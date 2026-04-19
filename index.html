@@ -110,7 +110,7 @@
   #auth-error { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
 
   /* ─── APP SHELL ───────────────────────────────────────────── */
-  #app { display: none; min-height: 100dvh; position: relative; z-index: 1; }
+  #app { display: none; height: 100dvh; position: relative; z-index: 1; }
   #app.visible { display: flex; flex-direction: column; }
 
   /* ─── TOP NAV ─────────────────────────────────────────────── */
@@ -157,7 +157,7 @@
   .nav-user-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ─── LAYOUT BODY ─────────────────────────────────────────── */
-  #layout-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  #layout-body { display: flex; flex: 1; min-height: 0; }
 
   /* ─── SIDEBAR ─────────────────────────────────────────────── */
   #sidebar {
@@ -174,7 +174,15 @@
 
   /* En desktop el sidebar siempre visible */
   @media (min-width: 768px) {
-    #sidebar { transform: translateX(0); position: sticky; top: 0; height: calc(100dvh - var(--nav-h)); flex-shrink: 0; }
+    #sidebar {
+      transform: translateX(0);
+      position: relative;
+      top: auto; bottom: auto; left: auto;
+      height: auto;
+      align-self: stretch;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
     .nav-hamburger { display: none; }
     #sidebar-overlay { display: none !important; }
   }

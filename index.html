@@ -133,9 +133,9 @@
     background: var(--text); border-radius: 2px;
     transition: all 220ms ease;
   }
-  #sidebar.open ~ #main #topnav .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-  #sidebar.open ~ #main #topnav .nav-hamburger span:nth-child(2) { opacity: 0; }
-  #sidebar.open ~ #main #topnav .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  #sidebar.open ~ #layout-body #main #topnav .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  #sidebar.open ~ #layout-body #main #topnav .nav-hamburger span:nth-child(2) { opacity: 0; }
+  #sidebar.open ~ #layout-body #main #topnav .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
   .nav-brand {
     font-size: 13px; font-weight: 700; letter-spacing: .06em; flex: 1;
@@ -157,7 +157,7 @@
   .nav-user-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* ─── LAYOUT BODY ─────────────────────────────────────────── */
-  #layout-body { display: flex; flex: 1; overflow: hidden; }
+  #layout-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
   /* ─── SIDEBAR ─────────────────────────────────────────────── */
   #sidebar {
@@ -174,7 +174,7 @@
 
   /* En desktop el sidebar siempre visible */
   @media (min-width: 768px) {
-    #sidebar { transform: translateX(0); position: sticky; top: var(--nav-h); height: calc(100dvh - var(--nav-h)); flex-shrink: 0; }
+    #sidebar { transform: translateX(0); position: sticky; top: 0; height: calc(100dvh - var(--nav-h)); flex-shrink: 0; }
     .nav-hamburger { display: none; }
     #sidebar-overlay { display: none !important; }
   }
@@ -920,6 +920,27 @@
 <!-- ========================================================== -->
 <div id="app">
 
+  <!-- TOP NAV -->
+  <header id="topnav">
+    <button class="nav-hamburger" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-brand">RR<span>HH</span></div>
+    <div class="nav-module-tag" id="nav-tag">Inicio</div>
+    <div class="nav-user-btn" id="nav-user-btn" onclick="toggleUserMenu()">?</div>
+  </header>
+
+  <!-- USER DROPDOWN -->
+  <div class="user-dropdown" id="user-dropdown">
+    <div class="dropdown-label" id="dd-email">email</div>
+    <div class="dropdown-sep"></div>
+    <div class="dropdown-item" onclick="doLogout()">
+      <span>←</span> Cerrar sesión
+    </div>
+  </div>
+
+  <div id="layout-body">
+
   <!-- SIDEBAR OVERLAY (mobile) -->
   <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -1004,25 +1025,6 @@
 
   <!-- MAIN -->
   <div id="main">
-
-    <!-- TOP NAV -->
-    <header id="topnav">
-      <button class="nav-hamburger" onclick="toggleSidebar()">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="nav-brand">RR<span>HH</span></div>
-      <div class="nav-module-tag" id="nav-tag">Inicio</div>
-      <div class="nav-user-btn" id="nav-user-btn" onclick="toggleUserMenu()">?</div>
-    </header>
-
-    <!-- USER DROPDOWN -->
-    <div class="user-dropdown" id="user-dropdown">
-      <div class="dropdown-label" id="dd-email">email</div>
-      <div class="dropdown-sep"></div>
-      <div class="dropdown-item" onclick="doLogout()">
-        <span>←</span> Cerrar sesión
-      </div>
-    </div>
 
     <!-- ── MÓDULO 00: INICIO ──────────────────────────────── -->
     <div class="module active" id="module-home">
@@ -2367,6 +2369,7 @@
     </div>
 
   </div><!-- /main -->
+  </div><!-- /layout-body -->
 </div><!-- /app -->
 
 
@@ -2431,12 +2434,12 @@ async function enviarMailIngreso(data) {
 <script>
 // ==============================================================
 const firebaseConfig = {
-  apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
-  authDomain:        "rrhhsystem.firebaseapp.com",
-  projectId: "rrhhsystem",
-  storageBucket: "rrhhsystem.firebasestorage.app",
-  messagingSenderId: "71511125212",
-  appId: "1:71511125212:web:03a0ad11b281e397a29819"
+  apiKey:            "TU_API_KEY",
+  authDomain:        "TU_PROJECT.firebaseapp.com",
+  projectId:         "TU_PROJECT_ID",
+  storageBucket:     "TU_PROJECT.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId:             "TU_APP_ID"
 };
 
 // --------------------------------------------------------------

@@ -962,19 +962,19 @@
       <span class="nav-item-num">00</span>
     </a>
 
-    <a class="nav-item" data-module="reclutamiento" style="--item-color: var(--m1)" onclick="navigate('reclutamiento', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="reclutamiento" style="--item-color: var(--m1)" onclick="navigate('reclutamiento', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Reclutamiento</span>
       <span class="nav-item-num">01</span>
     </a>
 
-    <a class="nav-item" data-module="ingresos" style="--item-color: var(--m2)" onclick="navigate('ingresos', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="ingresos" style="--item-color: var(--m2)" onclick="navigate('ingresos', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Ingresos</span>
       <span class="nav-item-num">02</span>
     </a>
 
-    <a class="nav-item" data-module="formulario" style="--item-color: var(--m3)" onclick="navigate('formulario', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="formulario" style="--item-color: var(--m3)" onclick="navigate('formulario', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Form. de Personal</span>
       <span class="nav-item-num">03</span>
@@ -992,13 +992,13 @@
       <span class="nav-item-num">05</span>
     </a>
 
-    <a class="nav-item" data-module="bajas" style="--item-color: var(--m6)" onclick="navigate('bajas', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="bajas" style="--item-color: var(--m6)" onclick="navigate('bajas', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Bajas</span>
       <span class="nav-item-num">06</span>
     </a>
 
-    <a class="nav-item" data-module="liquidaciones" style="--item-color: var(--m7)" onclick="navigate('liquidaciones', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="liquidaciones" style="--item-color: var(--m7)" onclick="navigate('liquidaciones', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Liquidaciones</span>
       <span class="nav-item-num">07</span>
@@ -1011,11 +1011,17 @@
     </a>
 
     <!-- Sección Admin -->
-    <div class="sidebar-section-label" style="margin-top:8px">Administración</div>
-    <a class="nav-item" data-module="admin-locales" style="--item-color: #a0a8b8" onclick="navigate('admin-locales', this)">
+    <div class="sidebar-section-label" id="sidebar-admin-label" style="margin-top:8px">Administración</div>
+    <a class="nav-item" data-rol="rrhh" data-module="admin-locales" style="--item-color: #a0a8b8" onclick="navigate('admin-locales', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Locales</span>
       <span class="nav-item-num">⚙</span>
+    </a>
+
+    <a class="nav-item" data-rol="rrhh" data-module="usuarios" style="--item-color: #f0a0ff" onclick="navigate('usuarios', this)">
+      <span class="nav-dot"></span>
+      <span class="nav-item-text">Usuarios</span>
+      <span class="nav-item-num">👤</span>
     </a>
 
     <!-- Footer del sidebar -->
@@ -1024,7 +1030,7 @@
         <div class="sidebar-avatar" id="sb-avatar">—</div>
         <div class="sidebar-user-info">
           <div class="sidebar-user-name" id="sb-name">—</div>
-          <div class="sidebar-user-role">RRHH · Admin</div>
+          <div class="sidebar-user-role" id="sb-role">RRHH · Admin</div>
         </div>
         <button class="btn-logout" onclick="doLogout()">Salir</button>
       </div>
@@ -1584,29 +1590,36 @@
       </div>
     </div>
 
-    <!-- MODAL CONFIG NÓMINA (puestos por local) -->
+    <!-- MODAL CONFIG NÓMINA (secciones por local) -->
     <div class="bj-modal-overlay" id="ip-nomina-config-overlay" onclick="infoPersonal.cerrarConfigNomina(event)">
       <div class="bj-modal" style="max-width:640px" onclick="event.stopPropagation()">
         <div class="bj-modal-header">
           <div>
             <div class="bj-modal-tag" style="color:var(--m4)">Nómina</div>
-            <div class="bj-modal-title">Configurar dotación por puesto</div>
+            <div class="bj-modal-title">Configurar secciones y dotación</div>
           </div>
           <button class="bj-modal-close" onclick="infoPersonal.cerrarConfigNomina()">✕</button>
         </div>
         <div class="bj-modal-body" style="max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
-          <div style="font-size:12px;color:var(--muted)">Seleccioná un local y configurá cuántas personas se necesitan en cada puesto.</div>
+          <div style="font-size:12px;color:var(--muted)">Seleccioná un local para configurar sus secciones y la cantidad de empleados requerida en cada una.</div>
           <div style="display:flex;gap:10px;align-items:center">
             <select class="bj-select" id="ip-nc-local" onchange="infoPersonal.cargarSeccionesLocal(this.value)" style="flex:1;border-color:color-mix(in srgb,var(--m4) 40%,var(--border))">
               <option value="">— elegir local —</option>
             </select>
           </div>
-          <div id="ip-nc-secciones" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div id="ip-nc-secciones" style="display:flex;flex-direction:column;gap:10px"></div>
+          <div id="ip-nc-add" style="display:none;flex-direction:column;gap:10px">
+            <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--m4)">Nueva sección</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input class="bj-input" id="ip-nc-nueva-nombre" placeholder="Nombre de la sección (Ej: Cocina)" style="flex:1;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
+              <input class="bj-input" id="ip-nc-nueva-dot" type="number" min="1" placeholder="Dotación" style="width:100px;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
+              <button class="bj-btn" onclick="infoPersonal.agregarSeccion()" style="background:var(--m4);color:#0e0f11">Agregar</button>
+            </div>
+          </div>
           <div id="ip-nc-status" style="font-size:12px;font-family:'DM Mono',monospace;min-height:16px;color:var(--accent2)"></div>
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="infoPersonal.cerrarConfigNomina()">Cerrar</button>
-          <button class="bj-btn" onclick="infoPersonal.guardarDotacionPuestos()" style="background:var(--m4);color:#0e0f11">Guardar</button>
         </div>
       </div>
     </div>
@@ -1682,52 +1695,12 @@
           <div class="bj-form-row">
             <div class="bj-field bj-field-wide">
               <label class="bj-label">Puesto Real</label>
-              <select class="bj-input ip-inp" id="ip-puesto-real">
-                <option value="">— seleccionar —</option>
-                <option value="Gerencia">Gerencia</option>
-                <option value="Director">Director</option>
-                <option value="Gerente general">Gerente general</option>
-                <option value="Gerente de compras">Gerente de compras</option>
-                <option value="Jefa de administracion">Jefa de administracion</option>
-                <option value="Administracion">Administracion</option>
-                <option value="Compras">Compras</option>
-                <option value="RRHH">RRHH</option>
-                <option value="Auditora jefe">Auditora jefe</option>
-                <option value="Auditora">Auditora</option>
-                <option value="Supervision">Supervision</option>
-                <option value="Caja">Caja</option>
-                <option value="Recepcion">Recepcion</option>
-                <option value="Camarero">Camarero</option>
-                <option value="Camarero Jr">Camarero Jr</option>
-                <option value="Corredor">Corredor</option>
-                <option value="Jefe de barra">Jefe de barra</option>
-                <option value="Barra">Barra</option>
-                <option value="Chef">Chef</option>
-                <option value="Sous Chef">Sous Chef</option>
-                <option value="Cocina">Cocina</option>
-                <option value="Volante">Volante</option>
-                <option value="Sartenes">Sartenes</option>
-                <option value="Wok">Wok</option>
-                <option value="Causas">Causas</option>
-                <option value="Frituras/Sanguches">Frituras/Sanguches</option>
-                <option value="Produccion">Produccion</option>
-                <option value="Pasteleria">Pasteleria</option>
-                <option value="Bacha">Bacha</option>
-                <option value="Limpieza">Limpieza</option>
-                <option value="Almacen">Almacen</option>
-                <option value="Vigilancia">Vigilancia</option>
-                <option value="Valet Parking">Valet Parking</option>
-                <option value="Cebiche">Cebiche</option>
-                <option value="Tiraditos">Tiraditos</option>
-                <option value="Mantenimiento">Mantenimiento</option>
-              </select>
+              <input class="bj-input ip-inp" id="ip-puesto-real" placeholder="Ej: Cocinero A">
             </div>
             <div class="bj-field bj-field-wide">
               <label class="bj-label">Sección</label>
               <select class="bj-input ip-inp" id="ip-seccion">
-                <option value="">— sin sección —</option>
-                <option value="Cocina">Cocina</option>
-                <option value="Salon">Salon</option>
+                <option value="">— seleccionar —</option>
               </select>
             </div>
             <div class="bj-field bj-field-wide">
@@ -2409,6 +2382,68 @@
       </div>
     </div>
 
+
+    <!-- ── MÓDULO USUARIOS ──────────────────────────────── -->
+    <div class="module" id="module-usuarios">
+      <div class="module-header">
+        <div class="module-icon" style="background:color-mix(in srgb,#f0a0ff 15%,var(--surface2));color:#f0a0ff">👤</div>
+        <div class="module-title-group">
+          <div class="module-eyebrow">Administración</div>
+          <div class="module-title">Gestión de Usuarios</div>
+          <div class="module-desc">Creá y administrá las cuentas de acceso al sistema.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="bj-btn" style="background:#f0a0ff;color:#0e0f11" onclick="usuarios.abrirNuevo()">+ Nuevo usuario</button>
+        </div>
+      </div>
+      <div class="module-body">
+        <div id="usr-list" style="display:flex;flex-direction:column;gap:10px">
+          <div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px">Cargando usuarios…</div>
+        </div>
+      </div>
+      <!-- Modal nuevo usuario -->
+      <div class="bj-modal-overlay" id="usr-modal-overlay" onclick="usuarios.cerrar(event)">
+        <div class="bj-modal bj-modal-sm" onclick="event.stopPropagation()">
+          <div class="bj-modal-header">
+            <div>
+              <div class="bj-modal-tag" style="color:#f0a0ff">Usuarios</div>
+              <div class="bj-modal-title" id="usr-modal-title">Nuevo usuario</div>
+            </div>
+            <button class="bj-modal-close" onclick="usuarios.cerrar()">✕</button>
+          </div>
+          <div class="bj-modal-body" style="display:flex;flex-direction:column;gap:14px">
+            <div class="bj-field">
+              <label class="bj-label">Email *</label>
+              <input class="bj-input" id="usr-email" type="email" placeholder="usuario@empresa.com">
+            </div>
+            <div class="bj-field" id="usr-pass-field">
+              <label class="bj-label">Contraseña *</label>
+              <input class="bj-input" id="usr-pass" type="password" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="bj-field">
+              <label class="bj-label">Rol *</label>
+              <select class="bj-input" id="usr-rol">
+                <option value="">— seleccionar —</option>
+                <option value="rrhh">RRHH (acceso completo)</option>
+                <option value="gerente">Gerente (horarios, info personal, portal)</option>
+              </select>
+            </div>
+            <div class="bj-field" id="usr-local-field" style="display:none">
+              <label class="bj-label">Local asignado *</label>
+              <select class="bj-input" id="usr-local">
+                <option value="">— seleccionar —</option>
+              </select>
+            </div>
+            <div id="usr-error" style="color:var(--danger);font-size:12px;min-height:16px"></div>
+          </div>
+          <div class="bj-modal-footer">
+            <button class="bj-btn bj-btn-outline" onclick="usuarios.cerrar()">Cancelar</button>
+            <button class="bj-btn" id="usr-save-btn" onclick="usuarios.guardar()" style="background:#f0a0ff;color:#0e0f11">Crear usuario</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main -->
   </div><!-- /layout-body -->
 </div><!-- /app -->
@@ -2557,23 +2592,68 @@ if (auth) {
   });
 }
 
-function showApp(user) {
+// Estado global del usuario
+window._currentUser = null;
+window._currentRol  = null;
+window._currentLocal = null;
+
+async function showApp(user) {
   document.getElementById('auth-screen').style.display = 'none';
   const app = document.getElementById('app');
   app.classList.add('visible');
-  // Inicializar locales desde el inicio para que los selects estén listos
-  setTimeout(() => { if (typeof adminLocales !== 'undefined') adminLocales.init(); }, 200);
+
+  window._currentUser = user;
+
+  // Cargar perfil desde Firestore
+  let rol = 'rrhh', localAsignado = '';
+  if (db && user.uid) {
+    try {
+      const snap = await db.collection('usuarios').where('uid','==',user.uid).limit(1).get();
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        rol = data.rol || 'rrhh';
+        localAsignado = data.local || '';
+      }
+    } catch(e) { console.warn('No se pudo cargar perfil:', e); }
+  }
+  window._currentRol   = rol;
+  window._currentLocal = localAsignado;
+
+  aplicarPermisos(rol, localAsignado);
 
   const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario');
   const initials = name.slice(0,2).toUpperCase();
 
   document.getElementById('home-name').textContent = name;
   document.getElementById('sb-name').textContent = name;
+  document.getElementById('sb-role').textContent = rol === 'gerente' ? `Gerente · ${localAsignado}` : 'RRHH · Admin';
   document.getElementById('sb-avatar').textContent = initials;
   document.getElementById('nav-user-btn').textContent = initials;
   document.getElementById('dd-email').textContent = user.email || name;
 
+  setTimeout(() => { if (typeof adminLocales !== 'undefined') adminLocales.init(); }, 200);
   checkFirebase();
+}
+
+function aplicarPermisos(rol, localAsignado) {
+  const esRRHH = rol === 'rrhh';
+
+  // Mostrar/ocultar items del sidebar según rol
+  document.querySelectorAll('[data-rol="rrhh"]').forEach(el => {
+    el.style.display = esRRHH ? '' : 'none';
+  });
+  const adminLabel = document.getElementById('sidebar-admin-label');
+  if (adminLabel) adminLabel.style.display = esRRHH ? '' : 'none';
+
+  // Si es gerente, ir directo a horarios
+  if (!esRRHH) {
+    setTimeout(() => {
+      navigate('horarios', document.querySelector('[data-module="horarios"]'));
+    }, 300);
+  }
+
+  // Guardar para filtros por local
+  window._filtroLocal = esRRHH ? '' : localAsignado;
 }
 
 function hideApp() {
@@ -3111,7 +3191,7 @@ const infoPersonal = (() => {
         <td>
           <div class="bj-row-actions">
             <button class="bj-icon-btn" title="Editar" onclick="infoPersonal.edit('${r.id}')">✏</button>
-            <button class="bj-icon-btn" title="Dar de baja" style="color:var(--m6)" onclick="infoPersonal.darDeBaja('${r.id}')">💀</button>
+            <button class="bj-icon-btn" title="Dar de baja" style="color:var(--m6)" onclick="infoPersonal.darDeBaja('${r.id}')">🚪</button>
             <button class="bj-icon-btn del" title="Eliminar" onclick="infoPersonal.askDelete('${r.id}','${esc(r.nombre)}')">✕</button>
           </div>
         </td>
@@ -3335,18 +3415,8 @@ const infoPersonal = (() => {
   }
 
   // -- NÓMINA -----------------------------------------------
-  const COL_NOM = 'nomina-secciones';
-  const PUESTOS_LISTA = [
-    'Gerencia','Director','Gerente general','Gerente de compras',
-    'Jefa de administracion','Administracion','Compras','RRHH',
-    'Auditora jefe','Auditora','Supervision','Caja','Recepcion',
-    'Camarero','Camarero Jr','Corredor','Jefe de barra','Barra',
-    'Chef','Sous Chef','Cocina','Volante','Sartenes','Wok',
-    'Causas','Frituras/Sanguches','Produccion','Pasteleria',
-    'Bacha','Limpieza','Almacen','Vigilancia','Valet Parking',
-    'Cebiche','Tiraditos','Mantenimiento'
-  ];
-  let _nominaConfig = {};
+  const COL_NOM = 'nomina-secciones'; // { localNombre, secciones: [{nombre, dotacion}] }
+  let _nominaConfig = {}; // { [localNombre]: [{nombre, dotacion, id?}] }
 
   async function _cargarNominaConfig() {
     if (!db) return;
@@ -3354,7 +3424,7 @@ const infoPersonal = (() => {
     _nominaConfig = {};
     snap.docs.forEach(d => {
       const data = d.data();
-      _nominaConfig[data.localNombre] = { id: d.id, puestos: data.puestos || {} };
+      _nominaConfig[data.localNombre] = { id: d.id, secciones: data.secciones || [] };
     });
   }
 
@@ -3370,10 +3440,23 @@ const infoPersonal = (() => {
       sel.innerHTML = base + locales.map(l => `<option value="${l.nombre}">${l.nombre}</option>`).join('');
       sel.value = cur;
     });
+
+    // También poblar el select de sección en el form de empleado
+    const ipSec = document.getElementById('ip-seccion');
+    if (ipSec) {
+      const localVal = document.getElementById('ip-local')?.value || '';
+      _actualizarSelectSeccion(localVal);
+    }
   }
 
   function _actualizarSelectSeccion(localNombre) {
-    // Sección es fija (Cocina / Salon)
+    const sel = document.getElementById('ip-seccion');
+    if (!sel) return;
+    const cur = sel.value;
+    const secs = _nominaConfig[localNombre]?.secciones || [];
+    sel.innerHTML = '<option value="">— sin sección —</option>' +
+      secs.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join('');
+    if (cur) sel.value = cur;
   }
 
   async function renderNomina() {
@@ -3383,21 +3466,24 @@ const infoPersonal = (() => {
     const locales = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
     const localesFiltrados = filtroLocal ? locales.filter(l => l.nombre === filtroLocal) : locales;
 
+    // Solo empleados activos (sin baja registrada)
     const bajasReg = typeof bajas !== 'undefined' ? bajas.getRegistros() : [];
     const activosFn = r => !bajasReg.some(b => b['ip-ref'] === r.id || (b.cuil && b.cuil === r.cuil && r.cuil));
     const activos = _registros.filter(activosFn);
 
+    // Resumen global
     const resEl = document.getElementById('ip-nomina-resumen');
     if (resEl) {
       const total = activos.length;
       const locTotal = [...new Set(activos.map(r => r.local).filter(Boolean))].length;
       let dotTotal = 0;
-      Object.values(_nominaConfig).forEach(c => Object.values(c.puestos||{}).forEach(v => dotTotal += (parseInt(v)||0)));
-      resEl.innerHTML = [
+      Object.values(_nominaConfig).forEach(c => c.secciones?.forEach(s => dotTotal += (parseInt(s.dotacion)||0)));
+      const chips = [
         ['Empleados activos', total, 'var(--m4)'],
         ['Locales activos', locTotal, 'var(--m2)'],
-        ['Dotacion requerida total', dotTotal, 'var(--m1)'],
-      ].map(([l,v,c]) =>
+        ['Dotación requerida total', dotTotal, 'var(--m1)'],
+      ];
+      resEl.innerHTML = chips.map(([l,v,c]) =>
         `<div style="background:color-mix(in srgb,${c} 8%,var(--surface2));border:1px solid color-mix(in srgb,${c} 25%,var(--border));border-radius:12px;padding:14px 20px;display:flex;flex-direction:column;gap:4px;min-width:160px">
           <div style="font-size:26px;font-weight:800;color:${c}">${v}</div>
           <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">${l}</div>
@@ -3405,39 +3491,41 @@ const infoPersonal = (() => {
       ).join('');
     }
 
+    // Panel de locales
     const panel = document.getElementById('ip-nomina-panel');
     if (!panel) return;
     if (!localesFiltrados.length) {
-      panel.innerHTML = `<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:24px 0">No hay locales configurados.</div>`;
+      panel.innerHTML = `<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:24px 0">No hay locales configurados. Agregá locales en Admin Locales.</div>`;
       return;
     }
 
     panel.innerHTML = localesFiltrados.map(loc => {
       const cfg = _nominaConfig[loc.nombre];
-      const puestos = cfg?.puestos || {};
+      const secciones = cfg?.secciones || [];
       const empLocal = activos.filter(r => r.local === loc.nombre);
       const totalLocal = empLocal.length;
-      const dotLocal = Object.values(puestos).reduce((a, v) => a + (parseInt(v)||0), 0);
 
-      const puestosConDatos = PUESTOS_LISTA.filter(p => (parseInt(puestos[p])||0) > 0 || empLocal.filter(r => r['puesto-real'] === p).length > 0);
+      let dotLocal = secciones.reduce((a, s) => a + (parseInt(s.dotacion)||0), 0);
 
-      const puestosHtml = puestosConDatos.length ? puestosConDatos.map(p => {
-        const actual = empLocal.filter(r => r['puesto-real'] === p).length;
-        const req = parseInt(puestos[p]) || 0;
+      const seccionesHtml = secciones.length ? secciones.map(sec => {
+        const actual = empLocal.filter(r => r.seccion === sec.nombre).length;
+        const req = parseInt(sec.dotacion) || 0;
         const diff = actual - req;
-        const pct = req > 0 ? Math.min(100, Math.round((actual/req)*100)) : (actual > 0 ? 100 : 0);
-        const color = req === 0 ? 'var(--muted)' : (actual >= req ? 'var(--accent2)' : (actual >= req * 0.7 ? 'var(--m1)' : 'var(--danger))'));
-        const label = req === 0 ? `${actual} sin req.` : (diff === 0 ? 'Completo' : (diff > 0 ? `+${diff} extra` : `${diff} faltante${Math.abs(diff)!==1?'s':''}`));
+        const pct  = req > 0 ? Math.min(100, Math.round((actual/req)*100)) : (actual > 0 ? 100 : 0);
+        const color = actual >= req ? 'var(--accent2)' : (actual >= req * 0.7 ? 'var(--m1)' : 'var(--danger)');
+        const label = diff === 0 ? 'Completo' : (diff > 0 ? `+${diff} extra` : `${diff} faltante${Math.abs(diff)!==1?'s':''}`);
         return `<div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="font-size:13px;font-weight:600">${p}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:11px;color:${color};white-space:nowrap">${actual} / ${req||'—'} · ${label}</div>
+            <div style="font-size:13px;font-weight:600">${sec.nombre}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;color:${color};white-space:nowrap">${actual} / ${req} · ${label}</div>
           </div>
-          ${req > 0 ? `<div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div></div>` : ''}
+          <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div>
+          </div>
         </div>`;
-      }).join('') : `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:8px 0">Sin datos. Usa <strong style="color:var(--m4)">Configurar dotaciones</strong> para definir cuantos necesitas por puesto.</div>`;
+      }).join('') : `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:8px 0">Sin secciones configuradas. Usá <strong style="color:var(--m4)">⚙ Configurar dotaciones</strong> para agregarlas.</div>`;
 
-      const globalColor = dotLocal === 0 ? 'var(--muted)' : (totalLocal >= dotLocal ? 'var(--accent2)' : (totalLocal >= dotLocal * 0.7 ? 'var(--m1)' : 'var(--danger))'));
+      const globalColor = dotLocal === 0 ? 'var(--muted)' : (totalLocal >= dotLocal ? 'var(--accent2)' : (totalLocal >= dotLocal * 0.7 ? 'var(--m1)' : 'var(--danger)'));
 
       return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
         <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
@@ -3445,22 +3533,26 @@ const infoPersonal = (() => {
             <div style="font-size:15px;font-weight:700">${loc.nombre}</div>
             ${loc.razon ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${loc.razon}</div>` : ''}
           </div>
-          <div style="text-align:right">
-            <div style="font-size:22px;font-weight:800;color:${globalColor}">${totalLocal}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">de ${dotLocal} requeridos</div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="text-align:right">
+              <div style="font-size:22px;font-weight:800;color:${globalColor}">${totalLocal}</div>
+              <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">de ${dotLocal} requeridos</div>
+            </div>
           </div>
         </div>
         <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-          ${puestosHtml}
+          ${seccionesHtml}
         </div>
       </div>`;
     }).join('');
   }
 
+  // -- CONFIG NÓMINA (modal) ------------------------------------
   async function abrirConfigNomina() {
     await _cargarNominaConfig();
     _poblarNominaLocalSelect();
     document.getElementById('ip-nc-secciones').innerHTML = '';
+    document.getElementById('ip-nc-add').style.display = 'none';
     document.getElementById('ip-nc-status').textContent = '';
     document.getElementById('ip-nomina-config-overlay').classList.add('open');
   }
@@ -3472,62 +3564,88 @@ const infoPersonal = (() => {
 
   function cargarSeccionesLocal(localNombre) {
     const cont = document.getElementById('ip-nc-secciones');
+    const addDiv = document.getElementById('ip-nc-add');
     document.getElementById('ip-nc-status').textContent = '';
-    if (!localNombre) { cont.innerHTML = ''; return; }
-    const puestos = _nominaConfig[localNombre]?.puestos || {};
-    _renderPuestosConfig(puestos, localNombre);
+    if (!localNombre) { cont.innerHTML = ''; addDiv.style.display = 'none'; return; }
+    addDiv.style.display = 'flex';
+    const secs = _nominaConfig[localNombre]?.secciones || [];
+    _renderSeccionesConfig(secs, localNombre);
   }
 
-  function _renderPuestosConfig(puestos) {
+  function _renderSeccionesConfig(secs, localNombre) {
     const cont = document.getElementById('ip-nc-secciones');
-    cont.innerHTML = `
-      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--m4);margin-bottom:4px">Dotacion requerida por puesto (0 = no aplica)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
-        ${PUESTOS_LISTA.map(p => `
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
-            <div style="font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</div>
-            <input type="number" min="0" value="${parseInt(puestos[p])||0}" data-puesto="${p}"
-              style="width:56px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:center">
-          </div>`).join('')}
-      </div>`;
+    if (!secs.length) {
+      cont.innerHTML = `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">No hay secciones todavía. Agregá la primera abajo.</div>`;
+      return;
+    }
+    cont.innerHTML = secs.map((s, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1;font-size:13px;font-weight:600">${s.nombre}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" min="1" value="${s.dotacion||0}"
+            style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:center"
+            onchange="infoPersonal.editarDotacion('${localNombre}',${i},this.value)">
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">requeridos</div>
+        </div>
+        <button onclick="infoPersonal.eliminarSeccion('${localNombre}',${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px">&#x2715;</button>
+      </div>`).join('');
   }
 
-  async function guardarDotacionPuestos() {
+  async function agregarSeccion() {
     const localNombre = document.getElementById('ip-nc-local').value;
+    const nombre = document.getElementById('ip-nc-nueva-nombre').value.trim();
+    const dotacion = parseInt(document.getElementById('ip-nc-nueva-dot').value) || 0;
     const status = document.getElementById('ip-nc-status');
-    if (!localNombre) { status.style.color = 'var(--danger)'; status.textContent = 'Selecciona un local.'; return; }
-    const inputs = document.querySelectorAll('#ip-nc-secciones input[data-puesto]');
-    const puestos = {};
-    inputs.forEach(inp => { const v = parseInt(inp.value)||0; if(v>0) puestos[inp.dataset.puesto]=v; });
-    const cfg = _nominaConfig[localNombre] || {};
-    cfg.puestos = puestos;
+    if (!localNombre || !nombre) { status.style.color = 'var(--danger)'; status.textContent = 'Completá local y nombre.'; return; }
+    const cfg = _nominaConfig[localNombre] || { secciones: [] };
+    if (cfg.secciones.find(s => s.nombre.toLowerCase() === nombre.toLowerCase())) {
+      status.style.color = 'var(--danger)'; status.textContent = 'Esa sección ya existe.'; return;
+    }
+    cfg.secciones.push({ nombre, dotacion });
     await _guardarConfig(localNombre, cfg);
-    status.style.color = 'var(--accent2)'; status.textContent = 'Dotacion guardada ✓';
+    document.getElementById('ip-nc-nueva-nombre').value = '';
+    document.getElementById('ip-nc-nueva-dot').value = '';
+    status.style.color = 'var(--accent2)'; status.textContent = 'Sección agregada.';
+    _renderSeccionesConfig(cfg.secciones, localNombre);
+    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
   }
 
-  async function agregarSeccion() {}
-  async function editarDotacion() {}
-  async function eliminarSeccion() {}
+  async function editarDotacion(localNombre, idx, val) {
+    const cfg = _nominaConfig[localNombre];
+    if (!cfg) return;
+    cfg.secciones[idx].dotacion = parseInt(val) || 0;
+    await _guardarConfig(localNombre, cfg);
+    const status = document.getElementById('ip-nc-status');
+    status.style.color = 'var(--accent2)'; status.textContent = 'Dotación actualizada.';
+  }
+
+  async function eliminarSeccion(localNombre, idx) {
+    const cfg = _nominaConfig[localNombre];
+    if (!cfg) return;
+    const nombre = cfg.secciones[idx]?.nombre || '';
+    if (!confirm(`Eliminar sección "${nombre}"?`)) return;
+    cfg.secciones.splice(idx, 1);
+    await _guardarConfig(localNombre, cfg);
+    _renderSeccionesConfig(cfg.secciones, localNombre);
+    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
+  }
 
   async function _guardarConfig(localNombre, cfg) {
     if (!db) return;
     _nominaConfig[localNombre] = cfg;
-    const payload = { localNombre, puestos: cfg.puestos || {} };
     if (cfg.id) {
-      await db.collection(COL_NOM).doc(cfg.id).set(payload);
+      await db.collection(COL_NOM).doc(cfg.id).set({ localNombre, secciones: cfg.secciones });
     } else {
-      const ref = await db.collection(COL_NOM).add(payload);
+      const ref = await db.collection(COL_NOM).add({ localNombre, secciones: cfg.secciones });
       _nominaConfig[localNombre].id = ref.id;
     }
   }
-
 
   return { init, openForm, closeForm, edit, guardar,
            askDelete, cancelDelete, confirmDelete,
            filtrar, filtrarLocal, filtrarProv, exportCSV,
            setTab, renderNomina, abrirConfigNomina, cerrarConfigNomina,
            cargarSeccionesLocal, agregarSeccion, editarDotacion, eliminarSeccion,
-           guardarDotacionPuestos,
            _actualizarSelectSeccion,
            getRegistros: () => _registros,
            refreshBadges: () => _renderTabla(),
@@ -4360,6 +4478,7 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'info-personal') infoPersonal.init();
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
+  if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
 };
 
 // ==============================================================
@@ -5065,6 +5184,131 @@ if (new URLSearchParams(location.search).get('vista') === 'portal') {
     _initPortalPublico();
   }
 }
+
+// =============================================================
+//  MÓDULO USUARIOS (solo RRHH)
+// =============================================================
+const usuarios = (() => {
+  const COL = 'usuarios';
+
+  function init() { _renderLista(); }
+
+  async function _renderLista() {
+    const cont = document.getElementById('usr-list');
+    if (!cont) return;
+    if (!db) { cont.innerHTML = '<div style="color:var(--muted);font-size:12px">Firebase no configurado.</div>'; return; }
+    cont.innerHTML = '<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px">Cargando…</div>';
+    try {
+      const snap = await db.collection(COL).orderBy('email').get();
+      if (snap.empty) {
+        cont.innerHTML = '<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px">No hay usuarios creados todavía.</div>';
+        return;
+      }
+      cont.innerHTML = snap.docs.map(d => {
+        const u = d.data();
+        const rolLabel = u.rol === 'gerente' ? 'Gerente' : 'RRHH';
+        const rolColor = u.rol === 'gerente' ? 'var(--m5)' : 'var(--m4)';
+        return `<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
+          <div style="width:38px;height:38px;border-radius:50%;background:color-mix(in srgb,${rolColor} 20%,var(--surface));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:${rolColor};flex-shrink:0">${(u.email||'?').slice(0,2).toUpperCase()}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px">${rolLabel}${u.local ? ' · ' + u.local : ''}</div>
+          </div>
+          <button onclick="usuarios.eliminar('${d.id}','${(u.email||'').replace(/'/g,"\\'")}','${u.uid||''}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:4px 8px;opacity:.7" title="Eliminar usuario">✕</button>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      cont.innerHTML = `<div style="color:var(--danger);font-size:12px">Error: ${e.message}</div>`;
+    }
+  }
+
+  function abrirNuevo() {
+    document.getElementById('usr-email').value = '';
+    document.getElementById('usr-pass').value = '';
+    document.getElementById('usr-rol').value = '';
+    document.getElementById('usr-local').value = '';
+    document.getElementById('usr-error').textContent = '';
+    document.getElementById('usr-local-field').style.display = 'none';
+    document.getElementById('usr-pass-field').style.display = '';
+    document.getElementById('usr-modal-title').textContent = 'Nuevo usuario';
+    document.getElementById('usr-save-btn').textContent = 'Crear usuario';
+
+    // Poblar locales
+    const locales = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
+    const sel = document.getElementById('usr-local');
+    sel.innerHTML = '<option value="">— seleccionar —</option>' +
+      locales.map(l => `<option value="${l.nombre}">${l.nombre}</option>`).join('');
+
+    // Mostrar local si cambia el rol
+    document.getElementById('usr-rol').onchange = function() {
+      document.getElementById('usr-local-field').style.display = this.value === 'gerente' ? '' : 'none';
+    };
+
+    document.getElementById('usr-modal-overlay').classList.add('open');
+  }
+
+  function cerrar(e) {
+    if (e && e.target !== document.getElementById('usr-modal-overlay')) return;
+    document.getElementById('usr-modal-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const email    = document.getElementById('usr-email').value.trim();
+    const pass     = document.getElementById('usr-pass').value;
+    const rol      = document.getElementById('usr-rol').value;
+    const local    = document.getElementById('usr-local').value;
+    const errEl    = document.getElementById('usr-error');
+    const btn      = document.getElementById('usr-save-btn');
+
+    errEl.textContent = '';
+    if (!email) { errEl.textContent = 'Ingresá un email.'; return; }
+    if (!pass || pass.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
+    if (!rol) { errEl.textContent = 'Seleccioná un rol.'; return; }
+    if (rol === 'gerente' && !local) { errEl.textContent = 'El gerente necesita un local asignado.'; return; }
+
+    btn.textContent = 'Creando…'; btn.disabled = true;
+
+    try {
+      // Crear usuario en Firebase Auth usando una segunda instancia temporal
+      const secondaryApp = firebase.initializeApp(firebase.app().options, 'secondary-' + Date.now());
+      const secondaryAuth = secondaryApp.auth();
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
+      const uid = cred.user.uid;
+      await secondaryAuth.signOut();
+      await secondaryApp.delete();
+
+      // Guardar perfil en Firestore
+      await db.collection(COL).add({ email, uid, rol, local: local || '', createdAt: new Date().toISOString() });
+
+      document.getElementById('usr-modal-overlay').classList.remove('open');
+      _renderLista();
+    } catch(e) {
+      const msgs = {
+        'auth/email-already-in-use': 'Ese email ya está registrado.',
+        'auth/invalid-email': 'Email inválido.',
+        'auth/weak-password': 'Contraseña muy débil.',
+      };
+      errEl.textContent = msgs[e.code] || e.message;
+    } finally {
+      btn.textContent = 'Crear usuario'; btn.disabled = false;
+    }
+  }
+
+  async function eliminar(docId, email, uid) {
+    if (!confirm(`¿Eliminar el usuario "${email}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await db.collection(COL).doc(docId).delete();
+      _renderLista();
+    } catch(e) {
+      alert('Error al eliminar: ' + e.message);
+    }
+  }
+
+  return { init, abrirNuevo, cerrar, guardar, eliminar };
+})();
+
+// Módulo usuarios se inicializa via navigate() ya configurado arriba
+
 </script>
 </body>
 </html>

@@ -2323,6 +2323,12 @@
               <label style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">URL del video (YouTube / Vimeo)</label>
               <input class="bj-input" id="portal-video-url" placeholder="https://youtube.com/watch?v=..." style="border-color:color-mix(in srgb,var(--m8) 30%,var(--border))">
             </div>
+            <!-- Link externo -->
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <label style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Link externo (opcional)</label>
+              <input class="bj-input" id="portal-link-url" placeholder="https://..." style="border-color:color-mix(in srgb,var(--m8) 30%,var(--border))">
+              <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Si ingresás un link, los empleados podrán hacer clic para abrirlo.</span>
+            </div>
             <!-- Destacar -->
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
               <input type="checkbox" id="portal-destacado" style="accent-color:var(--m8);width:16px;height:16px">
@@ -4759,7 +4765,7 @@ const portal = (() => {
 
   function abrirNuevo() {
     _editId = null; _tipo = 'noticia';
-    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url'].forEach(id => {
+    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url','portal-link-url'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('portal-destacado').checked = false;
@@ -4805,6 +4811,7 @@ const portal = (() => {
       texto:      document.getElementById('portal-texto').value.trim(),
       imagenUrl:  document.getElementById('portal-imagen-url').value.trim(),
       videoUrl:   document.getElementById('portal-video-url').value.trim(),
+      linkUrl:    document.getElementById('portal-link-url').value.trim(),
       destacado:  document.getElementById('portal-destacado').checked,
       updatedAt:  new Date().toISOString(),
     };
@@ -4835,6 +4842,7 @@ const portal = (() => {
     document.getElementById('portal-texto').value      = r.texto     || '';
     document.getElementById('portal-imagen-url').value = r.imagenUrl || '';
     document.getElementById('portal-video-url').value  = r.videoUrl  || '';
+    document.getElementById('portal-link-url').value   = r.linkUrl   || '';
     document.getElementById('portal-destacado').checked = !!r.destacado;
     document.getElementById('portal-form-error').textContent = '';
     _setTipoCampos(_tipo);
@@ -5011,6 +5019,7 @@ function _initPortalPublico() {
         <div class="ppbg">${lb[r.tipo]||r.tipo}</div>
         <div class="pp-mtit">${r.titulo||''}${star}</div>
         ${r.texto ? `<div class="pp-mtxt">${r.texto.replace(/\n/g,'<br>')}</div>` : ''}
+        ${r.linkUrl ? `<a href="${r.linkUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;color:#ff4ab4;font-size:13px;font-family:'DM Mono',monospace;text-decoration:none;border:1px solid rgba(255,74,180,.3);border-radius:8px;padding:7px 14px;width:fit-content;transition:background .2s" onmouseover="this.style.background='rgba(255,74,180,.1)'" onmouseout="this.style.background='transparent'">&#x1F517; Abrir enlace</a>` : ''}
         ${fecha ? `<div class="pp-mdate">${fecha}</div>` : ''}
       </div>`;
     document.getElementById('pp-ov').classList.add('open');
@@ -5047,7 +5056,8 @@ function _initPortalPublico() {
       else if (r.tipo === 'video' && r.videoUrl) media = `<div class="ppc-vid-wrap"><iframe class="ppcv" src="${_emb(r.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`;
       const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
       const textoCorto = r.texto ? (r.texto.length > 120 ? r.texto.slice(0,120)+'…' : r.texto) : '';
-      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}</div><div class="ppcd">${fecha}</div></div>`;
+      const linkChip = r.linkUrl ? `<span style="display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:10px;color:#ff4ab4;margin-top:2px">&#x1F517; Tiene enlace</span>` : '';
+      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}${linkChip}</div><div class="ppcd">${fecha}</div></div>`;
     }).join('');
   };
 

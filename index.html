@@ -4936,15 +4936,30 @@ function _initPortalPublico() {
     '.ppfb{padding:7px 16px;border-radius:20px;border:1px solid #2a2b2f;background:#18191d;color:#8b8c91;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer;transition:all .2s}',
     '.ppfb.on{border-color:#ff4ab4;color:#ff4ab4;background:rgba(255,74,180,.1)}',
     '.ppg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}',
-    '.ppc{background:#18191d;border:1px solid #2a2b2f;border-radius:16px;overflow:hidden;transition:border-color .2s,transform .2s;display:flex;flex-direction:column}',
+    '.ppc{background:#18191d;border:1px solid #2a2b2f;border-radius:16px;overflow:hidden;transition:border-color .2s,transform .2s;display:flex;flex-direction:column;cursor:pointer}',
     '.ppc:hover{border-color:#ff4ab4;transform:translateY(-3px)}',
-    '.ppc img{width:100%;height:180px;object-fit:cover;display:block}',
-    '.ppcv{width:100%;aspect-ratio:16/9;border:none;display:block}',
+    '.ppc-img-wrap{width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#111;overflow:hidden}',
+    '.ppc img{max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block}',
+    '.ppc-vid-wrap{width:100%;aspect-ratio:16/9;overflow:hidden;pointer-events:none}',
+    '.ppcv{width:100%;height:100%;border:none;display:block}',
     '.ppcb{padding:16px 18px;display:flex;flex-direction:column;gap:10px;flex:1}',
     '.ppbg{display:inline-flex;align-items:center;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(255,74,180,.12);color:#ff4ab4;width:fit-content}',
     '.ppct{font-size:16px;font-weight:700;line-height:1.3}',
     '.ppcx{font-size:13px;color:#8b8c91;line-height:1.7;flex:1}',
     '.ppcd{font-family:"DM Mono",monospace;font-size:10px;color:#555;padding:10px 18px;border-top:1px solid #2a2b2f}',
+    '.pp-ov{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}',
+    '.pp-ov.open{display:flex}',
+    '.pp-mwrap{position:relative;width:100%;max-width:700px}',
+    '.pp-modal{background:#18191d;border:1px solid #333;border-radius:20px;width:100%;max-height:90dvh;overflow-y:auto;display:flex;flex-direction:column;animation:ppIn .2s ease}',
+    '@keyframes ppIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}',
+    '.pp-mcls{position:absolute;top:-14px;right:-14px;background:#ff4ab4;border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10000;font-weight:700}',
+    '.pp-mmedia{width:100%;display:flex;align-items:center;justify-content:center;background:#111;border-radius:20px 20px 0 0;overflow:hidden}',
+    '.pp-mmedia img{max-width:100%;height:auto;max-height:500px;object-fit:contain;display:block}',
+    '.pp-mmedia iframe{width:100%;aspect-ratio:16/9;border:none;display:block}',
+    '.pp-mbody{padding:24px 28px;display:flex;flex-direction:column;gap:12px}',
+    '.pp-mtit{font-size:20px;font-weight:800;line-height:1.3}',
+    '.pp-mtxt{font-size:14px;color:#8b8c91;line-height:1.8}',
+    '.pp-mdate{font-family:"DM Mono",monospace;font-size:11px;color:#444}',
     '.pps{flex:1;min-width:200px;background:#18191d;border:1px solid #2a2b2f;border-radius:10px;padding:9px 14px;color:#e8e9ec;font-size:13px;outline:none}',
     '.pps:focus{border-color:#ff4ab4}',
     '.ppe{text-align:center;padding:80px 0;color:#555;font-family:"DM Mono",monospace;font-size:13px}',
@@ -4965,15 +4980,56 @@ function _initPortalPublico() {
         <button class="ppfb" data-t="video"   onclick="ppT('video',this)">&#x25B6; Videos</button>
       </div>
       <div id="ppg" class="ppg"><div class="ppe">Cargando...</div></div>
+    </div>
+    <!-- MODAL -->
+    <div class="pp-ov" id="pp-ov" onclick="ppClose(event)">
+      <div class="pp-mwrap">
+        <button class="pp-mcls" onclick="ppCloseBtn()">✕</button>
+        <div class="pp-modal" id="pp-modal"></div>
+      </div>
     </div>`;
 
   let _t = '', _docs = [];
+
+  window.ppClose = (e) => { if (e.target === document.getElementById('pp-ov')) ppCloseBtn(); };
+  window.ppCloseBtn = () => {
+    document.getElementById('pp-ov').classList.remove('open');
+    document.getElementById('pp-modal').innerHTML = '';
+  };
+  window.ppOpen = (id) => {
+    const r = _docs.find(x => x.id === id);
+    if (!r) return;
+    const fecha = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('es-AR') : '');
+    const lb = { noticia:'📰 Noticia', imagen:'🖼 Imagen', video:'▶ Video' };
+    let media = '';
+    if (r.tipo === 'imagen' && r.imagenUrl) media = `<div class="pp-mmedia"><img src="${r.imagenUrl}" alt=""></div>`;
+    else if (r.tipo === 'video' && r.videoUrl) media = `<div class="pp-mmedia"><iframe src="${_emb(r.videoUrl)}" allowfullscreen></iframe></div>`;
+    const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
+    document.getElementById('pp-modal').innerHTML = `
+      ${media}
+      <div class="pp-mbody">
+        <div class="ppbg">${lb[r.tipo]||r.tipo}</div>
+        <div class="pp-mtit">${r.titulo||''}${star}</div>
+        ${r.texto ? `<div class="pp-mtxt">${r.texto.replace(/\n/g,'<br>')}</div>` : ''}
+        ${fecha ? `<div class="pp-mdate">${fecha}</div>` : ''}
+      </div>`;
+    document.getElementById('pp-ov').classList.add('open');
+  };
 
   window.ppT = (tipo, btn) => {
     _t = tipo;
     document.querySelectorAll('.ppfb[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === tipo));
     ppF();
   };
+
+  function _emb(url) {
+    const m = (url||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+    if (m) return 'https://www.youtube.com/embed/' + m[1];
+    const v = (url||'').match(/vimeo\.com\/(\d+)/);
+    if (v) return 'https://player.vimeo.com/video/' + v[1];
+    return url||'';
+  }
+
   window.ppF = () => {
     const q = (document.getElementById('ppsrch')?.value || '').toLowerCase();
     const list = _docs.filter(r => {
@@ -4984,20 +5040,14 @@ function _initPortalPublico() {
     if (!g) return;
     if (!list.length) { g.innerHTML = '<div class="ppe">No hay publicaciones.</div>'; return; }
     const lb = { noticia:'Noticia', imagen:'Imagen', video:'Video' };
-    function emb(url) {
-      const m = (url||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
-      if (m) return 'https://www.youtube.com/embed/' + m[1];
-      const v = (url||'').match(/vimeo\.com\/(\d+)/);
-      if (v) return 'https://player.vimeo.com/video/' + v[1];
-      return url||'';
-    }
     g.innerHTML = list.map(r => {
       const fecha = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('es-AR') : '');
       let media = '';
-      if (r.tipo === 'imagen' && r.imagenUrl) media = `<img src="${r.imagenUrl}" alt="" onerror="this.style.display='none'">`;
-      else if (r.tipo === 'video' && r.videoUrl) media = `<iframe class="ppcv" src="${emb(r.videoUrl)}" allowfullscreen loading="lazy"></iframe>`;
-      const star = r.destacado ? ' <span style="color:#f59e0b">&#9733;</span>' : '';
-      return `<div class="ppc">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${r.texto?`<div class="ppcx">${r.texto.replace(/\n/g,'<br>')}</div>`:''}</div><div class="ppcd">${fecha}</div></div>`;
+      if (r.tipo === 'imagen' && r.imagenUrl) media = `<div class="ppc-img-wrap"><img src="${r.imagenUrl}" alt="" onerror="this.parentElement.style.display='none'"></div>`;
+      else if (r.tipo === 'video' && r.videoUrl) media = `<div class="ppc-vid-wrap"><iframe class="ppcv" src="${_emb(r.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`;
+      const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
+      const textoCorto = r.texto ? (r.texto.length > 120 ? r.texto.slice(0,120)+'…' : r.texto) : '';
+      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}</div><div class="ppcd">${fecha}</div></div>`;
     }).join('');
   };
 

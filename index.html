@@ -1584,36 +1584,29 @@
       </div>
     </div>
 
-    <!-- MODAL CONFIG NÓMINA (secciones por local) -->
+    <!-- MODAL CONFIG NÓMINA (puestos por local) -->
     <div class="bj-modal-overlay" id="ip-nomina-config-overlay" onclick="infoPersonal.cerrarConfigNomina(event)">
       <div class="bj-modal" style="max-width:640px" onclick="event.stopPropagation()">
         <div class="bj-modal-header">
           <div>
             <div class="bj-modal-tag" style="color:var(--m4)">Nómina</div>
-            <div class="bj-modal-title">Configurar secciones y dotación</div>
+            <div class="bj-modal-title">Configurar dotación por puesto</div>
           </div>
           <button class="bj-modal-close" onclick="infoPersonal.cerrarConfigNomina()">✕</button>
         </div>
         <div class="bj-modal-body" style="max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
-          <div style="font-size:12px;color:var(--muted)">Seleccioná un local para configurar sus secciones y la cantidad de empleados requerida en cada una.</div>
+          <div style="font-size:12px;color:var(--muted)">Seleccioná un local y configurá cuántas personas se necesitan en cada puesto.</div>
           <div style="display:flex;gap:10px;align-items:center">
             <select class="bj-select" id="ip-nc-local" onchange="infoPersonal.cargarSeccionesLocal(this.value)" style="flex:1;border-color:color-mix(in srgb,var(--m4) 40%,var(--border))">
               <option value="">— elegir local —</option>
             </select>
           </div>
-          <div id="ip-nc-secciones" style="display:flex;flex-direction:column;gap:10px"></div>
-          <div id="ip-nc-add" style="display:none;flex-direction:column;gap:10px">
-            <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--m4)">Nueva sección</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <input class="bj-input" id="ip-nc-nueva-nombre" placeholder="Nombre de la sección (Ej: Cocina)" style="flex:1;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
-              <input class="bj-input" id="ip-nc-nueva-dot" type="number" min="1" placeholder="Dotación" style="width:100px;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
-              <button class="bj-btn" onclick="infoPersonal.agregarSeccion()" style="background:var(--m4);color:#0e0f11">Agregar</button>
-            </div>
-          </div>
+          <div id="ip-nc-secciones" style="display:flex;flex-direction:column;gap:8px"></div>
           <div id="ip-nc-status" style="font-size:12px;font-family:'DM Mono',monospace;min-height:16px;color:var(--accent2)"></div>
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="infoPersonal.cerrarConfigNomina()">Cerrar</button>
+          <button class="bj-btn" onclick="infoPersonal.guardarDotacionPuestos()" style="background:var(--m4);color:#0e0f11">Guardar</button>
         </div>
       </div>
     </div>
@@ -1689,12 +1682,52 @@
           <div class="bj-form-row">
             <div class="bj-field bj-field-wide">
               <label class="bj-label">Puesto Real</label>
-              <input class="bj-input ip-inp" id="ip-puesto-real" placeholder="Ej: Cocinero A">
+              <select class="bj-input ip-inp" id="ip-puesto-real">
+                <option value="">— seleccionar —</option>
+                <option value="Gerencia">Gerencia</option>
+                <option value="Director">Director</option>
+                <option value="Gerente general">Gerente general</option>
+                <option value="Gerente de compras">Gerente de compras</option>
+                <option value="Jefa de administracion">Jefa de administracion</option>
+                <option value="Administracion">Administracion</option>
+                <option value="Compras">Compras</option>
+                <option value="RRHH">RRHH</option>
+                <option value="Auditora jefe">Auditora jefe</option>
+                <option value="Auditora">Auditora</option>
+                <option value="Supervision">Supervision</option>
+                <option value="Caja">Caja</option>
+                <option value="Recepcion">Recepcion</option>
+                <option value="Camarero">Camarero</option>
+                <option value="Camarero Jr">Camarero Jr</option>
+                <option value="Corredor">Corredor</option>
+                <option value="Jefe de barra">Jefe de barra</option>
+                <option value="Barra">Barra</option>
+                <option value="Chef">Chef</option>
+                <option value="Sous Chef">Sous Chef</option>
+                <option value="Cocina">Cocina</option>
+                <option value="Volante">Volante</option>
+                <option value="Sartenes">Sartenes</option>
+                <option value="Wok">Wok</option>
+                <option value="Causas">Causas</option>
+                <option value="Frituras/Sanguches">Frituras/Sanguches</option>
+                <option value="Produccion">Produccion</option>
+                <option value="Pasteleria">Pasteleria</option>
+                <option value="Bacha">Bacha</option>
+                <option value="Limpieza">Limpieza</option>
+                <option value="Almacen">Almacen</option>
+                <option value="Vigilancia">Vigilancia</option>
+                <option value="Valet Parking">Valet Parking</option>
+                <option value="Cebiche">Cebiche</option>
+                <option value="Tiraditos">Tiraditos</option>
+                <option value="Mantenimiento">Mantenimiento</option>
+              </select>
             </div>
             <div class="bj-field bj-field-wide">
               <label class="bj-label">Sección</label>
               <select class="bj-input ip-inp" id="ip-seccion">
-                <option value="">— seleccionar —</option>
+                <option value="">— sin sección —</option>
+                <option value="Cocina">Cocina</option>
+                <option value="Salon">Salon</option>
               </select>
             </div>
             <div class="bj-field bj-field-wide">
@@ -2322,12 +2355,6 @@
             <div id="portal-campo-video" style="display:none;flex-direction:column;gap:5px">
               <label style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">URL del video (YouTube / Vimeo)</label>
               <input class="bj-input" id="portal-video-url" placeholder="https://youtube.com/watch?v=..." style="border-color:color-mix(in srgb,var(--m8) 30%,var(--border))">
-            </div>
-            <!-- Link externo -->
-            <div style="display:flex;flex-direction:column;gap:5px">
-              <label style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Link externo (opcional)</label>
-              <input class="bj-input" id="portal-link-url" placeholder="https://..." style="border-color:color-mix(in srgb,var(--m8) 30%,var(--border))">
-              <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">Si ingresás un link, los empleados podrán hacer clic para abrirlo.</span>
             </div>
             <!-- Destacar -->
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
@@ -3084,7 +3111,7 @@ const infoPersonal = (() => {
         <td>
           <div class="bj-row-actions">
             <button class="bj-icon-btn" title="Editar" onclick="infoPersonal.edit('${r.id}')">✏</button>
-            <button class="bj-icon-btn" title="Dar de baja" style="color:var(--m6)" onclick="infoPersonal.darDeBaja('${r.id}')">🚪</button>
+            <button class="bj-icon-btn" title="Dar de baja" style="color:var(--m6)" onclick="infoPersonal.darDeBaja('${r.id}')">💀</button>
             <button class="bj-icon-btn del" title="Eliminar" onclick="infoPersonal.askDelete('${r.id}','${esc(r.nombre)}')">✕</button>
           </div>
         </td>
@@ -3308,8 +3335,18 @@ const infoPersonal = (() => {
   }
 
   // -- NÓMINA -----------------------------------------------
-  const COL_NOM = 'nomina-secciones'; // { localNombre, secciones: [{nombre, dotacion}] }
-  let _nominaConfig = {}; // { [localNombre]: [{nombre, dotacion, id?}] }
+  const COL_NOM = 'nomina-secciones';
+  const PUESTOS_LISTA = [
+    'Gerencia','Director','Gerente general','Gerente de compras',
+    'Jefa de administracion','Administracion','Compras','RRHH',
+    'Auditora jefe','Auditora','Supervision','Caja','Recepcion',
+    'Camarero','Camarero Jr','Corredor','Jefe de barra','Barra',
+    'Chef','Sous Chef','Cocina','Volante','Sartenes','Wok',
+    'Causas','Frituras/Sanguches','Produccion','Pasteleria',
+    'Bacha','Limpieza','Almacen','Vigilancia','Valet Parking',
+    'Cebiche','Tiraditos','Mantenimiento'
+  ];
+  let _nominaConfig = {};
 
   async function _cargarNominaConfig() {
     if (!db) return;
@@ -3317,7 +3354,7 @@ const infoPersonal = (() => {
     _nominaConfig = {};
     snap.docs.forEach(d => {
       const data = d.data();
-      _nominaConfig[data.localNombre] = { id: d.id, secciones: data.secciones || [] };
+      _nominaConfig[data.localNombre] = { id: d.id, puestos: data.puestos || {} };
     });
   }
 
@@ -3333,23 +3370,10 @@ const infoPersonal = (() => {
       sel.innerHTML = base + locales.map(l => `<option value="${l.nombre}">${l.nombre}</option>`).join('');
       sel.value = cur;
     });
-
-    // También poblar el select de sección en el form de empleado
-    const ipSec = document.getElementById('ip-seccion');
-    if (ipSec) {
-      const localVal = document.getElementById('ip-local')?.value || '';
-      _actualizarSelectSeccion(localVal);
-    }
   }
 
   function _actualizarSelectSeccion(localNombre) {
-    const sel = document.getElementById('ip-seccion');
-    if (!sel) return;
-    const cur = sel.value;
-    const secs = _nominaConfig[localNombre]?.secciones || [];
-    sel.innerHTML = '<option value="">— sin sección —</option>' +
-      secs.map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join('');
-    if (cur) sel.value = cur;
+    // Sección es fija (Cocina / Salon)
   }
 
   async function renderNomina() {
@@ -3359,24 +3383,21 @@ const infoPersonal = (() => {
     const locales = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
     const localesFiltrados = filtroLocal ? locales.filter(l => l.nombre === filtroLocal) : locales;
 
-    // Solo empleados activos (sin baja registrada)
     const bajasReg = typeof bajas !== 'undefined' ? bajas.getRegistros() : [];
     const activosFn = r => !bajasReg.some(b => b['ip-ref'] === r.id || (b.cuil && b.cuil === r.cuil && r.cuil));
     const activos = _registros.filter(activosFn);
 
-    // Resumen global
     const resEl = document.getElementById('ip-nomina-resumen');
     if (resEl) {
       const total = activos.length;
       const locTotal = [...new Set(activos.map(r => r.local).filter(Boolean))].length;
       let dotTotal = 0;
-      Object.values(_nominaConfig).forEach(c => c.secciones?.forEach(s => dotTotal += (parseInt(s.dotacion)||0)));
-      const chips = [
+      Object.values(_nominaConfig).forEach(c => Object.values(c.puestos||{}).forEach(v => dotTotal += (parseInt(v)||0)));
+      resEl.innerHTML = [
         ['Empleados activos', total, 'var(--m4)'],
         ['Locales activos', locTotal, 'var(--m2)'],
-        ['Dotación requerida total', dotTotal, 'var(--m1)'],
-      ];
-      resEl.innerHTML = chips.map(([l,v,c]) =>
+        ['Dotacion requerida total', dotTotal, 'var(--m1)'],
+      ].map(([l,v,c]) =>
         `<div style="background:color-mix(in srgb,${c} 8%,var(--surface2));border:1px solid color-mix(in srgb,${c} 25%,var(--border));border-radius:12px;padding:14px 20px;display:flex;flex-direction:column;gap:4px;min-width:160px">
           <div style="font-size:26px;font-weight:800;color:${c}">${v}</div>
           <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">${l}</div>
@@ -3384,41 +3405,39 @@ const infoPersonal = (() => {
       ).join('');
     }
 
-    // Panel de locales
     const panel = document.getElementById('ip-nomina-panel');
     if (!panel) return;
     if (!localesFiltrados.length) {
-      panel.innerHTML = `<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:24px 0">No hay locales configurados. Agregá locales en Admin Locales.</div>`;
+      panel.innerHTML = `<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;padding:24px 0">No hay locales configurados.</div>`;
       return;
     }
 
     panel.innerHTML = localesFiltrados.map(loc => {
       const cfg = _nominaConfig[loc.nombre];
-      const secciones = cfg?.secciones || [];
+      const puestos = cfg?.puestos || {};
       const empLocal = activos.filter(r => r.local === loc.nombre);
       const totalLocal = empLocal.length;
+      const dotLocal = Object.values(puestos).reduce((a, v) => a + (parseInt(v)||0), 0);
 
-      let dotLocal = secciones.reduce((a, s) => a + (parseInt(s.dotacion)||0), 0);
+      const puestosConDatos = PUESTOS_LISTA.filter(p => (parseInt(puestos[p])||0) > 0 || empLocal.filter(r => r['puesto-real'] === p).length > 0);
 
-      const seccionesHtml = secciones.length ? secciones.map(sec => {
-        const actual = empLocal.filter(r => r.seccion === sec.nombre).length;
-        const req = parseInt(sec.dotacion) || 0;
+      const puestosHtml = puestosConDatos.length ? puestosConDatos.map(p => {
+        const actual = empLocal.filter(r => r['puesto-real'] === p).length;
+        const req = parseInt(puestos[p]) || 0;
         const diff = actual - req;
-        const pct  = req > 0 ? Math.min(100, Math.round((actual/req)*100)) : (actual > 0 ? 100 : 0);
-        const color = actual >= req ? 'var(--accent2)' : (actual >= req * 0.7 ? 'var(--m1)' : 'var(--danger)');
-        const label = diff === 0 ? 'Completo' : (diff > 0 ? `+${diff} extra` : `${diff} faltante${Math.abs(diff)!==1?'s':''}`);
+        const pct = req > 0 ? Math.min(100, Math.round((actual/req)*100)) : (actual > 0 ? 100 : 0);
+        const color = req === 0 ? 'var(--muted)' : (actual >= req ? 'var(--accent2)' : (actual >= req * 0.7 ? 'var(--m1)' : 'var(--danger))'));
+        const label = req === 0 ? `${actual} sin req.` : (diff === 0 ? 'Completo' : (diff > 0 ? `+${diff} extra` : `${diff} faltante${Math.abs(diff)!==1?'s':''}`));
         return `<div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="font-size:13px;font-weight:600">${sec.nombre}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:11px;color:${color};white-space:nowrap">${actual} / ${req} · ${label}</div>
+            <div style="font-size:13px;font-weight:600">${p}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;color:${color};white-space:nowrap">${actual} / ${req||'—'} · ${label}</div>
           </div>
-          <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div>
-          </div>
+          ${req > 0 ? `<div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div></div>` : ''}
         </div>`;
-      }).join('') : `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:8px 0">Sin secciones configuradas. Usá <strong style="color:var(--m4)">⚙ Configurar dotaciones</strong> para agregarlas.</div>`;
+      }).join('') : `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:8px 0">Sin datos. Usa <strong style="color:var(--m4)">Configurar dotaciones</strong> para definir cuantos necesitas por puesto.</div>`;
 
-      const globalColor = dotLocal === 0 ? 'var(--muted)' : (totalLocal >= dotLocal ? 'var(--accent2)' : (totalLocal >= dotLocal * 0.7 ? 'var(--m1)' : 'var(--danger)'));
+      const globalColor = dotLocal === 0 ? 'var(--muted)' : (totalLocal >= dotLocal ? 'var(--accent2)' : (totalLocal >= dotLocal * 0.7 ? 'var(--m1)' : 'var(--danger))'));
 
       return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
         <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
@@ -3426,26 +3445,22 @@ const infoPersonal = (() => {
             <div style="font-size:15px;font-weight:700">${loc.nombre}</div>
             ${loc.razon ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${loc.razon}</div>` : ''}
           </div>
-          <div style="display:flex;gap:12px;align-items:center">
-            <div style="text-align:right">
-              <div style="font-size:22px;font-weight:800;color:${globalColor}">${totalLocal}</div>
-              <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">de ${dotLocal} requeridos</div>
-            </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:800;color:${globalColor}">${totalLocal}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">de ${dotLocal} requeridos</div>
           </div>
         </div>
         <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-          ${seccionesHtml}
+          ${puestosHtml}
         </div>
       </div>`;
     }).join('');
   }
 
-  // -- CONFIG NÓMINA (modal) ------------------------------------
   async function abrirConfigNomina() {
     await _cargarNominaConfig();
     _poblarNominaLocalSelect();
     document.getElementById('ip-nc-secciones').innerHTML = '';
-    document.getElementById('ip-nc-add').style.display = 'none';
     document.getElementById('ip-nc-status').textContent = '';
     document.getElementById('ip-nomina-config-overlay').classList.add('open');
   }
@@ -3457,88 +3472,62 @@ const infoPersonal = (() => {
 
   function cargarSeccionesLocal(localNombre) {
     const cont = document.getElementById('ip-nc-secciones');
-    const addDiv = document.getElementById('ip-nc-add');
     document.getElementById('ip-nc-status').textContent = '';
-    if (!localNombre) { cont.innerHTML = ''; addDiv.style.display = 'none'; return; }
-    addDiv.style.display = 'flex';
-    const secs = _nominaConfig[localNombre]?.secciones || [];
-    _renderSeccionesConfig(secs, localNombre);
+    if (!localNombre) { cont.innerHTML = ''; return; }
+    const puestos = _nominaConfig[localNombre]?.puestos || {};
+    _renderPuestosConfig(puestos, localNombre);
   }
 
-  function _renderSeccionesConfig(secs, localNombre) {
+  function _renderPuestosConfig(puestos) {
     const cont = document.getElementById('ip-nc-secciones');
-    if (!secs.length) {
-      cont.innerHTML = `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">No hay secciones todavía. Agregá la primera abajo.</div>`;
-      return;
-    }
-    cont.innerHTML = secs.map((s, i) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
-        <div style="flex:1;font-size:13px;font-weight:600">${s.nombre}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="number" min="1" value="${s.dotacion||0}"
-            style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:center"
-            onchange="infoPersonal.editarDotacion('${localNombre}',${i},this.value)">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">requeridos</div>
-        </div>
-        <button onclick="infoPersonal.eliminarSeccion('${localNombre}',${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px">&#x2715;</button>
-      </div>`).join('');
+    cont.innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--m4);margin-bottom:4px">Dotacion requerida por puesto (0 = no aplica)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
+        ${PUESTOS_LISTA.map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px">
+            <div style="font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p}</div>
+            <input type="number" min="0" value="${parseInt(puestos[p])||0}" data-puesto="${p}"
+              style="width:56px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:center">
+          </div>`).join('')}
+      </div>`;
   }
 
-  async function agregarSeccion() {
+  async function guardarDotacionPuestos() {
     const localNombre = document.getElementById('ip-nc-local').value;
-    const nombre = document.getElementById('ip-nc-nueva-nombre').value.trim();
-    const dotacion = parseInt(document.getElementById('ip-nc-nueva-dot').value) || 0;
     const status = document.getElementById('ip-nc-status');
-    if (!localNombre || !nombre) { status.style.color = 'var(--danger)'; status.textContent = 'Completá local y nombre.'; return; }
-    const cfg = _nominaConfig[localNombre] || { secciones: [] };
-    if (cfg.secciones.find(s => s.nombre.toLowerCase() === nombre.toLowerCase())) {
-      status.style.color = 'var(--danger)'; status.textContent = 'Esa sección ya existe.'; return;
-    }
-    cfg.secciones.push({ nombre, dotacion });
+    if (!localNombre) { status.style.color = 'var(--danger)'; status.textContent = 'Selecciona un local.'; return; }
+    const inputs = document.querySelectorAll('#ip-nc-secciones input[data-puesto]');
+    const puestos = {};
+    inputs.forEach(inp => { const v = parseInt(inp.value)||0; if(v>0) puestos[inp.dataset.puesto]=v; });
+    const cfg = _nominaConfig[localNombre] || {};
+    cfg.puestos = puestos;
     await _guardarConfig(localNombre, cfg);
-    document.getElementById('ip-nc-nueva-nombre').value = '';
-    document.getElementById('ip-nc-nueva-dot').value = '';
-    status.style.color = 'var(--accent2)'; status.textContent = 'Sección agregada.';
-    _renderSeccionesConfig(cfg.secciones, localNombre);
-    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
+    status.style.color = 'var(--accent2)'; status.textContent = 'Dotacion guardada ✓';
   }
 
-  async function editarDotacion(localNombre, idx, val) {
-    const cfg = _nominaConfig[localNombre];
-    if (!cfg) return;
-    cfg.secciones[idx].dotacion = parseInt(val) || 0;
-    await _guardarConfig(localNombre, cfg);
-    const status = document.getElementById('ip-nc-status');
-    status.style.color = 'var(--accent2)'; status.textContent = 'Dotación actualizada.';
-  }
-
-  async function eliminarSeccion(localNombre, idx) {
-    const cfg = _nominaConfig[localNombre];
-    if (!cfg) return;
-    const nombre = cfg.secciones[idx]?.nombre || '';
-    if (!confirm(`Eliminar sección "${nombre}"?`)) return;
-    cfg.secciones.splice(idx, 1);
-    await _guardarConfig(localNombre, cfg);
-    _renderSeccionesConfig(cfg.secciones, localNombre);
-    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
-  }
+  async function agregarSeccion() {}
+  async function editarDotacion() {}
+  async function eliminarSeccion() {}
 
   async function _guardarConfig(localNombre, cfg) {
     if (!db) return;
     _nominaConfig[localNombre] = cfg;
+    const payload = { localNombre, puestos: cfg.puestos || {} };
     if (cfg.id) {
-      await db.collection(COL_NOM).doc(cfg.id).set({ localNombre, secciones: cfg.secciones });
+      await db.collection(COL_NOM).doc(cfg.id).set(payload);
     } else {
-      const ref = await db.collection(COL_NOM).add({ localNombre, secciones: cfg.secciones });
+      const ref = await db.collection(COL_NOM).add(payload);
       _nominaConfig[localNombre].id = ref.id;
     }
   }
+
 
   return { init, openForm, closeForm, edit, guardar,
            askDelete, cancelDelete, confirmDelete,
            filtrar, filtrarLocal, filtrarProv, exportCSV,
            setTab, renderNomina, abrirConfigNomina, cerrarConfigNomina,
            cargarSeccionesLocal, agregarSeccion, editarDotacion, eliminarSeccion,
+           guardarDotacionPuestos,
            _actualizarSelectSeccion,
            getRegistros: () => _registros,
            refreshBadges: () => _renderTabla(),
@@ -4765,7 +4754,7 @@ const portal = (() => {
 
   function abrirNuevo() {
     _editId = null; _tipo = 'noticia';
-    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url','portal-link-url'].forEach(id => {
+    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('portal-destacado').checked = false;
@@ -4811,7 +4800,6 @@ const portal = (() => {
       texto:      document.getElementById('portal-texto').value.trim(),
       imagenUrl:  document.getElementById('portal-imagen-url').value.trim(),
       videoUrl:   document.getElementById('portal-video-url').value.trim(),
-      linkUrl:    document.getElementById('portal-link-url').value.trim(),
       destacado:  document.getElementById('portal-destacado').checked,
       updatedAt:  new Date().toISOString(),
     };
@@ -4842,7 +4830,6 @@ const portal = (() => {
     document.getElementById('portal-texto').value      = r.texto     || '';
     document.getElementById('portal-imagen-url').value = r.imagenUrl || '';
     document.getElementById('portal-video-url').value  = r.videoUrl  || '';
-    document.getElementById('portal-link-url').value   = r.linkUrl   || '';
     document.getElementById('portal-destacado').checked = !!r.destacado;
     document.getElementById('portal-form-error').textContent = '';
     _setTipoCampos(_tipo);
@@ -5019,7 +5006,6 @@ function _initPortalPublico() {
         <div class="ppbg">${lb[r.tipo]||r.tipo}</div>
         <div class="pp-mtit">${r.titulo||''}${star}</div>
         ${r.texto ? `<div class="pp-mtxt">${r.texto.replace(/\n/g,'<br>')}</div>` : ''}
-        ${r.linkUrl ? `<a href="${r.linkUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;color:#ff4ab4;font-size:13px;font-family:'DM Mono',monospace;text-decoration:none;border:1px solid rgba(255,74,180,.3);border-radius:8px;padding:7px 14px;width:fit-content;transition:background .2s" onmouseover="this.style.background='rgba(255,74,180,.1)'" onmouseout="this.style.background='transparent'">&#x1F517; Abrir enlace</a>` : ''}
         ${fecha ? `<div class="pp-mdate">${fecha}</div>` : ''}
       </div>`;
     document.getElementById('pp-ov').classList.add('open');
@@ -5056,8 +5042,7 @@ function _initPortalPublico() {
       else if (r.tipo === 'video' && r.videoUrl) media = `<div class="ppc-vid-wrap"><iframe class="ppcv" src="${_emb(r.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`;
       const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
       const textoCorto = r.texto ? (r.texto.length > 120 ? r.texto.slice(0,120)+'…' : r.texto) : '';
-      const linkChip = r.linkUrl ? `<span style="display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:10px;color:#ff4ab4;margin-top:2px">&#x1F517; Tiene enlace</span>` : '';
-      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}${linkChip}</div><div class="ppcd">${fecha}</div></div>`;
+      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}</div><div class="ppcd">${fecha}</div></div>`;
     }).join('');
   };
 

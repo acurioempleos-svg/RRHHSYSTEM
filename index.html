@@ -6007,7 +6007,6 @@ const horarios = (() => {
   let _planillaDocId = null;
   let _unsub = null;
   let _unsubAsist = null;
-  let _lastOptimisticWrite = 0; // timestamp de la última escritura optimista
 
   // Modal turno
   let _mt_empId = null, _mt_diaIdx = null;
@@ -6128,14 +6127,9 @@ const horarios = (() => {
 
     // Listener en doc de planilla
     _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
-      const msSinceWrite = Date.now() - _lastOptimisticWrite;
       if (snap.exists) {
         const data = snap.data();
         const rawTurnos = data.turnos || {};
-        // Si llegó un snapshot vacío dentro de 3s de una escritura optimista, ignorarlo
-        if (Object.keys(rawTurnos).length === 0 && msSinceWrite < 3000) {
-          return;
-        }
         _planilla = {};
         Object.keys(rawTurnos).forEach(empId => {
           _planilla[empId] = {};
@@ -6146,10 +6140,6 @@ const horarios = (() => {
         _planillaEnPlanilla = data.empleados || [];
         _planillaDocId = semId;
       } else {
-        // Doc no existe: si hubo escritura optimista reciente, no borrar estado local
-        if (msSinceWrite < 3000) {
-          return;
-        }
         _planilla = {};
         _planillaEnPlanilla = [];
         _planillaDocId = null;
@@ -6340,19 +6330,8 @@ const horarios = (() => {
         updateObj['local']    = _localActivo;
         updateObj['semanaId'] = semId;
         updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
-        // Actualización local optimista antes de esperar el snapshot
-        if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
-        _planilla[_mt_empId][_mt_diaIdx] = turnoData;
-        if (!yaEsta) _planillaEnPlanilla.push(_mt_empId);
-        _lastOptimisticWrite = Date.now();
-        _renderGrid();
-        try {
-          await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
-          // Leer el doc inmediatamente para verificar qué quedó guardado
-          const snap = await db.collection(COL_PLANILLAS).doc(semId).get();
-        } catch(writeErr) {
-          alert('Error guardando: ' + writeErr.message);
-        }
+        // Escribir en Firestore — el onSnapshot devuelve el estado actualizado automáticamente
+        await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
       } else {
         // Demo: actualizar state local
         if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};

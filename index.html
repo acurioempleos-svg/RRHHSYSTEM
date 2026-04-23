@@ -6260,6 +6260,11 @@ const horarios = (() => {
         updateObj['local']    = _localActivo;
         updateObj['semanaId'] = semId;
         updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        // Actualización local optimista antes de esperar el snapshot
+        if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
+        _planilla[_mt_empId][_mt_diaIdx] = turnoData;
+        if (!yaEsta) _planillaEnPlanilla.push(_mt_empId);
+        _renderGrid();
         await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
       } else {
         // Demo: actualizar state local
@@ -6365,7 +6370,7 @@ const horarios = (() => {
     diasEl.innerHTML = diasConTurnos.map(({ label, i }) => {
       const f = _diaFecha(i);
       const esPasado = f <= hoy;
-      return `<button class="hr-week-btn${!esPasado?' ':''}" style="font-size:11px"
+      return `<button class="hr-week-btn${!esPasado?' ':''}" data-dia="${i}" style="font-size:11px"
         onclick="horarios._seleccionarDiaCierre(${i})"
         ${!esPasado ? 'title="Turno todavía no ocurrió"' : ''}>
         ${label} ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}
@@ -6391,9 +6396,15 @@ const horarios = (() => {
     const empsConTurno = Object.keys(_planilla).filter(empId => (_planilla[empId]||{})[diaIdx]?.entrada);
 
     // Highlight del botón seleccionado
-    document.querySelectorAll('#hr-cierre-dias .hr-week-btn').forEach((btn, idx) => {
+    document.querySelectorAll('#hr-cierre-dias .hr-week-btn').forEach(btn => {
       btn.style.borderColor = '';
       btn.style.color = '';
+      btn.style.background = '';
+      if (parseInt(btn.getAttribute('data-dia')) === diaIdx) {
+        btn.style.borderColor = 'var(--m2)';
+        btn.style.color = 'var(--m2)';
+        btn.style.background = 'rgba(74,255,180,0.12)';
+      }
     });
 
     const lista = document.getElementById('hr-cierre-lista');
@@ -6507,12 +6518,54 @@ const horarios = (() => {
     const btn = document.querySelector('.hr-export-btn.pdf');
     if (btn) { btn.textContent = '⏳ Generando…'; btn.disabled = true; }
     try {
-      const canvas = await html2canvas(grid, {
+      // Clonar el nodo y resolver todos los estilos computados
+      // para evitar que html2canvas falle con color-mix() y var()
+      const clone = grid.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.left = '-9999px';
+      clone.style.width = grid.offsetWidth + 'px';
+      clone.style.background = '#16181c';
+      clone.style.color = '#f0f0ec';
+      document.body.appendChild(clone);
+
+      // Resolver estilos en todos los elementos del clon
+      const origEls = grid.querySelectorAll('*');
+      const cloneEls = clone.querySelectorAll('*');
+      origEls.forEach((orig, i) => {
+        const computed = window.getComputedStyle(orig);
+        const el = cloneEls[i];
+        if (!el) return;
+        // Copiar solo las propiedades visuales relevantes
+        const props = ['color','background-color','background','border-color',
+          'border-top-color','border-bottom-color','border-left-color','border-right-color',
+          'opacity','font-size','font-weight','font-family','padding','margin',
+          'border-radius','display','flex-direction','align-items','justify-content',
+          'gap','width','height','min-width','max-width','flex','flex-wrap',
+          'white-space','overflow','text-overflow','line-height','letter-spacing',
+          'text-transform','border','border-width','border-style'];
+        props.forEach(p => {
+          try { el.style.setProperty(p, computed.getPropertyValue(p)); } catch(_) {}
+        });
+        // Remover cualquier color-mix o var residual que podría quedar en style inline
+        ['color','background-color','border-color'].forEach(p => {
+          const v = el.style.getPropertyValue(p);
+          if (v && (v.includes('color-mix') || v.includes('var('))) {
+            el.style.removeProperty(p);
+          }
+        });
+      });
+
+      const canvas = await html2canvas(clone, {
         backgroundColor: '#16181c',
         scale: 2,
         useCORS: true,
         logging: false,
+        allowTaint: true,
       });
+
+      document.body.removeChild(clone);
+
       const { jsPDF } = window.jspdf;
       const imgW = canvas.width;
       const imgH = canvas.height;
@@ -6529,11 +6582,9 @@ const horarios = (() => {
       const drawH = (imgH / 96 * 25.4) * fitRatio;
       const x = (pageW - drawW) / 2;
       const y = (pageH - drawH) / 2;
-      // Encabezado
       pdf.setFillColor(22, 24, 28);
       pdf.rect(0, 0, pageW, pageH, 'F');
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, drawW, drawH);
-      // Footer
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
       pdf.setTextColor(107, 112, 128);
@@ -6542,6 +6593,9 @@ const horarios = (() => {
       pdf.save(filename);
       _toast('PDF descargado correctamente', 'ok');
     } catch(e) {
+      // Si hay un clon colgado, limpiarlo
+      const colgado = document.body.querySelector('[style*="-9999px"]');
+      if (colgado) document.body.removeChild(colgado);
       _toast('Error al generar el PDF: ' + e.message, 'err');
       console.error(e);
     } finally {

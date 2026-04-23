@@ -4012,13 +4012,32 @@ const infoPersonal = (() => {
 
   let _registros = [], _filtrados = [], _unsub = null, _pendingDel = null;
   let _queryTxt = '', _queryLocal = '', _queryProv = '';
+  let _readyCallbacks = []; // callbacks a ejecutar cuando lleguen los primeros datos
+  let _dataReady = false;
 
   function $f(id) { return document.getElementById('ip-' + id); }
   function $v(id) { return ($f(id) || {}).value || ''; }
   function $s(id, v) { const el = $f(id); if (el) el.value = v ?? ''; }
 
+  function _onReady(fn) {
+    if (_dataReady) { fn(); }
+    else { _readyCallbacks.push(fn); }
+  }
+
+  function _notifyReady() {
+    if (!_dataReady) {
+      _dataReady = true;
+      _readyCallbacks.forEach(fn => { try { fn(); } catch(e) {} });
+      _readyCallbacks = [];
+    }
+  }
+
   function init() {
-    if (_unsub) return;
+    if (_unsub) {
+      // Ya está escuchando, pero si horarios pide init y ya hay datos, notificamos igual
+      if (_dataReady) _notifyReady();
+      return;
+    }
     if (!db) { renderDemo(); return; }
 
     _unsub = db.collection(COL).orderBy('createdAt','desc')
@@ -4026,6 +4045,7 @@ const infoPersonal = (() => {
         _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         _poblarSelects();
         _aplicarFiltros();
+        _notifyReady();
       }, err => {
         console.error('IP snapshot error:', err);
         // Fallback sin ordenamiento si falla el índice
@@ -4034,6 +4054,7 @@ const infoPersonal = (() => {
             .sort((a, b) => (b.createdAt || '') > (a.createdAt || '') ? 1 : -1);
           _poblarSelects();
           _aplicarFiltros();
+          _notifyReady();
         }, err2 => console.error('IP snapshot fallback error:', err2));
       });
   }
@@ -4537,6 +4558,7 @@ const infoPersonal = (() => {
            cargarSeccionesLocal, agregarSeccion, editarDotacion, eliminarSeccion,
            _actualizarSelectSeccion,
            getRegistros: () => _registros,
+           onReady: _onReady,
            refreshBadges: () => _renderTabla(),
            darDeBaja(ipId) {
              // 1. Navegar al módulo bajas
@@ -5525,7 +5547,15 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'info-personal') infoPersonal.init();
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
-  if (moduleId === 'horarios')      { adminLocales.init(); if (typeof infoPersonal !== 'undefined') infoPersonal.init(); setTimeout(() => horarios.init(), 150); }
+  if (moduleId === 'horarios') {
+    adminLocales.init();
+    if (typeof infoPersonal !== 'undefined') {
+      infoPersonal.init();
+      infoPersonal.onReady(() => horarios.init());
+    } else {
+      horarios.init();
+    }
+  }
   if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
 };
 

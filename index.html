@@ -6524,23 +6524,39 @@ const horarios = (() => {
       const rank   = estado.rank  || '';
       const RANKS  = ['S','A','B','C','D'];
 
-      return `<div class="hr-cierre-emp" id="hr-cemp-${empId}">
+      return `<div class="hr-cierre-emp" id="hr-cemp-${empId}" data-empid="${empId}">
         <div>
           <div class="hr-cierre-name">${nombre}</div>
           <div class="hr-cierre-time">${turno.label || (turno.entrada === '08:00' ? 'AM' : 'PM')}</div>
         </div>
         <div class="hr-asist-btns">
-          ${['P','A','T'].map(a => `<button class="hr-asist-btn${asist===a?' sel-'+a:''}" onclick="horarios._setAsist('${empId}','${a}')">${a==='P'?'Pres':a==='A'?'Aus':'Tarde'}</button>`).join('')}
+          ${['P','A','T'].map(a => `<button class="hr-asist-btn${asist===a?' sel-'+a:''}" data-action="asist" data-empid="${empId}" data-val="${a}">${a==='P'?'Pres':a==='A'?'Aus':'Tarde'}</button>`).join('')}
         </div>
         <input class="hr-tard-inp" id="hr-tard-${empId}" type="number" min="0" max="180" placeholder="min"
           value="${tarde}" style="${asist!=='T'?'visibility:hidden':''}"
-          onchange="horarios._setTarde('${empId}',this.value)">
+          data-action="tarde" data-empid="${empId}">
         <div class="hr-rank-btns">
-          ${RANKS.map(r => `<button class="hr-rank-btn${rank===r?' sel':''}" data-r="${r}"
-            onclick="horarios._setRank('${empId}','${r}')">${r}</button>`).join('')}
+          ${RANKS.map(r => `<button class="hr-rank-btn${rank===r?' sel':''}" data-action="rank" data-empid="${empId}" data-val="${r}" data-r="${r}">${r}</button>`).join('')}
         </div>
       </div>`;
     }).join('');
+
+    // Event delegation — un solo listener en la lista, no en cada botón
+    lista.onclick = e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const empId  = btn.dataset.empid;
+      const val    = btn.dataset.val;
+      if (action === 'asist') { _setAsist(empId, val); }
+      else if (action === 'rank') { _setRank(empId, val); }
+    };
+    lista.onchange = e => {
+      const inp = e.target.closest('[data-action="tarde"]');
+      if (!inp) return;
+      _setTarde(inp.dataset.empid, inp.value);
+    };
   }
 
   function _setAsist(empId, valor) {

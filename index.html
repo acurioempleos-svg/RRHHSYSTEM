@@ -6012,6 +6012,7 @@ const horarios = (() => {
   let _planillaDocId = null;
   let _unsub = null;
   let _unsubAsist = null;
+  let _lastOptimisticWrite = 0; // timestamp de la última escritura optimista
 
   // Modal turno
   let _mt_empId = null, _mt_diaIdx = null;
@@ -6135,11 +6136,15 @@ const horarios = (() => {
 
     // Listener en doc de planilla
     _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
+      const msSinceWrite = Date.now() - _lastOptimisticWrite;
       if (snap.exists) {
         const data = snap.data();
-        // Normalizar: Firestore devuelve keys numéricas como strings ("0","1"…)
-        // Convertimos a número para que el acceso por índice funcione siempre
         const rawTurnos = data.turnos || {};
+        // Si llegó un snapshot vacío dentro de 3s de una escritura optimista, ignorarlo
+        if (Object.keys(rawTurnos).length === 0 && msSinceWrite < 3000) {
+          console.log('[onSnapshot] ignorando snapshot vacío post-escritura optimista (' + msSinceWrite + 'ms)');
+          return;
+        }
         _planilla = {};
         Object.keys(rawTurnos).forEach(empId => {
           _planilla[empId] = {};
@@ -6150,6 +6155,11 @@ const horarios = (() => {
         _planillaEnPlanilla = data.empleados || [];
         _planillaDocId = semId;
       } else {
+        // Doc no existe: si hubo escritura optimista reciente, no borrar estado local
+        if (msSinceWrite < 3000) {
+          console.log('[onSnapshot] doc no existe pero hay escritura pendiente, ignorando (' + msSinceWrite + 'ms)');
+          return;
+        }
         _planilla = {};
         _planillaEnPlanilla = [];
         _planillaDocId = null;
@@ -6187,6 +6197,9 @@ const horarios = (() => {
     let empIds = _planillaEnPlanilla.length
       ? _planillaEnPlanilla
       : _empleados.map(e => e.id);
+
+    console.log('[_renderGrid] empIds=', empIds, '_planillaEnPlanilla=', _planillaEnPlanilla, '_empleados.length=', _empleados.length);
+    console.log('[_renderGrid] _planilla=', JSON.stringify(_planilla));
 
     // Si no hay empleados
     if (!empIds.length && !_empleados.length) {
@@ -6346,13 +6359,20 @@ const horarios = (() => {
         if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
         _planilla[_mt_empId][_mt_diaIdx] = turnoData;
         if (!yaEsta) _planillaEnPlanilla.push(_mt_empId);
-        console.log('[guardarTurno] empId=' + _mt_empId + ' diaIdx=' + _mt_diaIdx + ' turno=', turnoData);
-        console.log('[guardarTurno] _planillaEnPlanilla=', _planillaEnPlanilla);
-        console.log('[guardarTurno] _empleados IDs=', _empleados.map(e=>e.id));
-        console.log('[guardarTurno] _empleados locales=', _empleados.map(e=>e.local));
-        console.log('[guardarTurno] _localActivo=', _localActivo);
+        _lastOptimisticWrite = Date.now();
+        console.log('[guardarTurno] semId=' + semId);
+        console.log('[guardarTurno] updateObj=', JSON.stringify(updateObj));
         _renderGrid();
-        await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
+        try {
+          await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
+          console.log('[guardarTurno] Firestore write OK');
+          // Leer el doc inmediatamente para verificar qué quedó guardado
+          const snap = await db.collection(COL_PLANILLAS).doc(semId).get();
+          console.log('[guardarTurno] doc en Firestore después de set:', JSON.stringify(snap.data()));
+        } catch(writeErr) {
+          console.error('[guardarTurno] ERROR Firestore:', writeErr);
+          alert('Error guardando: ' + writeErr.message);
+        }
       } else {
         // Demo: actualizar state local
         if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};

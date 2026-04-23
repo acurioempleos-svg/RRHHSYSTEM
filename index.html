@@ -4013,6 +4013,7 @@ const infoPersonal = (() => {
   let _registros = [], _filtrados = [], _unsub = null, _pendingDel = null;
   let _queryTxt = '', _queryLocal = '', _queryProv = '';
   let _readyCallbacks = []; // callbacks a ejecutar cuando lleguen los primeros datos
+  let _updateListeners = []; // callbacks a ejecutar en cada actualización
   let _dataReady = false;
 
   function $f(id) { return document.getElementById('ip-' + id); }
@@ -4025,16 +4026,21 @@ const infoPersonal = (() => {
   }
 
   function _notifyReady() {
+    // Primera vez: ejecutar callbacks pendientes
     if (!_dataReady) {
       _dataReady = true;
       _readyCallbacks.forEach(fn => { try { fn(); } catch(e) {} });
       _readyCallbacks = [];
     }
+    // Siempre: notificar a suscriptores de actualización (ej: horarios)
+    _updateListeners.forEach(fn => { try { fn(); } catch(e) {} });
   }
+
+  function onUpdate(fn) { _updateListeners.push(fn); }
 
   function init() {
     if (_unsub) {
-      // Ya está escuchando, pero si horarios pide init y ya hay datos, notificamos igual
+      // Ya está escuchando: si ya hay datos, notificar inmediatamente
       if (_dataReady) _notifyReady();
       return;
     }
@@ -4559,6 +4565,7 @@ const infoPersonal = (() => {
            _actualizarSelectSeccion,
            getRegistros: () => _registros,
            onReady: _onReady,
+           onUpdate: onUpdate,
            refreshBadges: () => _renderTabla(),
            darDeBaja(ipId) {
              // 1. Navegar al módulo bajas
@@ -4596,17 +4603,25 @@ const infoPersonal = (() => {
 const adminLocales = (() => {
   const COL = 'locales';
   let _locales = [], _unsub = null, _pendingDel = null;
+  let _readyCbs = [], _ready = false;
+  function _onReady(fn) { if (_ready) fn(); else _readyCbs.push(fn); }
+  function _notifyReady() { if (!_ready) { _ready = true; _readyCbs.forEach(fn => { try { fn(); } catch(e) {} }); _readyCbs = []; } }
 
   function $f(id) { return document.getElementById('al-' + id); }
   function $v(id) { const e = $f(id); return e ? e.value.trim() : ''; }
 
   function init() {
-    if (_unsub) return;
-    if (!db) { _render([]); return; }
+    if (_unsub) {
+      // Ya escuchando: si ya tenemos datos, notificar inmediatamente
+      if (_ready) _notifyReady();
+      return;
+    }
+    if (!db) { _render([]); _notifyReady(); return; }
     _unsub = db.collection(COL).orderBy('nombre').onSnapshot(snap => {
       _locales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       _render();
       _propagarSelects();
+      _notifyReady();
     }, err => console.error('Locales listener:', err));
   }
 
@@ -4733,7 +4748,7 @@ const adminLocales = (() => {
 
   function esc(v) { return String(v ?? '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;"); }
 
-  return { init, getLocales, openForm, closeForm, edit, guardar, askDelete, cancelDelete, confirmDelete };
+  return { init, getLocales, onReady: _onReady, openForm, closeForm, edit, guardar, askDelete, cancelDelete, confirmDelete };
 })();
 
 // ==============================================================
@@ -5549,11 +5564,17 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'admin-locales') adminLocales.init();
   if (moduleId === 'horarios') {
     adminLocales.init();
+    if (typeof infoPersonal !== 'undefined') infoPersonal.init();
+    // Esperar que AMBAS dependencias async estén listas antes de inicializar horarios
+    let _locReady = false, _ipReady = false;
+    function _tryInitHorarios() {
+      if (_locReady && _ipReady) horarios.init();
+    }
+    adminLocales.onReady(() => { _locReady = true; _tryInitHorarios(); });
     if (typeof infoPersonal !== 'undefined') {
-      infoPersonal.init();
-      infoPersonal.onReady(() => horarios.init());
+      infoPersonal.onReady(() => { _ipReady = true; _tryInitHorarios(); });
     } else {
-      horarios.init();
+      _ipReady = true; _tryInitHorarios();
     }
   }
   if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
@@ -5998,16 +6019,17 @@ const horarios = (() => {
   let _cierre_diaIdx = null;
   let _cierreState   = {}; // { empId: { asist, tarde, rank } }
 
+  let _ipUpdateSub = false; // flag para no suscribir onUpdate dos veces
+
   // ── INIT ────────────────────────────────────────────────────
   function init() {
     if (!_semanaBase) _semanaBase = _luneDe(new Date());
+
     _locales = adminLocales.getLocales().map(l => l.nombre).filter(Boolean).sort();
     if (!_locales.length) {
-      // fallback: leer desde Info Personal
       const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
       _locales = [...new Set(ipRegs.map(r => r.local).filter(Boolean))].sort();
     }
-    _renderTabs();
 
     // Determinar local activo según rol
     const rol   = window._currentRol || 'rrhh';
@@ -6019,9 +6041,20 @@ const horarios = (() => {
     }
     _renderTabs();
 
-    // Mostrar botón agregar solo si es rrhh o gerente (no supervisor puro)
+    // Mostrar botón agregar solo si es rrhh o gerente
     const btnAgregar = document.getElementById('hr-btn-agregar');
     if (btnAgregar) btnAgregar.style.display = (rol === 'rrhh' || rol === 'gerente') ? '' : 'none';
+
+    // Suscribirse a actualizaciones de infoPersonal para re-renderizar si llegan tarde
+    if (!_ipUpdateSub && typeof infoPersonal !== 'undefined' && infoPersonal.onUpdate) {
+      _ipUpdateSub = true;
+      infoPersonal.onUpdate(() => {
+        // Solo re-renderizar si el módulo horarios está activo
+        if (document.getElementById('module-horarios')?.classList.contains('active')) {
+          _renderGrid();
+        }
+      });
+    }
 
     _cargarSemana();
   }
@@ -6137,6 +6170,10 @@ const horarios = (() => {
   function _renderGrid() {
     const cont = document.getElementById('hr-grid-container');
     if (!cont) return;
+
+    // Siempre releer empleados frescos de infoPersonal (pueden llegar después de _cargarSemana)
+    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
+    _empleados = ipRegs.filter(r => r.local === _localActivo);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const todayStr = hoy.toISOString().slice(0,10);

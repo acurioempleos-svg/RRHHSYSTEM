@@ -14,6 +14,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+<!-- PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
   /* ─── VARIABLES ───────────────────────────────────────────── */
   :root {
@@ -880,6 +884,124 @@
     color:var(--m1);font-family:'DM Mono',monospace;font-size:10px;
   }
 
+  /* ─── INGRESOS: modal éxito + modal mail ──────────────────── */
+  .in-success-overlay {
+    position: fixed; inset: 0; z-index: 220;
+    background: rgba(0,0,0,.72); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .in-success-overlay.open { display: flex; }
+  .in-success-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; width: 100%; max-width: 420px;
+    animation: fadeIn 150ms ease; overflow: hidden;
+  }
+  .in-success-top {
+    background: color-mix(in srgb, var(--m2) 8%, var(--surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--m2) 18%, var(--border));
+    padding: 28px 28px 22px; text-align: center;
+  }
+  .in-success-icon { font-size: 36px; margin-bottom: 8px; }
+  .in-success-title { font-size: 13px; font-weight: 700; color: var(--m2); margin-bottom: 6px; letter-spacing: .06em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+  .in-success-name  { font-size: 21px; font-weight: 800; line-height: 1.2; }
+  .in-success-data  { padding: 18px 24px; display: flex; flex-direction: column; gap: 8px; }
+  .in-success-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .in-success-row-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); min-width: 60px;
+  }
+  .in-success-row-val { font-size: 13px; font-weight: 700; flex: 1; }
+  .in-success-actions {
+    padding: 14px 24px 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  }
+  .in-success-btn-mail {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 9px;
+    background: color-mix(in srgb, var(--m3) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m3) 35%, transparent);
+    color: var(--m3); font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all var(--transition); font-family: 'Syne', sans-serif;
+  }
+  .in-success-btn-mail:hover { background: color-mix(in srgb, var(--m3) 24%, transparent); }
+  .in-success-btn-close {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px; border-radius: 9px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all var(--transition); font-family: 'Syne', sans-serif;
+  }
+  .in-success-btn-close:hover { border-color: var(--text); color: var(--text); }
+
+  /* Modal mail ingreso */
+  .in-mail-overlay {
+    position: fixed; inset: 0; z-index: 230;
+    background: rgba(0,0,0,.78); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .in-mail-overlay.open { display: flex; }
+  .in-mail-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 480px;
+    animation: fadeIn 150ms ease;
+  }
+  .in-mail-header {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .in-mail-icon {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m3) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m3) 25%, transparent);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .in-mail-body { padding: 18px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .in-mail-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: block;
+  }
+  .in-mail-recipients {
+    display: flex; flex-wrap: wrap; gap: 6px; min-height: 38px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+    padding: 6px 10px; cursor: text; align-items: center;
+    transition: border-color var(--transition);
+  }
+  .in-mail-recipients:focus-within { border-color: var(--m3); }
+  .in-mail-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: color-mix(in srgb, var(--m3) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m3) 30%, transparent);
+    color: var(--m3); border-radius: 20px; padding: 3px 10px;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600;
+  }
+  .in-mail-chip-del {
+    background: none; border: none; color: var(--m3); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0; opacity: .7;
+  }
+  .in-mail-chip-del:hover { opacity: 1; }
+  .in-mail-recipient-inp {
+    background: none; border: none; outline: none; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 12px; flex: 1; min-width: 140px; padding: 2px 0;
+  }
+  .in-mail-preview {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.9; color: var(--muted);
+  }
+  .in-mail-preview strong { color: var(--text); font-weight: 700; }
+  .in-mail-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+  }
+  .in-mail-status {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); flex: 1;
+  }
+  .in-mail-status.ok  { color: var(--accent2); }
+  .in-mail-status.err { color: var(--danger); }
+
   /* ==========================================================
      ADMIN LOCALES
   ========================================================== */
@@ -897,9 +1019,514 @@
   .al-local-name { font-size:14px;font-weight:700;flex:1; }
   .al-local-razon { font-family:'DM Mono',monospace;font-size:11px;color:var(--muted); }
   .al-local-actions { display:flex;gap:4px; }
+
+  /* ==========================================================
+     MÓDULO 05 — HORARIOS
+  ========================================================== */
+
+  /* Nav de locales */
+  .hr-local-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 16px 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .hr-local-tab {
+    padding: 7px 16px; border-radius: 8px 8px 0 0;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    border: 1px solid transparent; border-bottom: none;
+    transition: all var(--transition);
+    color: var(--muted); background: transparent;
+  }
+  .hr-local-tab.active {
+    background: color-mix(in srgb, var(--m5) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--m5) 30%, var(--border));
+    color: var(--m5);
+  }
+  .hr-local-tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  /* Toolbar de semana */
+  .hr-week-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .hr-week-label {
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--m5); flex: 1; min-width: 160px;
+  }
+  .hr-week-nav {
+    display: flex; gap: 4px;
+  }
+  .hr-week-btn {
+    padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); cursor: pointer; font-size: 13px;
+    transition: all var(--transition);
+  }
+  .hr-week-btn:hover { border-color: var(--m5); color: var(--m5); }
+
+  /* Grid semanal */
+  .hr-grid-wrap { overflow-x: auto; padding: 0 20px 20px; }
+  .hr-grid {
+    min-width: 720px; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .hr-grid-head {
+    display: grid; grid-template-columns: 200px repeat(7, 1fr);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .hr-grid-head-cell {
+    padding: 10px 8px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    border-right: 1px solid var(--border);
+  }
+  .hr-grid-head-cell:first-child { text-align: left; padding-left: 14px; }
+  .hr-grid-head-cell:last-child { border-right: none; }
+  .hr-grid-head-cell.today { color: var(--m5); }
+
+  /* Fila empleado */
+  .hr-emp-row {
+    display: grid; grid-template-columns: 200px repeat(7, 1fr);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    transition: background var(--transition);
+  }
+  .hr-emp-row:last-child { border-bottom: none; }
+  .hr-emp-row:hover { background: color-mix(in srgb, var(--m5) 3%, transparent); }
+
+  .hr-emp-cell {
+    padding: 8px 14px; display: flex; align-items: center; gap: 8px;
+    border-right: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  }
+  .hr-emp-cell:last-child { border-right: none; }
+  .hr-emp-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m4) 15%, transparent);
+    color: var(--m4); font-size: 10px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .hr-emp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .hr-emp-name { font-size: 12px; font-weight: 700; line-height: 1.2; }
+  .hr-emp-puesto { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+
+  /* Celda de turno */
+  .hr-day-cell {
+    padding: 6px; display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    cursor: pointer; position: relative;
+  }
+  .hr-day-cell:last-child { border-right: none; }
+  .hr-day-cell.libre { opacity: .4; }
+
+  .hr-turno-chip {
+    width: 100%; border-radius: 6px; padding: 4px 6px;
+    background: color-mix(in srgb, var(--m5) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m5) 25%, transparent);
+    text-align: center; cursor: pointer;
+  }
+  .hr-turno-time {
+    font-family: 'DM Mono', monospace; font-size: 9px; color: var(--m5);
+    white-space: nowrap;
+  }
+  .hr-turno-libre {
+    width: 100%; border-radius: 6px; padding: 4px 6px;
+    border: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
+    text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 9px; color: var(--border);
+  }
+
+  /* Badges de asistencia */
+  .hr-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 6px; border-radius: 20px;
+    font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700;
+    letter-spacing: .04em; margin-top: 3px;
+  }
+  .hr-badge-presente { background: color-mix(in srgb,var(--m2) 15%,transparent); color: var(--m2); }
+  .hr-badge-ausente  { background: color-mix(in srgb,var(--danger) 15%,transparent); color: var(--danger); }
+  .hr-badge-tarde    { background: color-mix(in srgb,var(--m5) 15%,transparent); color: var(--m5); }
+
+  /* Ranking Yakuza */
+  .hr-rank {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 5px;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 800;
+    flex-shrink: 0;
+  }
+  .hr-rank-S { background: color-mix(in srgb,#ffd700 20%,transparent); color: #ffd700; border: 1px solid color-mix(in srgb,#ffd700 40%,transparent); }
+  .hr-rank-A { background: color-mix(in srgb,var(--m2)  20%,transparent); color: var(--m2);  border: 1px solid color-mix(in srgb,var(--m2)  40%,transparent); }
+  .hr-rank-B { background: color-mix(in srgb,var(--m3)  20%,transparent); color: var(--m3);  border: 1px solid color-mix(in srgb,var(--m3)  40%,transparent); }
+  .hr-rank-C { background: color-mix(in srgb,var(--m5)  20%,transparent); color: var(--m5);  border: 1px solid color-mix(in srgb,var(--m5)  40%,transparent); }
+  .hr-rank-D { background: color-mix(in srgb,var(--danger) 20%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 40%,transparent); }
+
+  /* Modal de turno */
+  .hr-modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .hr-modal-overlay.open { display: flex; }
+  .hr-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; width: 100%; max-width: 400px;
+    animation: fadeIn 150ms ease;
+  }
+  .hr-modal-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .hr-modal-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 20px; }
+  .hr-modal-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .hr-modal-row .bj-field { flex: 1; min-width: 100px; }
+  .hr-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Modal cierre de turno (supervisor) */
+  .hr-cierre-overlay {
+    position: fixed; inset: 0; z-index: 201;
+    background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 20px; overflow-y: auto;
+  }
+  .hr-cierre-overlay.open { display: flex; }
+  .hr-cierre-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 560px;
+    animation: fadeIn 150ms ease; margin: auto;
+  }
+  .hr-cierre-header {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+  }
+  .hr-cierre-title { font-size: 15px; font-weight: 800; }
+  .hr-cierre-sub { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Fila empleado en cierre */
+  .hr-cierre-emp {
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    align-items: center; gap: 10px;
+    padding: 12px 24px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  }
+  .hr-cierre-emp:last-child { border-bottom: none; }
+  .hr-cierre-name { font-size: 13px; font-weight: 700; }
+  .hr-cierre-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* Selector de asistencia */
+  .hr-asist-btns { display: flex; gap: 4px; }
+  .hr-asist-btn {
+    padding: 5px 9px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Mono', monospace; transition: all var(--transition);
+  }
+  .hr-asist-btn.sel-P { background: color-mix(in srgb,var(--m2) 20%,transparent); border-color: var(--m2); color: var(--m2); }
+  .hr-asist-btn.sel-A { background: color-mix(in srgb,var(--danger) 20%,transparent); border-color: var(--danger); color: var(--danger); }
+  .hr-asist-btn.sel-T { background: color-mix(in srgb,var(--m5) 20%,transparent); border-color: var(--m5); color: var(--m5); }
+
+  /* Input tardanza */
+  .hr-tard-inp {
+    width: 56px; padding: 5px 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px;
+    text-align: center;
+  }
+  .hr-tard-inp:focus { outline: none; border-color: var(--m5); }
+
+  /* Selector de ranking Yakuza */
+  .hr-rank-btns { display: flex; gap: 4px; }
+  .hr-rank-btn {
+    width: 26px; height: 26px; border-radius: 6px;
+    border: 1px solid var(--border); background: transparent;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 800;
+    cursor: pointer; color: var(--muted); transition: all var(--transition);
+  }
+  .hr-rank-btn[data-r="S"].sel { background: color-mix(in srgb,#ffd700 20%,transparent); border-color: #ffd700; color: #ffd700; }
+  .hr-rank-btn[data-r="A"].sel { background: color-mix(in srgb,var(--m2) 20%,transparent); border-color: var(--m2); color: var(--m2); }
+  .hr-rank-btn[data-r="B"].sel { background: color-mix(in srgb,var(--m3) 20%,transparent); border-color: var(--m3); color: var(--m3); }
+  .hr-rank-btn[data-r="C"].sel { background: color-mix(in srgb,var(--m5) 20%,transparent); border-color: var(--m5); color: var(--m5); }
+  .hr-rank-btn[data-r="D"].sel { background: color-mix(in srgb,var(--danger) 20%,transparent); border-color: var(--danger); color: var(--danger); }
+
+  .hr-cierre-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+
+  /* Toolbar extra */
+  .hr-toolbar-right { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  .hr-add-emp-btn {
+    padding: 7px 14px; border-radius: 7px;
+    background: color-mix(in srgb, var(--m5) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m5) 30%, var(--border));
+    color: var(--m5); font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all var(--transition); white-space: nowrap;
+  }
+  .hr-add-emp-btn:hover { background: color-mix(in srgb, var(--m5) 22%, transparent); }
+
+  /* Botones de exportar */
+  .hr-export-btn {
+    padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all var(--transition); white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); font-family: 'Syne', sans-serif;
+  }
+  .hr-export-btn:hover { border-color: var(--text); color: var(--text); }
+  .hr-export-btn.pdf:hover  { border-color: var(--danger); color: var(--danger); }
+  .hr-export-btn.mail:hover { border-color: var(--m3); color: var(--m3); }
+
+  /* Modal de envío por email */
+  .hr-mail-overlay {
+    position: fixed; inset: 0; z-index: 210;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .hr-mail-overlay.open { display: flex; }
+  .hr-mail-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 480px;
+    animation: fadeIn 150ms ease;
+  }
+  .hr-mail-header {
+    padding: 22px 24px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hr-mail-icon {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m3) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m3) 25%, transparent);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .hr-mail-title { font-size: 15px; font-weight: 800; }
+  .hr-mail-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .hr-mail-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .hr-mail-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: block;
+  }
+  .hr-mail-recipients {
+    display: flex; flex-wrap: wrap; gap: 6px; min-height: 38px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+    padding: 6px 10px; cursor: text; align-items: center;
+    transition: border-color var(--transition);
+  }
+  .hr-mail-recipients:focus-within { border-color: var(--m3); }
+  .hr-mail-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: color-mix(in srgb, var(--m3) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m3) 30%, transparent);
+    color: var(--m3); border-radius: 20px; padding: 3px 10px;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 600;
+  }
+  .hr-mail-chip-del {
+    background: none; border: none; color: var(--m3); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0; opacity: .7;
+  }
+  .hr-mail-chip-del:hover { opacity: 1; }
+  .hr-mail-recipient-inp {
+    background: none; border: none; outline: none; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 12px; flex: 1; min-width: 140px;
+    padding: 2px 0;
+  }
+  .hr-mail-subject-inp, .hr-mail-msg-inp {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 12px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 13px; outline: none;
+    transition: border-color var(--transition); resize: vertical;
+  }
+  .hr-mail-subject-inp:focus, .hr-mail-msg-inp:focus { border-color: var(--m3); }
+  .hr-mail-msg-inp { min-height: 80px; }
+  .hr-mail-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end; align-items: center;
+  }
+  .hr-mail-status {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    flex: 1; min-width: 0;
+  }
+  .hr-mail-status.ok   { color: var(--accent2); }
+  .hr-mail-status.err  { color: var(--danger); }
+
+  /* Toast de confirmación */
+  .hr-toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    animation: fadeIn 200ms ease;
+    max-width: 320px;
+  }
+
+  /* Modal selector empleado para agregar a planilla */
+  .hr-emp-pick-overlay {
+    position: fixed; inset: 0; z-index: 202;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .hr-emp-pick-overlay.open { display: flex; }
+  .hr-emp-pick-modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; width: 100%; max-width: 420px; max-height: 80dvh;
+    display: flex; flex-direction: column; animation: fadeIn 150ms ease;
+  }
+  .hr-emp-pick-head { padding: 18px 20px 12px; border-bottom: 1px solid var(--border); }
+  .hr-emp-pick-title { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+  .hr-emp-pick-list { overflow-y: auto; flex: 1; }
+  .hr-emp-pick-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+    transition: background var(--transition);
+  }
+  .hr-emp-pick-item:hover { background: color-mix(in srgb, var(--m5) 6%, transparent); }
+  .hr-emp-pick-item.ya-en-planilla { opacity: .35; pointer-events: none; }
+  .hr-emp-pick-name { font-size: 13px; font-weight: 700; }
+  .hr-emp-pick-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .hr-emp-pick-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+
+  /* Empty state horarios */
+  .hr-empty {
+    padding: 60px 20px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted);
+  }
+  .hr-empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  /* Indicador "hoy" en columna */
+  .hr-today-col { background: color-mix(in srgb, var(--m5) 4%, transparent); }
+
+  /* Resumen de asistencia en el header de día */
+  .hr-day-stats { font-size: 8px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+  @media (max-width: 640px) {
+    .hr-grid { min-width: 600px; }
+    .hr-grid-head { grid-template-columns: 160px repeat(7, 1fr); }
+    .hr-emp-row   { grid-template-columns: 160px repeat(7, 1fr); }
+  }
+
+  /* ─── PANTALLA CONFIRMACIÓN PRESENTACIÓN (pública) ───────── */
+  #confirmar-screen {
+    position: fixed; inset: 0; z-index: 500;
+    background: var(--bg);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px; flex-direction: column;
+  }
+  #confirmar-screen.show { display: flex; }
+  .conf-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; width: 100%; max-width: 420px;
+    overflow: hidden; animation: fadeIn 250ms ease;
+  }
+  .conf-top {
+    padding: 32px 28px 24px; text-align: center;
+    background: color-mix(in srgb, var(--m2) 6%, var(--surface));
+    border-bottom: 1px solid color-mix(in srgb, var(--m2) 15%, var(--border));
+  }
+  .conf-logo {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .25em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 20px;
+  }
+  .conf-icon-wrap {
+    width: 60px; height: 60px; border-radius: 14px; margin: 0 auto 14px;
+    background: color-mix(in srgb, var(--m2) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--m2) 30%, transparent);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .conf-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--m2); margin-bottom: 5px;
+  }
+  .conf-nombre { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 3px; }
+  .conf-puesto { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .conf-data { padding: 18px 24px; display: flex; flex-direction: column; gap: 8px; }
+  .conf-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 13px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .conf-row-icon { font-size: 14px; flex-shrink: 0; }
+  .conf-row-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+    letter-spacing: .1em; text-transform: uppercase; min-width: 54px;
+  }
+  .conf-row-val { font-size: 13px; font-weight: 700; }
+  .conf-action { padding: 0 24px 24px; }
+  .conf-btn {
+    width: 100%; padding: 14px;
+    background: var(--m2); color: #0e0f11;
+    border: none; border-radius: 10px;
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+    cursor: pointer; transition: opacity var(--transition), transform var(--transition);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .conf-btn:hover { opacity: .88; transform: translateY(-1px); }
+  .conf-btn:active { transform: translateY(0); }
+  .conf-btn:disabled { opacity: .45; cursor: default; transform: none; }
+  .conf-result {
+    padding: 20px 24px 24px; text-align: center;
+    display: none; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .conf-result.show { display: flex; }
+  .conf-result-icon { font-size: 44px; }
+  .conf-result-title { font-size: 17px; font-weight: 800; }
+  .conf-result-sub { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; line-height: 1.6; max-width: 280px; }
+  .conf-footer {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+    text-align: center; margin-top: 18px; letter-spacing: .08em;
+  }
 </style>
 </head>
 <body>
+
+<!-- ========================================================== -->
+<!--  PANTALLA PÚBLICA: CONFIRMAR PRESENTACIÓN                 -->
+<!--  Se activa cuando la URL tiene ?confirmar=DOCID           -->
+<!-- ========================================================== -->
+<div id="confirmar-screen">
+  <div class="conf-card">
+    <div class="conf-top">
+      <div class="conf-logo">RRHH · Sistema de Gestión</div>
+      <div class="conf-icon-wrap">👤</div>
+      <div class="conf-eyebrow">Nuevo ingreso</div>
+      <div class="conf-nombre" id="conf-nombre">Cargando…</div>
+      <div class="conf-puesto" id="conf-puesto"></div>
+    </div>
+    <div class="conf-data">
+      <div class="conf-row">
+        <span class="conf-row-icon">📅</span>
+        <span class="conf-row-label">Fecha</span>
+        <span class="conf-row-val" id="conf-fecha">—</span>
+      </div>
+      <div class="conf-row">
+        <span class="conf-row-icon">🕐</span>
+        <span class="conf-row-label">Horario</span>
+        <span class="conf-row-val" id="conf-horario">—</span>
+      </div>
+      <div class="conf-row">
+        <span class="conf-row-icon">📍</span>
+        <span class="conf-row-label">Local</span>
+        <span class="conf-row-val" id="conf-local">—</span>
+      </div>
+    </div>
+    <div class="conf-action" id="conf-action">
+      <button class="conf-btn" id="conf-btn" onclick="_confirmarPresentacion()">
+        ✅ Confirmar presentación
+      </button>
+    </div>
+    <div class="conf-result" id="conf-result-ok">
+      <div class="conf-result-icon">🎉</div>
+      <div class="conf-result-title" style="color:var(--m2)">¡Presentación confirmada!</div>
+      <div class="conf-result-sub" id="conf-result-ok-sub">La asistencia fue registrada correctamente.</div>
+    </div>
+    <div class="conf-result" id="conf-result-ya">
+      <div class="conf-result-icon">✅</div>
+      <div class="conf-result-title" style="color:var(--muted)">Ya estaba confirmada</div>
+      <div class="conf-result-sub">La presentación de este empleado ya fue registrada anteriormente.</div>
+    </div>
+    <div class="conf-result" id="conf-result-err">
+      <div class="conf-result-icon">❌</div>
+      <div class="conf-result-title" style="color:var(--danger)">Error al confirmar</div>
+      <div class="conf-result-sub" id="conf-result-err-sub">Hubo un problema. Intentá de nuevo o contactá a RRHH.</div>
+    </div>
+  </div>
+  <div class="conf-footer">BC Gestión · Sistema interno de RRHH</div>
+</div>
 
 <!-- ========================================================== -->
 <!--  AUTH SCREEN                                              -->
@@ -1355,6 +1982,72 @@
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="ingresos.cancelDelete()">Cancelar</button>
           <button class="bj-btn bj-btn-danger" onclick="ingresos.confirmDelete()">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL ÉXITO INGRESO -->
+    <div class="in-success-overlay" id="in-success-overlay">
+      <div class="in-success-modal" onclick="event.stopPropagation()">
+        <div class="in-success-top">
+          <div class="in-success-icon">✅</div>
+          <div class="in-success-title">Ingreso registrado</div>
+          <div class="in-success-name" id="in-succ-nombre">—</div>
+        </div>
+        <div class="in-success-data">
+          <div class="in-success-row">
+            <span class="in-success-row-label">Puesto</span>
+            <span class="in-success-row-val" id="in-succ-puesto">—</span>
+          </div>
+          <div class="in-success-row">
+            <span class="in-success-row-label">Fecha</span>
+            <span class="in-success-row-val" id="in-succ-fecha">—</span>
+          </div>
+          <div class="in-success-row">
+            <span class="in-success-row-label">Horario</span>
+            <span class="in-success-row-val" id="in-succ-horario">—</span>
+          </div>
+          <div class="in-success-row">
+            <span class="in-success-row-label">Local</span>
+            <span class="in-success-row-val" id="in-succ-local">—</span>
+          </div>
+        </div>
+        <div class="in-success-actions">
+          <button class="in-success-btn-mail" onclick="ingresos.abrirMailIngreso()">✉ Enviar por email</button>
+          <button class="in-success-btn-close" onclick="ingresos.cerrarSuccess()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL MAIL INGRESO -->
+    <div class="in-mail-overlay" id="in-mail-overlay" onclick="ingresos.cerrarMailIngreso(event)">
+      <div class="in-mail-modal" onclick="event.stopPropagation()">
+        <div class="in-mail-header">
+          <div class="in-mail-icon">✉</div>
+          <div>
+            <div style="font-size:15px;font-weight:800">Notificar ingreso por email</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px" id="in-mail-subtitulo">—</div>
+          </div>
+        </div>
+        <div class="in-mail-body">
+          <div>
+            <label class="in-mail-label">Destinatarios</label>
+            <div class="in-mail-recipients" id="in-mail-recipients" onclick="document.getElementById('in-mail-inp').focus()">
+              <input class="in-mail-recipient-inp" id="in-mail-inp" type="email"
+                placeholder="email@ejemplo.com · Enter para agregar"
+                onkeydown="ingresos._inMailKey(event)" onblur="ingresos._inMailBlur()">
+            </div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px">Enter o coma para agregar. Podés poner varios destinatarios.</div>
+          </div>
+          <div>
+            <label class="in-mail-label">Vista previa del mensaje</label>
+            <div class="in-mail-preview" id="in-mail-preview">—</div>
+          </div>
+        </div>
+        <div class="in-mail-footer">
+          <div class="in-mail-status" id="in-mail-status"></div>
+          <button class="bj-btn bj-btn-outline" onclick="ingresos.cerrarMailIngreso()">Cancelar</button>
+          <button class="bj-btn" style="background:var(--m3);color:#0e0f11" id="in-mail-send-btn" onclick="ingresos.enviarMailModal()">Enviar</button>
         </div>
       </div>
     </div>
@@ -1865,19 +2558,153 @@
         <div class="module-title-group">
           <div class="module-eyebrow">Módulo 05</div>
           <div class="module-title">Horarios</div>
-          <div class="module-desc">Planificación de turnos y gestión de asistencia.</div>
+          <div class="module-desc">Planificación semanal de turnos y registro de asistencia por local.</div>
         </div>
       </div>
-      <div class="module-body">
-        <div class="placeholder-card">
-          <div class="ph-icon">🕐</div>
-          <div class="ph-title">Módulo en construcción</div>
-          <div class="ph-sub">Asignación de turnos, cobertura por sucursal, calendario semanal y registro de asistencia.</div>
+
+      <!-- Tabs por local -->
+      <div class="hr-local-tabs" id="hr-local-tabs">
+        <!-- se generan dinámicamente -->
+      </div>
+
+      <!-- Toolbar de semana -->
+      <div class="hr-week-bar">
+        <button class="hr-week-btn" onclick="horarios.semanaAnterior()">‹</button>
+        <div class="hr-week-label" id="hr-week-label">—</div>
+        <button class="hr-week-btn" onclick="horarios.semanaSiguiente()">›</button>
+        <button class="hr-week-btn" onclick="horarios.irHoy()" style="font-size:11px;color:var(--m5)">Hoy</button>
+        <div class="hr-toolbar-right" id="hr-toolbar-right">
+          <!-- botón agregar empleado: solo gerente/rrhh -->
+          <button class="hr-add-emp-btn" id="hr-btn-agregar" onclick="horarios.abrirPickerEmpleado()" style="display:none">+ Agregar empleado</button>
+          <!-- botón cierre de turno -->
+          <button class="hr-add-emp-btn" onclick="horarios.abrirCierre()" style="background:color-mix(in srgb,var(--m2) 12%,transparent);border-color:color-mix(in srgb,var(--m2) 30%,var(--border));color:var(--m2)">✓ Cierre de turno</button>
+          <!-- botones exportar -->
+          <button class="hr-export-btn pdf" onclick="horarios.exportarPDF()" title="Descargar PDF de la semana">⬇ PDF</button>
+          <button class="hr-export-btn mail" onclick="horarios.abrirModalMail()" title="Enviar horario por email">✉ Enviar</button>
+        </div>
+      </div>
+
+      <!-- Grid principal -->
+      <div class="hr-grid-wrap">
+        <div id="hr-grid-container">
+          <div class="hr-empty">
+            <div class="hr-empty-icon">🕐</div>
+            Cargando planilla…
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: Editar turno (gerente/rrhh) ─────────────── -->
+      <div class="hr-modal-overlay" id="hr-turno-overlay" onclick="horarios.cerrarModalTurno(event)">
+        <div class="hr-modal" onclick="event.stopPropagation()">
+          <div class="hr-modal-title" id="hr-turno-modal-title">Asignar turno</div>
+          <div class="hr-modal-sub" id="hr-turno-modal-sub">—</div>
+
+          <div class="hr-modal-row">
+            <div class="bj-field">
+              <label class="bj-label">Hora entrada</label>
+              <input class="bj-input" id="hr-t-entrada" type="time">
+            </div>
+            <div class="bj-field">
+              <label class="bj-label">Hora salida</label>
+              <input class="bj-input" id="hr-t-salida" type="time">
+            </div>
+          </div>
+
+          <div class="bj-field" style="margin-bottom:14px">
+            <label class="bj-label">Nota del turno (opcional)</label>
+            <input class="bj-input" id="hr-t-nota" type="text" placeholder="Ej: Refuerzo, capacitación…">
+          </div>
+
+          <div class="hr-modal-actions">
+            <button class="bj-btn bj-btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="horarios.eliminarTurno()">Quitar turno</button>
+            <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarModalTurno()">Cancelar</button>
+            <button class="bj-btn" style="background:var(--m5);color:#0e0f11" onclick="horarios.guardarTurno()">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: Cierre de turno (supervisor) ───────────── -->
+      <div class="hr-cierre-overlay" id="hr-cierre-overlay" onclick="horarios.cerrarCierre(event)">
+        <div class="hr-cierre-modal" onclick="event.stopPropagation()">
+          <div class="hr-cierre-header">
+            <div class="hr-cierre-title">Cierre de turno</div>
+            <div class="hr-cierre-sub" id="hr-cierre-sub">—</div>
+          </div>
+
+          <!-- Selector de día -->
+          <div style="padding:14px 24px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Día:</span>
+            <div id="hr-cierre-dias" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          </div>
+
+          <!-- Lista de empleados del día -->
+          <div id="hr-cierre-lista" style="margin-top:14px;border-top:1px solid var(--border)">
+            <div class="hr-empty" style="padding:24px">Seleccioná un día</div>
+          </div>
+
+          <div class="hr-cierre-footer">
+            <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarCierre()">Cerrar</button>
+            <button class="bj-btn" style="background:var(--m2);color:#0e0f11" id="hr-cierre-save-btn" onclick="horarios.guardarCierre()" disabled>Guardar cierre</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL: Picker de empleados (agregar a planilla) ── -->
+      <div class="hr-emp-pick-overlay" id="hr-emp-pick-overlay" onclick="horarios.cerrarPickerEmpleado(event)">
+        <div class="hr-emp-pick-modal" onclick="event.stopPropagation()">
+          <div class="hr-emp-pick-head">
+            <div class="hr-emp-pick-title">Agregar empleado a la semana</div>
+            <input class="bj-input" id="hr-pick-search" type="text" placeholder="Buscar por nombre…" oninput="horarios.filtrarPicker(this.value)" style="margin-top:0">
+          </div>
+          <div class="hr-emp-pick-list" id="hr-pick-list"></div>
+          <div class="hr-emp-pick-foot">
+            <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarPickerEmpleado()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /module-horarios -->
+
+    <!-- ── MODAL: Enviar horario por email ──────────────────── -->
+    <div class="hr-mail-overlay" id="hr-mail-overlay" onclick="horarios.cerrarModalMail(event)">
+      <div class="hr-mail-modal" onclick="event.stopPropagation()">
+        <div class="hr-mail-header">
+          <div class="hr-mail-icon">✉</div>
+          <div>
+            <div class="hr-mail-title">Enviar horario por email</div>
+            <div class="hr-mail-sub" id="hr-mail-semana-lbl">—</div>
+          </div>
+        </div>
+        <div class="hr-mail-body">
+          <div>
+            <label class="hr-mail-label">Destinatarios</label>
+            <div class="hr-mail-recipients" id="hr-mail-recipients" onclick="document.getElementById('hr-mail-inp').focus()">
+              <input class="hr-mail-recipient-inp" id="hr-mail-inp" type="email" placeholder="email@ejemplo.com · Enter para agregar"
+                onkeydown="horarios._mailInpKey(event)" onblur="horarios._mailInpBlur()">
+            </div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:5px">Presioná Enter o coma para agregar cada destinatario</div>
+          </div>
+          <div>
+            <label class="hr-mail-label">Asunto</label>
+            <input class="hr-mail-subject-inp" id="hr-mail-subject" type="text" placeholder="Ej: Horario semana 12/05 – Local Centro">
+          </div>
+          <div>
+            <label class="hr-mail-label">Mensaje (opcional)</label>
+            <textarea class="hr-mail-msg-inp" id="hr-mail-msg" placeholder="Texto adicional para el email…"></textarea>
+          </div>
+          <div style="background:color-mix(in srgb,var(--m3) 8%,var(--surface2));border:1px solid color-mix(in srgb,var(--m3) 20%,var(--border));border-radius:8px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.6">
+            📎 Se genera el PDF del horario de la semana y se adjunta al email.
+          </div>
+        </div>
+        <div class="hr-mail-footer">
+          <div class="hr-mail-status" id="hr-mail-status"></div>
+          <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarModalMail()">Cancelar</button>
+          <button class="bj-btn" style="background:var(--m3);color:#0e0f11" id="hr-mail-send-btn" onclick="horarios.enviarEmail()">Enviar</button>
         </div>
       </div>
     </div>
 
-    <!-- ── MÓDULO 06: BAJAS ───────────────────────────────── -->
     <div class="module" id="module-bajas">
       <div class="module-header" style="--item-color: var(--m6)">
         <div class="module-icon" style="--item-color: var(--m6)">🚪</div>
@@ -2171,7 +2998,25 @@
               </div>
             </div>
 
-            <!-- ─ Resultados ─ -->
+            <!-- ─ Adicionales: Feriados y Horas Extra ─ -->
+            <div class="lq-section">
+              <div class="lq-section-label">Adicionales</div>
+              <div class="lq-row2">
+                <div class="bj-field">
+                  <label class="bj-label">Feriados trabajados <span class="lq-src-tag" style="background:color-mix(in srgb,var(--m5) 15%,transparent);color:var(--m5)">días</span></label>
+                  <input class="bj-input lq-inp" id="lq-feriados" type="number" min="0" placeholder="0" oninput="liquidaciones.calcular()">
+                </div>
+                <div class="bj-field">
+                  <label class="bj-label">Horas extras 50% <span class="lq-src-tag" style="background:color-mix(in srgb,var(--m5) 15%,transparent);color:var(--m5)">hs</span></label>
+                  <input class="bj-input lq-inp" id="lq-hs-extra50" type="number" min="0" placeholder="0" step="0.5" oninput="liquidaciones.calcular()">
+                </div>
+                <div class="bj-field">
+                  <label class="bj-label">Horas extras 100% <span class="lq-src-tag" style="background:color-mix(in srgb,var(--m5) 15%,transparent);color:var(--m5)">hs</span></label>
+                  <input class="bj-input lq-inp" id="lq-hs-extra100" type="number" min="0" placeholder="0" step="0.5" oninput="liquidaciones.calcular()">
+                </div>
+              </div>
+            </div>
+
             <div class="lq-section lq-results-section" id="lq-results-section" style="display:none">
               <div class="lq-section-label" style="color:var(--m7)">Detalle del cálculo</div>
 
@@ -2211,6 +3056,32 @@
                     </div>
                   </div>
                   <div class="lq-result-val" id="lq-val-vac"></div>
+                </div>
+
+                <div class="lq-divider"></div>
+
+                <!-- Feriados trabajados -->
+                <div class="lq-result-row" id="lq-row-feriados" style="display:none">
+                  <div class="lq-result-label">
+                    <span class="lq-result-icon">📅</span>
+                    <div>
+                      <div>Feriados trabajados</div>
+                      <div class="lq-result-sub" id="lq-sub-feriados"></div>
+                    </div>
+                  </div>
+                  <div class="lq-result-val" id="lq-val-feriados" style="color:var(--m5)"></div>
+                </div>
+
+                <!-- Horas extras -->
+                <div class="lq-result-row" id="lq-row-extras" style="display:none">
+                  <div class="lq-result-label">
+                    <span class="lq-result-icon">⏱</span>
+                    <div>
+                      <div>Horas extras</div>
+                      <div class="lq-result-sub" id="lq-sub-extras"></div>
+                    </div>
+                  </div>
+                  <div class="lq-result-val" id="lq-val-extras" style="color:var(--m5)"></div>
                 </div>
 
                 <div class="lq-divider"></div>
@@ -2458,10 +3329,10 @@
 //  3. Crear template con las variables de abajo
 //  4. Pegar tus IDs aqui
 // =================================================================
-const EMAILJS_PUBLIC_KEY  = 'TU_PUBLIC_KEY';   // Account > API Keys
-const EMAILJS_SERVICE_ID  = 'TU_SERVICE_ID';   // Email Services > Service ID
-const EMAILJS_TEMPLATE_ID = 'TU_TEMPLATE_ID';  // Email Templates > Template ID
-const EMAILJS_TO_EMAIL    = 'rrhh@tuempresa.com'; // Casilla destinataria
+const EMAILJS_PUBLIC_KEY  = 'VGDuLGr6fez402k18';
+const EMAILJS_SERVICE_ID  = 'service_6onuqwg';
+const EMAILJS_TEMPLATE_ID = 'template_qyjp8ni';
+const EMAILJS_TO_EMAIL    = 'acurioempleos@gmail.com';
 
 // Inicializar EmailJS
 if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY') {
@@ -2474,7 +3345,6 @@ async function enviarMailIngreso(data) {
     return;
   }
 
-  // Resolver email destinatario: primero busca el del local, sino usa el fallback
   let destinatario = EMAILJS_TO_EMAIL;
   if (data.local && typeof adminLocales !== 'undefined') {
     const loc = adminLocales.getLocales().find(l => l.nombre === data.local);
@@ -2483,22 +3353,26 @@ async function enviarMailIngreso(data) {
     }
   }
 
-  const fecha = data.fecha
-    ? data.fecha.split('-').reverse().join('/')
-    : '-';
+  const fecha = data.fecha ? data.fecha.split('-').reverse().join('/') : '-';
 
-  // Enviar a cada casilla (soporta múltiples separadas por coma o salto de línea)
+  // Generar link de confirmación de presentación
+  const baseUrl = location.href.split('?')[0];
+  const confirmUrl = data._docId
+    ? `${baseUrl}?confirmar=${data._docId}`
+    : '';
+
   const casillas = destinatario.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
   for (const casilla of casillas) {
     try {
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_email: casilla,
-        empleado: data.nombre  || '-',
-        puesto:   data.puesto  || '-',
-        local:    data.local   || '-',
+        to_email:    casilla,
+        empleado:    data.nombre  || '-',
+        puesto:      data.puesto  || '-',
+        local:       data.local   || '-',
         fecha,
-        horario:  data.horario || 'No especificado',
-        codigo:   data.codigo  || '-',
+        horario:     data.horario || 'No especificado',
+        codigo:      data.codigo  || '-',
+        confirm_url: confirmUrl,
       });
       console.log('Mail enviado a', casilla);
     } catch(e) {
@@ -2651,7 +3525,6 @@ function aplicarPermisos(rol, localAsignado) {
       navigate('horarios', document.querySelector('[data-module="horarios"]'));
     }, 300);
   }
-
   // Guardar para filtros por local
   window._filtroLocal = esRRHH ? '' : localAsignado;
 }
@@ -4169,25 +5042,180 @@ const ingresos = (() => {
     if (rcRef) data['rc-ref'] = rcRef;
     data.updatedAt = firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString();
     btn.textContent = 'Guardando…'; btn.disabled = true;
+    const esNuevo = !$f('doc-id').value;
     try {
       if (!db) throw new Error('Firebase no configurado');
       const docId = $f('doc-id').value;
       if (docId) { await db.collection(COL).doc(docId).update(data); }
       else {
         data.createdAt = data.updatedAt;
-        await db.collection(COL).add(data);
-        // Notificacion por mail al registrar nuevo ingreso
+        const docRef = await db.collection(COL).add(data);
+        data._docId = docRef.id; // guardar ID real para el link de confirmación
         enviarMailIngreso(data);
       }
       document.getElementById('in-modal-overlay').classList.remove('open');
-      // Marcar candidato como "Aprobado" en reclutamiento si viene de ahí
       if (rcRef && db) {
         db.collection('reclutamiento').doc(rcRef).update({ estado: 'Aprobado' }).catch(()=>{});
       }
+      if (esNuevo) _mostrarSuccess(data);
     } catch(e) {
       errEl.textContent = 'Error: ' + e.message;
     } finally {
       btn.textContent = 'Guardar'; btn.disabled = false;
+    }
+  }
+
+  // ── MODAL ÉXITO ─────────────────────────────────────────────
+  let _lastData = null;
+
+  function _mostrarSuccess(data) {
+    _lastData = data;
+    const fmt = v => v ? v.split('-').reverse().join('/') : '-';
+    document.getElementById('in-succ-nombre').textContent  = data.nombre  || '-';
+    document.getElementById('in-succ-puesto').textContent  = data.puesto  || '-';
+    document.getElementById('in-succ-fecha').textContent   = fmt(data.fecha);
+    document.getElementById('in-succ-horario').textContent = data.horario || 'No especificado';
+    document.getElementById('in-succ-local').textContent   = data.local   || '-';
+    document.getElementById('in-success-overlay').classList.add('open');
+  }
+
+  function cerrarSuccess() {
+    document.getElementById('in-success-overlay').classList.remove('open');
+  }
+
+  // ── MODAL MAIL INGRESO ───────────────────────────────────────
+  let _inMailRecipients = [];
+
+  function abrirMailIngreso() {
+    if (!_lastData) return;
+    _inMailRecipients = [];
+    // Pre-cargar emails del local si existen
+    if (typeof adminLocales !== 'undefined' && _lastData.local) {
+      const loc = adminLocales.getLocales().find(l => l.nombre === _lastData.local);
+      if (loc && loc.email) {
+        loc.email.split(/[\n,]+/).map(e => e.trim()).filter(Boolean).forEach(e => {
+          if (!_inMailRecipients.includes(e)) _inMailRecipients.push(e);
+        });
+      }
+    }
+    _renderInMailChips();
+    const fmt = v => v ? v.split('-').reverse().join('/') : '-';
+    const sub  = document.getElementById('in-mail-subtitulo');
+    if (sub) sub.textContent = `${_lastData.nombre || ''} · ${_lastData.local || ''}`;
+    const prev = document.getElementById('in-mail-preview');
+    if (prev) prev.innerHTML = [
+      `<strong>Nuevo ingreso registrado</strong>`,
+      ``,
+      `Empleado: <strong>${_lastData.nombre || '-'}</strong>`,
+      `Puesto:   <strong>${_lastData.puesto  || '-'}</strong>`,
+      `Fecha:    <strong>${fmt(_lastData.fecha)}</strong>`,
+      `Horario:  <strong>${_lastData.horario || 'No especificado'}</strong>`,
+      `Local:    <strong>${_lastData.local   || '-'}</strong>`,
+    ].join('<br>');
+    const status = document.getElementById('in-mail-status');
+    if (status) { status.textContent = ''; status.className = 'in-mail-status'; }
+    const sendBtn = document.getElementById('in-mail-send-btn');
+    if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
+    document.getElementById('in-success-overlay').classList.remove('open');
+    document.getElementById('in-mail-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('in-mail-inp')?.focus(), 100);
+  }
+
+  function cerrarMailIngreso(e) {
+    if (e && e.target !== document.getElementById('in-mail-overlay')) return;
+    document.getElementById('in-mail-overlay').classList.remove('open');
+  }
+
+  function _renderInMailChips() {
+    const cont = document.getElementById('in-mail-recipients');
+    if (!cont) return;
+    cont.querySelectorAll('.in-mail-chip').forEach(c => c.remove());
+    const inp = document.getElementById('in-mail-inp');
+    _inMailRecipients.forEach((email, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'in-mail-chip';
+      chip.innerHTML = `${email}<button class="in-mail-chip-del" onclick="ingresos._removeInMailChip(${idx})" type="button">×</button>`;
+      cont.insertBefore(chip, inp);
+    });
+  }
+
+  function _addInMailChip(val) {
+    const email = val.trim().replace(/,/g,'');
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    if (!_inMailRecipients.includes(email)) _inMailRecipients.push(email);
+    const inp = document.getElementById('in-mail-inp');
+    if (inp) inp.value = '';
+    _renderInMailChips();
+  }
+
+  function _removeInMailChip(idx) {
+    _inMailRecipients.splice(idx, 1);
+    _renderInMailChips();
+  }
+
+  function _inMailKey(e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); _addInMailChip(e.target.value); }
+  }
+  function _inMailBlur() {
+    const inp = document.getElementById('in-mail-inp');
+    if (inp && inp.value.trim()) _addInMailChip(inp.value);
+  }
+
+  async function enviarMailModal() {
+    if (!_inMailRecipients.length) {
+      const s = document.getElementById('in-mail-status');
+      if (s) { s.textContent = 'Agregá al menos un destinatario.'; s.className = 'in-mail-status err'; }
+      return;
+    }
+    const sendBtn = document.getElementById('in-mail-send-btn');
+    const status  = document.getElementById('in-mail-status');
+    if (sendBtn) { sendBtn.textContent = 'Enviando…'; sendBtn.disabled = true; }
+    if (status)  { status.textContent = ''; status.className = 'in-mail-status'; }
+    const data = _lastData || {};
+    const fmt  = v => v ? v.split('-').reverse().join('/') : '-';
+    const baseUrl    = location.href.split('?')[0];
+    const confirmUrl = data._docId ? `${baseUrl}?confirmar=${data._docId}` : '';
+    const body = [
+      `Nuevo ingreso registrado`,
+      ``,
+      `Empleado: ${data.nombre  || '-'}`,
+      `Puesto:   ${data.puesto  || '-'}`,
+      `Fecha:    ${fmt(data.fecha)}`,
+      `Horario:  ${data.horario || 'No especificado'}`,
+      `Local:    ${data.local   || '-'}`,
+      confirmUrl ? `\n✅ Confirmar presentación: ${confirmUrl}` : '',
+    ].join('\n');
+    const subject = `Nuevo ingreso: ${data.nombre || ''} – ${data.local || ''}`;
+    if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY') {
+      let errores = 0;
+      for (const casilla of _inMailRecipients) {
+        try {
+          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_email:    casilla,
+            empleado:    data.nombre  || '-',
+            puesto:      data.puesto  || '-',
+            local:       data.local   || '-',
+            fecha:       fmt(data.fecha),
+            horario:     data.horario || 'No especificado',
+            codigo:      data.codigo  || '-',
+            confirm_url: confirmUrl,
+          });
+        } catch(e) { errores++; console.error('Mail error', casilla, e); }
+      }
+      if (errores === 0) {
+        if (status) { status.textContent = `✓ Mail enviado a ${_inMailRecipients.length} destinatario${_inMailRecipients.length > 1 ? 's' : ''}.`; status.className = 'in-mail-status ok'; }
+        if (sendBtn) sendBtn.textContent = 'Enviado';
+        setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 1800);
+      } else {
+        if (status) { status.textContent = `Hubo ${errores} error(es) de envío.`; status.className = 'in-mail-status err'; }
+        if (sendBtn) { sendBtn.textContent = 'Reintentar'; sendBtn.disabled = false; }
+      }
+    } else {
+      window.open(`mailto:${_inMailRecipients.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+      if (status) { status.textContent = 'Cliente de email abierto.'; status.className = 'in-mail-status ok'; }
+      if (sendBtn) sendBtn.textContent = 'Listo';
+      setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 1600);
     }
   }
 
@@ -4249,7 +5277,9 @@ const ingresos = (() => {
            filtrar, filtrarLocal,
            crearLegajo, _irAInfoPersonal, _precargarDesdeRC, _clearOrigen,
            askDelete, cancelDelete, confirmDelete,
-           exportCSV, getRegistros, _renderTablaPublic };
+           exportCSV, getRegistros, _renderTablaPublic,
+           cerrarSuccess, abrirMailIngreso, cerrarMailIngreso, enviarMailModal,
+           _inMailKey, _inMailBlur, _removeInMailChip };
 })();
 
 // -- HELPER GLOBAL: poblar select de locales ------------------
@@ -4478,6 +5508,7 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'info-personal') infoPersonal.init();
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
+  if (moduleId === 'horarios')      { adminLocales.init(); if (typeof infoPersonal !== 'undefined') infoPersonal.init(); setTimeout(() => horarios.init(), 150); }
   if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
 };
 
@@ -4540,6 +5571,9 @@ const liquidaciones = (() => {
     const cese      = document.getElementById('lq-fecha-cese').value;
     const descuento = parseFloat(document.getElementById('lq-descuento').value) || 0;
     const bono      = parseFloat(document.getElementById('lq-bono').value) || 0;
+    const feriados  = parseInt(document.getElementById('lq-feriados')?.value) || 0;
+    const hsExtra50  = parseFloat(document.getElementById('lq-hs-extra50')?.value) || 0;
+    const hsExtra100 = parseFloat(document.getElementById('lq-hs-extra100')?.value) || 0;
     const res       = document.getElementById('lq-results-section');
 
     if (!sueldo || !ingreso || !cese) { res.style.display = 'none'; return; }
@@ -4556,31 +5590,56 @@ const liquidaciones = (() => {
     const sueldoDiario = sueldo / 30;
     const haberes = sueldoDiario * diasMes;
 
-    // -- 2. SAC PROPORCIONAL AL AÑO --
-    // SAC = sueldo/12 x (dias trabajados en el semestre / 180)
-    // Calculamos días totales en el año natural desde el ingreso hasta el cese
-    const inicioAnio = new Date(dCese.getFullYear(), 0, 1);
-    const desdeAnio  = dIngreso > inicioAnio ? dIngreso : inicioAnio;
-    const diasAnio   = Math.max(0, Math.round((dCese - desdeAnio) / 86400000) + 1);
-    const sac = (sueldo / 12) * (diasAnio / 365);
+    // -- 2. SAC PROPORCIONAL (por semestre, art. 122 LCT) --
+    // 1er semestre: 01/01 – 30/06  | 2do semestre: 01/07 – 31/12
+    const esPrimerSem = dCese.getMonth() < 6; // 0-5 = ene-jun
+    const inicioSem = esPrimerSem
+      ? new Date(dCese.getFullYear(), 0, 1)    // 01/01
+      : new Date(dCese.getFullYear(), 6, 1);   // 01/07
+    const diasSem = esPrimerSem ? 181 : 184;   // días aprox del semestre
+    const desdeSem = dIngreso > inicioSem ? dIngreso : inicioSem;
+    const diasAnio = Math.max(0, Math.round((dCese - desdeSem) / 86400000) + 1);
+    const sac = (sueldo / 12) * (diasAnio / diasSem);
 
     // -- 3. VACACIONES PROPORCIONALES --
     // Antigüedad total en días
     const antiguedadDias = Math.round((dCese - dIngreso) / 86400000);
     const antiguedadMeses = antiguedadDias / 30.44;
-    let diasVac, reglaSub;
-    if (antiguedadMeses >= 6) {
-      diasVac = 14;
-      reglaSub = '+6 meses <- 14 días corridos';
-    } else {
-      // 1 día cada 20 trabajados
+    // -- 3. VACACIONES PROPORCIONALES (art. 150 LCT) --
+    // Escala: <6m→proporcional | <5a→14d | <10a→21d | <20a→28d | >=20a→35d
+    const antiguedadAnios = antiguedadDias / 365.25;
+    let diasVacBase, reglaSub;
+    if (antiguedadMeses < 6) {
       diasVac = Math.floor(antiguedadDias / 20);
-      reglaSub = `${antiguedadDias} días trabajados <- 1 cada 20`;
+      reglaSub = `${antiguedadDias} días trabajados → 1 cada 20`;
+    } else if (antiguedadAnios < 5) {
+      diasVac = 14;
+      reglaSub = 'antigüedad < 5 años → 14 días corridos';
+    } else if (antiguedadAnios < 10) {
+      diasVac = 21;
+      reglaSub = 'antigüedad 5–10 años → 21 días corridos';
+    } else if (antiguedadAnios < 20) {
+      diasVac = 28;
+      reglaSub = 'antigüedad 10–20 años → 28 días corridos';
+    } else {
+      diasVac = 35;
+      reglaSub = 'antigüedad ≥ 20 años → 35 días corridos';
     }
     const vacaciones = sueldoDiario * diasVac;
 
+    // -- 4. FERIADOS TRABAJADOS (doble jornal = día normal × 2) --
+    // El feriado se cobra el día normal + recargo 100% = 2× jornal diario
+    const valorFeriado = sueldoDiario * 2 * feriados;
+
+    // -- 5. HORAS EXTRAS --
+    // Valor hora = sueldo / 200 (base 200hs/mes estándar)
+    const valorHora  = sueldo / 200;
+    const valorExtra50  = valorHora * 1.5 * hsExtra50;
+    const valorExtra100 = valorHora * 2   * hsExtra100;
+    const totalExtras   = valorExtra50 + valorExtra100;
+
     // -- TOTAL --
-    const total = haberes + sac + vacaciones - descuento + bono;
+    const total = haberes + sac + vacaciones + valorFeriado + totalExtras - descuento + bono;
 
     // -- RENDER --
     const fmt = v => '$' + v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4590,19 +5649,39 @@ const liquidaciones = (() => {
     document.getElementById('lq-val-haberes').textContent = fmt(haberes);
 
     document.getElementById('lq-sub-sac').textContent =
-      `${diasAnio} días en el año × sueldo÷12÷365`;
+      `${diasAnio} días en el ${esPrimerSem ? '1er' : '2do'} semestre × sueldo÷12÷${diasSem}`;
     document.getElementById('lq-val-sac').textContent = fmt(sac);
 
     document.getElementById('lq-sub-vac').textContent =
       `${diasVac} días · ${reglaSub}`;
     document.getElementById('lq-val-vac').textContent = fmt(vacaciones);
 
-    document.getElementById('lq-total').textContent = fmt(total);
+    // Feriados
+    const rowFeriados = document.getElementById('lq-row-feriados');
+    if (feriados > 0) {
+      rowFeriados.style.display = '';
+      document.getElementById('lq-sub-feriados').textContent = `${feriados} día${feriados>1?'s':''} × jornal diario × 2 (doble)`;
+      document.getElementById('lq-val-feriados').textContent = fmt(valorFeriado);
+    } else { rowFeriados.style.display = 'none'; }
+
+    // Horas extras
+    const rowExtras = document.getElementById('lq-row-extras');
+    if (totalExtras > 0) {
+      rowExtras.style.display = '';
+      const partes = [];
+      if (hsExtra50  > 0) partes.push(`${hsExtra50}hs al 50%`);
+      if (hsExtra100 > 0) partes.push(`${hsExtra100}hs al 100%`);
+      document.getElementById('lq-sub-extras').textContent = partes.join(' + ') + ` · $/h ${valorHora.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+      document.getElementById('lq-val-extras').textContent = fmt(totalExtras);
+    } else { rowExtras.style.display = 'none'; }
+
+
 
     res.style.display = '';
 
     // Guardar valores calculados para persistir
-    window._lqCalcResult = { diasMes, haberes, diasAnio, sac, diasVac, vacaciones, descuento, bono, total };
+    window._lqCalcResult = { diasMes, haberes, diasAnio, sac, diasVac, vacaciones,
+      feriados, valorFeriado, hsExtra50, hsExtra100, totalExtras, descuento, bono, total };
   }
 
   // -- NUEVA ----------------------------------------------------
@@ -4736,7 +5815,7 @@ const liquidaciones = (() => {
   function _limpiarForm() {
     ['lq-doc-id','lq-baja-ref','lq-sueldo','lq-fecha-ingreso','lq-fecha-cese',
      'lq-descuento','lq-desc-nota','lq-bono','lq-bono-nota','lq-observaciones',
-     'lq-baja-search'].forEach(id => {
+     'lq-baja-search','lq-feriados','lq-hs-extra50','lq-hs-extra100'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -4789,6 +5868,11 @@ const liquidaciones = (() => {
       calc_sac:       calc.sac,
       calc_diasVac:   calc.diasVac,
       calc_vacaciones:calc.vacaciones,
+      calc_feriados:  calc.feriados,
+      calc_valorFeriado: calc.valorFeriado,
+      calc_hsExtra50: calc.hsExtra50,
+      calc_hsExtra100:calc.hsExtra100,
+      calc_totalExtras: calc.totalExtras,
       total:          calc.total,
       updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString(),
     };
@@ -4842,8 +5926,722 @@ const liquidaciones = (() => {
 })();
 
 // =================================================================
-//  MODULO 08 - PORTAL DE EMPLEADOS
+//  MODULO 05 - HORARIOS
 // =================================================================
+const horarios = (() => {
+  const COL_PLANILLAS = 'hr_planillas'; // doc por local+semana, con subcolección turnos
+  const COL_ASISTENCIA = 'hr_asistencia'; // doc por local+semana+dia
+  const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+  let _localActivo = '';       // local seleccionado en tabs
+  let _locales     = [];       // lista de locales disponibles
+  let _semanaBase  = null;     // Date del lunes de la semana activa
+  let _planilla    = {};       // { empId: { 0:{ entrada,salida,nota }, 1:… } } (0=lun)
+  let _asistencia  = {};       // { diaIdx: { empId: { asist, tarde, rank } } }
+  let _empleados   = [];       // empleados del local activo en Info Personal
+  let _planillaEnPlanilla = [];// empIds actualmente en la planilla (semana)
+  let _planillaDocId = null;
+  let _unsub = null;
+  let _unsubAsist = null;
+
+  // Modal turno
+  let _mt_empId = null, _mt_diaIdx = null;
+
+  // Modal cierre
+  let _cierre_diaIdx = null;
+  let _cierreState   = {}; // { empId: { asist, tarde, rank } }
+
+  // ── INIT ────────────────────────────────────────────────────
+  function init() {
+    if (!_semanaBase) _semanaBase = _luneDe(new Date());
+    _locales = adminLocales.getLocales().map(l => l.nombre).filter(Boolean).sort();
+    if (!_locales.length) {
+      // fallback: leer desde Info Personal
+      const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
+      _locales = [...new Set(ipRegs.map(r => r.local).filter(Boolean))].sort();
+    }
+    _renderTabs();
+
+    // Determinar local activo según rol
+    const rol   = window._currentRol || 'rrhh';
+    const local = window._currentLocal || '';
+    if (rol !== 'rrhh' && local) {
+      _localActivo = local;
+    } else if (!_localActivo && _locales.length) {
+      _localActivo = _locales[0];
+    }
+    _renderTabs();
+
+    // Mostrar botón agregar solo si es rrhh o gerente (no supervisor puro)
+    const btnAgregar = document.getElementById('hr-btn-agregar');
+    if (btnAgregar) btnAgregar.style.display = (rol === 'rrhh' || rol === 'gerente') ? '' : 'none';
+
+    _cargarSemana();
+  }
+
+  // ── TABS DE LOCAL ───────────────────────────────────────────
+  function _renderTabs() {
+    const cont = document.getElementById('hr-local-tabs');
+    if (!cont) return;
+    const rol   = window._currentRol || 'rrhh';
+    const local = window._currentLocal || '';
+    // supervisor solo ve su local
+    const visibles = (rol !== 'rrhh' && local) ? [local] : _locales;
+    cont.innerHTML = visibles.map(l =>
+      `<button class="hr-local-tab${l === _localActivo ? ' active' : ''}"
+         onclick="horarios.cambiarLocal('${l.replace(/'/g,"\\'")}')">
+         ${l}
+       </button>`
+    ).join('');
+  }
+
+  function cambiarLocal(nombre) {
+    _localActivo = nombre;
+    _renderTabs();
+    _cargarSemana();
+  }
+
+  // ── NAVEGACIÓN SEMANAL ─────────────────────────────────────
+  function _luneDe(fecha) {
+    const d = new Date(fecha);
+    const dow = d.getDay(); // 0=dom
+    const diff = (dow === 0) ? -6 : 1 - dow;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  function _semanaId() {
+    return _localActivo.replace(/\s+/g,'_') + '__' + _semanaBase.toISOString().slice(0,10);
+  }
+  function _diaFecha(idx) {
+    const d = new Date(_semanaBase);
+    d.setDate(d.getDate() + idx);
+    return d;
+  }
+  function _labelSemana() {
+    const fin = new Date(_semanaBase); fin.setDate(fin.getDate() + 6);
+    const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    return `Semana ${fmt(_semanaBase)} – ${fmt(fin)} / ${fin.getFullYear()}`;
+  }
+
+  function semanaAnterior() { _semanaBase.setDate(_semanaBase.getDate() - 7); _cargarSemana(); }
+  function semanaSiguiente(){ _semanaBase.setDate(_semanaBase.getDate() + 7); _cargarSemana(); }
+  function irHoy() { _semanaBase = _luneDe(new Date()); _cargarSemana(); }
+
+  // ── CARGA DE DATOS ─────────────────────────────────────────
+  function _cargarSemana() {
+    if (_unsub) { _unsub(); _unsub = null; }
+    if (_unsubAsist) { _unsubAsist(); _unsubAsist = null; }
+
+    const lbl = document.getElementById('hr-week-label');
+    if (lbl) lbl.textContent = _labelSemana();
+
+    _planilla = {};
+    _asistencia = {};
+    _planillaEnPlanilla = [];
+    _planillaDocId = null;
+
+    // Empleados del local desde Info Personal
+    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
+    _empleados = ipRegs.filter(r => r.local === _localActivo);
+
+    if (!db) { _renderGrid(); return; }
+
+    const semId = _semanaId();
+
+    // Listener en doc de planilla
+    _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
+      if (snap.exists) {
+        const data = snap.data();
+        _planilla = data.turnos || {};
+        _planillaEnPlanilla = data.empleados || [];
+        _planillaDocId = semId;
+      } else {
+        _planilla = {};
+        _planillaEnPlanilla = [];
+        _planillaDocId = null;
+      }
+      _renderGrid();
+    }, e => console.error('hr planilla:', e));
+
+    // Listener en colección de asistencia
+    _unsubAsist = db.collection(COL_ASISTENCIA)
+      .where('semanaId', '==', semId)
+      .onSnapshot(snap => {
+        _asistencia = {};
+        snap.docs.forEach(d => {
+          const data = d.data();
+          _asistencia[data.diaIdx] = data.registros || {};
+        });
+        _renderGrid();
+      }, e => console.error('hr asistencia:', e));
+  }
+
+  // ── RENDER GRID ─────────────────────────────────────────────
+  function _renderGrid() {
+    const cont = document.getElementById('hr-grid-container');
+    if (!cont) return;
+
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const todayStr = hoy.toISOString().slice(0,10);
+
+    // Empleados a mostrar: los de la planilla + todos del local si no hay planilla
+    let empIds = _planillaEnPlanilla.length
+      ? _planillaEnPlanilla
+      : _empleados.map(e => e.id);
+
+    // Si no hay empleados
+    if (!empIds.length && !_empleados.length) {
+      cont.innerHTML = `<div class="hr-empty"><div class="hr-empty-icon">👥</div>No hay empleados en ${_localActivo || 'este local'} (Info Personal)</div>`;
+      return;
+    }
+    if (!empIds.length) empIds = _empleados.map(e => e.id);
+
+    // Cabecera días con fecha
+    const headCols = DIAS.map((d, i) => {
+      const f = _diaFecha(i);
+      const fStr = f.toISOString().slice(0,10);
+      const isHoy = fStr === todayStr;
+      // stats asistencia
+      const asistDia = _asistencia[i] || {};
+      const p = Object.values(asistDia).filter(r=>r.asist==='P').length;
+      const a = Object.values(asistDia).filter(r=>r.asist==='A').length;
+      const statsTxt = (p||a) ? `${p}P ${a}A` : '';
+      return `<div class="hr-grid-head-cell${isHoy?' today':''}">
+        ${d} ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}
+        ${statsTxt ? `<div class="hr-day-stats">${statsTxt}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    const rol = window._currentRol || 'rrhh';
+    const puedeEditar = (rol === 'rrhh' || rol === 'gerente');
+
+    // Filas empleados
+    const rows = empIds.map(empId => {
+      const emp = _empleados.find(e => e.id === empId);
+      if (!emp) return '';
+      const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avatar = emp.foto
+        ? `<img src="${emp.foto}" onerror="this.parentNode.textContent='${initials}'">`
+        : initials;
+      const empCell = `<div class="hr-emp-cell">
+        <div class="hr-emp-avatar">${avatar}</div>
+        <div><div class="hr-emp-name">${esc(emp.nombre||'')}</div>
+        <div class="hr-emp-puesto">${esc(emp.puesto||'')}</div></div>
+      </div>`;
+
+      const turnoCells = DIAS.map((_, i) => {
+        const f = _diaFecha(i);
+        const fStr = f.toISOString().slice(0,10);
+        const isHoy = fStr === todayStr;
+        const turno = (_planilla[empId] || {})[i];
+        const asist = ((_asistencia[i] || {})[empId]) || {};
+        let chip;
+        if (turno && turno.entrada) {
+          let asistBadge = '';
+          if (asist.asist === 'P') asistBadge = `<div class="hr-badge hr-badge-presente">✓ Pres.</div>`;
+          else if (asist.asist === 'A') asistBadge = `<div class="hr-badge hr-badge-ausente">✕ Aus.</div>`;
+          else if (asist.asist === 'T') asistBadge = `<div class="hr-badge hr-badge-tarde">⏱ +${asist.tarde||0}m</div>`;
+          const rankBadge = asist.rank ? `<span class="hr-rank hr-rank-${asist.rank}">${asist.rank}</span>` : '';
+          chip = `<div class="hr-turno-chip" ${puedeEditar ? `onclick="horarios.abrirModalTurno('${empId}',${i})"` : ''}>
+            <div class="hr-turno-time">${turno.entrada}–${turno.salida}</div>
+            ${turno.nota ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px">${esc(turno.nota)}</div>` : ''}
+            <div style="display:flex;gap:3px;align-items:center;justify-content:center;margin-top:3px;flex-wrap:wrap">
+              ${asistBadge}${rankBadge}
+            </div>
+          </div>`;
+        } else {
+          chip = puedeEditar
+            ? `<div class="hr-turno-libre" onclick="horarios.abrirModalTurno('${empId}',${i})">+ turno</div>`
+            : `<div class="hr-turno-libre">libre</div>`;
+        }
+        return `<div class="hr-day-cell${isHoy?' hr-today-col':''}">${chip}</div>`;
+      }).join('');
+
+      return `<div class="hr-emp-row">${empCell}${turnoCells}</div>`;
+    }).join('');
+
+    cont.innerHTML = `<div class="hr-grid">
+      <div class="hr-grid-head">
+        <div class="hr-grid-head-cell">Empleado · ${_localActivo}</div>
+        ${headCols}
+      </div>
+      ${rows || `<div class="hr-empty" style="grid-column:1/-1">Sin empleados en planilla</div>`}
+    </div>`;
+  }
+
+  // ── MODAL TURNO (gerente / rrhh) ────────────────────────────
+  function abrirModalTurno(empId, diaIdx) {
+    const rol = window._currentRol || 'rrhh';
+    if (rol !== 'rrhh' && rol !== 'gerente') return;
+    _mt_empId  = empId;
+    _mt_diaIdx = diaIdx;
+    const emp   = _empleados.find(e => e.id === empId);
+    const fecha = _diaFecha(diaIdx);
+    const turno = (_planilla[empId] || {})[diaIdx] || {};
+    document.getElementById('hr-turno-modal-title').textContent = emp ? emp.nombre : 'Empleado';
+    document.getElementById('hr-turno-modal-sub').textContent =
+      `${DIAS[diaIdx]} ${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')} · ${_localActivo}`;
+    document.getElementById('hr-t-entrada').value = turno.entrada || '';
+    document.getElementById('hr-t-salida').value  = turno.salida  || '';
+    document.getElementById('hr-t-nota').value    = turno.nota    || '';
+    document.getElementById('hr-turno-overlay').classList.add('open');
+  }
+
+  function cerrarModalTurno(e) {
+    if (e && e.target !== document.getElementById('hr-turno-overlay')) return;
+    document.getElementById('hr-turno-overlay').classList.remove('open');
+    _mt_empId = null; _mt_diaIdx = null;
+  }
+
+  async function guardarTurno() {
+    if (!_mt_empId || _mt_diaIdx === null) return;
+    const entrada = document.getElementById('hr-t-entrada').value;
+    const salida  = document.getElementById('hr-t-salida').value;
+    const nota    = document.getElementById('hr-t-nota').value.trim();
+    if (!entrada || !salida) { alert('Ingresá hora de entrada y salida.'); return; }
+
+    const semId = _semanaId();
+    const turnoData = { entrada, salida, nota };
+
+    try {
+      if (db) {
+        // Merge: actualizar solo ese turno, preservar el resto
+        const fieldPath = `turnos.${_mt_empId}.${_mt_diaIdx}`;
+        const updateObj = {};
+        updateObj[fieldPath] = turnoData;
+        // Si el empleado no está en la lista, agregarlo
+        const yaEsta = _planillaEnPlanilla.includes(_mt_empId);
+        if (!yaEsta) {
+          updateObj['empleados'] = firebase.firestore.FieldValue.arrayUnion(_mt_empId);
+        }
+        updateObj['local']    = _localActivo;
+        updateObj['semanaId'] = semId;
+        updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
+      } else {
+        // Demo: actualizar state local
+        if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
+        _planilla[_mt_empId][_mt_diaIdx] = turnoData;
+        _renderGrid();
+      }
+      document.getElementById('hr-turno-overlay').classList.remove('open');
+    } catch(e) { alert('Error guardando turno: ' + e.message); }
+  }
+
+  async function eliminarTurno() {
+    if (!_mt_empId || _mt_diaIdx === null) return;
+    if (!confirm('¿Quitar este turno?')) return;
+    try {
+      if (db) {
+        const fieldPath = `turnos.${_mt_empId}.${_mt_diaIdx}`;
+        const updateObj = {};
+        updateObj[fieldPath] = firebase.firestore.FieldValue.delete();
+        updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection(COL_PLANILLAS).doc(_semanaId()).update(updateObj);
+      } else {
+        if (_planilla[_mt_empId]) delete _planilla[_mt_empId][_mt_diaIdx];
+        _renderGrid();
+      }
+      document.getElementById('hr-turno-overlay').classList.remove('open');
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── PICKER DE EMPLEADOS (agregar a planilla) ────────────────
+  function abrirPickerEmpleado() {
+    document.getElementById('hr-pick-search').value = '';
+    filtrarPicker('');
+    document.getElementById('hr-emp-pick-overlay').classList.add('open');
+  }
+
+  function cerrarPickerEmpleado(e) {
+    if (e && e.target !== document.getElementById('hr-emp-pick-overlay')) return;
+    document.getElementById('hr-emp-pick-overlay').classList.remove('open');
+  }
+
+  function filtrarPicker(q) {
+    const list = document.getElementById('hr-pick-list');
+    if (!list) return;
+    const qLow = q.toLowerCase();
+    const filtrados = _empleados.filter(e =>
+      !q || (e.nombre||'').toLowerCase().includes(qLow)
+    );
+    if (!filtrados.length) {
+      list.innerHTML = `<div class="hr-empty" style="padding:24px">Sin resultados</div>`;
+      return;
+    }
+    list.innerHTML = filtrados.map(e => {
+      const yaEsta = _planillaEnPlanilla.includes(e.id);
+      const initials = (e.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avatar = e.foto
+        ? `<img src="${e.foto}" style="width:30px;height:30px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`
+        : `<div class="hr-emp-avatar" style="width:30px;height:30px;font-size:10px">${initials}</div>`;
+      return `<div class="hr-emp-pick-item${yaEsta?' ya-en-planilla':''}" onclick="horarios.agregarEmpleadoPlanilla('${e.id}')">
+        ${avatar}
+        <div>
+          <div class="hr-emp-pick-name">${esc(e.nombre||'')}</div>
+          <div class="hr-emp-pick-meta">${esc(e.puesto||'')}${yaEsta?' · ya en planilla':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function agregarEmpleadoPlanilla(empId) {
+    if (_planillaEnPlanilla.includes(empId)) return;
+    const semId = _semanaId();
+    try {
+      if (db) {
+        await db.collection(COL_PLANILLAS).doc(semId).set({
+          empleados: firebase.firestore.FieldValue.arrayUnion(empId),
+          local: _localActivo,
+          semanaId: semId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } else {
+        _planillaEnPlanilla.push(empId);
+        _renderGrid();
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── MODAL CIERRE DE TURNO ───────────────────────────────────
+  function abrirCierre() {
+    _cierre_diaIdx = null;
+    _cierreState   = {};
+    const local = _localActivo;
+    document.getElementById('hr-cierre-sub').textContent = `${local} · ${_labelSemana()}`;
+
+    // Renderizar botones de día (solo días con turnos asignados)
+    const diasConTurnos = [];
+    DIAS.forEach((label, i) => {
+      const hayAlguien = Object.keys(_planilla).some(empId => (_planilla[empId]||{})[i]?.entrada);
+      if (hayAlguien) diasConTurnos.push({ label, i });
+    });
+
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const diasEl = document.getElementById('hr-cierre-dias');
+    diasEl.innerHTML = diasConTurnos.map(({ label, i }) => {
+      const f = _diaFecha(i);
+      const esPasado = f <= hoy;
+      return `<button class="hr-week-btn${!esPasado?' ':''}" style="font-size:11px"
+        onclick="horarios._seleccionarDiaCierre(${i})"
+        ${!esPasado ? 'title="Turno todavía no ocurrió"' : ''}>
+        ${label} ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}
+      </button>`;
+    }).join('');
+
+    if (!diasConTurnos.length) diasEl.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Sin turnos asignados esta semana</span>`;
+
+    document.getElementById('hr-cierre-save-btn').disabled = true;
+    document.getElementById('hr-cierre-lista').innerHTML = `<div class="hr-empty" style="padding:24px">Seleccioná un día</div>`;
+    document.getElementById('hr-cierre-overlay').classList.add('open');
+  }
+
+  function _seleccionarDiaCierre(diaIdx) {
+    _cierre_diaIdx = diaIdx;
+    _cierreState   = {};
+
+    // Pre-cargar asistencia ya guardada
+    const yaGuardado = _asistencia[diaIdx] || {};
+    Object.entries(yaGuardado).forEach(([empId, val]) => { _cierreState[empId] = { ...val }; });
+
+    // Empleados con turno ese día
+    const empsConTurno = Object.keys(_planilla).filter(empId => (_planilla[empId]||{})[diaIdx]?.entrada);
+
+    // Highlight del botón seleccionado
+    document.querySelectorAll('#hr-cierre-dias .hr-week-btn').forEach((btn, idx) => {
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    });
+
+    const lista = document.getElementById('hr-cierre-lista');
+    if (!empsConTurno.length) {
+      lista.innerHTML = `<div class="hr-empty" style="padding:24px">Sin empleados con turno este día</div>`;
+      document.getElementById('hr-cierre-save-btn').disabled = true;
+      return;
+    }
+
+    document.getElementById('hr-cierre-save-btn').disabled = false;
+
+    lista.innerHTML = empsConTurno.map(empId => {
+      const emp    = _empleados.find(e => e.id === empId);
+      const turno  = (_planilla[empId]||{})[diaIdx] || {};
+      const estado = _cierreState[empId] || {};
+      const nombre = emp ? esc(emp.nombre||'') : empId;
+      const asist  = estado.asist || '';
+      const tarde  = estado.tarde || '';
+      const rank   = estado.rank  || '';
+      const RANKS  = ['S','A','B','C','D'];
+
+      return `<div class="hr-cierre-emp" id="hr-cemp-${empId}">
+        <div>
+          <div class="hr-cierre-name">${nombre}</div>
+          <div class="hr-cierre-time">${turno.entrada||''}–${turno.salida||''}</div>
+        </div>
+        <div class="hr-asist-btns">
+          ${['P','A','T'].map(a => `<button class="hr-asist-btn${asist===a?' sel-'+a:''}" onclick="horarios._setAsist('${empId}','${a}')">${a==='P'?'Pres':a==='A'?'Aus':'Tarde'}</button>`).join('')}
+        </div>
+        <input class="hr-tard-inp" id="hr-tard-${empId}" type="number" min="0" max="180" placeholder="min"
+          value="${tarde}" style="${asist!=='T'?'visibility:hidden':''}"
+          onchange="horarios._setTarde('${empId}',this.value)">
+        <div class="hr-rank-btns">
+          ${RANKS.map(r => `<button class="hr-rank-btn${rank===r?' sel':''}" data-r="${r}"
+            onclick="horarios._setRank('${empId}','${r}')">${r}</button>`).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function _setAsist(empId, valor) {
+    if (!_cierreState[empId]) _cierreState[empId] = {};
+    _cierreState[empId].asist = valor;
+    // re-render esa fila
+    _seleccionarDiaCierre(_cierre_diaIdx);
+  }
+  function _setTarde(empId, min) {
+    if (!_cierreState[empId]) _cierreState[empId] = {};
+    _cierreState[empId].tarde = parseInt(min) || 0;
+  }
+  function _setRank(empId, rank) {
+    if (!_cierreState[empId]) _cierreState[empId] = {};
+    _cierreState[empId].rank = rank;
+    _seleccionarDiaCierre(_cierre_diaIdx);
+  }
+
+  async function guardarCierre() {
+    if (_cierre_diaIdx === null) return;
+    const btn = document.getElementById('hr-cierre-save-btn');
+    btn.textContent = 'Guardando…'; btn.disabled = true;
+    const semId = _semanaId();
+    const asistDocId = semId + '__d' + _cierre_diaIdx;
+    try {
+      if (db) {
+        await db.collection(COL_ASISTENCIA).doc(asistDocId).set({
+          semanaId:  semId,
+          local:     _localActivo,
+          diaIdx:    _cierre_diaIdx,
+          registros: _cierreState,
+          savedBy:   window._currentUser?.email || 'desconocido',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        _asistencia[_cierre_diaIdx] = { ..._cierreState };
+        _renderGrid();
+      }
+      btn.textContent = '✓ Guardado';
+      btn.style.background = 'var(--m2)';
+      setTimeout(() => {
+        btn.textContent = 'Guardar cierre';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2000);
+    } catch(e) {
+      alert('Error guardando cierre: ' + e.message);
+      btn.textContent = 'Guardar cierre'; btn.disabled = false;
+    }
+  }
+
+  function cerrarCierre(e) {
+    if (e && e.target !== document.getElementById('hr-cierre-overlay')) return;
+    document.getElementById('hr-cierre-overlay').classList.remove('open');
+    _cierre_diaIdx = null;
+  }
+
+  function esc(v) { return String(v??'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
+
+  // ── TOAST helper ────────────────────────────────────────────
+  function _toast(msg, color) {
+    const t = document.createElement('div');
+    t.className = 'hr-toast';
+    t.innerHTML = `<span style="font-size:16px">${color === 'ok' ? '✅' : '❌'}</span><span>${msg}</span>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3800);
+  }
+
+  // ── EXPORTAR PDF ────────────────────────────────────────────
+  async function exportarPDF() {
+    const grid = document.getElementById('hr-grid-container');
+    if (!grid) return;
+    const btn = document.querySelector('.hr-export-btn.pdf');
+    if (btn) { btn.textContent = '⏳ Generando…'; btn.disabled = true; }
+    try {
+      const canvas = await html2canvas(grid, {
+        backgroundColor: '#16181c',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const { jsPDF } = window.jspdf;
+      const imgW = canvas.width;
+      const imgH = canvas.height;
+      const pdfW = 297; // A4 landscape mm
+      const pdfH = 210;
+      const ratio = Math.min(pdfW / imgW * 96, pdfH / imgH * 96);
+      const finalW = (imgW * ratio) / 96;
+      const finalH = (imgH * ratio) / 96;
+      const pdf = new jsPDF({ orientation: finalW > finalH ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const fitRatio = Math.min(pageW / (imgW / 96 * 25.4), pageH / (imgH / 96 * 25.4));
+      const drawW = (imgW / 96 * 25.4) * fitRatio;
+      const drawH = (imgH / 96 * 25.4) * fitRatio;
+      const x = (pageW - drawW) / 2;
+      const y = (pageH - drawH) / 2;
+      // Encabezado
+      pdf.setFillColor(22, 24, 28);
+      pdf.rect(0, 0, pageW, pageH, 'F');
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, drawW, drawH);
+      // Footer
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(107, 112, 128);
+      pdf.text(`Horario ${_labelSemana()} · ${_localActivo} · Generado ${new Date().toLocaleDateString('es-AR')}`, pageW / 2, pageH - 4, { align: 'center' });
+      const filename = `Horario_${_localActivo.replace(/\s+/g,'_')}_${_semanaBase.toISOString().slice(0,10)}.pdf`;
+      pdf.save(filename);
+      _toast('PDF descargado correctamente', 'ok');
+    } catch(e) {
+      _toast('Error al generar el PDF: ' + e.message, 'err');
+      console.error(e);
+    } finally {
+      if (btn) { btn.textContent = '⬇ PDF'; btn.disabled = false; }
+    }
+  }
+
+  // ── MODAL MAIL ──────────────────────────────────────────────
+  let _mailRecipients = [];
+
+  function abrirModalMail() {
+    _mailRecipients = [];
+    _renderMailChips();
+    const lbl = document.getElementById('hr-mail-semana-lbl');
+    if (lbl) lbl.textContent = `${_labelSemana()} · ${_localActivo}`;
+    const subj = document.getElementById('hr-mail-subject');
+    if (subj) subj.value = `Horario ${_labelSemana()} – ${_localActivo}`;
+    const msg = document.getElementById('hr-mail-msg');
+    if (msg) msg.value = '';
+    const status = document.getElementById('hr-mail-status');
+    if (status) { status.textContent = ''; status.className = 'hr-mail-status'; }
+    const sendBtn = document.getElementById('hr-mail-send-btn');
+    if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
+    document.getElementById('hr-mail-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('hr-mail-inp')?.focus(), 100);
+  }
+
+  function cerrarModalMail(e) {
+    if (e && e.target !== document.getElementById('hr-mail-overlay')) return;
+    document.getElementById('hr-mail-overlay').classList.remove('open');
+  }
+
+  function _renderMailChips() {
+    const cont = document.getElementById('hr-mail-recipients');
+    if (!cont) return;
+    // Eliminar chips existentes (mantener el input)
+    cont.querySelectorAll('.hr-mail-chip').forEach(c => c.remove());
+    const inp = document.getElementById('hr-mail-inp');
+    _mailRecipients.forEach((email, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'hr-mail-chip';
+      chip.innerHTML = `${email}<button class="hr-mail-chip-del" onclick="horarios._removeMailChip(${idx})" type="button">×</button>`;
+      cont.insertBefore(chip, inp);
+    });
+  }
+
+  function _addMailChip(val) {
+    const email = val.trim().replace(/,/g,'');
+    if (!email) return;
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(email)) return;
+    if (!_mailRecipients.includes(email)) _mailRecipients.push(email);
+    const inp = document.getElementById('hr-mail-inp');
+    if (inp) inp.value = '';
+    _renderMailChips();
+  }
+
+  function _removeMailChip(idx) {
+    _mailRecipients.splice(idx, 1);
+    _renderMailChips();
+  }
+
+  function _mailInpKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      _addMailChip(e.target.value);
+    }
+  }
+
+  function _mailInpBlur() {
+    const inp = document.getElementById('hr-mail-inp');
+    if (inp && inp.value.trim()) _addMailChip(inp.value);
+  }
+
+  async function enviarEmail() {
+    if (!_mailRecipients.length) {
+      const status = document.getElementById('hr-mail-status');
+      if (status) { status.textContent = 'Agregá al menos un destinatario.'; status.className = 'hr-mail-status err'; }
+      return;
+    }
+    const sendBtn = document.getElementById('hr-mail-send-btn');
+    const status  = document.getElementById('hr-mail-status');
+    const subject = (document.getElementById('hr-mail-subject')?.value || '').trim();
+    const mensaje = (document.getElementById('hr-mail-msg')?.value || '').trim();
+    if (sendBtn) { sendBtn.textContent = 'Generando PDF…'; sendBtn.disabled = true; }
+    if (status)  { status.textContent = 'Capturando grilla…'; status.className = 'hr-mail-status'; }
+    try {
+      // Generar PDF como base64
+      const grid = document.getElementById('hr-grid-container');
+      const canvas = await html2canvas(grid, { backgroundColor: '#16181c', scale: 2, useCORS: true, logging: false });
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const iW = canvas.width; const iH = canvas.height;
+      const ratio = Math.min(pageW / (iW / 96 * 25.4), pageH / (iH / 96 * 25.4));
+      const dW = (iW / 96 * 25.4) * ratio; const dH = (iH / 96 * 25.4) * ratio;
+      pdf.setFillColor(22, 24, 28); pdf.rect(0, 0, pageW, pageH, 'F');
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW-dW)/2, (pageH-dH)/2, dW, dH);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(107,112,128);
+      pdf.text(`Horario ${_labelSemana()} · ${_localActivo} · Generado ${new Date().toLocaleDateString('es-AR')}`, pageW/2, pageH-4, { align:'center' });
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const filename  = `Horario_${_localActivo.replace(/\s+/g,'_')}_${_semanaBase.toISOString().slice(0,10)}.pdf`;
+      if (status) { status.textContent = 'Abriendo cliente de email…'; }
+
+      // Construir mailto con info del pdf como datos descargables
+      // Como los clientes de email no soportan adjuntar base64 por mailto,
+      // descargamos el PDF y abrimos el cliente listo para que el usuario lo adjunte.
+      pdf.save(filename);
+      const body = [
+        mensaje,
+        '',
+        `📅 ${_labelSemana()}`,
+        `📍 Local: ${_localActivo}`,
+        '',
+        '(El PDF del horario fue descargado automáticamente en tu equipo. Adjuntalo a este email.)',
+      ].join('\n');
+      const mailto = `mailto:${_mailRecipients.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(mailto, '_blank');
+      if (status) { status.textContent = '✓ PDF descargado y cliente de email abierto.'; status.className = 'hr-mail-status ok'; }
+      if (sendBtn) { sendBtn.textContent = 'Enviado'; }
+      setTimeout(() => document.getElementById('hr-mail-overlay').classList.remove('open'), 2200);
+    } catch(e) {
+      if (status) { status.textContent = 'Error: ' + e.message; status.className = 'hr-mail-status err'; }
+      if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
+      console.error(e);
+    }
+  }
+
+  return {
+    init, cambiarLocal,
+    semanaAnterior, semanaSiguiente, irHoy,
+    abrirModalTurno, cerrarModalTurno, guardarTurno, eliminarTurno,
+    abrirPickerEmpleado, cerrarPickerEmpleado, filtrarPicker, agregarEmpleadoPlanilla,
+    abrirCierre, cerrarCierre, guardarCierre, _seleccionarDiaCierre,
+    _setAsist, _setTarde, _setRank,
+    exportarPDF, abrirModalMail, cerrarModalMail, enviarEmail,
+    _mailInpKey, _mailInpBlur, _removeMailChip,
+  };
+})();
+
+
 const portal = (() => {
   const COL = 'portal-publicaciones';
   let _registros = [], _filtrados = [], _unsub = null, _tipo = 'noticia', _editId = null;
@@ -5308,6 +7106,82 @@ const usuarios = (() => {
 })();
 
 // Módulo usuarios se inicializa via navigate() ya configurado arriba
+
+// =============================================================
+//  PANTALLA PÚBLICA: CONFIRMAR PRESENTACIÓN
+//  Se activa si la URL tiene ?confirmar=DOCID (sin login)
+// =============================================================
+(function _initConfirmar() {
+  const params  = new URLSearchParams(location.search);
+  const docId   = params.get('confirmar');
+  if (!docId) return;
+
+  // Mostrar pantalla inmediatamente, ocultar todo lo demás
+  const screen = document.getElementById('confirmar-screen');
+  if (screen) screen.classList.add('show');
+
+  // Esperar a que Firebase esté listo
+  function _waitFirebase(fn, n) {
+    if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) { fn(); }
+    else if (n < 40) { setTimeout(() => _waitFirebase(fn, n + 1), 150); }
+    else {
+      document.getElementById('conf-nombre').textContent = 'Error de conexión';
+      document.getElementById('conf-btn').disabled = true;
+    }
+  }
+
+  _waitFirebase(async () => {
+    try {
+      const snap = await db.collection('ingresos').doc(docId).get();
+      if (!snap.exists) {
+        document.getElementById('conf-nombre').textContent = 'Registro no encontrado';
+        document.getElementById('conf-btn').disabled = true;
+        return;
+      }
+      const d   = snap.data();
+      const fmt = v => v ? v.split('-').reverse().join('/') : '—';
+
+      document.getElementById('conf-nombre').textContent  = d.nombre  || '—';
+      document.getElementById('conf-puesto').textContent  = d.puesto  || '';
+      document.getElementById('conf-fecha').textContent   = fmt(d.fecha);
+      document.getElementById('conf-horario').textContent = d.horario || 'No especificado';
+      document.getElementById('conf-local').textContent   = d.local   || '—';
+
+      // Si ya fue confirmado, mostrar ese estado
+      if (d.presentacion === true) {
+        document.getElementById('conf-action').style.display = 'none';
+        document.getElementById('conf-result-ya').classList.add('show');
+      }
+    } catch(e) {
+      document.getElementById('conf-nombre').textContent = 'Error al cargar';
+      document.getElementById('conf-btn').disabled = true;
+      console.error('confirmar load:', e);
+    }
+  }, 0);
+
+  window._confirmarPresentacion = async function() {
+    const btn = document.getElementById('conf-btn');
+    btn.textContent = 'Confirmando…';
+    btn.disabled = true;
+    try {
+      await db.collection('ingresos').doc(docId).update({
+        presentacion: true,
+        presentacionAt: new Date().toISOString(),
+      });
+      const nombre = document.getElementById('conf-nombre').textContent;
+      document.getElementById('conf-action').style.display = 'none';
+      document.getElementById('conf-result-ok-sub').textContent =
+        `${nombre} fue marcado como presente. El equipo de RRHH quedó notificado.`;
+      document.getElementById('conf-result-ok').classList.add('show');
+    } catch(e) {
+      document.getElementById('conf-result-err-sub').textContent = e.message || 'Error desconocido.';
+      document.getElementById('conf-result-err').classList.add('show');
+      btn.textContent = 'Reintentar';
+      btn.disabled = false;
+      console.error('confirmar write:', e);
+    }
+  };
+})();
 
 </script>
 </body>

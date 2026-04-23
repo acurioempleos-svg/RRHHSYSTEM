@@ -6234,6 +6234,7 @@ const horarios = (() => {
         const isHoy = fStr === todayStr;
         const turno = (_planilla[empId] || {})[i] || (_planilla[empId] || {})[String(i)];
         const asist = ((_asistencia[i] || {})[empId]) || ((_asistencia[String(i)] || {})[empId]) || {};
+        if (i === 0) console.log('[chip] empId=' + empId + ' dia=0 planillaEmp=', JSON.stringify(_planilla[empId] || {}), 'turno=', turno);
         let chip;
         if (turno && turno.entrada) {
           let asistBadge = '';

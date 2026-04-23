@@ -6217,7 +6217,7 @@ const horarios = (() => {
     // Filas empleados
     const rows = empIds.map(empId => {
       const emp = _empleados.find(e => e.id === empId);
-      if (!emp) return '';
+      if (!emp) { console.log('[_renderGrid] empId=' + empId + ' NO encontrado en _empleados. IDs disponibles:', _empleados.map(e=>e.id)); return ''; }
       const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const avatar = emp.foto
         ? `<img src="${emp.foto}" onerror="this.parentNode.textContent='${initials}'">`
@@ -6345,6 +6345,11 @@ const horarios = (() => {
         if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
         _planilla[_mt_empId][_mt_diaIdx] = turnoData;
         if (!yaEsta) _planillaEnPlanilla.push(_mt_empId);
+        console.log('[guardarTurno] empId=' + _mt_empId + ' diaIdx=' + _mt_diaIdx + ' turno=', turnoData);
+        console.log('[guardarTurno] _planillaEnPlanilla=', _planillaEnPlanilla);
+        console.log('[guardarTurno] _empleados IDs=', _empleados.map(e=>e.id));
+        console.log('[guardarTurno] _empleados locales=', _empleados.map(e=>e.local));
+        console.log('[guardarTurno] _localActivo=', _localActivo);
         _renderGrid();
         await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
       } else {

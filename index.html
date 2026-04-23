@@ -4026,7 +4026,6 @@ const infoPersonal = (() => {
   }
 
   function _notifyReady() {
-    console.log('[infoPersonal] _notifyReady fired, registros=' + _registros.length + ' dataReady=' + _dataReady);
     // Primera vez: ejecutar callbacks pendientes
     if (!_dataReady) {
       _dataReady = true;
@@ -5563,17 +5562,13 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
   if (moduleId === 'horarios') {
-    console.log('[HORARIOS] navigate triggered');
     adminLocales.init();
     if (typeof infoPersonal !== 'undefined') infoPersonal.init();
     let _locReady = false, _ipReady = false;
     function _tryInitHorarios() {
-      console.log('[HORARIOS] _tryInitHorarios locReady=' + _locReady + ' ipReady=' + _ipReady);
       if (_locReady && _ipReady) horarios.init();
     }
-    adminLocales.onReady(() => { console.log('[HORARIOS] adminLocales ready, locales=' + JSON.stringify(adminLocales.getLocales().map(l=>l.nombre))); _locReady = true; _tryInitHorarios(); });
     if (typeof infoPersonal !== 'undefined') {
-      infoPersonal.onReady(() => { console.log('[HORARIOS] infoPersonal ready, regs=' + infoPersonal.getRegistros().length); _ipReady = true; _tryInitHorarios(); });
     } else {
       _ipReady = true; _tryInitHorarios();
     }
@@ -6025,11 +6020,9 @@ const horarios = (() => {
 
   // ── INIT ────────────────────────────────────────────────────
   function init() {
-    console.log('[HORARIOS] init() called');
     if (!_semanaBase) _semanaBase = _luneDe(new Date());
 
     _locales = adminLocales.getLocales().map(l => l.nombre).filter(Boolean).sort();
-    console.log('[HORARIOS] locales disponibles:', _locales);
     if (!_locales.length) {
       const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
       _locales = [...new Set(ipRegs.map(r => r.local).filter(Boolean))].sort();
@@ -6114,7 +6107,6 @@ const horarios = (() => {
 
   // ── CARGA DE DATOS ─────────────────────────────────────────
   function _cargarSemana() {
-    console.log('[HORARIOS] _cargarSemana() localActivo=' + _localActivo);
     if (_unsub) { _unsub(); _unsub = null; }
     if (_unsubAsist) { _unsubAsist(); _unsubAsist = null; }
 
@@ -6142,7 +6134,6 @@ const horarios = (() => {
         const rawTurnos = data.turnos || {};
         // Si llegó un snapshot vacío dentro de 3s de una escritura optimista, ignorarlo
         if (Object.keys(rawTurnos).length === 0 && msSinceWrite < 3000) {
-          console.log('[onSnapshot] ignorando snapshot vacío post-escritura optimista (' + msSinceWrite + 'ms)');
           return;
         }
         _planilla = {};
@@ -6157,7 +6148,6 @@ const horarios = (() => {
       } else {
         // Doc no existe: si hubo escritura optimista reciente, no borrar estado local
         if (msSinceWrite < 3000) {
-          console.log('[onSnapshot] doc no existe pero hay escritura pendiente, ignorando (' + msSinceWrite + 'ms)');
           return;
         }
         _planilla = {};
@@ -6188,7 +6178,6 @@ const horarios = (() => {
     // Siempre releer empleados frescos de infoPersonal (pueden llegar después de _cargarSemana)
     const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
     _empleados = ipRegs.filter(r => r.local === _localActivo);
-    console.log('[HORARIOS] _renderGrid() localActivo=' + _localActivo + ' totalIPRegs=' + ipRegs.length + ' empleadosEnLocal=' + _empleados.length);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const todayStr = hoy.toISOString().slice(0,10);
@@ -6198,8 +6187,6 @@ const horarios = (() => {
       ? _planillaEnPlanilla
       : _empleados.map(e => e.id);
 
-    console.log('[_renderGrid] empIds=', empIds, '_planillaEnPlanilla=', _planillaEnPlanilla, '_empleados.length=', _empleados.length);
-    console.log('[_renderGrid] _planilla=', JSON.stringify(_planilla));
 
     // Si no hay empleados
     if (!empIds.length && !_empleados.length) {
@@ -6230,7 +6217,6 @@ const horarios = (() => {
     // Filas empleados
     const rows = empIds.map(empId => {
       const emp = _empleados.find(e => e.id === empId);
-      if (!emp) { console.log('[_renderGrid] empId=' + empId + ' NO encontrado en _empleados. IDs disponibles:', _empleados.map(e=>e.id)); return ''; }
       const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
       const avatar = emp.foto
         ? `<img src="${emp.foto}" onerror="this.parentNode.textContent='${initials}'">`
@@ -6247,7 +6233,6 @@ const horarios = (() => {
         const isHoy = fStr === todayStr;
         const turno = (_planilla[empId] || {})[i] || (_planilla[empId] || {})[String(i)];
         const asist = ((_asistencia[i] || {})[empId]) || ((_asistencia[String(i)] || {})[empId]) || {};
-        if (i === 0) console.log('[chip] empId=' + empId + ' dia=0 planillaEmp=', JSON.stringify(_planilla[empId] || {}), 'turno=', turno);
         let chip;
         if (turno && turno.entrada) {
           let asistBadge = '';
@@ -6360,17 +6345,12 @@ const horarios = (() => {
         _planilla[_mt_empId][_mt_diaIdx] = turnoData;
         if (!yaEsta) _planillaEnPlanilla.push(_mt_empId);
         _lastOptimisticWrite = Date.now();
-        console.log('[guardarTurno] semId=' + semId);
-        console.log('[guardarTurno] updateObj=', JSON.stringify(updateObj));
         _renderGrid();
         try {
           await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
-          console.log('[guardarTurno] Firestore write OK');
           // Leer el doc inmediatamente para verificar qué quedó guardado
           const snap = await db.collection(COL_PLANILLAS).doc(semId).get();
-          console.log('[guardarTurno] doc en Firestore después de set:', JSON.stringify(snap.data()));
         } catch(writeErr) {
-          console.error('[guardarTurno] ERROR Firestore:', writeErr);
           alert('Error guardando: ' + writeErr.message);
         }
       } else {
@@ -6495,12 +6475,17 @@ const horarios = (() => {
   }
 
   function _seleccionarDiaCierre(diaIdx) {
+    const diaChanged = diaIdx !== _cierre_diaIdx;
     _cierre_diaIdx = diaIdx;
-    _cierreState   = {};
 
-    // Pre-cargar asistencia ya guardada
-    const yaGuardado = _asistencia[diaIdx] || {};
-    Object.entries(yaGuardado).forEach(([empId, val]) => { _cierreState[empId] = { ...val }; });
+    if (diaChanged) {
+      // Solo resetear el estado cuando cambia el día, no en cada re-render
+      _cierreState = {};
+      // Pre-cargar asistencia ya guardada en Firestore
+      const yaGuardado = _asistencia[diaIdx] || {};
+      Object.entries(yaGuardado).forEach(([empId, val]) => { _cierreState[empId] = { ...val }; });
+    }
+    // Si el día es el mismo (re-render por click en botón), mantener _cierreState tal cual
 
     // Empleados con turno ese día
     const empsConTurno = Object.keys(_planilla).filter(empId => {

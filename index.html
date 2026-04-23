@@ -1160,8 +1160,21 @@
   .hr-rank-C { background: color-mix(in srgb,var(--m5)  20%,transparent); color: var(--m5);  border: 1px solid color-mix(in srgb,var(--m5)  40%,transparent); }
   .hr-rank-D { background: color-mix(in srgb,var(--danger) 20%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 40%,transparent); }
 
-  /* Modal de turno */
-  .hr-modal-overlay {
+  /* Selector AM / PM */
+  .hr-turno-tipo-btn {
+    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted);
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all var(--transition);
+  }
+  .hr-turno-tipo-btn.sel-am {
+    background: color-mix(in srgb, #fbbf24 15%, transparent);
+    border-color: #fbbf24; color: #fbbf24;
+  }
+  .hr-turno-tipo-btn.sel-pm {
+    background: color-mix(in srgb, var(--m3) 15%, transparent);
+    border-color: var(--m3); color: var(--m3);
+  }
     position: fixed; inset: 0; z-index: 200;
     background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
@@ -1893,6 +1906,7 @@
               <th>Fecha Ingreso</th>
               <th>Puesto</th>
               <th>Origen</th>
+              <th>Presentación</th>
               <th>Legajo</th>
               <th class="col-acc"></th>
             </tr>
@@ -2601,13 +2615,14 @@
           <div class="hr-modal-sub" id="hr-turno-modal-sub">—</div>
 
           <div class="hr-modal-row">
-            <div class="bj-field">
-              <label class="bj-label">Hora entrada</label>
-              <input class="bj-input" id="hr-t-entrada" type="time">
-            </div>
-            <div class="bj-field">
-              <label class="bj-label">Hora salida</label>
-              <input class="bj-input" id="hr-t-salida" type="time">
+            <div class="bj-field" style="flex:1">
+              <label class="bj-label">Turno</label>
+              <div style="display:flex;gap:8px">
+                <button class="hr-turno-tipo-btn" id="hr-btn-am" onclick="horarios._setTurnoTipo('AM')" type="button">🌅 AM</button>
+                <button class="hr-turno-tipo-btn" id="hr-btn-pm" onclick="horarios._setTurnoTipo('PM')" type="button">🌆 PM</button>
+              </div>
+              <input type="hidden" id="hr-t-entrada">
+              <input type="hidden" id="hr-t-salida">
             </div>
           </div>
 
@@ -4933,13 +4948,12 @@ const ingresos = (() => {
     const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
 
     if (!_filtrados.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="bj-empty-cell">Sin ingresos registrados</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="bj-empty-cell">Sin ingresos registrados</td></tr>`;
       count.textContent = '0 registros';
       return;
     }
     count.textContent = `${_filtrados.length} ingreso${_filtrados.length!==1?'s':''}`;
     tbody.innerHTML = _filtrados.map(r => {
-      // Verificar si ya tiene legajo en Info Personal
       const emp = ipRegs.find(e => e['in-ref'] === r.id || (e.nombre && e.nombre === r.nombre && e.local === r.local));
       const legajoBadge = emp
         ? `<span class="in-badge-legajo" title="Ver en Info Personal" onclick="ingresos._irAInfoPersonal('${emp.id}')">👤 Legajo <-</span>`
@@ -4947,6 +4961,9 @@ const ingresos = (() => {
       const origenBadge = r['rc-ref']
         ? `<span class="in-badge-origen">desde CV</span>`
         : `<span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:10px">manual</span>`;
+      const presentBadge = r.presentacion === true
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:color-mix(in srgb,var(--m2) 14%,transparent);border:1px solid color-mix(in srgb,var(--m2) 30%,transparent);color:var(--m2);font-family:'DM Mono',monospace;font-size:10px;font-weight:700" title="${r.presentacionAt ? 'Confirmado: ' + new Date(r.presentacionAt).toLocaleString('es-AR') : ''}">✅ Presente</span>`
+        : `<span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:10px">Pendiente</span>`;
       return `
         <tr>
           <td class="col-mono">${esc(r.codigo)}</td>
@@ -4955,6 +4972,7 @@ const ingresos = (() => {
           <td class="col-mono col-muted">${fmtFecha(r.fecha)}</td>
           <td>${esc(r.puesto)}</td>
           <td>${origenBadge}</td>
+          <td>${presentBadge}</td>
           <td>${legajoBadge}</td>
           <td>
             <div class="bj-row-actions">
@@ -5051,7 +5069,6 @@ const ingresos = (() => {
         data.createdAt = data.updatedAt;
         const docRef = await db.collection(COL).add(data);
         data._docId = docRef.id; // guardar ID real para el link de confirmación
-        enviarMailIngreso(data);
       }
       document.getElementById('in-modal-overlay').classList.remove('open');
       if (rcRef && db) {
@@ -6144,7 +6161,7 @@ const horarios = (() => {
           else if (asist.asist === 'T') asistBadge = `<div class="hr-badge hr-badge-tarde">⏱ +${asist.tarde||0}m</div>`;
           const rankBadge = asist.rank ? `<span class="hr-rank hr-rank-${asist.rank}">${asist.rank}</span>` : '';
           chip = `<div class="hr-turno-chip" ${puedeEditar ? `onclick="horarios.abrirModalTurno('${empId}',${i})"` : ''}>
-            <div class="hr-turno-time">${turno.entrada}–${turno.salida}</div>
+            <div class="hr-turno-time">${turno.label || (turno.entrada === '08:00' ? 'AM' : 'PM')}</div>
             ${turno.nota ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px">${esc(turno.nota)}</div>` : ''}
             <div style="display:flex;gap:3px;align-items:center;justify-content:center;margin-top:3px;flex-wrap:wrap">
               ${asistBadge}${rankBadge}
@@ -6171,6 +6188,22 @@ const horarios = (() => {
   }
 
   // ── MODAL TURNO (gerente / rrhh) ────────────────────────────
+  function _setTurnoTipo(tipo) {
+    const btnAm = document.getElementById('hr-btn-am');
+    const btnPm = document.getElementById('hr-btn-pm');
+    if (!btnAm || !btnPm) return;
+    btnAm.classList.toggle('sel-am', tipo === 'AM');
+    btnPm.classList.toggle('sel-pm', tipo === 'PM');
+    // AM: 08:00 – 14:00 / PM: 14:00 – 22:00
+    if (tipo === 'AM') {
+      document.getElementById('hr-t-entrada').value = '08:00';
+      document.getElementById('hr-t-salida').value  = '14:00';
+    } else {
+      document.getElementById('hr-t-entrada').value = '14:00';
+      document.getElementById('hr-t-salida').value  = '22:00';
+    }
+  }
+
   function abrirModalTurno(empId, diaIdx) {
     const rol = window._currentRol || 'rrhh';
     if (rol !== 'rrhh' && rol !== 'gerente') return;
@@ -6182,9 +6215,16 @@ const horarios = (() => {
     document.getElementById('hr-turno-modal-title').textContent = emp ? emp.nombre : 'Empleado';
     document.getElementById('hr-turno-modal-sub').textContent =
       `${DIAS[diaIdx]} ${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')} · ${_localActivo}`;
+    // Restaurar selección AM/PM según turno guardado
+    const btnAm = document.getElementById('hr-btn-am');
+    const btnPm = document.getElementById('hr-btn-pm');
+    if (btnAm) btnAm.classList.remove('sel-am');
+    if (btnPm) btnPm.classList.remove('sel-pm');
     document.getElementById('hr-t-entrada').value = turno.entrada || '';
     document.getElementById('hr-t-salida').value  = turno.salida  || '';
-    document.getElementById('hr-t-nota').value    = turno.nota    || '';
+    if (turno.entrada === '08:00') btnAm?.classList.add('sel-am');
+    else if (turno.entrada === '14:00') btnPm?.classList.add('sel-pm');
+    document.getElementById('hr-t-nota').value = turno.nota || '';
     document.getElementById('hr-turno-overlay').classList.add('open');
   }
 
@@ -6199,10 +6239,12 @@ const horarios = (() => {
     const entrada = document.getElementById('hr-t-entrada').value;
     const salida  = document.getElementById('hr-t-salida').value;
     const nota    = document.getElementById('hr-t-nota').value.trim();
-    if (!entrada || !salida) { alert('Ingresá hora de entrada y salida.'); return; }
+    if (!entrada || !salida) { alert('Seleccioná un turno: AM o PM.'); return; }
+    // Etiqueta legible para el chip
+    const turnoLabel = entrada === '08:00' ? 'AM' : 'PM';
 
     const semId = _semanaId();
-    const turnoData = { entrada, salida, nota };
+    const turnoData = { entrada, salida, nota, label: turnoLabel };
 
     try {
       if (db) {
@@ -6376,7 +6418,7 @@ const horarios = (() => {
       return `<div class="hr-cierre-emp" id="hr-cemp-${empId}">
         <div>
           <div class="hr-cierre-name">${nombre}</div>
-          <div class="hr-cierre-time">${turno.entrada||''}–${turno.salida||''}</div>
+          <div class="hr-cierre-time">${turno.label || (turno.entrada === '08:00' ? 'AM' : 'PM')}</div>
         </div>
         <div class="hr-asist-btns">
           ${['P','A','T'].map(a => `<button class="hr-asist-btn${asist===a?' sel-'+a:''}" onclick="horarios._setAsist('${empId}','${a}')">${a==='P'?'Pres':a==='A'?'Aus':'Tarde'}</button>`).join('')}
@@ -6638,6 +6680,7 @@ const horarios = (() => {
     _setAsist, _setTarde, _setRank,
     exportarPDF, abrirModalMail, cerrarModalMail, enviarEmail,
     _mailInpKey, _mailInpBlur, _removeMailChip,
+    _setTurnoTipo,
   };
 })();
 

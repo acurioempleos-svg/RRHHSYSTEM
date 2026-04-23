@@ -4026,6 +4026,7 @@ const infoPersonal = (() => {
   }
 
   function _notifyReady() {
+    console.log('[infoPersonal] _notifyReady fired, registros=' + _registros.length + ' dataReady=' + _dataReady);
     // Primera vez: ejecutar callbacks pendientes
     if (!_dataReady) {
       _dataReady = true;
@@ -5332,8 +5333,7 @@ const ingresos = (() => {
            crearLegajo, _irAInfoPersonal, _precargarDesdeRC, _clearOrigen,
            askDelete, cancelDelete, confirmDelete,
            exportCSV, getRegistros, _renderTablaPublic,
-           cerrarSuccess, abrirMailIngreso, cerrarMailIngreso, enviarMailModal,
-           _inMailKey, _inMailBlur, _removeInMailChip };
+           cerrarSuccess, abrirMailIngreso, cerrarMailIngreso, enviarMailModal };
 })();
 
 // -- HELPER GLOBAL: poblar select de locales ------------------
@@ -5563,16 +5563,17 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
   if (moduleId === 'horarios') {
+    console.log('[HORARIOS] navigate triggered');
     adminLocales.init();
     if (typeof infoPersonal !== 'undefined') infoPersonal.init();
-    // Esperar que AMBAS dependencias async estén listas antes de inicializar horarios
     let _locReady = false, _ipReady = false;
     function _tryInitHorarios() {
+      console.log('[HORARIOS] _tryInitHorarios locReady=' + _locReady + ' ipReady=' + _ipReady);
       if (_locReady && _ipReady) horarios.init();
     }
-    adminLocales.onReady(() => { _locReady = true; _tryInitHorarios(); });
+    adminLocales.onReady(() => { console.log('[HORARIOS] adminLocales ready, locales=' + JSON.stringify(adminLocales.getLocales().map(l=>l.nombre))); _locReady = true; _tryInitHorarios(); });
     if (typeof infoPersonal !== 'undefined') {
-      infoPersonal.onReady(() => { _ipReady = true; _tryInitHorarios(); });
+      infoPersonal.onReady(() => { console.log('[HORARIOS] infoPersonal ready, regs=' + infoPersonal.getRegistros().length); _ipReady = true; _tryInitHorarios(); });
     } else {
       _ipReady = true; _tryInitHorarios();
     }
@@ -6023,9 +6024,11 @@ const horarios = (() => {
 
   // ── INIT ────────────────────────────────────────────────────
   function init() {
+    console.log('[HORARIOS] init() called');
     if (!_semanaBase) _semanaBase = _luneDe(new Date());
 
     _locales = adminLocales.getLocales().map(l => l.nombre).filter(Boolean).sort();
+    console.log('[HORARIOS] locales disponibles:', _locales);
     if (!_locales.length) {
       const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
       _locales = [...new Set(ipRegs.map(r => r.local).filter(Boolean))].sort();
@@ -6110,6 +6113,7 @@ const horarios = (() => {
 
   // ── CARGA DE DATOS ─────────────────────────────────────────
   function _cargarSemana() {
+    console.log('[HORARIOS] _cargarSemana() localActivo=' + _localActivo);
     if (_unsub) { _unsub(); _unsub = null; }
     if (_unsubAsist) { _unsubAsist(); _unsubAsist = null; }
 
@@ -6174,6 +6178,7 @@ const horarios = (() => {
     // Siempre releer empleados frescos de infoPersonal (pueden llegar después de _cargarSemana)
     const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
     _empleados = ipRegs.filter(r => r.local === _localActivo);
+    console.log('[HORARIOS] _renderGrid() localActivo=' + _localActivo + ' totalIPRegs=' + ipRegs.length + ' empleadosEnLocal=' + _empleados.length);
 
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const todayStr = hoy.toISOString().slice(0,10);

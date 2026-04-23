@@ -1175,6 +1175,7 @@
     background: color-mix(in srgb, var(--m3) 15%, transparent);
     border-color: var(--m3); color: var(--m3);
   }
+  .hr-modal-overlay {
     position: fixed; inset: 0; z-index: 200;
     background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
@@ -2045,13 +2046,11 @@
         </div>
         <div class="in-mail-body">
           <div>
-            <label class="in-mail-label">Destinatarios</label>
-            <div class="in-mail-recipients" id="in-mail-recipients" onclick="document.getElementById('in-mail-inp').focus()">
-              <input class="in-mail-recipient-inp" id="in-mail-inp" type="email"
-                placeholder="email@ejemplo.com · Enter para agregar"
-                onkeydown="ingresos._inMailKey(event)" onblur="ingresos._inMailBlur()">
+            <label class="in-mail-label">Destinatarios <span style="font-weight:400;color:var(--muted);font-size:9px;margin-left:6px;font-family:'DM Mono',monospace">BASE DE LOCALES</span></label>
+            <div class="in-mail-recipients" id="in-mail-recipients" style="cursor:default;min-height:38px;align-items:center">
+              <div id="in-mail-chips-auto" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%"></div>
             </div>
-            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px">Enter o coma para agregar. Podés poner varios destinatarios.</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px">Los destinatarios se cargan automáticamente del local. Editá los mails en <strong style="color:var(--text)">Admin → Locales</strong>.</div>
           </div>
           <div>
             <label class="in-mail-label">Vista previa del mensaje</label>
@@ -3522,6 +3521,8 @@ async function showApp(user) {
 
   setTimeout(() => { if (typeof adminLocales !== 'undefined') adminLocales.init(); }, 200);
   checkFirebase();
+  // Chequear recordatorios de devolución pendientes al iniciar sesión
+  setTimeout(_checkDevolucionesPendientes, 3000);
 }
 
 function aplicarPermisos(rol, localAsignado) {
@@ -5101,12 +5102,14 @@ const ingresos = (() => {
   }
 
   // ── MODAL MAIL INGRESO ───────────────────────────────────────
+  // Los destinatarios se cargan automáticamente desde la base de locales.
+  // El usuario no escribe emails — solo confirma y envía.
   let _inMailRecipients = [];
 
   function abrirMailIngreso() {
     if (!_lastData) return;
+    // Cargar emails del local automáticamente
     _inMailRecipients = [];
-    // Pre-cargar emails del local si existen
     if (typeof adminLocales !== 'undefined' && _lastData.local) {
       const loc = adminLocales.getLocales().find(l => l.nombre === _lastData.local);
       if (loc && loc.email) {
@@ -5135,7 +5138,6 @@ const ingresos = (() => {
     if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
     document.getElementById('in-success-overlay').classList.remove('open');
     document.getElementById('in-mail-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('in-mail-inp')?.focus(), 100);
   }
 
   function cerrarMailIngreso(e) {
@@ -5144,45 +5146,25 @@ const ingresos = (() => {
   }
 
   function _renderInMailChips() {
-    const cont = document.getElementById('in-mail-recipients');
+    const cont = document.getElementById('in-mail-chips-auto');
     if (!cont) return;
-    cont.querySelectorAll('.in-mail-chip').forEach(c => c.remove());
-    const inp = document.getElementById('in-mail-inp');
-    _inMailRecipients.forEach((email, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'in-mail-chip';
-      chip.innerHTML = `${email}<button class="in-mail-chip-del" onclick="ingresos._removeInMailChip(${idx})" type="button">×</button>`;
-      cont.insertBefore(chip, inp);
-    });
-  }
-
-  function _addInMailChip(val) {
-    const email = val.trim().replace(/,/g,'');
-    if (!email) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    if (!_inMailRecipients.includes(email)) _inMailRecipients.push(email);
-    const inp = document.getElementById('in-mail-inp');
-    if (inp) inp.value = '';
-    _renderInMailChips();
-  }
-
-  function _removeInMailChip(idx) {
-    _inMailRecipients.splice(idx, 1);
-    _renderInMailChips();
-  }
-
-  function _inMailKey(e) {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); _addInMailChip(e.target.value); }
-  }
-  function _inMailBlur() {
-    const inp = document.getElementById('in-mail-inp');
-    if (inp && inp.value.trim()) _addInMailChip(inp.value);
+    if (!_inMailRecipients.length) {
+      cont.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--danger)">⚠ No hay emails configurados para este local. Agregá en Admin → Locales.</span>`;
+      const sendBtn = document.getElementById('in-mail-send-btn');
+      if (sendBtn) sendBtn.disabled = true;
+      return;
+    }
+    cont.innerHTML = _inMailRecipients.map(email =>
+      `<span style="background:color-mix(in srgb,var(--m3) 12%,transparent);border:1px solid color-mix(in srgb,var(--m3) 30%,transparent);color:var(--m3);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:10px">${email}</span>`
+    ).join('');
+    const sendBtn = document.getElementById('in-mail-send-btn');
+    if (sendBtn) sendBtn.disabled = false;
   }
 
   async function enviarMailModal() {
     if (!_inMailRecipients.length) {
       const s = document.getElementById('in-mail-status');
-      if (s) { s.textContent = 'Agregá al menos un destinatario.'; s.className = 'in-mail-status err'; }
+      if (s) { s.textContent = 'No hay destinatarios configurados para este local.'; s.className = 'in-mail-status err'; }
       return;
     }
     const sendBtn = document.getElementById('in-mail-send-btn');
@@ -5193,17 +5175,12 @@ const ingresos = (() => {
     const fmt  = v => v ? v.split('-').reverse().join('/') : '-';
     const baseUrl    = location.href.split('?')[0];
     const confirmUrl = data._docId ? `${baseUrl}?confirmar=${data._docId}` : '';
-    const body = [
-      `Nuevo ingreso registrado`,
-      ``,
-      `Empleado: ${data.nombre  || '-'}`,
-      `Puesto:   ${data.puesto  || '-'}`,
-      `Fecha:    ${fmt(data.fecha)}`,
-      `Horario:  ${data.horario || 'No especificado'}`,
-      `Local:    ${data.local   || '-'}`,
-      confirmUrl ? `\n✅ Confirmar presentación: ${confirmUrl}` : '',
-    ].join('\n');
-    const subject = `Nuevo ingreso: ${data.nombre || ''} – ${data.local || ''}`;
+
+    // Calcular fecha de devolución (3 días corridos desde hoy)
+    const devDate = new Date();
+    devDate.setDate(devDate.getDate() + 3);
+    const devolucionAt = devDate.toISOString();
+
     if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY') {
       let errores = 0;
       for (const casilla of _inMailRecipients) {
@@ -5221,14 +5198,37 @@ const ingresos = (() => {
         } catch(e) { errores++; console.error('Mail error', casilla, e); }
       }
       if (errores === 0) {
-        if (status) { status.textContent = `✓ Mail enviado a ${_inMailRecipients.length} destinatario${_inMailRecipients.length > 1 ? 's' : ''}.`; status.className = 'in-mail-status ok'; }
+        // Guardar destinatarios y fecha de devolución pendiente en Firestore
+        if (db && data._docId) {
+          try {
+            await db.collection('ingresos').doc(data._docId).update({
+              mailEnviado:     true,
+              mailEnviadoAt:   new Date().toISOString(),
+              mailDestinatarios: _inMailRecipients,
+              devolucionAt,
+              devolucionEnviada: false,
+            });
+          } catch(e) { console.warn('No se pudo guardar devolucionAt:', e); }
+        }
+        if (status) { status.textContent = `✓ Mail enviado a ${_inMailRecipients.length} destinatario${_inMailRecipients.length > 1 ? 's' : ''}. Recordatorio automático en 3 días.`; status.className = 'in-mail-status ok'; }
         if (sendBtn) sendBtn.textContent = 'Enviado';
-        setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 1800);
+        setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 2400);
       } else {
         if (status) { status.textContent = `Hubo ${errores} error(es) de envío.`; status.className = 'in-mail-status err'; }
         if (sendBtn) { sendBtn.textContent = 'Reintentar'; sendBtn.disabled = false; }
       }
     } else {
+      const body = [
+        `Nuevo ingreso registrado`,
+        ``,
+        `Empleado: ${data.nombre  || '-'}`,
+        `Puesto:   ${data.puesto  || '-'}`,
+        `Fecha:    ${fmt(data.fecha)}`,
+        `Horario:  ${data.horario || 'No especificado'}`,
+        `Local:    ${data.local   || '-'}`,
+        confirmUrl ? `\n✅ Confirmar presentación: ${confirmUrl}` : '',
+      ].join('\n');
+      const subject = `Nuevo ingreso: ${data.nombre || ''} – ${data.local || ''}`;
       window.open(`mailto:${_inMailRecipients.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
       if (status) { status.textContent = 'Cliente de email abierto.'; status.className = 'in-mail-status ok'; }
       if (sendBtn) sendBtn.textContent = 'Listo';
@@ -5236,7 +5236,7 @@ const ingresos = (() => {
     }
   }
 
-  // Crear legajo en Info Personal desde un ingreso
+    // Crear legajo en Info Personal desde un ingreso
   function crearLegajo(inId) {
     const r = _registros.find(x => x.id === inId);
     if (!r) return;
@@ -6070,7 +6070,16 @@ const horarios = (() => {
     _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
       if (snap.exists) {
         const data = snap.data();
-        _planilla = data.turnos || {};
+        // Normalizar: Firestore devuelve keys numéricas como strings ("0","1"…)
+        // Convertimos a número para que el acceso por índice funcione siempre
+        const rawTurnos = data.turnos || {};
+        _planilla = {};
+        Object.keys(rawTurnos).forEach(empId => {
+          _planilla[empId] = {};
+          Object.keys(rawTurnos[empId] || {}).forEach(diaKey => {
+            _planilla[empId][Number(diaKey)] = rawTurnos[empId][diaKey];
+          });
+        });
         _planillaEnPlanilla = data.empleados || [];
         _planillaDocId = semId;
       } else {
@@ -6151,8 +6160,8 @@ const horarios = (() => {
         const f = _diaFecha(i);
         const fStr = f.toISOString().slice(0,10);
         const isHoy = fStr === todayStr;
-        const turno = (_planilla[empId] || {})[i];
-        const asist = ((_asistencia[i] || {})[empId]) || {};
+        const turno = (_planilla[empId] || {})[i] || (_planilla[empId] || {})[String(i)];
+        const asist = ((_asistencia[i] || {})[empId]) || ((_asistencia[String(i)] || {})[empId]) || {};
         let chip;
         if (turno && turno.entrada) {
           let asistBadge = '';
@@ -6211,7 +6220,7 @@ const horarios = (() => {
     _mt_diaIdx = diaIdx;
     const emp   = _empleados.find(e => e.id === empId);
     const fecha = _diaFecha(diaIdx);
-    const turno = (_planilla[empId] || {})[diaIdx] || {};
+    const turno = (_planilla[empId] || {})[diaIdx] || (_planilla[empId] || {})[String(diaIdx)] || {};
     document.getElementById('hr-turno-modal-title').textContent = emp ? emp.nombre : 'Empleado';
     document.getElementById('hr-turno-modal-sub').textContent =
       `${DIAS[diaIdx]} ${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')} · ${_localActivo}`;
@@ -6361,7 +6370,10 @@ const horarios = (() => {
     // Renderizar botones de día (solo días con turnos asignados)
     const diasConTurnos = [];
     DIAS.forEach((label, i) => {
-      const hayAlguien = Object.keys(_planilla).some(empId => (_planilla[empId]||{})[i]?.entrada);
+      const hayAlguien = Object.keys(_planilla).some(empId => {
+        const ep = _planilla[empId] || {};
+        return ep[i]?.entrada || ep[String(i)]?.entrada;
+      });
       if (hayAlguien) diasConTurnos.push({ label, i });
     });
 
@@ -6393,7 +6405,10 @@ const horarios = (() => {
     Object.entries(yaGuardado).forEach(([empId, val]) => { _cierreState[empId] = { ...val }; });
 
     // Empleados con turno ese día
-    const empsConTurno = Object.keys(_planilla).filter(empId => (_planilla[empId]||{})[diaIdx]?.entrada);
+    const empsConTurno = Object.keys(_planilla).filter(empId => {
+      const ep = _planilla[empId] || {};
+      return ep[diaIdx]?.entrada || ep[String(diaIdx)]?.entrada;
+    });
 
     // Highlight del botón seleccionado
     document.querySelectorAll('#hr-cierre-dias .hr-week-btn').forEach(btn => {
@@ -6418,7 +6433,7 @@ const horarios = (() => {
 
     lista.innerHTML = empsConTurno.map(empId => {
       const emp    = _empleados.find(e => e.id === empId);
-      const turno  = (_planilla[empId]||{})[diaIdx] || {};
+      const turno  = (_planilla[empId]||{})[diaIdx] || (_planilla[empId]||{})[String(diaIdx)] || {};
       const estado = _cierreState[empId] || {};
       const nombre = emp ? esc(emp.nombre||'') : empId;
       const asist  = estado.asist || '';
@@ -7261,9 +7276,13 @@ const usuarios = (() => {
     btn.textContent = 'Confirmando…';
     btn.disabled = true;
     try {
+      const devDate = new Date();
+      devDate.setDate(devDate.getDate() + 3);
       await db.collection('ingresos').doc(docId).update({
         presentacion: true,
         presentacionAt: new Date().toISOString(),
+        devolucionAt: devDate.toISOString(),
+        devolucionEnviada: false,
       });
       const nombre = document.getElementById('conf-nombre').textContent;
       document.getElementById('conf-action').style.display = 'none';
@@ -7279,6 +7298,57 @@ const usuarios = (() => {
     }
   };
 })();
+
+// =============================================================
+//  RECORDATORIO AUTOMÁTICO DE DEVOLUCIÓN (3 días post-ingreso)
+//  Se ejecuta al iniciar la app. Chequea ingresos con
+//  devolucionAt <= ahora y devolucionEnviada === false,
+//  y manda el mail de solicitud de devolución.
+// =============================================================
+async function _checkDevolucionesPendientes() {
+  if (!db) return;
+  if (EMAILJS_PUBLIC_KEY === 'TU_PUBLIC_KEY') return;
+  try {
+    const ahora = new Date().toISOString();
+    const snap = await db.collection('ingresos')
+      .where('devolucionEnviada', '==', false)
+      .where('devolucionAt', '<=', ahora)
+      .get();
+    if (snap.empty) return;
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const destinatarios = d.mailDestinatarios || [];
+      if (!destinatarios.length) continue;
+      const fmt = v => v ? v.split('-').reverse().join('/') : '-';
+      const baseUrl    = location.href.split('?')[0];
+      const confirmUrl = d.presentacion ? '' : `${baseUrl}?confirmar=${doc.id}`;
+      const TEMPLATE_DEV = EMAILJS_TEMPLATE_ID; // Podés crear un template separado si querés
+      let ok = true;
+      for (const casilla of destinatarios) {
+        try {
+          await emailjs.send(EMAILJS_SERVICE_ID, TEMPLATE_DEV, {
+            to_email:    casilla,
+            empleado:    d.nombre  || '-',
+            puesto:      d.puesto  || '-',
+            local:       d.local   || '-',
+            fecha:       fmt(d.fecha),
+            horario:     d.horario || 'No especificado',
+            codigo:      d.codigo  || '-',
+            confirm_url: confirmUrl,
+            // Variable extra que podés usar en el template de EmailJS:
+            tipo_mail:   'SOLICITUD DE DEVOLUCIÓN — Han pasado 3 días desde el ingreso de este colaborador. Por favor confirmá si presentó la documentación correspondiente.',
+          });
+        } catch(e) { ok = false; console.error('Devolución mail error:', e); }
+      }
+      if (ok) {
+        await db.collection('ingresos').doc(doc.id).update({ devolucionEnviada: true, devolucionEnviadaAt: new Date().toISOString() });
+        console.log('Recordatorio de devolución enviado para:', d.nombre);
+      }
+    }
+  } catch(e) {
+    console.warn('Error en check devoluciones:', e);
+  }
+}
 
 </script>
 </body>

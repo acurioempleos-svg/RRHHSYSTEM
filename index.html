@@ -1299,12 +1299,14 @@
     cursor: pointer; transition: all var(--transition);
   }
   .hr-turno-tipo-btn.sel-am {
-    background: color-mix(in srgb, #fbbf24 15%, transparent);
+    background: rgba(251,191,36,0.35);
     border-color: #fbbf24; color: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251,191,36,0.25);
   }
   .hr-turno-tipo-btn.sel-pm {
-    background: color-mix(in srgb, var(--m3) 15%, transparent);
-    border-color: var(--m3); color: var(--m3);
+    background: rgba(74,255,180,0.28);
+    border-color: #4affb4; color: #4affb4;
+    box-shadow: 0 0 0 2px rgba(74,255,180,0.22);
   }
   .hr-modal-overlay {
     position: fixed; inset: 0; z-index: 200;
@@ -6639,13 +6641,26 @@ const horarios = (() => {
     const btnAm = document.getElementById('hr-btn-am');
     const btnPm = document.getElementById('hr-btn-pm');
     if (!btnAm || !btnPm) return;
-    btnAm.classList.toggle('sel-am', tipo === 'AM');
-    btnPm.classList.toggle('sel-pm', tipo === 'PM');
-    // AM: 08:00 – 14:00 / PM: 14:00 – 22:00
+    // Reset ambos
+    btnAm.classList.remove('sel-am');
+    btnPm.classList.remove('sel-pm');
+    btnAm.style.background = ''; btnAm.style.borderColor = ''; btnAm.style.color = ''; btnAm.style.boxShadow = '';
+    btnPm.style.background = ''; btnPm.style.borderColor = ''; btnPm.style.color = ''; btnPm.style.boxShadow = '';
+    // Aplicar al seleccionado — doble vía: clase + inline (por si color-mix falla)
     if (tipo === 'AM') {
+      btnAm.classList.add('sel-am');
+      btnAm.style.background  = 'rgba(251,191,36,0.18)';
+      btnAm.style.borderColor = '#fbbf24';
+      btnAm.style.color       = '#fbbf24';
+      btnAm.style.boxShadow   = '0 0 0 2px rgba(251,191,36,0.15)';
       document.getElementById('hr-t-entrada').value = '08:00';
       document.getElementById('hr-t-salida').value  = '14:00';
     } else {
+      btnPm.classList.add('sel-pm');
+      btnPm.style.background  = 'rgba(74,255,180,0.14)';
+      btnPm.style.borderColor = '#4affb4';
+      btnPm.style.color       = '#4affb4';
+      btnPm.style.boxShadow   = '0 0 0 2px rgba(74,255,180,0.12)';
       document.getElementById('hr-t-entrada').value = '14:00';
       document.getElementById('hr-t-salida').value  = '22:00';
     }
@@ -6669,8 +6684,8 @@ const horarios = (() => {
     if (btnPm) btnPm.classList.remove('sel-pm');
     document.getElementById('hr-t-entrada').value = turno.entrada || '';
     document.getElementById('hr-t-salida').value  = turno.salida  || '';
-    if (turno.entrada === '08:00') btnAm?.classList.add('sel-am');
-    else if (turno.entrada === '14:00') btnPm?.classList.add('sel-pm');
+    if (turno.entrada === '08:00') { _setTurnoTipo('AM'); }
+    else if (turno.entrada === '14:00') { _setTurnoTipo('PM'); }
     document.getElementById('hr-t-nota').value = turno.nota || '';
     document.getElementById('hr-turno-overlay').classList.add('open');
   }

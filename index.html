@@ -458,6 +458,30 @@
   }
   .nov-del-btn:hover { color: #ef4444; }
 
+  /* Selector de destinatarios en novedades */
+  .nov-dest-label { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .nov-dest-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 90px; overflow-y: auto; }
+  .nov-dest-chip {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px; cursor: pointer;
+    font-size: 11px; transition: border-color .15s, background .15s;
+    user-select: none;
+  }
+  .nov-dest-chip.sel {
+    border-color: var(--accent); background: rgba(99,102,241,.12);
+    color: var(--accent);
+  }
+  .nov-dest-chip input[type=checkbox] { display: none; }
+  .nov-dest-todos {
+    font-size: 11px; color: var(--accent); cursor: pointer;
+    background: none; border: none; padding: 0; text-decoration: underline;
+    font-family: inherit;
+  }
+  .nov-dest-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  /* Badge "Para vos" en novedades recibidas */
+  .nov-para-vos { font-size: 10px; color: var(--accent); font-weight: 700; margin-left: auto; }
+
   /* ─── STATUS DOT FIREBASE ─────────────────────────────────── */
   .firebase-status {
     font-family: 'DM Mono', monospace; font-size: 10px;
@@ -1869,6 +1893,15 @@
                   </select>
                 </div>
                 <textarea id="nov-cuerpo" rows="2" placeholder="Descripción (opcional)…"></textarea>
+                <div>
+                  <div class="nov-dest-row">
+                    <span class="nov-dest-label">Destinatarios</span>
+                    <button class="nov-dest-todos" onclick="homeMod.selTodos()">Seleccionar todos</button>
+                  </div>
+                  <div class="nov-dest-grid" id="nov-dest-grid">
+                    <span style="font-size:12px;color:var(--muted)">Cargando usuarios…</span>
+                  </div>
+                </div>
                 <button class="nov-pub-btn" onclick="homeMod.publicarNovedad()">Publicar</button>
               </div>
             </div>
@@ -3837,7 +3870,11 @@ document.addEventListener('click', e => {
 // ==============================================================
 const homeMod = (() => {
   const COL_NOV   = 'novedades';
-  const TODO_KEY  = 'hrms_todo_';   // prefix en localStorage por usuario
+  const COL_USR   = 'usuarios';
+  const TODO_KEY  = 'hrms_todo_';
+  let _usuariosDisp = []; // { uid, email, nombre, rol } — todos los usuarios del sistema
+  let _destSelec    = new Set(); // emails seleccionados como destinatarios
+  let _userEmail    = '';
 
   const FRASES = [
     { text: "El éxito no es la clave de la felicidad. La felicidad es la clave del éxito.", author: "— Albert Schweitzer" },
@@ -3936,14 +3973,34 @@ const homeMod = (() => {
     const lista = document.getElementById('nov-lista');
     const count = document.getElementById('nov-count');
     if (!lista) return;
-    if (count) count.textContent = docs.length ? docs.length + ' novedad' + (docs.length > 1 ? 'es' : '') : '';
-    if (!docs.length) {
+
+    // Cada usuario ve solo las novedades donde está en destinatarios (o es rrhh = ve todas)
+    const visibles = _rol === 'rrhh'
+      ? docs
+      : docs.filter(d => {
+          if (!d.destinatarios || d.destinatarios.length === 0) return true; // sin restricción = todos
+          return d.destinatarios.includes(_userEmail);
+        });
+
+    if (count) count.textContent = visibles.length ? visibles.length + ' novedad' + (visibles.length > 1 ? 'es' : '') : '';
+    if (!visibles.length) {
       lista.innerHTML = '<div class="todo-empty">Sin novedades</div>';
       return;
     }
-    lista.innerHTML = docs.map(d => {
+    lista.innerHTML = visibles.map(d => {
       const fecha = d.fecha ? new Date(d.fecha.seconds * 1000).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) : '—';
       const puedeEliminar = _rol === 'rrhh';
+      // Armar lista de destinatarios para mostrar a RRHH
+      let destTexto = '';
+      if (_rol === 'rrhh' && d.destinatarios && d.destinatarios.length) {
+        const nombres = d.destinatarios.map(email => {
+          const u = _usuariosDisp.find(x => x.email === email);
+          return u ? (u.nombre || u.email) : email;
+        });
+        destTexto = `<div style="font-size:10px;color:var(--muted);margin-top:3px">Para: ${nombres.join(', ')}</div>`;
+      } else if (_rol === 'rrhh' && (!d.destinatarios || !d.destinatarios.length)) {
+        destTexto = `<div style="font-size:10px;color:var(--muted);margin-top:3px">Para: todos</div>`;
+      }
       return `<div class="nov-item">
         <div class="nov-item-header">
           <span class="nov-badge ${d.tipo || 'info'}">${d.tipo === 'alerta' ? 'Alerta' : d.tipo === 'ok' ? 'OK' : 'Info'}</span>
@@ -3952,6 +4009,7 @@ const homeMod = (() => {
         </div>
         <div class="nov-title">${_esc(d.titulo || '')}</div>
         ${d.cuerpo ? `<div class="nov-body">${_esc(d.cuerpo)}</div>` : ''}
+        ${destTexto}
       </div>`;
     }).join('');
   }
@@ -3960,19 +4018,68 @@ const homeMod = (() => {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── DESTINATARIOS ──────────────────────────────────────────
+  function _cargarUsuariosDisp() {
+    if (!db) return;
+    db.collection(COL_USR).get().then(snap => {
+      _usuariosDisp = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .filter(u => u.email); // solo usuarios con email
+      _renderDestGrid();
+    }).catch(() => {});
+  }
+
+  function _renderDestGrid() {
+    const grid = document.getElementById('nov-dest-grid');
+    if (!grid) return;
+    if (!_usuariosDisp.length) {
+      grid.innerHTML = '<span style="font-size:12px;color:var(--muted)">No hay usuarios cargados</span>';
+      return;
+    }
+    grid.innerHTML = _usuariosDisp.map(u => {
+      const sel = _destSelec.has(u.email);
+      const label = u.nombre ? `${u.nombre} <span style="opacity:.6;font-size:10px">(${u.email})</span>` : u.email;
+      return `<label class="nov-dest-chip${sel ? ' sel' : ''}" onclick="homeMod.toggleDest('${u.email}', this)">
+        ${label}
+      </label>`;
+    }).join('');
+  }
+
+  function toggleDest(email, el) {
+    if (_destSelec.has(email)) { _destSelec.delete(email); el.classList.remove('sel'); }
+    else { _destSelec.add(email); el.classList.add('sel'); }
+  }
+
+  function selTodos() {
+    const grid = document.getElementById('nov-dest-grid');
+    if (!grid) return;
+    const todosSeleccionados = _destSelec.size === _usuariosDisp.length;
+    if (todosSeleccionados) {
+      _destSelec.clear();
+      grid.querySelectorAll('.nov-dest-chip').forEach(c => c.classList.remove('sel'));
+    } else {
+      _usuariosDisp.forEach(u => _destSelec.add(u.email));
+      grid.querySelectorAll('.nov-dest-chip').forEach(c => c.classList.add('sel'));
+    }
+  }
+
+  // ── PUBLICAR / ELIMINAR ────────────────────────────────────
   function publicarNovedad() {
     const titulo = (document.getElementById('nov-titulo')?.value || '').trim();
     const cuerpo = (document.getElementById('nov-cuerpo')?.value || '').trim();
     const tipo   = document.getElementById('nov-tipo')?.value || 'info';
     if (!titulo) { alert('Escribí un título para la novedad.'); return; }
+    if (!_destSelec.size) { alert('Seleccioná al menos un destinatario.'); return; }
     if (!db) return;
     db.collection(COL_NOV).add({
       titulo, cuerpo, tipo,
+      destinatarios: [..._destSelec], // array de emails
       fecha: firebase.firestore.FieldValue.serverTimestamp(),
       autor: window._currentUser?.email || '—'
     }).then(() => {
       document.getElementById('nov-titulo').value = '';
       document.getElementById('nov-cuerpo').value = '';
+      _destSelec.clear();
+      _renderDestGrid();
     }).catch(e => alert('Error: ' + e.message));
   }
 
@@ -3983,14 +4090,18 @@ const homeMod = (() => {
 
   // ── INIT ───────────────────────────────────────────────────
   function init(rol, userEmail) {
-    _rol      = rol || 'rrhh';
-    _userKey  = userEmail || '';
+    _rol       = rol || 'rrhh';
+    _userKey   = userEmail || '';
+    _userEmail = userEmail || '';
     _mostrarFrase();
     _loadTodos();
 
     // Mostrar form de nueva novedad solo para rrhh
     const formArea = document.getElementById('nov-form-area');
     if (formArea) formArea.style.display = (_rol === 'rrhh') ? '' : 'none';
+
+    // Cargar lista de usuarios disponibles para destinatarios (solo RRHH)
+    if (_rol === 'rrhh') _cargarUsuariosDisp();
 
     // Novedades desde Firestore (visibles para rrhh y gerente, no para supervisor)
     if (db && (_rol === 'rrhh' || _rol === 'gerente')) {
@@ -4012,7 +4123,7 @@ const homeMod = (() => {
     }
   }
 
-  return { init, addTodo, toggleTodo, delTodo, publicarNovedad, eliminarNovedad };
+  return { init, addTodo, toggleTodo, delTodo, publicarNovedad, eliminarNovedad, toggleDest, selTodos };
 })();
 
 // ==============================================================

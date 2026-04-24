@@ -327,6 +327,137 @@
   }
   .module-card-name { font-size: 13px; font-weight: 700; line-height: 1.3; }
 
+  /* ─── HOME WIDGETS ───────────────────────────────────────── */
+  .home-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .home-widgets { grid-template-columns: 1fr; } }
+
+  /* Frase motivacional */
+  .home-frase {
+    background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(168,85,247,.08));
+    border: 1px solid rgba(99,102,241,.25);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 4px;
+  }
+  .home-frase-text {
+    font-size: 14px; line-height: 1.6;
+    color: var(--fg); font-style: italic;
+  }
+  .home-frase-author {
+    font-size: 11px; color: var(--muted);
+    margin-top: 8px; font-family: 'DM Mono', monospace;
+  }
+
+  /* Widget TODO */
+  .home-widget {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .home-widget-header {
+    padding: 14px 16px 10px;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .home-widget-body { padding: 12px 16px; flex: 1; overflow-y: auto; max-height: 280px; }
+
+  /* TODO list */
+  .todo-input-row {
+    display: flex; gap: 8px; margin-bottom: 12px;
+  }
+  .todo-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--fg);
+    font-size: 13px; outline: none;
+    transition: border-color var(--transition);
+  }
+  .todo-input:focus { border-color: var(--accent); }
+  .todo-add-btn {
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #fff; font-weight: 700; font-size: 18px;
+    width: 34px; height: 34px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity var(--transition);
+  }
+  .todo-add-btn:hover { opacity: .8; }
+  .todo-list { display: flex; flex-direction: column; gap: 6px; }
+  .todo-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    transition: opacity .2s;
+  }
+  .todo-item.done { opacity: .45; }
+  .todo-item.done .todo-label { text-decoration: line-through; }
+  .todo-check {
+    width: 16px; height: 16px; border-radius: 4px;
+    border: 2px solid var(--border); background: transparent;
+    cursor: pointer; flex-shrink: 0; appearance: none;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .todo-check:checked { background: var(--accent); border-color: var(--accent); }
+  .todo-label { flex: 1; font-size: 13px; line-height: 1.4; }
+  .todo-del {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 15px; padding: 2px 4px;
+    border-radius: 4px; transition: color var(--transition);
+    flex-shrink: 0;
+  }
+  .todo-del:hover { color: #ef4444; }
+  .todo-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+  /* Novedades */
+  .nov-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nov-item:last-child { border-bottom: none; }
+  .nov-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .nov-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 20px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .nov-badge.info { background: rgba(99,102,241,.15); color: #818cf8; }
+  .nov-badge.alerta { background: rgba(239,68,68,.15); color: #f87171; }
+  .nov-badge.ok { background: rgba(34,197,94,.15); color: #4ade80; }
+  .nov-fecha { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .nov-title { font-size: 13px; font-weight: 700; }
+  .nov-body { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 3px; }
+  .nov-input-area { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .nov-form { display: flex; flex-direction: column; gap: 6px; }
+  .nov-form input, .nov-form textarea, .nov-form select {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; color: var(--fg);
+    font-size: 12px; outline: none; font-family: inherit;
+    transition: border-color var(--transition);
+    resize: vertical;
+  }
+  .nov-form input:focus, .nov-form textarea:focus, .nov-form select:focus { border-color: var(--accent); }
+  .nov-form-row { display: flex; gap: 6px; }
+  .nov-pub-btn {
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #fff; font-weight: 700; font-size: 12px;
+    padding: 7px 14px; cursor: pointer; align-self: flex-end;
+    transition: opacity var(--transition);
+  }
+  .nov-pub-btn:hover { opacity: .8; }
+  .nov-del-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 13px; margin-left: auto;
+    padding: 2px 4px; border-radius: 4px;
+    transition: color var(--transition);
+  }
+  .nov-del-btn:hover { color: #ef4444; }
+
   /* ─── STATUS DOT FIREBASE ─────────────────────────────────── */
   .firebase-status {
     font-family: 'DM Mono', monospace; font-size: 10px;
@@ -1687,6 +1818,60 @@
         <div>
           <div class="home-greeting">Hola, <span id="home-name">—</span>.</div>
           <div class="home-sub">Seleccioná un módulo para comenzar.</div>
+        </div>
+
+        <!-- Frase motivacional -->
+        <div class="home-frase" id="home-frase-box">
+          <div class="home-frase-text" id="home-frase-text">—</div>
+          <div class="home-frase-author" id="home-frase-author"></div>
+        </div>
+
+        <!-- Widgets: TODO + Novedades -->
+        <div class="home-widgets">
+
+          <!-- TODO -->
+          <div class="home-widget">
+            <div class="home-widget-header">
+              <span>✅ Mis tareas</span>
+              <span id="todo-count" style="font-size:11px;color:var(--accent)"></span>
+            </div>
+            <div class="home-widget-body">
+              <div class="todo-input-row">
+                <input class="todo-input" id="todo-input" type="text" placeholder="Nueva tarea…" maxlength="120"
+                  onkeydown="if(event.key==='Enter') homeMod.addTodo()">
+                <button class="todo-add-btn" onclick="homeMod.addTodo()">+</button>
+              </div>
+              <div class="todo-list" id="todo-list">
+                <div class="todo-empty">Sin tareas pendientes</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Novedades -->
+          <div class="home-widget" id="nov-widget">
+            <div class="home-widget-header">
+              <span>📢 Novedades</span>
+              <span id="nov-count" style="font-size:11px;color:var(--accent)"></span>
+            </div>
+            <div class="home-widget-body" id="nov-lista">
+              <div class="todo-empty">Sin novedades</div>
+            </div>
+            <div class="nov-input-area" id="nov-form-area" style="display:none">
+              <div class="nov-form">
+                <div class="nov-form-row">
+                  <input id="nov-titulo" placeholder="Título de la novedad…" style="flex:1">
+                  <select id="nov-tipo">
+                    <option value="info">Info</option>
+                    <option value="alerta">Alerta</option>
+                    <option value="ok">OK</option>
+                  </select>
+                </div>
+                <textarea id="nov-cuerpo" rows="2" placeholder="Descripción (opcional)…"></textarea>
+                <button class="nov-pub-btn" onclick="homeMod.publicarNovedad()">Publicar</button>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div class="module-grid">
@@ -3523,6 +3708,8 @@ async function showApp(user) {
   checkFirebase();
   // Chequear recordatorios de devolución pendientes al iniciar sesión
   setTimeout(_checkDevolucionesPendientes, 3000);
+  // Inicializar módulo home
+  if (typeof homeMod !== 'undefined') homeMod.init(rol, user.email || '');
 }
 
 function aplicarPermisos(rol, localAsignado) {
@@ -3641,6 +3828,190 @@ document.addEventListener('click', e => {
     dd.classList.remove('show');
   }
 });
+
+
+// ==============================================================
+//  MÓDULO HOME — Frases, TODO, Novedades
+// ==============================================================
+const homeMod = (() => {
+  const COL_NOV   = 'novedades';
+  const TODO_KEY  = 'hrms_todo_';   // prefix en localStorage por usuario
+
+  const FRASES = [
+    { text: "El éxito no es la clave de la felicidad. La felicidad es la clave del éxito.", author: "— Albert Schweitzer" },
+    { text: "La mejor manera de predecir el futuro es creándolo.", author: "— Peter Drucker" },
+    { text: "No cuentes los días, haz que los días cuenten.", author: "— Muhammad Ali" },
+    { text: "El único modo de hacer un gran trabajo es amar lo que hacés.", author: "— Steve Jobs" },
+    { text: "Solos podemos hacer tan poco; juntos podemos hacer tanto.", author: "— Helen Keller" },
+    { text: "El talento gana partidos, pero el trabajo en equipo y la inteligencia ganan campeonatos.", author: "— Michael Jordan" },
+    { text: "No tengas miedo de dar un gran paso cuando sea necesario.", author: "— David Lloyd George" },
+    { text: "Cada logro grande empieza con una decisión de intentarlo.", author: "— John F. Kennedy" },
+    { text: "La disciplina es el puente entre metas y logros.", author: "— Jim Rohn" },
+    { text: "El trabajo duro supera al talento cuando el talento no trabaja duro.", author: "— Tim Notke" },
+    { text: "Los equipos exitosos no nacen, se construyen con dedicación y respeto.", author: "— Anónimo" },
+    { text: "Una empresa es tan buena como la gente que la forma.", author: "— Anónimo" },
+    { text: "El liderazgo es el arte de hacer que alguien más quiera hacer algo que vos sabés que debe hacerse.", author: "— Dwight D. Eisenhower" },
+    { text: "Contratá por actitud, entrenás por habilidad.", author: "— Anónimo HR" },
+    { text: "Las grandes cosas en los negocios nunca las hace una sola persona. Las hace un equipo de personas.", author: "— Steve Jobs" },
+  ];
+
+  let _todos  = [];
+  let _unsub  = null;
+  let _rol    = 'rrhh';
+  let _userKey = '';
+
+  // ── FRASES ─────────────────────────────────────────────────
+  function _mostrarFrase() {
+    const idx = Math.floor(Math.random() * FRASES.length);
+    const f   = FRASES[idx];
+    const el  = document.getElementById('home-frase-text');
+    const au  = document.getElementById('home-frase-author');
+    if (el) el.textContent = '"' + f.text + '"';
+    if (au) au.textContent = f.author;
+  }
+
+  // ── TODO ───────────────────────────────────────────────────
+  function _todoKey() { return TODO_KEY + (_userKey || 'anon'); }
+
+  function _loadTodos() {
+    try { _todos = JSON.parse(localStorage.getItem(_todoKey()) || '[]'); }
+    catch(e) { _todos = []; }
+    _renderTodos();
+  }
+
+  function _saveTodos() {
+    localStorage.setItem(_todoKey(), JSON.stringify(_todos));
+  }
+
+  function _renderTodos() {
+    const list  = document.getElementById('todo-list');
+    const count = document.getElementById('todo-count');
+    if (!list) return;
+    const pending = _todos.filter(t => !t.done).length;
+    if (count) count.textContent = pending ? pending + ' pendiente' + (pending > 1 ? 's' : '') : '';
+    if (!_todos.length) {
+      list.innerHTML = '<div class="todo-empty">Sin tareas pendientes</div>';
+      return;
+    }
+    list.innerHTML = _todos.map((t, i) => `
+      <div class="todo-item${t.done ? ' done' : ''}" id="todo-item-${i}">
+        <input type="checkbox" class="todo-check" ${t.done ? 'checked' : ''}
+          onchange="homeMod.toggleTodo(${i})">
+        <span class="todo-label">${_esc(t.text)}</span>
+        <button class="todo-del" onclick="homeMod.delTodo(${i})">×</button>
+      </div>`).join('');
+  }
+
+  function addTodo() {
+    const inp = document.getElementById('todo-input');
+    if (!inp) return;
+    const text = inp.value.trim();
+    if (!text) return;
+    _todos.unshift({ text, done: false, ts: Date.now() });
+    _saveTodos();
+    _renderTodos();
+    inp.value = '';
+    inp.focus();
+  }
+
+  function toggleTodo(i) {
+    if (_todos[i] === undefined) return;
+    _todos[i].done = !_todos[i].done;
+    // Mover completadas al final
+    _todos.sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+    _saveTodos();
+    _renderTodos();
+  }
+
+  function delTodo(i) {
+    _todos.splice(i, 1);
+    _saveTodos();
+    _renderTodos();
+  }
+
+  // ── NOVEDADES ──────────────────────────────────────────────
+  function _renderNovedades(docs) {
+    const lista = document.getElementById('nov-lista');
+    const count = document.getElementById('nov-count');
+    if (!lista) return;
+    if (count) count.textContent = docs.length ? docs.length + ' novedad' + (docs.length > 1 ? 'es' : '') : '';
+    if (!docs.length) {
+      lista.innerHTML = '<div class="todo-empty">Sin novedades</div>';
+      return;
+    }
+    lista.innerHTML = docs.map(d => {
+      const fecha = d.fecha ? new Date(d.fecha.seconds * 1000).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) : '—';
+      const puedeEliminar = _rol === 'rrhh';
+      return `<div class="nov-item">
+        <div class="nov-item-header">
+          <span class="nov-badge ${d.tipo || 'info'}">${d.tipo === 'alerta' ? 'Alerta' : d.tipo === 'ok' ? 'OK' : 'Info'}</span>
+          <span class="nov-fecha">${fecha}</span>
+          ${puedeEliminar ? `<button class="nov-del-btn" onclick="homeMod.eliminarNovedad('${d.id}')">×</button>` : ''}
+        </div>
+        <div class="nov-title">${_esc(d.titulo || '')}</div>
+        ${d.cuerpo ? `<div class="nov-body">${_esc(d.cuerpo)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function _esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function publicarNovedad() {
+    const titulo = (document.getElementById('nov-titulo')?.value || '').trim();
+    const cuerpo = (document.getElementById('nov-cuerpo')?.value || '').trim();
+    const tipo   = document.getElementById('nov-tipo')?.value || 'info';
+    if (!titulo) { alert('Escribí un título para la novedad.'); return; }
+    if (!db) return;
+    db.collection(COL_NOV).add({
+      titulo, cuerpo, tipo,
+      fecha: firebase.firestore.FieldValue.serverTimestamp(),
+      autor: window._currentUser?.email || '—'
+    }).then(() => {
+      document.getElementById('nov-titulo').value = '';
+      document.getElementById('nov-cuerpo').value = '';
+    }).catch(e => alert('Error: ' + e.message));
+  }
+
+  function eliminarNovedad(id) {
+    if (!confirm('¿Eliminar esta novedad?')) return;
+    if (db) db.collection(COL_NOV).doc(id).delete().catch(e => alert('Error: ' + e.message));
+  }
+
+  // ── INIT ───────────────────────────────────────────────────
+  function init(rol, userEmail) {
+    _rol      = rol || 'rrhh';
+    _userKey  = userEmail || '';
+    _mostrarFrase();
+    _loadTodos();
+
+    // Mostrar form de nueva novedad solo para rrhh
+    const formArea = document.getElementById('nov-form-area');
+    if (formArea) formArea.style.display = (_rol === 'rrhh') ? '' : 'none';
+
+    // Novedades desde Firestore (visibles para rrhh y gerente, no para supervisor)
+    if (db && (_rol === 'rrhh' || _rol === 'gerente')) {
+      if (_unsub) _unsub();
+      _unsub = db.collection(COL_NOV)
+        .orderBy('fecha', 'desc')
+        .limit(20)
+        .onSnapshot(snap => {
+          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          _renderNovedades(docs);
+        }, err => {
+          console.warn('Novedades:', err);
+          _renderNovedades([]);
+        });
+      // Ocultar widget de novedades para supervisor
+    } else if (_rol === 'supervisor') {
+      const w = document.getElementById('nov-widget');
+      if (w) w.style.display = 'none';
+    }
+  }
+
+  return { init, addTodo, toggleTodo, delTodo, publicarNovedad, eliminarNovedad };
+})();
 
 // ==============================================================
 //  MÓDULO BAJAS
@@ -6125,8 +6496,18 @@ const horarios = (() => {
 
     const semId = _semanaId();
 
+    // Fallback: si en 5s no llegó ningún snapshot, renderizar igual con lo que hay
+    const _fallbackTimer = setTimeout(() => {
+      const cont = document.getElementById('hr-grid-container');
+      if (cont && cont.querySelector('.hr-empty')?.textContent.includes('Cargando')) {
+        console.warn('[horarios] Firestore tardó demasiado, renderizando sin datos de planilla');
+        _renderGrid();
+      }
+    }, 5000);
+
     // Listener en doc de planilla
     _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
+      clearTimeout(_fallbackTimer);
       if (snap.exists) {
         const data = snap.data();
         const rawTurnos = data.turnos || {};
@@ -6145,7 +6526,7 @@ const horarios = (() => {
         _planillaDocId = null;
       }
       _renderGrid();
-    }, e => console.error('hr planilla:', e));
+    }, e => { console.error('hr planilla:', e); clearTimeout(_fallbackTimer); _renderGrid(); });
 
     // Listener en colección de asistencia
     _unsubAsist = db.collection(COL_ASISTENCIA)
@@ -6157,7 +6538,7 @@ const horarios = (() => {
           _asistencia[data.diaIdx] = data.registros || {};
         });
         _renderGrid();
-      }, e => console.error('hr asistencia:', e));
+      }, e => { console.error('hr asistencia:', e); _renderGrid(); });
   }
 
   // ── RENDER GRID ─────────────────────────────────────────────

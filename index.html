@@ -5933,16 +5933,12 @@ window.navigate = function(moduleId, navEl) {
   if (moduleId === 'liquidaciones') liquidaciones.init();
   if (moduleId === 'admin-locales') adminLocales.init();
   if (moduleId === 'horarios') {
-    adminLocales.init();
+    // Iniciar dependencias y esperar locales antes de arrancar horarios
     if (typeof infoPersonal !== 'undefined') infoPersonal.init();
-    let _locReady = false, _ipReady = false;
-    function _tryInitHorarios() {
-      if (_locReady && _ipReady) horarios.init();
-    }
-    if (typeof infoPersonal !== 'undefined') {
-    } else {
-      _ipReady = true; _tryInitHorarios();
-    }
+    adminLocales.init();
+    // adminLocales._onReady() llama el callback cuando los locales estén en Firestore.
+    // Si ya están listos (segunda visita al módulo), el callback se ejecuta de inmediato.
+    adminLocales.onReady(() => horarios.init());
   }
   if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
 };

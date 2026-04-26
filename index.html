@@ -482,6 +482,68 @@
   /* Badge "Para vos" en novedades recibidas */
   .nov-para-vos { font-size: 10px; color: var(--accent); font-weight: 700; margin-left: auto; }
 
+  /* ─── ORGANIGRAMA ────────────────────────────────────────── */
+  .org-section {
+    margin-top: 28px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .org-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .org-section-title {
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em;
+  }
+  .org-controls { display: flex; gap: 8px; align-items: center; }
+  .org-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--fg); font-size: 11px;
+    padding: 5px 12px; cursor: pointer; transition: border-color .15s;
+    font-family: inherit;
+  }
+  .org-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .org-canvas-wrap {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; position: relative;
+    height: 480px; cursor: grab; user-select: none;
+  }
+  .org-canvas-wrap:active { cursor: grabbing; }
+  .org-canvas-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .org-canvas-wrap svg line { stroke: var(--border); stroke-width: 1.5; }
+  .org-nodes { position: absolute; inset: 0; }
+  .org-node {
+    position: absolute;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: grab;
+    min-width: 120px;
+    max-width: 180px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+    transition: border-color .15s, box-shadow .15s;
+    user-select: none;
+  }
+  .org-node:active { cursor: grabbing; box-shadow: 0 4px 20px rgba(0,0,0,.4); }
+  .org-node:hover { border-color: var(--accent); }
+  .org-node.rrhh { border-color: rgba(99,102,241,.5); }
+  .org-node.gerente { border-color: rgba(168,85,247,.4); }
+  .org-node.empleado { border-color: var(--border); }
+  .org-node-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 12px; margin: 0 auto 8px;
+  }
+  .org-node-name { font-size: 12px; font-weight: 700; text-align: center; line-height: 1.3; }
+  .org-node-role { font-size: 10px; color: var(--muted); text-align: center; margin-top: 3px; font-family: 'DM Mono', monospace; }
+  .org-node-local { font-size: 9px; color: var(--accent); text-align: center; margin-top: 2px; }
+  .org-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 13px; }
+  .org-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .org-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .org-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
   /* ─── STATUS DOT FIREBASE ─────────────────────────────────── */
   .firebase-status {
     font-family: 'DM Mono', monospace; font-size: 10px;
@@ -3505,6 +3567,26 @@
         <div id="usr-list" style="display:flex;flex-direction:column;gap:10px">
           <div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:12px">Cargando usuarios…</div>
         </div>
+
+        <!-- Organigrama -->
+        <div class="org-section">
+          <div class="org-section-header">
+            <span class="org-section-title">🗺 Organigrama</span>
+            <div class="org-controls">
+              <button class="org-btn" onclick="usuarios.orgCentrar()">Centrar</button>
+              <button class="org-btn" onclick="usuarios.orgReorganizar()">Reorganizar</button>
+            </div>
+          </div>
+          <div class="org-canvas-wrap" id="org-canvas-wrap">
+            <svg id="org-svg"><g id="org-lines"></g></svg>
+            <div class="org-nodes" id="org-nodes"></div>
+          </div>
+          <div class="org-legend">
+            <div class="org-legend-item"><div class="org-legend-dot" style="background:#6366f1"></div>RRHH</div>
+            <div class="org-legend-item"><div class="org-legend-dot" style="background:#a855f7"></div>Gerente</div>
+            <div class="org-legend-item"><div class="org-legend-dot" style="background:var(--muted)"></div>Empleado</div>
+          </div>
+        </div>
       </div>
       <!-- Modal nuevo usuario -->
       <div class="bj-modal-overlay" id="usr-modal-overlay" onclick="usuarios.cerrar(event)">
@@ -3517,6 +3599,10 @@
             <button class="bj-modal-close" onclick="usuarios.cerrar()">✕</button>
           </div>
           <div class="bj-modal-body" style="display:flex;flex-direction:column;gap:14px">
+            <div class="bj-field">
+              <label class="bj-label">Nombre completo *</label>
+              <input class="bj-input" id="usr-nombre" type="text" placeholder="Ej: María García">
+            </div>
             <div class="bj-field">
               <label class="bj-label">Email *</label>
               <input class="bj-input" id="usr-email" type="email" placeholder="usuario@empresa.com">
@@ -3832,6 +3918,19 @@ function navigate(moduleId, navEl) {
 
   // Cerrar sidebar en mobile
   closeSidebar();
+
+  // Inicializar módulos según destino
+  if (moduleId === 'usuarios' && typeof usuarios !== 'undefined') {
+    setTimeout(() => { usuarios._renderLista(); if (db) usuarios._cargarOrg(); }, 50);
+  }
+
+  if (moduleId === 'horarios' && typeof horarios !== 'undefined') {
+    setTimeout(() => {
+      // Asegurar que infoPersonal tenga datos antes de renderizar
+      if (typeof infoPersonal !== 'undefined') infoPersonal.init();
+      horarios.init();
+    }, 150);
+  }
 }
 
 // ==============================================================
@@ -4479,9 +4578,9 @@ const bajas = (() => {
 })();
 
 // ==============================================================
-//  MÓDULO 04 - INFO PERSONAL
+//  MÓDULO 04 - INFO PERSONAL + USUARIOS (mismo scope)
 // ==============================================================
-const infoPersonal = (() => {
+const usuarios = (() => {
   const COL = 'info-personal';
 
   const FIELDS = [
@@ -4914,2783 +5013,35 @@ const infoPersonal = (() => {
         const pct  = req > 0 ? Math.min(100, Math.round((actual/req)*100)) : (actual > 0 ? 100 : 0);
         const color = actual >= req ? 'var(--accent2)' : (actual >= req * 0.7 ? 'var(--m1)' : 'var(--danger)');
         const label = diff === 0 ? 'Completo' : (diff > 0 ? `+${diff} extra` : `${diff} faltante${Math.abs(diff)!==1?'s':''}`);
-        return `<div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-            <div style="font-size:13px;font-weight:600">${sec.nombre}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:11px;color:${color};white-space:nowrap">${actual} / ${req} · ${label}</div>
-          </div>
-          <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div>
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0">
+          <span style="font-size:12px">${sec.nombre}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:80px;height:6px;border-radius:3px;background:var(--border);overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .3s"></div>
+            </div>
+            <span style="font-size:11px;color:${color};font-family:'DM Mono',monospace;min-width:70px">${actual}/${req} ${label}</span>
           </div>
         </div>`;
-      }).join('') : `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;padding:8px 0">Sin secciones configuradas. Usá <strong style="color:var(--m4)">⚙ Configurar dotaciones</strong> para agregarlas.</div>`;
+      }).join('') : '<div style="font-size:11px;color:var(--muted)">Sin secciones</div>';
 
-      const globalColor = dotLocal === 0 ? 'var(--muted)' : (totalLocal >= dotLocal ? 'var(--accent2)' : (totalLocal >= dotLocal * 0.7 ? 'var(--m1)' : 'var(--danger)'));
-
-      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;overflow:hidden">
-        <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-          <div>
-            <div style="font-size:15px;font-weight:700">${loc.nombre}</div>
-            ${loc.razon ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${loc.razon}</div>` : ''}
-          </div>
-          <div style="display:flex;gap:12px;align-items:center">
-            <div style="text-align:right">
-              <div style="font-size:22px;font-weight:800;color:${globalColor}">${totalLocal}</div>
-              <div style="font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">de ${dotLocal} requeridos</div>
-            </div>
-          </div>
+      return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-weight:700;font-size:13px">${loc.nombre}</div>
+          <div style="font-size:11px;color:var(--muted)">${totalLocal} empleado${totalLocal!==1?'s':''} · dotación ${dotLocal}</div>
         </div>
-        <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-          ${seccionesHtml}
-        </div>
+        ${seccionesHtml}
       </div>`;
     }).join('');
   }
 
-  // -- CONFIG NÓMINA (modal) ------------------------------------
-  async function abrirConfigNomina() {
-    await _cargarNominaConfig();
-    _poblarNominaLocalSelect();
-    document.getElementById('ip-nc-secciones').innerHTML = '';
-    document.getElementById('ip-nc-add').style.display = 'none';
-    document.getElementById('ip-nc-status').textContent = '';
-    document.getElementById('ip-nomina-config-overlay').classList.add('open');
-  }
-
-  function cerrarConfigNomina(e) {
-    if (e && e.target !== document.getElementById('ip-nomina-config-overlay')) return;
-    document.getElementById('ip-nomina-config-overlay').classList.remove('open');
-  }
-
-  function cargarSeccionesLocal(localNombre) {
-    const cont = document.getElementById('ip-nc-secciones');
-    const addDiv = document.getElementById('ip-nc-add');
-    document.getElementById('ip-nc-status').textContent = '';
-    if (!localNombre) { cont.innerHTML = ''; addDiv.style.display = 'none'; return; }
-    addDiv.style.display = 'flex';
-    const secs = _nominaConfig[localNombre]?.secciones || [];
-    _renderSeccionesConfig(secs, localNombre);
-  }
-
-  function _renderSeccionesConfig(secs, localNombre) {
-    const cont = document.getElementById('ip-nc-secciones');
-    if (!secs.length) {
-      cont.innerHTML = `<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">No hay secciones todavía. Agregá la primera abajo.</div>`;
-      return;
-    }
-    cont.innerHTML = secs.map((s, i) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">
-        <div style="flex:1;font-size:13px;font-weight:600">${s.nombre}</div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="number" min="1" value="${s.dotacion||0}"
-            style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:center"
-            onchange="infoPersonal.editarDotacion('${localNombre}',${i},this.value)">
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">requeridos</div>
-        </div>
-        <button onclick="infoPersonal.eliminarSeccion('${localNombre}',${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px">&#x2715;</button>
-      </div>`).join('');
-  }
-
-  async function agregarSeccion() {
-    const localNombre = document.getElementById('ip-nc-local').value;
-    const nombre = document.getElementById('ip-nc-nueva-nombre').value.trim();
-    const dotacion = parseInt(document.getElementById('ip-nc-nueva-dot').value) || 0;
-    const status = document.getElementById('ip-nc-status');
-    if (!localNombre || !nombre) { status.style.color = 'var(--danger)'; status.textContent = 'Completá local y nombre.'; return; }
-    const cfg = _nominaConfig[localNombre] || { secciones: [] };
-    if (cfg.secciones.find(s => s.nombre.toLowerCase() === nombre.toLowerCase())) {
-      status.style.color = 'var(--danger)'; status.textContent = 'Esa sección ya existe.'; return;
-    }
-    cfg.secciones.push({ nombre, dotacion });
-    await _guardarConfig(localNombre, cfg);
-    document.getElementById('ip-nc-nueva-nombre').value = '';
-    document.getElementById('ip-nc-nueva-dot').value = '';
-    status.style.color = 'var(--accent2)'; status.textContent = 'Sección agregada.';
-    _renderSeccionesConfig(cfg.secciones, localNombre);
-    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
-  }
-
-  async function editarDotacion(localNombre, idx, val) {
-    const cfg = _nominaConfig[localNombre];
-    if (!cfg) return;
-    cfg.secciones[idx].dotacion = parseInt(val) || 0;
-    await _guardarConfig(localNombre, cfg);
-    const status = document.getElementById('ip-nc-status');
-    status.style.color = 'var(--accent2)'; status.textContent = 'Dotación actualizada.';
-  }
-
-  async function eliminarSeccion(localNombre, idx) {
-    const cfg = _nominaConfig[localNombre];
-    if (!cfg) return;
-    const nombre = cfg.secciones[idx]?.nombre || '';
-    if (!confirm(`Eliminar sección "${nombre}"?`)) return;
-    cfg.secciones.splice(idx, 1);
-    await _guardarConfig(localNombre, cfg);
-    _renderSeccionesConfig(cfg.secciones, localNombre);
-    _actualizarSelectSeccion(document.getElementById('ip-local')?.value || '');
-  }
-
-  async function _guardarConfig(localNombre, cfg) {
-    if (!db) return;
-    _nominaConfig[localNombre] = cfg;
-    if (cfg.id) {
-      await db.collection(COL_NOM).doc(cfg.id).set({ localNombre, secciones: cfg.secciones });
-    } else {
-      const ref = await db.collection(COL_NOM).add({ localNombre, secciones: cfg.secciones });
-      _nominaConfig[localNombre].id = ref.id;
-    }
-  }
-
-  return { init, openForm, closeForm, edit, guardar,
-           askDelete, cancelDelete, confirmDelete,
-           filtrar, filtrarLocal, filtrarProv, exportCSV,
-           setTab, renderNomina, abrirConfigNomina, cerrarConfigNomina,
-           cargarSeccionesLocal, agregarSeccion, editarDotacion, eliminarSeccion,
-           _actualizarSelectSeccion,
-           getRegistros: () => _registros,
-           onReady: _onReady,
-           onUpdate: onUpdate,
-           refreshBadges: () => _renderTabla(),
-           darDeBaja(ipId) {
-             // 1. Navegar al módulo bajas
-             navigate('bajas', document.querySelector('[data-module="bajas"]'));
-
-             // 2. Esperar a que bajas esté inicializado (listener activo) y luego abrir form
-             const MAX = 30; // 3 segundos máximo
-             let attempts = 0;
-             const tryOpen = () => {
-               attempts++;
-               // Verificar que el módulo esté inicializado y tenga registros cargados
-               // (bajas.init() arranca el listener; esperamos que el módulo esté listo)
-               if (typeof bajas !== 'undefined') {
-                 bajas.init(); // idempotente: no hace nada si ya está escuchando
-                 // Pequeño delay para que Firebase cargue si es primera vez
-                 const delay = attempts === 1 ? 300 : 0;
-                 setTimeout(() => {
-                   bajas.openForm();          // abre form limpio
-                   setTimeout(() => {
-                     bajas._seleccionarEmpleado(ipId); // pre-llena con datos del empleado
-                   }, 80);
-                 }, delay);
-               } else if (attempts < MAX) {
-                 setTimeout(tryOpen, 100);
-               }
-             };
-             setTimeout(tryOpen, 150);
-           }
-         };
-})();
-
-// ==============================================================
-//  ADMIN LOCALES
-// ==============================================================
-const adminLocales = (() => {
-  const COL = 'locales';
-  let _locales = [], _unsub = null, _pendingDel = null;
-  let _readyCbs = [], _ready = false;
-  function _onReady(fn) { if (_ready) fn(); else _readyCbs.push(fn); }
-  function _notifyReady() { if (!_ready) { _ready = true; _readyCbs.forEach(fn => { try { fn(); } catch(e) {} }); _readyCbs = []; } }
-
-  function $f(id) { return document.getElementById('al-' + id); }
-  function $v(id) { const e = $f(id); return e ? e.value.trim() : ''; }
-
-  function init() {
-    if (_unsub) {
-      // Ya escuchando: si ya tenemos datos, notificar inmediatamente
-      if (_ready) _notifyReady();
-      return;
-    }
-    if (!db) { _render([]); _notifyReady(); return; }
-    _unsub = db.collection(COL).orderBy('nombre').onSnapshot(snap => {
-      _locales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      _render();
-      _propagarSelects();
-      _notifyReady();
-    }, err => console.error('Locales listener:', err));
-  }
-
-  function getLocales() { return _locales; }
-
-  function _render() {
-    const grid = document.getElementById('al-grid');
-    if (!grid) return;
-    if (!_locales.length) {
-      grid.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:16px 0">No hay locales cargados. Agregá el primero.</div>`;
-      return;
-    }
-    grid.innerHTML = _locales.map(l => `
-      <div class="al-local-row">
-        <div class="al-local-dot"></div>
-        <div style="flex:1">
-          <div class="al-local-name">${esc(l.nombre)}</div>
-          ${l.razon ? `<div class="al-local-razon">${esc(l.razon)}</div>` : ''}
-          ${l.email ? `<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--m8);margin-top:2px">&#x2709; ${esc(l.email)}</div>` : '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted);margin-top:2px">Sin email de notificaciones</div>'}
-        </div>
-        <div class="al-local-actions">
-          <button class="bj-icon-btn" title="Editar" onclick="adminLocales.edit('${l.id}')">✏</button>
-          <button class="bj-icon-btn del" title="Eliminar" onclick="adminLocales.askDelete('${l.id}','${esc(l.nombre)}')">✕</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // Propaga los locales a todos los <select> que los usen
-  function _propagarSelects() {
-    const selectIds = [
-      'rc-local',      // módulo 01
-      'in-local',      // módulo 02
-      'ip-local',      // módulo 04 (si fuera select; es input pero podría cambiarse)
-    ];
-    const opts = '<option value="">- seleccionar -</option>' +
-      _locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
-
-    selectIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.tagName === 'SELECT') {
-        const cur = el.value;
-        el.innerHTML = opts;
-        el.value = cur;
-      }
-    });
-
-    // También los filtros
-    ['rc-filter-local','in-filter-local','ip-filter-local'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        const cur = el.value;
-        el.innerHTML = '<option value="">Todos los locales</option>' +
-          _locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
-        el.value = cur;
-      }
-    });
-  }
-
-  function openForm(docId) {
-    $f('doc-id').value = docId || '';
-    document.getElementById('al-modal-title').textContent = docId ? 'Editar local' : 'Agregar local';
-    $f('form-error').textContent = '';
-    if (!docId) { $f('nombre').value = ''; $f('razon').value = ''; $f('email').value = ''; }
-    document.getElementById('al-modal-overlay').classList.add('open');
-    setTimeout(() => $f('nombre').focus(), 100);
-  }
-
-  function closeForm(e) {
-    if (e && e.target !== document.getElementById('al-modal-overlay')) return;
-    document.getElementById('al-modal-overlay').classList.remove('open');
-  }
-
-  function edit(docId) {
-    const l = _locales.find(x => x.id === docId);
-    if (!l) return;
-    $f('nombre').value = l.nombre || '';
-    $f('razon').value  = l.razon  || '';
-    $f('email').value  = l.email  || '';
-    openForm(docId);
-  }
-
-  async function guardar() {
-    const errEl = $f('form-error');
-    const btn   = document.getElementById('al-save-btn');
-    errEl.textContent = '';
-    const nombre = $v('nombre');
-    if (!nombre) { errEl.textContent = 'El nombre es obligatorio.'; return; }
-    const data = {
-      nombre,
-      razon:  $v('razon'),
-      email:  ($f('email')?.value || '').trim(),
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString()
-    };
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    try {
-      if (!db) throw new Error('Firebase no configurado');
-      const docId = $f('doc-id').value;
-      if (docId) { await db.collection(COL).doc(docId).update(data); }
-      else { data.createdAt = data.updatedAt; await db.collection(COL).add(data); }
-      document.getElementById('al-modal-overlay').classList.remove('open');
-    } catch(e) {
-      errEl.textContent = 'Error: ' + e.message;
-    } finally {
-      btn.textContent = 'Guardar'; btn.disabled = false;
-    }
-  }
-
-  function askDelete(docId, nombre) {
-    _pendingDel = docId;
-    document.getElementById('al-del-name').textContent = nombre;
-    document.getElementById('al-del-overlay').classList.add('open');
-  }
-  function cancelDelete() {
-    _pendingDel = null;
-    document.getElementById('al-del-overlay').classList.remove('open');
-  }
-  async function confirmDelete() {
-    if (!_pendingDel || !db) { cancelDelete(); return; }
-    try { await db.collection(COL).doc(_pendingDel).delete(); }
-    catch(e) { alert('Error: ' + e.message); }
-    cancelDelete();
-  }
-
-  function esc(v) { return String(v ?? '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;"); }
-
-  return { init, getLocales, onReady: _onReady, openForm, closeForm, edit, guardar, askDelete, cancelDelete, confirmDelete };
-})();
-
-// ==============================================================
-//  MÓDULO 01 - RECLUTAMIENTO
-// ==============================================================
-const reclutamiento = (() => {
-  const COL = 'reclutamiento';
-  const FIELDS = ['nombre','fecha','local','puesto','telefono','email','estado','cv-link','notas'];
-  let _registros = [], _filtrados = [], _unsub = null, _pendingDel = null;
-  let _queryTxt = '', _queryEstado = '', _queryLocal = '';
-
-  function $f(id) { return document.getElementById('rc-' + id); }
-  function $v(id) { const e = $f(id); return e ? e.value.trim() : ''; }
-  function $s(id, v) { const e = $f(id); if (e) e.value = v ?? ''; }
-  function esc(v) { return String(v ?? '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;"); }
-
-  function init() {
-    if (_unsub) return;
-    if (!db) { _renderGrid([]); return; }
-    // Init adminLocales también para tener locales disponibles
-    adminLocales.init();
-    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
-      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      _aplicarFiltros();
-    }, err => console.error('Reclutamiento listener:', err));
-  }
-
-  const ESTADO_CLASS = {
-    'Nuevo':       'rc-estado-nuevo',
-    'En revisión': 'rc-estado-revision',
-    'Entrevistado':'rc-estado-entrevistado',
-    'Aprobado':    'rc-estado-aprobado',
-    'Rechazado':   'rc-estado-rechazado',
-  };
-
-  function _renderGrid() {
-    const grid  = document.getElementById('rc-grid');
-    const count = document.getElementById('rc-count');
-    if (!_filtrados.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">Sin candidatos</div>`;
-      count.textContent = '0 candidatos';
-      return;
-    }
-    count.textContent = `${_filtrados.length} candidato${_filtrados.length !== 1 ? 's' : ''}`;
-
-    // Verificar cuáles ya pasaron a ingresos
-    const ingRegs = typeof ingresos !== 'undefined' ? ingresos.getRegistros() : [];
-
-    grid.innerHTML = _filtrados.map(r => {
-      const cls = ESTADO_CLASS[r.estado] || 'rc-estado-nuevo';
-      const yaIngresado = ingRegs.some(i => i['rc-ref'] === r.id);
-      const btnIngr = yaIngresado
-        ? `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--m2)">✓ En Ingresos</span>`
-        : `<button class="rc-btn-ingresar" onclick="reclutamiento.pasarAIngresos('${r.id}')">➕ Pasar a Ingresos</button>`;
-      return `
-      <div class="rc-card">
-        <div class="rc-card-top">
-          <div class="rc-card-name">${esc(r.nombre)}</div>
-          <span class="rc-estado ${cls}">${esc(r.estado || 'Nuevo')}</span>
-        </div>
-        <div class="rc-card-meta">
-          ${r.local ? `<span class="rc-pill">📍 ${esc(r.local)}</span>` : ''}
-          ${r.puesto ? `<span class="rc-pill">💼 ${esc(r.puesto)}</span>` : ''}
-          ${r.fecha  ? `<span class="rc-pill">📅 ${r.fecha.split('-').reverse().join('/')}</span>` : ''}
-        </div>
-        ${r.notas ? `<div class="rc-card-notas">${esc(r.notas)}</div>` : ''}
-        <div class="rc-card-actions">
-          ${btnIngr}
-          ${r['cv-link'] ? `<a href="${esc(r['cv-link'])}" target="_blank" class="rc-btn-cv">📄 CV</a>` : ''}
-          <button class="bj-icon-btn" title="Editar" onclick="reclutamiento.edit('${r.id}')">✏</button>
-          <button class="bj-icon-btn del" title="Eliminar" onclick="reclutamiento.askDelete('${r.id}','${esc(r.nombre)}')">✕</button>
-        </div>
-      </div>
-    `}).join('');
-  }
-
-  function _aplicarFiltros() {
-    const q = _queryTxt.toLowerCase();
-    _filtrados = _registros.filter(r => {
-      const txt = (r.nombre + r.local + r.puesto + r.email).toLowerCase();
-      if (q && !txt.includes(q)) return false;
-      if (_queryEstado && r.estado !== _queryEstado) return false;
-      if (_queryLocal  && r.local  !== _queryLocal)  return false;
-      return true;
-    });
-    _renderGrid();
-  }
-
-  function filtrar(v)       { _queryTxt    = v; _aplicarFiltros(); }
-  function filtrarEstado(v) { _queryEstado = v; _aplicarFiltros(); }
-  function filtrarLocal(v)  { _queryLocal  = v; _aplicarFiltros(); }
-
-  function openForm(docId) {
-    $f('doc-id').value = docId || '';
-    $f('modal-tag').textContent   = docId ? 'Editar candidato' : 'Nuevo candidato';
-    $f('modal-title').textContent = docId ? 'Editar CV' : 'Agregar CV';
-    $f('form-error').textContent  = '';
-    if (!docId) { FIELDS.forEach(f => $s(f, '')); $s('estado','Nuevo'); }
-    // Populate local select
-    _poblarLocalSelect('rc-local');
-    document.getElementById('rc-modal-overlay').classList.add('open');
-    setTimeout(() => $f('nombre').focus(), 100);
-  }
-
-  function closeForm(e) {
-    if (e && e.target !== document.getElementById('rc-modal-overlay')) return;
-    document.getElementById('rc-modal-overlay').classList.remove('open');
-  }
-
-  function edit(docId) {
-    const r = _registros.find(x => x.id === docId);
-    if (!r) return;
-    openForm(docId);
-    // Poblar valores DESPUÉS de openForm (que reconstruye los selects)
-    setTimeout(() => {
-      FIELDS.forEach(f => $s(f, r[f]));
-      const localSel = document.getElementById('rc-local');
-      if (localSel && r.local) localSel.value = r.local;
-    }, 60);
-  }
-
-  async function guardar() {
-    const errEl = $f('form-error');
-    const btn   = document.getElementById('rc-save-btn');
-    errEl.textContent = '';
-    const nombre = $v('nombre');
-    if (!nombre) { errEl.textContent = 'El nombre es obligatorio.'; return; }
-    const data = {};
-    FIELDS.forEach(f => { data[f] = $v(f); });
-    data.updatedAt = firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString();
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    try {
-      if (!db) throw new Error('Firebase no configurado');
-      const docId = $f('doc-id').value;
-      if (docId) { await db.collection(COL).doc(docId).update(data); }
-      else { data.createdAt = data.updatedAt; await db.collection(COL).add(data); }
-      document.getElementById('rc-modal-overlay').classList.remove('open');
-    } catch(e) {
-      errEl.textContent = 'Error: ' + e.message;
-    } finally {
-      btn.textContent = 'Guardar'; btn.disabled = false;
-    }
-  }
-
-  // -- PASAR A INGRESOS -----------------------------------------
-  function pasarAIngresos(rcId) {
-    const r = _registros.find(x => x.id === rcId);
-    if (!r) return;
-    navigate('ingresos', document.querySelector('[data-module="ingresos"]'));
-    const tryOpen = (n) => {
-      if (typeof ingresos !== 'undefined') {
-        ingresos.init();
-        setTimeout(() => {
-          ingresos.openForm();
-          setTimeout(() => ingresos._precargarDesdeRC(r), 100);
-        }, 200);
-      } else if (n < 20) { setTimeout(() => tryOpen(n+1), 100); }
-    };
-    setTimeout(() => tryOpen(0), 150);
-  }
-
-  function askDelete(docId, nombre) {
-    _pendingDel = docId;
-    document.getElementById('rc-del-name').textContent = nombre;
-    document.getElementById('rc-del-overlay').classList.add('open');
-  }
-  function cancelDelete() {
-    _pendingDel = null;
-    document.getElementById('rc-del-overlay').classList.remove('open');
-  }
-  async function confirmDelete() {
-    if (!_pendingDel || !db) { cancelDelete(); return; }
-    try { await db.collection(COL).doc(_pendingDel).delete(); }
-    catch(e) { alert('Error: ' + e.message); }
-    cancelDelete();
-  }
-
-  function exportCSV() {
-    const h = ['Nombre','Fecha','Local','Puesto','Teléfono','Email','Estado','CV Link','Notas'];
-    const rows = _filtrados.map(r =>
-      [r.nombre, r.fecha, r.local, r.puesto, r.telefono, r.email, r.estado, r['cv-link'], r.notas]
-      .map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
-    );
-    const csv = [h.join(','), ...rows].join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}));
-    a.download = `reclutamiento_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  }
-
-  function getRegistros() { return _registros; }
-  function refreshGrid()  { _renderGrid(); }
-
-  return { init, openForm, closeForm, edit, guardar,
-           filtrar, filtrarEstado, filtrarLocal,
-           pasarAIngresos, askDelete, cancelDelete, confirmDelete,
-           exportCSV, getRegistros, refreshGrid };
-})();
-
-// ==============================================================
-//  MÓDULO 02 - INGRESOS
-// ==============================================================
-const ingresos = (() => {
-  const COL = 'ingresos';
-  const FIELDS = ['codigo','local','nombre','fecha','puesto','horario'];
-  let _registros = [], _filtrados = [], _unsub = null, _pendingDel = null;
-  let _queryTxt = '', _queryLocal = '';
-
-  function $f(id) { return document.getElementById('in-' + id); }
-  function $v(id) { const e = $f(id); return e ? e.value.trim() : ''; }
-  function $s(id, v) { const e = $f(id); if (e) e.value = v ?? ''; }
-  function esc(v) { return String(v ?? '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"&#39;"); }
-  function fmtFecha(v) {
-    if (!v) return '<span style="color:var(--muted)">-</span>';
-    const [y,m,d] = String(v).split('-');
-    return (d&&m&&y) ? `${d}/${m}/${y}` : esc(v);
-  }
-
-  function init() {
-    if (_unsub) return;
-    adminLocales.init();
-    if (!db) { _renderTabla(); return; }
-    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
-      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      _poblarLocalSelect('in-filter-local');
-      _aplicarFiltros();
-      // Refrescar módulo 01 para actualizar badges "En Ingresos"
-      if (typeof reclutamiento !== 'undefined') reclutamiento.refreshGrid();
-    }, err => console.error('Ingresos listener:', err));
-  }
-
-  function _renderTabla() {
-    const tbody = document.getElementById('in-tbody');
-    const count = document.getElementById('in-count');
-    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
-
-    if (!_filtrados.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="bj-empty-cell">Sin ingresos registrados</td></tr>`;
-      count.textContent = '0 registros';
-      return;
-    }
-    count.textContent = `${_filtrados.length} ingreso${_filtrados.length!==1?'s':''}`;
-    tbody.innerHTML = _filtrados.map(r => {
-      const emp = ipRegs.find(e => e['in-ref'] === r.id || (e.nombre && e.nombre === r.nombre && e.local === r.local));
-      const legajoBadge = emp
-        ? `<span class="in-badge-legajo" title="Ver en Info Personal" onclick="ingresos._irAInfoPersonal('${emp.id}')">👤 Legajo <-</span>`
-        : `<button class="bj-btn" style="padding:5px 10px;font-size:11px;background:color-mix(in srgb,var(--m4) 12%,transparent);color:var(--m4);border:1px solid color-mix(in srgb,var(--m4) 25%,transparent);border-radius:6px" onclick="ingresos.crearLegajo('${r.id}')">+ Legajo</button>`;
-      const origenBadge = r['rc-ref']
-        ? `<span class="in-badge-origen">desde CV</span>`
-        : `<span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:10px">manual</span>`;
-      const presentBadge = r.presentacion === true
-        ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:color-mix(in srgb,var(--m2) 14%,transparent);border:1px solid color-mix(in srgb,var(--m2) 30%,transparent);color:var(--m2);font-family:'DM Mono',monospace;font-size:10px;font-weight:700" title="${r.presentacionAt ? 'Confirmado: ' + new Date(r.presentacionAt).toLocaleString('es-AR') : ''}">✅ Presente</span>`
-        : `<span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:10px">Pendiente</span>`;
-      return `
-        <tr>
-          <td class="col-mono">${esc(r.codigo)}</td>
-          <td>${esc(r.local)}</td>
-          <td class="col-nombre">${esc(r.nombre)}</td>
-          <td class="col-mono col-muted">${fmtFecha(r.fecha)}</td>
-          <td>${esc(r.puesto)}</td>
-          <td>${origenBadge}</td>
-          <td>${presentBadge}</td>
-          <td>${legajoBadge}</td>
-          <td>
-            <div class="bj-row-actions">
-              <button class="bj-icon-btn" title="Editar" onclick="ingresos.edit('${r.id}')">✏</button>
-              <button class="bj-icon-btn del" title="Eliminar" onclick="ingresos.askDelete('${r.id}','${esc(r.nombre)}')">✕</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  function _aplicarFiltros() {
-    const q = _queryTxt.toLowerCase();
-    _filtrados = _registros.filter(r => {
-      const txt = (r.nombre + r.codigo).toLowerCase();
-      if (q && !txt.includes(q)) return false;
-      if (_queryLocal && r.local !== _queryLocal) return false;
-      return true;
-    });
-    _renderTabla();
-  }
-
-  function filtrar(v)      { _queryTxt   = v; _aplicarFiltros(); }
-  function filtrarLocal(v) { _queryLocal = v; _aplicarFiltros(); }
-
-  function openForm(docId) {
-    $f('doc-id').value = docId || '';
-    $f('modal-tag').textContent   = docId ? 'Editar ingreso' : 'Nuevo ingreso';
-    $f('modal-title').textContent = docId ? 'Editar registro' : 'Registrar ingreso';
-    $f('form-error').textContent  = '';
-    document.getElementById('in-rc-ref').value = '';
-    document.getElementById('in-origen-chip').style.display = 'none';
-    if (!docId) FIELDS.forEach(f => $s(f, ''));
-    _poblarLocalSelect('in-local');
-    document.getElementById('in-modal-overlay').classList.add('open');
-    setTimeout(() => $f('codigo').focus(), 100);
-  }
-
-  function closeForm(e) {
-    if (e && e.target !== document.getElementById('in-modal-overlay')) return;
-    document.getElementById('in-modal-overlay').classList.remove('open');
-  }
-
-  function edit(docId) {
-    const r = _registros.find(x => x.id === docId);
-    if (!r) return;
-    openForm(docId);
-    // Poblar valores DESPUÉS de openForm (que reconstruye los selects)
-    setTimeout(() => {
-      FIELDS.forEach(f => $s(f, r[f]));
-      const localSel = document.getElementById('in-local');
-      if (localSel && r.local) localSel.value = r.local;
-    }, 60);
-  }
-
-  // Pre-cargar desde un candidato de Reclutamiento
-  function _precargarDesdeRC(r) {
-    document.getElementById('in-rc-ref').value = r.id;
-    $s('nombre', r.nombre);
-    $s('local',  r.local);
-    $s('puesto', r.puesto);
-    $s('fecha',  r.fecha || new Date().toISOString().slice(0,10));
-    const chip = document.getElementById('in-origen-chip');
-    chip.style.display = 'flex';
-    document.getElementById('in-origen-nombre').textContent = r.nombre || '';
-  }
-
-  function _clearOrigen() {
-    document.getElementById('in-rc-ref').value = '';
-    document.getElementById('in-origen-chip').style.display = 'none';
-  }
-
-  async function guardar() {
-    const errEl = $f('form-error');
-    const btn   = document.getElementById('in-save-btn');
-    errEl.textContent = '';
-    const codigo = $v('codigo'), nombre = $v('nombre'), local = $v('local');
-    if (!codigo) { errEl.textContent = 'El código es obligatorio.'; return; }
-    if (!nombre) { errEl.textContent = 'El nombre es obligatorio.'; return; }
-    if (!local)  { errEl.textContent = 'Seleccioná un local.'; return; }
-    const data = {};
-    FIELDS.forEach(f => { data[f] = $v(f); });
-    const rcRef = document.getElementById('in-rc-ref').value;
-    if (rcRef) data['rc-ref'] = rcRef;
-    data.updatedAt = firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString();
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    const esNuevo = !$f('doc-id').value;
-    try {
-      if (!db) throw new Error('Firebase no configurado');
-      const docId = $f('doc-id').value;
-      if (docId) { await db.collection(COL).doc(docId).update(data); }
-      else {
-        data.createdAt = data.updatedAt;
-        const docRef = await db.collection(COL).add(data);
-        data._docId = docRef.id; // guardar ID real para el link de confirmación
-      }
-      document.getElementById('in-modal-overlay').classList.remove('open');
-      if (rcRef && db) {
-        db.collection('reclutamiento').doc(rcRef).update({ estado: 'Aprobado' }).catch(()=>{});
-      }
-      if (esNuevo) _mostrarSuccess(data);
-    } catch(e) {
-      errEl.textContent = 'Error: ' + e.message;
-    } finally {
-      btn.textContent = 'Guardar'; btn.disabled = false;
-    }
-  }
-
-  // ── MODAL ÉXITO ─────────────────────────────────────────────
-  let _lastData = null;
-
-  function _mostrarSuccess(data) {
-    _lastData = data;
-    const fmt = v => v ? v.split('-').reverse().join('/') : '-';
-    document.getElementById('in-succ-nombre').textContent  = data.nombre  || '-';
-    document.getElementById('in-succ-puesto').textContent  = data.puesto  || '-';
-    document.getElementById('in-succ-fecha').textContent   = fmt(data.fecha);
-    document.getElementById('in-succ-horario').textContent = data.horario || 'No especificado';
-    document.getElementById('in-succ-local').textContent   = data.local   || '-';
-    document.getElementById('in-success-overlay').classList.add('open');
-  }
-
-  function cerrarSuccess() {
-    document.getElementById('in-success-overlay').classList.remove('open');
-  }
-
-  // ── MODAL MAIL INGRESO ───────────────────────────────────────
-  // Los destinatarios se cargan automáticamente desde la base de locales.
-  // El usuario no escribe emails — solo confirma y envía.
-  let _inMailRecipients = [];
-
-  function abrirMailIngreso() {
-    if (!_lastData) return;
-    // Cargar emails del local automáticamente
-    _inMailRecipients = [];
-    if (typeof adminLocales !== 'undefined' && _lastData.local) {
-      const loc = adminLocales.getLocales().find(l => l.nombre === _lastData.local);
-      if (loc && loc.email) {
-        loc.email.split(/[\n,]+/).map(e => e.trim()).filter(Boolean).forEach(e => {
-          if (!_inMailRecipients.includes(e)) _inMailRecipients.push(e);
-        });
-      }
-    }
-    _renderInMailChips();
-    const fmt = v => v ? v.split('-').reverse().join('/') : '-';
-    const sub  = document.getElementById('in-mail-subtitulo');
-    if (sub) sub.textContent = `${_lastData.nombre || ''} · ${_lastData.local || ''}`;
-    const prev = document.getElementById('in-mail-preview');
-    if (prev) prev.innerHTML = [
-      `<strong>Nuevo ingreso registrado</strong>`,
-      ``,
-      `Empleado: <strong>${_lastData.nombre || '-'}</strong>`,
-      `Puesto:   <strong>${_lastData.puesto  || '-'}</strong>`,
-      `Fecha:    <strong>${fmt(_lastData.fecha)}</strong>`,
-      `Horario:  <strong>${_lastData.horario || 'No especificado'}</strong>`,
-      `Local:    <strong>${_lastData.local   || '-'}</strong>`,
-    ].join('<br>');
-    const status = document.getElementById('in-mail-status');
-    if (status) { status.textContent = ''; status.className = 'in-mail-status'; }
-    const sendBtn = document.getElementById('in-mail-send-btn');
-    if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
-    document.getElementById('in-success-overlay').classList.remove('open');
-    document.getElementById('in-mail-overlay').classList.add('open');
-  }
-
-  function cerrarMailIngreso(e) {
-    if (e && e.target !== document.getElementById('in-mail-overlay')) return;
-    document.getElementById('in-mail-overlay').classList.remove('open');
-  }
-
-  function _renderInMailChips() {
-    const cont = document.getElementById('in-mail-chips-auto');
-    if (!cont) return;
-    if (!_inMailRecipients.length) {
-      cont.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--danger)">⚠ No hay emails configurados para este local. Agregá en Admin → Locales.</span>`;
-      const sendBtn = document.getElementById('in-mail-send-btn');
-      if (sendBtn) sendBtn.disabled = true;
-      return;
-    }
-    cont.innerHTML = _inMailRecipients.map(email =>
-      `<span style="background:color-mix(in srgb,var(--m3) 12%,transparent);border:1px solid color-mix(in srgb,var(--m3) 30%,transparent);color:var(--m3);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:10px">${email}</span>`
-    ).join('');
-    const sendBtn = document.getElementById('in-mail-send-btn');
-    if (sendBtn) sendBtn.disabled = false;
-  }
-
-  async function enviarMailModal() {
-    if (!_inMailRecipients.length) {
-      const s = document.getElementById('in-mail-status');
-      if (s) { s.textContent = 'No hay destinatarios configurados para este local.'; s.className = 'in-mail-status err'; }
-      return;
-    }
-    const sendBtn = document.getElementById('in-mail-send-btn');
-    const status  = document.getElementById('in-mail-status');
-    if (sendBtn) { sendBtn.textContent = 'Enviando…'; sendBtn.disabled = true; }
-    if (status)  { status.textContent = ''; status.className = 'in-mail-status'; }
-    const data = _lastData || {};
-    const fmt  = v => v ? v.split('-').reverse().join('/') : '-';
-    const baseUrl    = location.href.split('?')[0];
-    const confirmUrl = data._docId ? `${baseUrl}?confirmar=${data._docId}` : '';
-
-    // Calcular fecha de devolución (3 días corridos desde hoy)
-    const devDate = new Date();
-    devDate.setDate(devDate.getDate() + 3);
-    const devolucionAt = devDate.toISOString();
-
-    if (EMAILJS_PUBLIC_KEY !== 'TU_PUBLIC_KEY') {
-      let errores = 0;
-      for (const casilla of _inMailRecipients) {
-        try {
-          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email:    casilla,
-            empleado:    data.nombre  || '-',
-            puesto:      data.puesto  || '-',
-            local:       data.local   || '-',
-            fecha:       fmt(data.fecha),
-            horario:     data.horario || 'No especificado',
-            codigo:      data.codigo  || '-',
-            confirm_url: confirmUrl,
-          });
-        } catch(e) { errores++; console.error('Mail error', casilla, e); }
-      }
-      if (errores === 0) {
-        // Guardar destinatarios y fecha de devolución pendiente en Firestore
-        if (db && data._docId) {
-          try {
-            await db.collection('ingresos').doc(data._docId).update({
-              mailEnviado:     true,
-              mailEnviadoAt:   new Date().toISOString(),
-              mailDestinatarios: _inMailRecipients,
-              devolucionAt,
-              devolucionEnviada: false,
-            });
-          } catch(e) { console.warn('No se pudo guardar devolucionAt:', e); }
-        }
-        if (status) { status.textContent = `✓ Mail enviado a ${_inMailRecipients.length} destinatario${_inMailRecipients.length > 1 ? 's' : ''}. Recordatorio automático en 3 días.`; status.className = 'in-mail-status ok'; }
-        if (sendBtn) sendBtn.textContent = 'Enviado';
-        setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 2400);
-      } else {
-        if (status) { status.textContent = `Hubo ${errores} error(es) de envío.`; status.className = 'in-mail-status err'; }
-        if (sendBtn) { sendBtn.textContent = 'Reintentar'; sendBtn.disabled = false; }
-      }
-    } else {
-      const body = [
-        `Nuevo ingreso registrado`,
-        ``,
-        `Empleado: ${data.nombre  || '-'}`,
-        `Puesto:   ${data.puesto  || '-'}`,
-        `Fecha:    ${fmt(data.fecha)}`,
-        `Horario:  ${data.horario || 'No especificado'}`,
-        `Local:    ${data.local   || '-'}`,
-        confirmUrl ? `\n✅ Confirmar presentación: ${confirmUrl}` : '',
-      ].join('\n');
-      const subject = `Nuevo ingreso: ${data.nombre || ''} – ${data.local || ''}`;
-      window.open(`mailto:${_inMailRecipients.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
-      if (status) { status.textContent = 'Cliente de email abierto.'; status.className = 'in-mail-status ok'; }
-      if (sendBtn) sendBtn.textContent = 'Listo';
-      setTimeout(() => { document.getElementById('in-mail-overlay').classList.remove('open'); }, 1600);
-    }
-  }
-
-    // Crear legajo en Info Personal desde un ingreso
-  function crearLegajo(inId) {
-    const r = _registros.find(x => x.id === inId);
-    if (!r) return;
-    navigate('info-personal', document.querySelector('[data-module="info-personal"]'));
-    const tryOpen = (n) => {
-      if (typeof infoPersonal !== 'undefined') {
-        infoPersonal.init();
-        setTimeout(() => {
-          infoPersonal.openForm();
-          setTimeout(() => infoPersonal._precargarDesdeIngreso(r, inId), 100);
-        }, 200);
-      } else if (n < 20) { setTimeout(() => tryOpen(n+1), 100); }
-    };
-    setTimeout(() => tryOpen(0), 150);
-  }
-
-  function _irAInfoPersonal(ipId) {
-    navigate('info-personal', document.querySelector('[data-module="info-personal"]'));
-  }
-
-  function askDelete(docId, nombre) {
-    _pendingDel = docId;
-    document.getElementById('in-del-name').textContent = nombre;
-    document.getElementById('in-del-overlay').classList.add('open');
-  }
-  function cancelDelete() {
-    _pendingDel = null;
-    document.getElementById('in-del-overlay').classList.remove('open');
-  }
-  async function confirmDelete() {
-    if (!_pendingDel || !db) { cancelDelete(); return; }
-    try { await db.collection(COL).doc(_pendingDel).delete(); }
-    catch(e) { alert('Error: ' + e.message); }
-    cancelDelete();
-  }
-
-  function exportCSV() {
-    const h = ['Código','Local','Nombre','Fecha Ingreso','Puesto','Origen'];
-    const rows = _filtrados.map(r =>
-      [r.codigo, r.local, r.nombre, r.fecha, r.puesto, r['rc-ref'] ? 'Reclutamiento' : 'Manual']
-      .map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
-    );
-    const csv = [h.join(','), ...rows].join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}));
-    a.download = `ingresos_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  }
-
-  function getRegistros() { return _registros; }
-
-  function _renderTablaPublic() { _renderTabla(); }
-
-  return { init, openForm, closeForm, edit, guardar,
-           filtrar, filtrarLocal,
-           crearLegajo, _irAInfoPersonal, _precargarDesdeRC, _clearOrigen,
-           askDelete, cancelDelete, confirmDelete,
-           exportCSV, getRegistros, _renderTablaPublic,
-           cerrarSuccess, abrirMailIngreso, cerrarMailIngreso, enviarMailModal };
-})();
-
-// -- HELPER GLOBAL: poblar select de locales ------------------
-function _poblarLocalSelect(selectId) {
-  const el = document.getElementById(selectId);
-  if (!el || el.tagName !== 'SELECT') return;
-  const locales = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
-  const cur = el.value;
-  el.innerHTML = '<option value="">- seleccionar -</option>' +
-    locales.map(l => `<option value="${String(l.nombre||'').replace(/"/g,'&quot;')}">${String(l.nombre||'').replace(/</g,'&lt;')}</option>`).join('');
-  if (cur) el.value = cur;
-}
-
-// Conexión 02<-04: precargar datos de un ingreso en el form de Info Personal
-infoPersonal._precargarDesdeIngreso = function(r, inId) {
-  const $s = (id, v) => { const e = document.getElementById('ip-' + id); if (e) e.value = v ?? ''; };
-  $s('nombre',        r.nombre);
-  $s('puesto-real',   r.puesto);
-  $s('fecha-ingreso', r.fecha);
-  // Poblar el select de local si existe
-  const localSel = document.getElementById('ip-local');
-  if (localSel && localSel.tagName === 'SELECT') {
-    _poblarLocalSelect('ip-local');
-    localSel.value = r.local || '';
-    if (!localSel.value && r.local) {
-      // Si no está en la lista, agregar opción temporal
-      const opt = document.createElement('option');
-      opt.value = r.local; opt.textContent = r.local;
-      localSel.appendChild(opt);
-      localSel.value = r.local;
-    }
-  } else if (localSel) {
-    localSel.value = r.local || '';
-  }
-  // Guardar in-ref en dataset del overlay para que guardar() lo persista
-  document.getElementById('ip-modal-overlay').dataset.inRef = inId;
-};
-
-// ==============================================================
-//  MODULO 03 - FORMULARIO DE PERSONAL (Google Forms + CSV import)
-// ==============================================================
-const formulario = (() => {
-  let _pendingRows = [];
-
-  // Mapa de columnas del CSV de Google Forms <- campos de Info Personal
-  const COL_MAP = {
-    'nombre completo': 'nombre',
-    'nombre':          'nombre',
-    'apellido y nombre': 'nombre',
-    'dni':             'dni',
-    'cuil':            'cuil',
-    'teléfono':        'telefono',
-    'telefono':        'telefono',
-    'celular':         'telefono',
-    'email':           'email',
-    'correo':          'email',
-    'correo electrónico': 'email',
-    'domicilio':       'domicilio',
-    'dirección':       'domicilio',
-    'localidad':       'localidad',
-    'ciudad':          'localidad',
-    'provincia':       'provincia',
-    'código postal':   'cp',
-    'cp':              'cp',
-    'fecha de nacimiento': 'fecha-nac',
-    'nacimiento':      'fecha-nac',
-    'puesto':          'puesto-real',
-    'cargo':           'puesto-real',
-    'local':           'local',
-    'sucursal':        'local',
-    'cbu':             'cbu',
-    'contacto de emergencia': 'contacto-emergencia',
-    'parentesco':      'parentesco',
-  };
-
-  function guardarURL(val) {
-    try { localStorage.setItem('gform_url', val); } catch(e) {}
-  }
-
-  function cargarForm() {
-    const url = document.getElementById('gform-url').value.trim();
-    const container = document.getElementById('gform-container');
-    if (!url) {
-      container.innerHTML = `<div style="color:var(--danger);font-family:'DM Mono',monospace;font-size:12px;padding:20px">Pegá una URL válida primero.</div>`;
-      return;
-    }
-    container.innerHTML = `<iframe src="${url}" width="100%" height="600" frameborder="0" marginheight="0" marginwidth="0" style="display:block;border:none">Cargando…</iframe>`;
-  }
-
-  function importarRespuestas() {
-    document.getElementById('gform-csv-input').click();
-  }
-
-  function procesarCSV(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const text = e.target.result;
-      const rows = _parseCSV(text);
-      if (rows.length < 2) {
-        alert('El CSV no tiene datos suficientes.');
-        return;
-      }
-      const headers = rows[0].map(h => h.trim().toLowerCase());
-      const dataRows = rows.slice(1).filter(r => r.some(c => c.trim()));
-
-      _pendingRows = dataRows.map(row => {
-        const obj = {};
-        headers.forEach((h, i) => {
-          const campo = COL_MAP[h];
-          if (campo) obj[campo] = (row[i] || '').trim();
-        });
-        return obj;
-      }).filter(obj => obj.nombre || obj.dni || obj.cuil);
-
-      _mostrarPreview(_pendingRows, headers);
-    };
-    reader.readAsText(file, 'UTF-8');
-    input.value = '';
-  }
-
-  function _parseCSV(text) {
-    const rows = [];
-    let row = [], cell = '', inQ = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (c === '"') {
-        if (inQ && text[i+1] === '"') { cell += '"'; i++; }
-        else inQ = !inQ;
-      } else if (c === ',' && !inQ) {
-        row.push(cell); cell = '';
-      } else if ((c === '\n' || c === '\r') && !inQ) {
-        row.push(cell); cell = '';
-        if (row.some(x => x)) rows.push(row);
-        row = [];
-        if (c === '\r' && text[i+1] === '\n') i++;
-      } else {
-        cell += c;
-      }
-    }
-    if (cell || row.length) { row.push(cell); if (row.some(x => x)) rows.push(row); }
-    return rows;
-  }
-
-  function _mostrarPreview(rows, _headers) {
-    const campos = ['nombre','dni','cuil','telefono','email','local','puesto-real','domicilio','fecha-nac'];
-    const labels = { 'nombre':'Nombre','dni':'DNI','cuil':'CUIL','telefono':'Teléfono','email':'Email','local':'Local','puesto-real':'Puesto','domicilio':'Domicilio','fecha-nac':'F. Nac.' };
-
-    let html = `<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
-      <thead><tr>${campos.map(c => `<th style="padding:8px 10px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;white-space:nowrap">${labels[c]||c}</th>`).join('')}</tr></thead>
-      <tbody>`;
-    rows.forEach(r => {
-      html += `<tr>${campos.map(c => `<td style="padding:7px 10px;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">${String(r[c]||'').replace(/</g,'&lt;')||'<span style="color:var(--muted)">-</span>'}</td>`).join('')}</tr>`;
-    });
-    html += '</tbody></table>';
-
-    document.getElementById('gform-preview-table').innerHTML = `<div style="overflow-x:auto">${html}</div>`;
-    const prev = document.getElementById('gform-preview');
-    prev.style.display = 'flex';
-    document.getElementById('gform-import-status').textContent = `${rows.length} registro${rows.length!==1?'s':''} listos para importar`;
-  }
-
-  function cancelarImport() {
-    _pendingRows = [];
-    document.getElementById('gform-preview').style.display = 'none';
-    document.getElementById('gform-import-status').textContent = '';
-  }
-
-  async function confirmarImport() {
-    if (!_pendingRows.length) return;
-    const btn = document.getElementById('gform-import-btn');
-    const status = document.getElementById('gform-import-status');
-    btn.disabled = true;
-    btn.textContent = 'Importando…';
-
-    let ok = 0, err = 0;
-    for (const row of _pendingRows) {
-      const data = {
-        ...row,
-        updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString(),
-        createdAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString(),
-      };
-      try {
-        if (!db) throw new Error('Firebase no configurado');
-        await db.collection('info-personal').add(data);
-        ok++;
-      } catch(e) { err++; console.error('Import error:', e); }
-    }
-
-    btn.textContent = '✓ Importar a Info Personal';
-    btn.disabled = false;
-    status.textContent = `✓ ${ok} importado${ok!==1?'s':''} correctamente${err ? ` · ${err} con error` : ''}`;
-    status.style.color = err ? 'var(--danger)' : 'var(--accent2)';
-
-    if (ok > 0) {
-      _pendingRows = [];
-      setTimeout(() => {
-        document.getElementById('gform-preview').style.display = 'none';
-        // Navegar a Info Personal para ver los nuevos registros
-        navigate('info-personal', document.querySelector('[data-module="info-personal"]'));
-      }, 1500);
-    }
-  }
-
-  // Restaurar URL guardada al inicializar
-  function init() {
-    try {
-      const saved = localStorage.getItem('gform_url');
-      if (saved) document.getElementById('gform-url').value = saved;
-    } catch(e) {}
-  }
-
-  return { init, guardarURL, cargarForm, importarRespuestas, procesarCSV, cancelarImport, confirmarImport };
-})();
-
-
-const _origNavigate = navigate;
-window.navigate = function(moduleId, navEl) {
-  _origNavigate(moduleId, navEl);
-  if (moduleId === 'reclutamiento') { adminLocales.init(); reclutamiento.init(); }
-  if (moduleId === 'ingresos')      { adminLocales.init(); ingresos.init(); }
-  if (moduleId === 'formulario')    formulario.init();
-  if (moduleId === 'portal')        portal.init();
-  if (moduleId === 'bajas')         bajas.init();
-  if (moduleId === 'info-personal') infoPersonal.init();
-  if (moduleId === 'liquidaciones') liquidaciones.init();
-  if (moduleId === 'admin-locales') adminLocales.init();
-  if (moduleId === 'horarios') {
-    // Iniciar dependencias y esperar locales antes de arrancar horarios
-    if (typeof infoPersonal !== 'undefined') infoPersonal.init();
-    adminLocales.init();
-    // adminLocales._onReady() llama el callback cuando los locales estén en Firestore.
-    // Si ya están listos (segunda visita al módulo), el callback se ejecuta de inmediato.
-    adminLocales.onReady(() => horarios.init());
-  }
-  if (moduleId === 'usuarios')      setTimeout(() => usuarios.init(), 100);
-};
-
-// ==============================================================
-//  MÓDULO 07 - LIQUIDACIONES DE BAJA
-// ==============================================================
-const liquidaciones = (() => {
-  const COL = 'liquidaciones';
-  let _registros  = [];   // docs guardados
-  let _filtrados  = [];
-  let _queryTxt   = '';
-  let _unsub      = null;
-  let _dirty      = false; // cambios sin guardar
-  let _activoId   = null;  // id de la liquidación activa en el panel
-
-  // -- INIT ----------------------------------------------------
-  function init() {
-    if (_unsub) return;
-    if (!db) { _renderLista([]); return; }
-    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
-      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      _aplicarFiltros();
-    }, err => console.error('Liquidaciones listener:', err));
-  }
-
-  // -- LISTA ----------------------------------------------------
-  function _aplicarFiltros() {
-    const q = _queryTxt.toLowerCase();
-    _filtrados = q
-      ? _registros.filter(r => (r.nombre||'').toLowerCase().includes(q) || (r.sucursal||'').toLowerCase().includes(q))
-      : [..._registros];
-    _renderLista();
-  }
-  function filtrar(v) { _queryTxt = v; _aplicarFiltros(); }
-
-  function _renderLista() {
-    const el = document.getElementById('lq-list');
-    if (!el) return;
-    if (!_filtrados.length) {
-      el.innerHTML = `<div class="lq-empty-state">Sin liquidaciones guardadas</div>`;
-      return;
-    }
-    el.innerHTML = _filtrados.map(r => {
-      const active = r.id === _activoId ? ' active' : '';
-      const total = r.total != null ? '$' + Number(r.total).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '-';
-      return `<div class="lq-item${active}" onclick="liquidaciones.seleccionar('${r.id}')">
-        <div class="lq-item-name">${esc(r.nombre||'Sin nombre')}</div>
-        <div class="lq-item-meta">${esc(r.sucursal||'')} · ${esc(r.fechaCese||'')}</div>
-        <div class="lq-item-total">${total}</div>
-      </div>`;
-    }).join('');
-    document.getElementById('lq-btn-export').disabled = false;
-  }
-
-  // -- CALCULADORA ---------------------------------------------
-  function calcular() {
-    _markDirty();
-    const sueldo    = parseFloat(document.getElementById('lq-sueldo').value) || 0;
-    const ingreso   = document.getElementById('lq-fecha-ingreso').value;
-    const cese      = document.getElementById('lq-fecha-cese').value;
-    const descuento = parseFloat(document.getElementById('lq-descuento').value) || 0;
-    const bono      = parseFloat(document.getElementById('lq-bono').value) || 0;
-    const feriados  = parseInt(document.getElementById('lq-feriados')?.value) || 0;
-    const hsExtra50  = parseFloat(document.getElementById('lq-hs-extra50')?.value) || 0;
-    const hsExtra100 = parseFloat(document.getElementById('lq-hs-extra100')?.value) || 0;
-    const res       = document.getElementById('lq-results-section');
-
-    if (!sueldo || !ingreso || !cese) { res.style.display = 'none'; return; }
-
-    const dIngreso = new Date(ingreso + 'T00:00:00');
-    const dCese    = new Date(cese + 'T00:00:00');
-    if (dCese <= dIngreso) { res.style.display = 'none'; return; }
-
-    // -- 1. DÍAS TRABAJADOS EN EL MES DEL CESE --
-    const primerDiaMes = new Date(dCese.getFullYear(), dCese.getMonth(), 1);
-    // Si el ingreso es posterior al primer día del mes del cese, usar ingreso como inicio
-    const desdeMes = dIngreso > primerDiaMes ? dIngreso : primerDiaMes;
-    const diasMes  = Math.max(0, Math.round((dCese - desdeMes) / 86400000) + 1);
-    const sueldoDiario = sueldo / 30;
-    const haberes = sueldoDiario * diasMes;
-
-    // -- 2. SAC PROPORCIONAL (por semestre, art. 122 LCT) --
-    // 1er semestre: 01/01 – 30/06  | 2do semestre: 01/07 – 31/12
-    const esPrimerSem = dCese.getMonth() < 6; // 0-5 = ene-jun
-    const inicioSem = esPrimerSem
-      ? new Date(dCese.getFullYear(), 0, 1)    // 01/01
-      : new Date(dCese.getFullYear(), 6, 1);   // 01/07
-    const diasSem = esPrimerSem ? 181 : 184;   // días aprox del semestre
-    const desdeSem = dIngreso > inicioSem ? dIngreso : inicioSem;
-    const diasAnio = Math.max(0, Math.round((dCese - desdeSem) / 86400000) + 1);
-    const sac = (sueldo / 12) * (diasAnio / diasSem);
-
-    // -- 3. VACACIONES PROPORCIONALES --
-    // Antigüedad total en días
-    const antiguedadDias = Math.round((dCese - dIngreso) / 86400000);
-    const antiguedadMeses = antiguedadDias / 30.44;
-    // -- 3. VACACIONES PROPORCIONALES (art. 150 LCT) --
-    // Escala: <6m→proporcional | <5a→14d | <10a→21d | <20a→28d | >=20a→35d
-    const antiguedadAnios = antiguedadDias / 365.25;
-    let diasVacBase, reglaSub;
-    if (antiguedadMeses < 6) {
-      diasVac = Math.floor(antiguedadDias / 20);
-      reglaSub = `${antiguedadDias} días trabajados → 1 cada 20`;
-    } else if (antiguedadAnios < 5) {
-      diasVac = 14;
-      reglaSub = 'antigüedad < 5 años → 14 días corridos';
-    } else if (antiguedadAnios < 10) {
-      diasVac = 21;
-      reglaSub = 'antigüedad 5–10 años → 21 días corridos';
-    } else if (antiguedadAnios < 20) {
-      diasVac = 28;
-      reglaSub = 'antigüedad 10–20 años → 28 días corridos';
-    } else {
-      diasVac = 35;
-      reglaSub = 'antigüedad ≥ 20 años → 35 días corridos';
-    }
-    const vacaciones = sueldoDiario * diasVac;
-
-    // -- 4. FERIADOS TRABAJADOS (doble jornal = día normal × 2) --
-    // El feriado se cobra el día normal + recargo 100% = 2× jornal diario
-    const valorFeriado = sueldoDiario * 2 * feriados;
-
-    // -- 5. HORAS EXTRAS --
-    // Valor hora = sueldo / 200 (base 200hs/mes estándar)
-    const valorHora  = sueldo / 200;
-    const valorExtra50  = valorHora * 1.5 * hsExtra50;
-    const valorExtra100 = valorHora * 2   * hsExtra100;
-    const totalExtras   = valorExtra50 + valorExtra100;
-
-    // -- TOTAL --
-    const total = haberes + sac + vacaciones + valorFeriado + totalExtras - descuento + bono;
-
-    // -- RENDER --
-    const fmt = v => '$' + v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    document.getElementById('lq-sub-dias').textContent =
-      `${diasMes} días × $${sueldoDiario.toLocaleString('es-AR',{maximumFractionDigits:2})} (sueldo÷30)`;
-    document.getElementById('lq-val-haberes').textContent = fmt(haberes);
-
-    document.getElementById('lq-sub-sac').textContent =
-      `${diasAnio} días en el ${esPrimerSem ? '1er' : '2do'} semestre × sueldo÷12÷${diasSem}`;
-    document.getElementById('lq-val-sac').textContent = fmt(sac);
-
-    document.getElementById('lq-sub-vac').textContent =
-      `${diasVac} días · ${reglaSub}`;
-    document.getElementById('lq-val-vac').textContent = fmt(vacaciones);
-
-    // Feriados
-    const rowFeriados = document.getElementById('lq-row-feriados');
-    if (feriados > 0) {
-      rowFeriados.style.display = '';
-      document.getElementById('lq-sub-feriados').textContent = `${feriados} día${feriados>1?'s':''} × jornal diario × 2 (doble)`;
-      document.getElementById('lq-val-feriados').textContent = fmt(valorFeriado);
-    } else { rowFeriados.style.display = 'none'; }
-
-    // Horas extras
-    const rowExtras = document.getElementById('lq-row-extras');
-    if (totalExtras > 0) {
-      rowExtras.style.display = '';
-      const partes = [];
-      if (hsExtra50  > 0) partes.push(`${hsExtra50}hs al 50%`);
-      if (hsExtra100 > 0) partes.push(`${hsExtra100}hs al 100%`);
-      document.getElementById('lq-sub-extras').textContent = partes.join(' + ') + ` · $/h ${valorHora.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
-      document.getElementById('lq-val-extras').textContent = fmt(totalExtras);
-    } else { rowExtras.style.display = 'none'; }
-
-
-
-    res.style.display = '';
-
-    // Guardar valores calculados para persistir
-    window._lqCalcResult = { diasMes, haberes, diasAnio, sac, diasVac, vacaciones,
-      feriados, valorFeriado, hsExtra50, hsExtra100, totalExtras, descuento, bono, total };
-  }
-
-  // -- NUEVA ----------------------------------------------------
-  function nueva() {
-    _activoId = null;
-    _renderLista();
-    _mostrarForm();
-    _limpiarForm();
-    document.getElementById('lq-baja-selector-wrap').style.display = '';
-    document.getElementById('lq-emp-header').style.display = 'none';
-  }
-
-  // -- SELECCIONAR DE LISTA -------------------------------------
-  function seleccionar(docId) {
-    _activoId = docId;
-    _renderLista();
-    const reg = _registros.find(r => r.id === docId);
-    if (!reg) return;
-    _mostrarForm();
-    _limpiarForm();
-
-    // Cargar datos guardados
-    document.getElementById('lq-doc-id').value  = docId;
-    document.getElementById('lq-baja-ref').value = reg['baja-ref'] || '';
-    document.getElementById('lq-sueldo').value   = reg.sueldo || '';
-    document.getElementById('lq-fecha-ingreso').value = reg.fechaIngreso || '';
-    document.getElementById('lq-fecha-cese').value    = reg.fechaCese || '';
-    document.getElementById('lq-descuento').value     = reg.descuento || '';
-    document.getElementById('lq-desc-nota').value     = reg.descuentoNota || '';
-    document.getElementById('lq-bono').value          = reg.bono || '';
-    document.getElementById('lq-bono-nota').value     = reg.bonoNota || '';
-    document.getElementById('lq-observaciones').value = reg.observaciones || '';
-
-    // Mostrar cabecera empleado
-    let empFoto = '';
-    if (reg['baja-ref'] && typeof bajas !== 'undefined') {
-      const bReg = bajas.getRegistros().find(b => b.id === reg['baja-ref']);
-      if (bReg && bReg['ip-ref'] && typeof infoPersonal !== 'undefined') {
-        const ipReg = infoPersonal.getRegistros().find(r => r.id === bReg['ip-ref']);
-        empFoto = ipReg?.foto || '';
-      }
-    }
-    _mostrarEmpHeader(reg.nombre, reg.sucursal, empFoto, reg.fechaCese);
-    document.getElementById('lq-baja-selector-wrap').style.display = 'none';
-
-    calcular();
-    _dirty = false;
-  }
-
-  // -- VINCULO DESDE BAJAS (06) ---------------------------------
-  function _buscarBaja(q) {
-    const dd = document.getElementById('lq-baja-dropdown');
-    if (!q || q.length < 2) { dd.classList.remove('open'); return; }
-    const bajasRegs = (typeof bajas !== 'undefined') ? bajas.getRegistros() : [];
-    const matches = bajasRegs.filter(r =>
-      (r.nombre||'').toLowerCase().includes(q.toLowerCase()) ||
-      (r.cuil||'').includes(q)
-    ).slice(0, 8);
-    dd.innerHTML = matches.length
-      ? matches.map(r => `<div class="bj-emp-opt" onclick="liquidaciones._vincularBaja('${r.id}')">
-          <div class="bj-emp-opt-name">${esc(r.nombre||'')}</div>
-          <div class="bj-emp-opt-meta">${esc(r.sucursal||'')} · cese ${r['fecha-cese'] ? r['fecha-cese'].split('-').reverse().join('/') : '-'}</div>
-        </div>`).join('')
-      : `<div class="bj-emp-opt-empty">Sin resultados en Bajas</div>`;
-    dd.classList.add('open');
-  }
-
-  function _vincularBaja(bajaId) {
-    const bajasRegs = (typeof bajas !== 'undefined') ? bajas.getRegistros() : [];
-    const baja = bajasRegs.find(r => r.id === bajaId);
-    if (!baja) return;
-
-    document.getElementById('lq-baja-ref').value = bajaId;
-    document.getElementById('lq-baja-dropdown').classList.remove('open');
-    document.getElementById('lq-baja-search').value = '';
-
-    // Pre-rellenar campos de cálculo desde la baja
-    if (baja['fecha-inicio']) document.getElementById('lq-fecha-ingreso').value = baja['fecha-inicio'];
-    if (baja['fecha-cese'])   document.getElementById('lq-fecha-cese').value   = baja['fecha-cese'];
-
-    // Intentar obtener sueldo desde Info Personal si hay ip-ref
-    if (baja['ip-ref'] && typeof infoPersonal !== 'undefined') {
-      const ipRegs = infoPersonal.getRegistros();
-      const emp = ipRegs.find(r => r.id === baja['ip-ref']);
-      if (emp && emp.sueldo) document.getElementById('lq-sueldo').value = emp.sueldo;
-    }
-
-    // Mostrar cabecera
-    const foto = (() => {
-      if (baja['ip-ref'] && typeof infoPersonal !== 'undefined') {
-        const emp = infoPersonal.getRegistros().find(r => r.id === baja['ip-ref']);
-        return emp?.foto || '';
-      }
-      return '';
-    })();
-    _mostrarEmpHeader(baja.nombre, baja.sucursal, foto, baja['fecha-cese']);
-    document.getElementById('lq-baja-selector-wrap').style.display = 'none';
-
-    calcular();
-  }
-
-  function _mostrarEmpHeader(nombre, sucursal, foto, fechaCese) {
-    const el = document.getElementById('lq-emp-header');
-    el.style.display = 'flex';
-    const initials = (nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const av = document.getElementById('lq-emp-avatar');
-    av.innerHTML = foto ? `<img src="${foto}" onerror="this.parentNode.textContent='${initials}'">` : initials;
-    document.getElementById('lq-emp-name').textContent = nombre || '-';
-    const ceseStr = fechaCese ? 'Cese: ' + fechaCese.split('-').reverse().join('/') : '';
-    document.getElementById('lq-emp-meta').textContent = [sucursal, ceseStr].filter(Boolean).join(' · ');
-  }
-
-  // -- DESDE BAJAS: abrir liquidación nueva pre-vinculada -------
-  function abrirDesdeBaja(bajaId) {
-    navigate('liquidaciones', document.querySelector('[data-module="liquidaciones"]'));
-    const run = () => {
-      init();
-      setTimeout(() => {
-        nueva();
-        setTimeout(() => _vincularBaja(bajaId), 80);
-      }, 200);
-    };
-    setTimeout(run, 150);
-  }
-
-  // -- UI helpers -----------------------------------------------
-  function _mostrarForm() {
-    document.getElementById('lq-no-sel').style.display = 'none';
-    document.getElementById('lq-form').style.display = '';
-  }
-  function _limpiarForm() {
-    ['lq-doc-id','lq-baja-ref','lq-sueldo','lq-fecha-ingreso','lq-fecha-cese',
-     'lq-descuento','lq-desc-nota','lq-bono','lq-bono-nota','lq-observaciones',
-     'lq-baja-search','lq-feriados','lq-hs-extra50','lq-hs-extra100'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    document.getElementById('lq-results-section').style.display = 'none';
-    document.getElementById('lq-form-error').textContent = '';
-    document.getElementById('lq-emp-header').style.display = 'none';
-    document.getElementById('lq-baja-dropdown').classList.remove('open');
-    window._lqCalcResult = null;
-    _dirty = false;
-  }
-  function _markDirty() { _dirty = true; }
-  function descartar() {
-    if (_dirty && !confirm('¿Descartás los cambios?')) return;
-    _activoId = null;
-    _renderLista();
-    _limpiarForm();
-    document.getElementById('lq-no-sel').style.display = '';
-    document.getElementById('lq-form').style.display = 'none';
-  }
-
-  // -- GUARDAR --------------------------------------------------
-  async function guardar() {
-    const errEl = document.getElementById('lq-form-error');
-    const btn   = document.getElementById('lq-btn-guardar');
-    errEl.textContent = '';
-
-    const nombre = document.getElementById('lq-emp-name').textContent;
-    if (!nombre || nombre === '-') { errEl.textContent = 'Vinculá primero a una baja para guardar.'; return; }
-    const sueldo = parseFloat(document.getElementById('lq-sueldo').value);
-    if (!sueldo) { errEl.textContent = 'Ingresá el sueldo mensual.'; return; }
-    const cese = document.getElementById('lq-fecha-cese').value;
-    if (!cese) { errEl.textContent = 'Ingresá la fecha de cese.'; return; }
-
-    const calc = window._lqCalcResult || {};
-    const data = {
-      'baja-ref':     document.getElementById('lq-baja-ref').value,
-      nombre,
-      sucursal:       document.getElementById('lq-emp-meta').textContent.split(' · ')[0],
-      sueldo,
-      fechaIngreso:   document.getElementById('lq-fecha-ingreso').value,
-      fechaCese:      cese,
-      descuento:      parseFloat(document.getElementById('lq-descuento').value) || 0,
-      descuentoNota:  document.getElementById('lq-desc-nota').value,
-      bono:           parseFloat(document.getElementById('lq-bono').value) || 0,
-      bonoNota:       document.getElementById('lq-bono-nota').value,
-      observaciones:  document.getElementById('lq-observaciones').value,
-      // Snapshot del cálculo
-      calc_diasMes:   calc.diasMes,
-      calc_haberes:   calc.haberes,
-      calc_sac:       calc.sac,
-      calc_diasVac:   calc.diasVac,
-      calc_vacaciones:calc.vacaciones,
-      calc_feriados:  calc.feriados,
-      calc_valorFeriado: calc.valorFeriado,
-      calc_hsExtra50: calc.hsExtra50,
-      calc_hsExtra100:calc.hsExtra100,
-      calc_totalExtras: calc.totalExtras,
-      total:          calc.total,
-      updatedAt: firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date().toISOString(),
-    };
-
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    try {
-      if (!db) throw new Error('Firebase no configurado');
-      const docId = document.getElementById('lq-doc-id').value;
-      if (docId) {
-        await db.collection(COL).doc(docId).update(data);
-        _activoId = docId;
-      } else {
-        data.createdAt = data.updatedAt;
-        const ref = await db.collection(COL).add(data);
-        document.getElementById('lq-doc-id').value = ref.id;
-        _activoId = ref.id;
-      }
-      _dirty = false;
-      errEl.style.color = 'var(--accent2)';
-      errEl.textContent = '✓ Guardado correctamente';
-      setTimeout(() => { errEl.textContent = ''; errEl.style.color = ''; }, 2500);
-    } catch(e) {
-      errEl.style.color = 'var(--danger)';
-      errEl.textContent = 'Error: ' + e.message;
-    } finally {
-      btn.textContent = 'Guardar liquidación'; btn.disabled = false;
-    }
-  }
-
-  // -- EXPORT CSV -----------------------------------------------
-  function exportCSV() {
-    const headers = ['Nombre','Sucursal','F. Cese','Sueldo','Días Mes','Haberes','SAC','Días Vac','Vacaciones','Descuento','Desc. Concepto','Bono','Bono Concepto','Total','Observaciones'];
-    const rows = _filtrados.map(r => [
-      r.nombre, r.sucursal, r.fechaCese, r.sueldo,
-      r.calc_diasMes, r.calc_haberes, r.calc_sac,
-      r.calc_diasVac, r.calc_vacaciones,
-      r.descuento, r.descuentoNota, r.bono, r.bonoNota, r.total, r.observaciones
-    ].map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `liquidaciones_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-  }
-
-  function esc(v) { return String(v??'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  return { init, nueva, seleccionar, filtrar, calcular, guardar, descartar,
-           exportCSV, _buscarBaja, _vincularBaja, _markDirty, abrirDesdeBaja };
-})();
-
-// =================================================================
-//  MODULO 05 - HORARIOS
-// =================================================================
-const horarios = (() => {
-  const COL_PLANILLAS = 'hr_planillas'; // doc por local+semana, con subcolección turnos
-  const COL_ASISTENCIA = 'hr_asistencia'; // doc por local+semana+dia
-  const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-
-  let _localActivo = '';       // local seleccionado en tabs
-  let _locales     = [];       // lista de locales disponibles
-  let _semanaBase  = null;     // Date del lunes de la semana activa
-  let _planilla    = {};       // { empId: { 0:{ entrada,salida,nota }, 1:… } } (0=lun)
-  let _asistencia  = {};       // { diaIdx: { empId: { asist, tarde, rank } } }
-  let _empleados   = [];       // empleados del local activo en Info Personal
-  let _planillaEnPlanilla = [];// empIds actualmente en la planilla (semana)
-  let _planillaDocId = null;
-  let _unsub = null;
-  let _unsubAsist = null;
-
-  // Modal turno
-  let _mt_empId = null, _mt_diaIdx = null;
-
-  // Modal cierre
-  let _cierre_diaIdx = null;
-  let _cierreState   = {}; // { empId: { asist, tarde, rank } }
-
-  let _ipUpdateSub = false; // flag para no suscribir onUpdate dos veces
-
-  // ── INIT ────────────────────────────────────────────────────
-  function init() {
-    if (!_semanaBase) _semanaBase = _luneDe(new Date());
-
-    _locales = adminLocales.getLocales().map(l => l.nombre).filter(Boolean).sort();
-    if (!_locales.length) {
-      const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
-      _locales = [...new Set(ipRegs.map(r => r.local).filter(Boolean))].sort();
-    }
-
-    // Determinar local activo según rol
-    const rol   = window._currentRol || 'rrhh';
-    const local = window._currentLocal || '';
-    if (rol !== 'rrhh' && local) {
-      _localActivo = local;
-    } else if (!_localActivo && _locales.length) {
-      _localActivo = _locales[0];
-    }
-    _renderTabs();
-
-    // Mostrar botón agregar solo si es rrhh o gerente
-    const btnAgregar = document.getElementById('hr-btn-agregar');
-    if (btnAgregar) btnAgregar.style.display = (rol === 'rrhh' || rol === 'gerente') ? '' : 'none';
-
-    // Suscribirse a actualizaciones de infoPersonal para re-renderizar si llegan tarde
-    if (!_ipUpdateSub && typeof infoPersonal !== 'undefined' && infoPersonal.onUpdate) {
-      _ipUpdateSub = true;
-      infoPersonal.onUpdate(() => {
-        // Solo re-renderizar si el módulo horarios está activo
-        if (document.getElementById('module-horarios')?.classList.contains('active')) {
-          _renderGrid();
-        }
-      });
-    }
-
-    _cargarSemana();
-  }
-
-  // ── TABS DE LOCAL ───────────────────────────────────────────
-  function _renderTabs() {
-    const cont = document.getElementById('hr-local-tabs');
-    if (!cont) return;
-    const rol   = window._currentRol || 'rrhh';
-    const local = window._currentLocal || '';
-    // supervisor solo ve su local
-    const visibles = (rol !== 'rrhh' && local) ? [local] : _locales;
-    cont.innerHTML = visibles.map(l =>
-      `<button class="hr-local-tab${l === _localActivo ? ' active' : ''}"
-         onclick="horarios.cambiarLocal('${l.replace(/'/g,"\\'")}')">
-         ${l}
-       </button>`
-    ).join('');
-  }
-
-  function cambiarLocal(nombre) {
-    _localActivo = nombre;
-    _renderTabs();
-    _cargarSemana();
-  }
-
-  // ── NAVEGACIÓN SEMANAL ─────────────────────────────────────
-  function _luneDe(fecha) {
-    const d = new Date(fecha);
-    const dow = d.getDay(); // 0=dom
-    const diff = (dow === 0) ? -6 : 1 - dow;
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-  function _semanaId() {
-    return _localActivo.replace(/\s+/g,'_') + '__' + _semanaBase.toISOString().slice(0,10);
-  }
-  function _diaFecha(idx) {
-    const d = new Date(_semanaBase);
-    d.setDate(d.getDate() + idx);
-    return d;
-  }
-  function _labelSemana() {
-    const fin = new Date(_semanaBase); fin.setDate(fin.getDate() + 6);
-    const fmt = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
-    return `Semana ${fmt(_semanaBase)} – ${fmt(fin)} / ${fin.getFullYear()}`;
-  }
-
-  function semanaAnterior() { _semanaBase.setDate(_semanaBase.getDate() - 7); _cargarSemana(); }
-  function semanaSiguiente(){ _semanaBase.setDate(_semanaBase.getDate() + 7); _cargarSemana(); }
-  function irHoy() { _semanaBase = _luneDe(new Date()); _cargarSemana(); }
-
-  // ── CARGA DE DATOS ─────────────────────────────────────────
-  function _cargarSemana() {
-    if (_unsub) { _unsub(); _unsub = null; }
-    if (_unsubAsist) { _unsubAsist(); _unsubAsist = null; }
-
-    const lbl = document.getElementById('hr-week-label');
-    if (lbl) lbl.textContent = _labelSemana();
-
-    _planilla = {};
-    _asistencia = {};
-    _planillaEnPlanilla = [];
-    _planillaDocId = null;
-
-    // Empleados del local desde Info Personal
-    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
-    _empleados = ipRegs.filter(r => r.local === _localActivo);
-
-    if (!db) { _renderGrid(); return; }
-
-    const semId = _semanaId();
-
-    // Fallback: si en 5s no llegó ningún snapshot, renderizar igual con lo que hay
-    const _fallbackTimer = setTimeout(() => {
-      const cont = document.getElementById('hr-grid-container');
-      if (cont && cont.querySelector('.hr-empty')?.textContent.includes('Cargando')) {
-        console.warn('[horarios] Firestore tardó demasiado, renderizando sin datos de planilla');
-        _renderGrid();
-      }
-    }, 5000);
-
-    // Listener en doc de planilla
-    _unsub = db.collection(COL_PLANILLAS).doc(semId).onSnapshot(snap => {
-      clearTimeout(_fallbackTimer);
-      if (snap.exists) {
-        const data = snap.data();
-        const rawTurnos = data.turnos || {};
-        _planilla = {};
-        Object.keys(rawTurnos).forEach(empId => {
-          _planilla[empId] = {};
-          Object.keys(rawTurnos[empId] || {}).forEach(diaKey => {
-            _planilla[empId][Number(diaKey)] = rawTurnos[empId][diaKey];
-          });
-        });
-        _planillaEnPlanilla = data.empleados || [];
-        _planillaDocId = semId;
-      } else {
-        _planilla = {};
-        _planillaEnPlanilla = [];
-        _planillaDocId = null;
-      }
-      _renderGrid();
-    }, e => { console.error('hr planilla:', e); clearTimeout(_fallbackTimer); _renderGrid(); });
-
-    // Listener en colección de asistencia
-    _unsubAsist = db.collection(COL_ASISTENCIA)
-      .where('semanaId', '==', semId)
-      .onSnapshot(snap => {
-        _asistencia = {};
-        snap.docs.forEach(d => {
-          const data = d.data();
-          _asistencia[data.diaIdx] = data.registros || {};
-        });
-        _renderGrid();
-      }, e => { console.error('hr asistencia:', e); _renderGrid(); });
-  }
-
-  // ── RENDER GRID ─────────────────────────────────────────────
-  function _renderGrid() {
-    const cont = document.getElementById('hr-grid-container');
-    if (!cont) return;
-
-    // Siempre releer empleados frescos de infoPersonal (pueden llegar después de _cargarSemana)
-    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
-    _empleados = ipRegs.filter(r => r.local === _localActivo);
-
-    const hoy = new Date(); hoy.setHours(0,0,0,0);
-    const todayStr = hoy.toISOString().slice(0,10);
-
-    // Empleados a mostrar: los de la planilla + todos del local si no hay planilla
-    let empIds = _planillaEnPlanilla.length
-      ? _planillaEnPlanilla
-      : _empleados.map(e => e.id);
-
-
-    // Si no hay empleados
-    if (!empIds.length && !_empleados.length) {
-      cont.innerHTML = `<div class="hr-empty"><div class="hr-empty-icon">👥</div>No hay empleados en ${_localActivo || 'este local'} (Info Personal)</div>`;
-      return;
-    }
-    if (!empIds.length) empIds = _empleados.map(e => e.id);
-
-    // Cabecera días con fecha
-    const headCols = DIAS.map((d, i) => {
-      const f = _diaFecha(i);
-      const fStr = f.toISOString().slice(0,10);
-      const isHoy = fStr === todayStr;
-      // stats asistencia
-      const asistDia = _asistencia[i] || {};
-      const p = Object.values(asistDia).filter(r=>r.asist==='P').length;
-      const a = Object.values(asistDia).filter(r=>r.asist==='A').length;
-      const statsTxt = (p||a) ? `${p}P ${a}A` : '';
-      return `<div class="hr-grid-head-cell${isHoy?' today':''}">
-        ${d} ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}
-        ${statsTxt ? `<div class="hr-day-stats">${statsTxt}</div>` : ''}
-      </div>`;
-    }).join('');
-
-    const rol = window._currentRol || 'rrhh';
-    const puedeEditar = (rol === 'rrhh' || rol === 'gerente');
-
-    // Filas empleados
-    const rows = empIds.map(empId => {
-      const emp = _empleados.find(e => e.id === empId);
-      const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const avatar = emp.foto
-        ? `<img src="${emp.foto}" onerror="this.parentNode.textContent='${initials}'">`
-        : initials;
-      const empCell = `<div class="hr-emp-cell">
-        <div class="hr-emp-avatar">${avatar}</div>
-        <div><div class="hr-emp-name">${esc(emp.nombre||'')}</div>
-        <div class="hr-emp-puesto">${esc(emp.puesto||'')}</div></div>
-      </div>`;
-
-      const turnoCells = DIAS.map((_, i) => {
-        const f = _diaFecha(i);
-        const fStr = f.toISOString().slice(0,10);
-        const isHoy = fStr === todayStr;
-        const turno = (_planilla[empId] || {})[i] || (_planilla[empId] || {})[String(i)];
-        const asist = ((_asistencia[i] || {})[empId]) || ((_asistencia[String(i)] || {})[empId]) || {};
-        let chip;
-        if (turno && turno.entrada) {
-          let asistBadge = '';
-          if (asist.asist === 'P') asistBadge = `<div class="hr-badge hr-badge-presente">✓ Pres.</div>`;
-          else if (asist.asist === 'A') asistBadge = `<div class="hr-badge hr-badge-ausente">✕ Aus.</div>`;
-          else if (asist.asist === 'T') asistBadge = `<div class="hr-badge hr-badge-tarde">⏱ +${asist.tarde||0}m</div>`;
-          const rankBadge = asist.rank ? `<span class="hr-rank hr-rank-${asist.rank}">${asist.rank}</span>` : '';
-          chip = `<div class="hr-turno-chip" ${puedeEditar ? `onclick="horarios.abrirModalTurno('${empId}',${i})"` : ''}>
-            <div class="hr-turno-time">${turno.label || (turno.entrada === '08:00' ? 'AM' : 'PM')}</div>
-            ${turno.nota ? `<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-top:1px">${esc(turno.nota)}</div>` : ''}
-            <div style="display:flex;gap:3px;align-items:center;justify-content:center;margin-top:3px;flex-wrap:wrap">
-              ${asistBadge}${rankBadge}
-            </div>
-          </div>`;
-        } else {
-          chip = puedeEditar
-            ? `<div class="hr-turno-libre" onclick="horarios.abrirModalTurno('${empId}',${i})">+ turno</div>`
-            : `<div class="hr-turno-libre">libre</div>`;
-        }
-        return `<div class="hr-day-cell${isHoy?' hr-today-col':''}">${chip}</div>`;
-      }).join('');
-
-      return `<div class="hr-emp-row">${empCell}${turnoCells}</div>`;
-    }).join('');
-
-    cont.innerHTML = `<div class="hr-grid">
-      <div class="hr-grid-head">
-        <div class="hr-grid-head-cell">Empleado · ${_localActivo}</div>
-        ${headCols}
-      </div>
-      ${rows || `<div class="hr-empty" style="grid-column:1/-1">Sin empleados en planilla</div>`}
-    </div>`;
-  }
-
-  // ── MODAL TURNO (gerente / rrhh) ────────────────────────────
-  function _setTurnoTipo(tipo) {
-    const btnAm = document.getElementById('hr-btn-am');
-    const btnPm = document.getElementById('hr-btn-pm');
-    if (!btnAm || !btnPm) return;
-    // Reset ambos
-    btnAm.classList.remove('sel-am');
-    btnPm.classList.remove('sel-pm');
-    btnAm.style.background = ''; btnAm.style.borderColor = ''; btnAm.style.color = ''; btnAm.style.boxShadow = '';
-    btnPm.style.background = ''; btnPm.style.borderColor = ''; btnPm.style.color = ''; btnPm.style.boxShadow = '';
-    // Aplicar al seleccionado — doble vía: clase + inline (por si color-mix falla)
-    if (tipo === 'AM') {
-      btnAm.classList.add('sel-am');
-      btnAm.style.background  = 'rgba(251,191,36,0.18)';
-      btnAm.style.borderColor = '#fbbf24';
-      btnAm.style.color       = '#fbbf24';
-      btnAm.style.boxShadow   = '0 0 0 2px rgba(251,191,36,0.15)';
-      document.getElementById('hr-t-entrada').value = '08:00';
-      document.getElementById('hr-t-salida').value  = '14:00';
-    } else {
-      btnPm.classList.add('sel-pm');
-      btnPm.style.background  = 'rgba(74,255,180,0.14)';
-      btnPm.style.borderColor = '#4affb4';
-      btnPm.style.color       = '#4affb4';
-      btnPm.style.boxShadow   = '0 0 0 2px rgba(74,255,180,0.12)';
-      document.getElementById('hr-t-entrada').value = '14:00';
-      document.getElementById('hr-t-salida').value  = '22:00';
-    }
-  }
-
-  function abrirModalTurno(empId, diaIdx) {
-    const rol = window._currentRol || 'rrhh';
-    if (rol !== 'rrhh' && rol !== 'gerente') return;
-    _mt_empId  = empId;
-    _mt_diaIdx = diaIdx;
-    const emp   = _empleados.find(e => e.id === empId);
-    const fecha = _diaFecha(diaIdx);
-    const turno = (_planilla[empId] || {})[diaIdx] || (_planilla[empId] || {})[String(diaIdx)] || {};
-    document.getElementById('hr-turno-modal-title').textContent = emp ? emp.nombre : 'Empleado';
-    document.getElementById('hr-turno-modal-sub').textContent =
-      `${DIAS[diaIdx]} ${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')} · ${_localActivo}`;
-    // Restaurar selección AM/PM según turno guardado
-    const btnAm = document.getElementById('hr-btn-am');
-    const btnPm = document.getElementById('hr-btn-pm');
-    if (btnAm) btnAm.classList.remove('sel-am');
-    if (btnPm) btnPm.classList.remove('sel-pm');
-    document.getElementById('hr-t-entrada').value = turno.entrada || '';
-    document.getElementById('hr-t-salida').value  = turno.salida  || '';
-    if (turno.entrada === '08:00') { _setTurnoTipo('AM'); }
-    else if (turno.entrada === '14:00') { _setTurnoTipo('PM'); }
-    document.getElementById('hr-t-nota').value = turno.nota || '';
-    document.getElementById('hr-turno-overlay').classList.add('open');
-  }
-
-  function cerrarModalTurno(e) {
-    if (e && e.target !== document.getElementById('hr-turno-overlay')) return;
-    document.getElementById('hr-turno-overlay').classList.remove('open');
-    _mt_empId = null; _mt_diaIdx = null;
-  }
-
-  async function guardarTurno() {
-    if (!_mt_empId || _mt_diaIdx === null) return;
-    const entrada = document.getElementById('hr-t-entrada').value;
-    const salida  = document.getElementById('hr-t-salida').value;
-    const nota    = document.getElementById('hr-t-nota').value.trim();
-    if (!entrada || !salida) { alert('Seleccioná un turno: AM o PM.'); return; }
-    // Etiqueta legible para el chip
-    const turnoLabel = entrada === '08:00' ? 'AM' : 'PM';
-
-    const semId = _semanaId();
-    const turnoData = { entrada, salida, nota, label: turnoLabel };
-
-    try {
-      if (db) {
-        // Merge: actualizar solo ese turno, preservar el resto
-        const fieldPath = `turnos.${_mt_empId}.${_mt_diaIdx}`;
-        const updateObj = {};
-        updateObj[fieldPath] = turnoData;
-        // Si el empleado no está en la lista, agregarlo
-        const yaEsta = _planillaEnPlanilla.includes(_mt_empId);
-        if (!yaEsta) {
-          updateObj['empleados'] = firebase.firestore.FieldValue.arrayUnion(_mt_empId);
-        }
-        updateObj['local']    = _localActivo;
-        updateObj['semanaId'] = semId;
-        updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
-        // Escribir en Firestore — el onSnapshot devuelve el estado actualizado automáticamente
-        await db.collection(COL_PLANILLAS).doc(semId).set(updateObj, { merge: true });
-      } else {
-        // Demo: actualizar state local
-        if (!_planilla[_mt_empId]) _planilla[_mt_empId] = {};
-        _planilla[_mt_empId][_mt_diaIdx] = turnoData;
-        _renderGrid();
-      }
-      document.getElementById('hr-turno-overlay').classList.remove('open');
-    } catch(e) { alert('Error guardando turno: ' + e.message); }
-  }
-
-  async function eliminarTurno() {
-    if (!_mt_empId || _mt_diaIdx === null) return;
-    if (!confirm('¿Quitar este turno?')) return;
-    try {
-      if (db) {
-        const fieldPath = `turnos.${_mt_empId}.${_mt_diaIdx}`;
-        const updateObj = {};
-        updateObj[fieldPath] = firebase.firestore.FieldValue.delete();
-        updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection(COL_PLANILLAS).doc(_semanaId()).update(updateObj);
-      } else {
-        if (_planilla[_mt_empId]) delete _planilla[_mt_empId][_mt_diaIdx];
-        _renderGrid();
-      }
-      document.getElementById('hr-turno-overlay').classList.remove('open');
-    } catch(e) { alert('Error: ' + e.message); }
-  }
-
-  // ── PICKER DE EMPLEADOS (agregar a planilla) ────────────────
-  function abrirPickerEmpleado() {
-    document.getElementById('hr-pick-search').value = '';
-    filtrarPicker('');
-    document.getElementById('hr-emp-pick-overlay').classList.add('open');
-  }
-
-  function cerrarPickerEmpleado(e) {
-    if (e && e.target !== document.getElementById('hr-emp-pick-overlay')) return;
-    document.getElementById('hr-emp-pick-overlay').classList.remove('open');
-  }
-
-  function filtrarPicker(q) {
-    const list = document.getElementById('hr-pick-list');
-    if (!list) return;
-    const qLow = q.toLowerCase();
-    const filtrados = _empleados.filter(e =>
-      !q || (e.nombre||'').toLowerCase().includes(qLow)
-    );
-    if (!filtrados.length) {
-      list.innerHTML = `<div class="hr-empty" style="padding:24px">Sin resultados</div>`;
-      return;
-    }
-    list.innerHTML = filtrados.map(e => {
-      const yaEsta = _planillaEnPlanilla.includes(e.id);
-      const initials = (e.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const avatar = e.foto
-        ? `<img src="${e.foto}" style="width:30px;height:30px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`
-        : `<div class="hr-emp-avatar" style="width:30px;height:30px;font-size:10px">${initials}</div>`;
-      return `<div class="hr-emp-pick-item${yaEsta?' ya-en-planilla':''}" onclick="horarios.agregarEmpleadoPlanilla('${e.id}')">
-        ${avatar}
-        <div>
-          <div class="hr-emp-pick-name">${esc(e.nombre||'')}</div>
-          <div class="hr-emp-pick-meta">${esc(e.puesto||'')}${yaEsta?' · ya en planilla':''}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  async function agregarEmpleadoPlanilla(empId) {
-    if (_planillaEnPlanilla.includes(empId)) return;
-    const semId = _semanaId();
-    try {
-      if (db) {
-        await db.collection(COL_PLANILLAS).doc(semId).set({
-          empleados: firebase.firestore.FieldValue.arrayUnion(empId),
-          local: _localActivo,
-          semanaId: semId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-      } else {
-        _planillaEnPlanilla.push(empId);
-        _renderGrid();
-      }
-    } catch(e) { alert('Error: ' + e.message); }
-  }
-
-  // ── MODAL CIERRE DE TURNO ───────────────────────────────────
-  function abrirCierre() {
-    _cierre_diaIdx = null;
-    _cierreState   = {};
-    const local = _localActivo;
-    document.getElementById('hr-cierre-sub').textContent = `${local} · ${_labelSemana()}`;
-
-    // Renderizar botones de día (solo días con turnos asignados)
-    const diasConTurnos = [];
-    DIAS.forEach((label, i) => {
-      const hayAlguien = Object.keys(_planilla).some(empId => {
-        const ep = _planilla[empId] || {};
-        return ep[i]?.entrada || ep[String(i)]?.entrada;
-      });
-      if (hayAlguien) diasConTurnos.push({ label, i });
-    });
-
-    const hoy = new Date(); hoy.setHours(0,0,0,0);
-    const diasEl = document.getElementById('hr-cierre-dias');
-    diasEl.innerHTML = diasConTurnos.map(({ label, i }) => {
-      const f = _diaFecha(i);
-      const esPasado = f <= hoy;
-      return `<button class="hr-week-btn${!esPasado?' ':''}" data-dia="${i}" style="font-size:11px"
-        onclick="horarios._seleccionarDiaCierre(${i})"
-        ${!esPasado ? 'title="Turno todavía no ocurrió"' : ''}>
-        ${label} ${String(f.getDate()).padStart(2,'0')}/${String(f.getMonth()+1).padStart(2,'0')}
-      </button>`;
-    }).join('');
-
-    if (!diasConTurnos.length) diasEl.innerHTML = `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Sin turnos asignados esta semana</span>`;
-
-    document.getElementById('hr-cierre-save-btn').disabled = true;
-    document.getElementById('hr-cierre-lista').innerHTML = `<div class="hr-empty" style="padding:24px">Seleccioná un día</div>`;
-    document.getElementById('hr-cierre-overlay').classList.add('open');
-  }
-
-  function _seleccionarDiaCierre(diaIdx) {
-    const diaChanged = diaIdx !== _cierre_diaIdx;
-    _cierre_diaIdx = diaIdx;
-
-    if (diaChanged) {
-      // Solo resetear el estado cuando cambia el día, no en cada re-render
-      _cierreState = {};
-      // Pre-cargar asistencia ya guardada en Firestore
-      const yaGuardado = _asistencia[diaIdx] || {};
-      Object.entries(yaGuardado).forEach(([empId, val]) => { _cierreState[empId] = { ...val }; });
-    }
-    // Si el día es el mismo (re-render por click en botón), mantener _cierreState tal cual
-
-    // Empleados con turno ese día
-    const empsConTurno = Object.keys(_planilla).filter(empId => {
-      const ep = _planilla[empId] || {};
-      return ep[diaIdx]?.entrada || ep[String(diaIdx)]?.entrada;
-    });
-
-    // Highlight del botón seleccionado
-    document.querySelectorAll('#hr-cierre-dias .hr-week-btn').forEach(btn => {
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      btn.style.background = '';
-      if (parseInt(btn.getAttribute('data-dia')) === diaIdx) {
-        btn.style.borderColor = 'var(--m2)';
-        btn.style.color = 'var(--m2)';
-        btn.style.background = 'rgba(74,255,180,0.12)';
-      }
-    });
-
-    const lista = document.getElementById('hr-cierre-lista');
-    if (!empsConTurno.length) {
-      lista.innerHTML = `<div class="hr-empty" style="padding:24px">Sin empleados con turno este día</div>`;
-      document.getElementById('hr-cierre-save-btn').disabled = true;
-      return;
-    }
-
-    document.getElementById('hr-cierre-save-btn').disabled = false;
-
-    lista.innerHTML = empsConTurno.map(empId => {
-      const emp    = _empleados.find(e => e.id === empId);
-      const turno  = (_planilla[empId]||{})[diaIdx] || (_planilla[empId]||{})[String(diaIdx)] || {};
-      const estado = _cierreState[empId] || {};
-      const nombre = emp ? esc(emp.nombre||'') : empId;
-      const asist  = estado.asist || '';
-      const tarde  = estado.tarde || '';
-      const rank   = estado.rank  || '';
-      const RANKS  = ['S','A','B','C','D'];
-
-      return `<div class="hr-cierre-emp" id="hr-cemp-${empId}" data-empid="${empId}">
-        <div>
-          <div class="hr-cierre-name">${nombre}</div>
-          <div class="hr-cierre-time">${turno.label || (turno.entrada === '08:00' ? 'AM' : 'PM')}</div>
-        </div>
-        <div class="hr-asist-btns">
-          ${['P','A','T'].map(a => `<button class="hr-asist-btn${asist===a?' sel-'+a:''}" data-action="asist" data-empid="${empId}" data-val="${a}">${a==='P'?'Pres':a==='A'?'Aus':'Tarde'}</button>`).join('')}
-        </div>
-        <input class="hr-tard-inp" id="hr-tard-${empId}" type="number" min="0" max="180" placeholder="min"
-          value="${tarde}" style="${asist!=='T'?'visibility:hidden':''}"
-          data-action="tarde" data-empid="${empId}">
-        <div class="hr-rank-btns">
-          ${RANKS.map(r => `<button class="hr-rank-btn${rank===r?' sel':''}" data-action="rank" data-empid="${empId}" data-val="${r}" data-r="${r}">${r}</button>`).join('')}
-        </div>
-      </div>`;
-    }).join('');
-
-    // Event delegation — un solo listener en la lista, no en cada botón
-    lista.onclick = e => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      const empId  = btn.dataset.empid;
-      const val    = btn.dataset.val;
-      if (action === 'asist') { _setAsist(empId, val); }
-      else if (action === 'rank') { _setRank(empId, val); }
-    };
-    lista.onchange = e => {
-      const inp = e.target.closest('[data-action="tarde"]');
-      if (!inp) return;
-      _setTarde(inp.dataset.empid, inp.value);
-    };
-  }
-
-  function _setAsist(empId, valor) {
-    if (!_cierreState[empId]) _cierreState[empId] = {};
-    _cierreState[empId].asist = valor;
-    // re-render esa fila
-    _seleccionarDiaCierre(_cierre_diaIdx);
-  }
-  function _setTarde(empId, min) {
-    if (!_cierreState[empId]) _cierreState[empId] = {};
-    _cierreState[empId].tarde = parseInt(min) || 0;
-  }
-  function _setRank(empId, rank) {
-    if (!_cierreState[empId]) _cierreState[empId] = {};
-    _cierreState[empId].rank = rank;
-    _seleccionarDiaCierre(_cierre_diaIdx);
-  }
-
-  async function guardarCierre() {
-    if (_cierre_diaIdx === null) return;
-    const btn = document.getElementById('hr-cierre-save-btn');
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    const semId = _semanaId();
-    const asistDocId = semId + '__d' + _cierre_diaIdx;
-    try {
-      if (db) {
-        await db.collection(COL_ASISTENCIA).doc(asistDocId).set({
-          semanaId:  semId,
-          local:     _localActivo,
-          diaIdx:    _cierre_diaIdx,
-          registros: _cierreState,
-          savedBy:   window._currentUser?.email || 'desconocido',
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
-      } else {
-        _asistencia[_cierre_diaIdx] = { ..._cierreState };
-        _renderGrid();
-      }
-      btn.textContent = '✓ Guardado';
-      btn.style.background = 'var(--m2)';
-      setTimeout(() => {
-        btn.textContent = 'Guardar cierre';
-        btn.style.background = '';
-        btn.disabled = false;
-      }, 2000);
-    } catch(e) {
-      alert('Error guardando cierre: ' + e.message);
-      btn.textContent = 'Guardar cierre'; btn.disabled = false;
-    }
-  }
-
-  function cerrarCierre(e) {
-    if (e && e.target !== document.getElementById('hr-cierre-overlay')) return;
-    document.getElementById('hr-cierre-overlay').classList.remove('open');
-    _cierre_diaIdx = null;
-  }
-
-  function esc(v) { return String(v??'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
-
-  // ── TOAST helper ────────────────────────────────────────────
-  function _toast(msg, color) {
-    const t = document.createElement('div');
-    t.className = 'hr-toast';
-    t.innerHTML = `<span style="font-size:16px">${color === 'ok' ? '✅' : '❌'}</span><span>${msg}</span>`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3800);
-  }
-
-  // ── EXPORTAR PDF ────────────────────────────────────────────
-  async function exportarPDF() {
-    const grid = document.getElementById('hr-grid-container');
-    if (!grid) return;
-    const btn = document.querySelector('.hr-export-btn.pdf');
-    if (btn) { btn.textContent = '⏳ Generando…'; btn.disabled = true; }
-    try {
-      // Clonar el nodo y resolver todos los estilos computados
-      // para evitar que html2canvas falle con color-mix() y var()
-      const clone = grid.cloneNode(true);
-      clone.style.position = 'absolute';
-      clone.style.top = '-9999px';
-      clone.style.left = '-9999px';
-      clone.style.width = grid.offsetWidth + 'px';
-      clone.style.background = '#16181c';
-      clone.style.color = '#f0f0ec';
-      document.body.appendChild(clone);
-
-      // Resolver estilos en todos los elementos del clon
-      const origEls = grid.querySelectorAll('*');
-      const cloneEls = clone.querySelectorAll('*');
-      origEls.forEach((orig, i) => {
-        const computed = window.getComputedStyle(orig);
-        const el = cloneEls[i];
-        if (!el) return;
-        // Copiar solo las propiedades visuales relevantes
-        const props = ['color','background-color','background','border-color',
-          'border-top-color','border-bottom-color','border-left-color','border-right-color',
-          'opacity','font-size','font-weight','font-family','padding','margin',
-          'border-radius','display','flex-direction','align-items','justify-content',
-          'gap','width','height','min-width','max-width','flex','flex-wrap',
-          'white-space','overflow','text-overflow','line-height','letter-spacing',
-          'text-transform','border','border-width','border-style'];
-        props.forEach(p => {
-          try { el.style.setProperty(p, computed.getPropertyValue(p)); } catch(_) {}
-        });
-        // Remover cualquier color-mix o var residual que podría quedar en style inline
-        ['color','background-color','border-color'].forEach(p => {
-          const v = el.style.getPropertyValue(p);
-          if (v && (v.includes('color-mix') || v.includes('var('))) {
-            el.style.removeProperty(p);
-          }
-        });
-      });
-
-      const canvas = await html2canvas(clone, {
-        backgroundColor: '#16181c',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-      });
-
-      document.body.removeChild(clone);
-
-      const { jsPDF } = window.jspdf;
-      const imgW = canvas.width;
-      const imgH = canvas.height;
-      const pdfW = 297; // A4 landscape mm
-      const pdfH = 210;
-      const ratio = Math.min(pdfW / imgW * 96, pdfH / imgH * 96);
-      const finalW = (imgW * ratio) / 96;
-      const finalH = (imgH * ratio) / 96;
-      const pdf = new jsPDF({ orientation: finalW > finalH ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const fitRatio = Math.min(pageW / (imgW / 96 * 25.4), pageH / (imgH / 96 * 25.4));
-      const drawW = (imgW / 96 * 25.4) * fitRatio;
-      const drawH = (imgH / 96 * 25.4) * fitRatio;
-      const x = (pageW - drawW) / 2;
-      const y = (pageH - drawH) / 2;
-      pdf.setFillColor(22, 24, 28);
-      pdf.rect(0, 0, pageW, pageH, 'F');
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, drawW, drawH);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
-      pdf.setTextColor(107, 112, 128);
-      pdf.text(`Horario ${_labelSemana()} · ${_localActivo} · Generado ${new Date().toLocaleDateString('es-AR')}`, pageW / 2, pageH - 4, { align: 'center' });
-      const filename = `Horario_${_localActivo.replace(/\s+/g,'_')}_${_semanaBase.toISOString().slice(0,10)}.pdf`;
-      pdf.save(filename);
-      _toast('PDF descargado correctamente', 'ok');
-    } catch(e) {
-      // Si hay un clon colgado, limpiarlo
-      const colgado = document.body.querySelector('[style*="-9999px"]');
-      if (colgado) document.body.removeChild(colgado);
-      _toast('Error al generar el PDF: ' + e.message, 'err');
-      console.error(e);
-    } finally {
-      if (btn) { btn.textContent = '⬇ PDF'; btn.disabled = false; }
-    }
-  }
-
-  // ── MODAL MAIL ──────────────────────────────────────────────
-  let _mailRecipients = [];
-
-  function abrirModalMail() {
-    _mailRecipients = [];
-    _renderMailChips();
-    const lbl = document.getElementById('hr-mail-semana-lbl');
-    if (lbl) lbl.textContent = `${_labelSemana()} · ${_localActivo}`;
-    const subj = document.getElementById('hr-mail-subject');
-    if (subj) subj.value = `Horario ${_labelSemana()} – ${_localActivo}`;
-    const msg = document.getElementById('hr-mail-msg');
-    if (msg) msg.value = '';
-    const status = document.getElementById('hr-mail-status');
-    if (status) { status.textContent = ''; status.className = 'hr-mail-status'; }
-    const sendBtn = document.getElementById('hr-mail-send-btn');
-    if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
-    document.getElementById('hr-mail-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('hr-mail-inp')?.focus(), 100);
-  }
-
-  function cerrarModalMail(e) {
-    if (e && e.target !== document.getElementById('hr-mail-overlay')) return;
-    document.getElementById('hr-mail-overlay').classList.remove('open');
-  }
-
-  function _renderMailChips() {
-    const cont = document.getElementById('hr-mail-recipients');
-    if (!cont) return;
-    // Eliminar chips existentes (mantener el input)
-    cont.querySelectorAll('.hr-mail-chip').forEach(c => c.remove());
-    const inp = document.getElementById('hr-mail-inp');
-    _mailRecipients.forEach((email, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'hr-mail-chip';
-      chip.innerHTML = `${email}<button class="hr-mail-chip-del" onclick="horarios._removeMailChip(${idx})" type="button">×</button>`;
-      cont.insertBefore(chip, inp);
-    });
-  }
-
-  function _addMailChip(val) {
-    const email = val.trim().replace(/,/g,'');
-    if (!email) return;
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!re.test(email)) return;
-    if (!_mailRecipients.includes(email)) _mailRecipients.push(email);
-    const inp = document.getElementById('hr-mail-inp');
-    if (inp) inp.value = '';
-    _renderMailChips();
-  }
-
-  function _removeMailChip(idx) {
-    _mailRecipients.splice(idx, 1);
-    _renderMailChips();
-  }
-
-  function _mailInpKey(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      _addMailChip(e.target.value);
-    }
-  }
-
-  function _mailInpBlur() {
-    const inp = document.getElementById('hr-mail-inp');
-    if (inp && inp.value.trim()) _addMailChip(inp.value);
-  }
-
-  async function enviarEmail() {
-    if (!_mailRecipients.length) {
-      const status = document.getElementById('hr-mail-status');
-      if (status) { status.textContent = 'Agregá al menos un destinatario.'; status.className = 'hr-mail-status err'; }
-      return;
-    }
-    const sendBtn = document.getElementById('hr-mail-send-btn');
-    const status  = document.getElementById('hr-mail-status');
-    const subject = (document.getElementById('hr-mail-subject')?.value || '').trim();
-    const mensaje = (document.getElementById('hr-mail-msg')?.value || '').trim();
-    if (sendBtn) { sendBtn.textContent = 'Generando PDF…'; sendBtn.disabled = true; }
-    if (status)  { status.textContent = 'Capturando grilla…'; status.className = 'hr-mail-status'; }
-    try {
-      // Generar PDF como base64
-      const grid = document.getElementById('hr-grid-container');
-      const canvas = await html2canvas(grid, { backgroundColor: '#16181c', scale: 2, useCORS: true, logging: false });
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const iW = canvas.width; const iH = canvas.height;
-      const ratio = Math.min(pageW / (iW / 96 * 25.4), pageH / (iH / 96 * 25.4));
-      const dW = (iW / 96 * 25.4) * ratio; const dH = (iH / 96 * 25.4) * ratio;
-      pdf.setFillColor(22, 24, 28); pdf.rect(0, 0, pageW, pageH, 'F');
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', (pageW-dW)/2, (pageH-dH)/2, dW, dH);
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(7); pdf.setTextColor(107,112,128);
-      pdf.text(`Horario ${_labelSemana()} · ${_localActivo} · Generado ${new Date().toLocaleDateString('es-AR')}`, pageW/2, pageH-4, { align:'center' });
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-      const filename  = `Horario_${_localActivo.replace(/\s+/g,'_')}_${_semanaBase.toISOString().slice(0,10)}.pdf`;
-      if (status) { status.textContent = 'Abriendo cliente de email…'; }
-
-      // Construir mailto con info del pdf como datos descargables
-      // Como los clientes de email no soportan adjuntar base64 por mailto,
-      // descargamos el PDF y abrimos el cliente listo para que el usuario lo adjunte.
-      pdf.save(filename);
-      const body = [
-        mensaje,
-        '',
-        `📅 ${_labelSemana()}`,
-        `📍 Local: ${_localActivo}`,
-        '',
-        '(El PDF del horario fue descargado automáticamente en tu equipo. Adjuntalo a este email.)',
-      ].join('\n');
-      const mailto = `mailto:${_mailRecipients.join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailto, '_blank');
-      if (status) { status.textContent = '✓ PDF descargado y cliente de email abierto.'; status.className = 'hr-mail-status ok'; }
-      if (sendBtn) { sendBtn.textContent = 'Enviado'; }
-      setTimeout(() => document.getElementById('hr-mail-overlay').classList.remove('open'), 2200);
-    } catch(e) {
-      if (status) { status.textContent = 'Error: ' + e.message; status.className = 'hr-mail-status err'; }
-      if (sendBtn) { sendBtn.textContent = 'Enviar'; sendBtn.disabled = false; }
-      console.error(e);
-    }
-  }
-
-  return {
-    init, cambiarLocal,
-    semanaAnterior, semanaSiguiente, irHoy,
-    abrirModalTurno, cerrarModalTurno, guardarTurno, eliminarTurno,
-    abrirPickerEmpleado, cerrarPickerEmpleado, filtrarPicker, agregarEmpleadoPlanilla,
-    abrirCierre, cerrarCierre, guardarCierre, _seleccionarDiaCierre,
-    _setAsist, _setTarde, _setRank,
-    exportarPDF, abrirModalMail, cerrarModalMail, enviarEmail,
-    _mailInpKey, _mailInpBlur, _removeMailChip,
-    _setTurnoTipo,
-  };
-})();
-
-
-const portal = (() => {
-  const COL = 'portal-publicaciones';
-  let _registros = [], _filtrados = [], _unsub = null, _tipo = 'noticia', _editId = null;
-
-  function init() {
-    if (_unsub) return;
-    const linkBtn = document.getElementById('portal-link-btn');
-    if (linkBtn) {
-      const portalUrl = location.href.replace(/[#?].*/, '') + '?vista=portal';
-      linkBtn.href = portalUrl;
-      linkBtn.style.display = '';
-    }
-    if (!db) { _renderGrid([]); return; }
-    _unsub = db.collection(COL).orderBy('createdAt','desc')
-      .onSnapshot(snap => {
-        _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        _renderStats();
-        filtrar();
-      }, () => {
-        _unsub = db.collection(COL).onSnapshot(snap => {
-          _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-            .sort((a,b) => (b.updatedAt||'') > (a.updatedAt||'') ? 1 : -1);
-          _renderStats(); filtrar();
-        });
-      });
-  }
-
-  function abrirNuevo() {
-    _editId = null; _tipo = 'noticia';
-    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('portal-destacado').checked = false;
-    document.getElementById('portal-form-error').textContent = '';
-    document.getElementById('portal-img-preview').style.display = 'none';
-    _setTipoCampos('noticia');
-    document.querySelectorAll('.portal-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'noticia'));
-    document.getElementById('portal-form-overlay').style.display = 'flex';
-  }
-
-  function cerrarForm() {
-    document.getElementById('portal-form-overlay').style.display = 'none';
-    _editId = null;
-  }
-
-  function setTipo(tipo, btn) {
-    _tipo = tipo;
-    document.querySelectorAll('.portal-type-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    _setTipoCampos(tipo);
-  }
-
-  function _setTipoCampos(tipo) {
-    document.getElementById('portal-campo-imagen').style.display = tipo === 'imagen' ? 'flex' : 'none';
-    document.getElementById('portal-campo-video').style.display  = tipo === 'video'  ? 'flex' : 'none';
-  }
-
-  function previewImagen(url) {
-    const prev = document.getElementById('portal-img-preview');
-    const img  = document.getElementById('portal-img-tag');
-    if (url && url.startsWith('http')) { img.src = url; prev.style.display = 'block'; }
-    else prev.style.display = 'none';
-  }
-
-  async function guardar() {
-    const errEl = document.getElementById('portal-form-error');
-    const btn   = document.getElementById('portal-save-btn');
-    errEl.style.color = 'var(--danger)';
-    const titulo = document.getElementById('portal-titulo').value.trim();
-    if (!titulo) { errEl.textContent = 'El titulo es obligatorio.'; return; }
-    const data = {
-      tipo: _tipo, titulo,
-      texto:      document.getElementById('portal-texto').value.trim(),
-      imagenUrl:  document.getElementById('portal-imagen-url').value.trim(),
-      videoUrl:   document.getElementById('portal-video-url').value.trim(),
-      destacado:  document.getElementById('portal-destacado').checked,
-      updatedAt:  new Date().toISOString(),
-    };
-    btn.disabled = true; btn.textContent = 'Publicando...';
-    try {
-      if (!db) throw new Error('Firebase no configurado');
-      if (_editId) {
-        await db.collection(COL).doc(_editId).update(data);
-      } else {
-        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        await db.collection(COL).add(data);
-      }
-      errEl.style.color = 'var(--accent2)';
-      errEl.textContent = 'Publicado correctamente';
-      setTimeout(cerrarForm, 800);
-    } catch(e) {
-      errEl.textContent = 'Error: ' + e.message;
-    } finally {
-      btn.disabled = false; btn.textContent = 'Publicar';
-    }
-  }
-
-  function editar(id) {
-    const r = _registros.find(x => x.id === id);
-    if (!r) return;
-    _editId = id; _tipo = r.tipo || 'noticia';
-    document.getElementById('portal-titulo').value     = r.titulo    || '';
-    document.getElementById('portal-texto').value      = r.texto     || '';
-    document.getElementById('portal-imagen-url').value = r.imagenUrl || '';
-    document.getElementById('portal-video-url').value  = r.videoUrl  || '';
-    document.getElementById('portal-destacado').checked = !!r.destacado;
-    document.getElementById('portal-form-error').textContent = '';
-    _setTipoCampos(_tipo);
-    document.querySelectorAll('.portal-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === _tipo));
-    if (r.imagenUrl) previewImagen(r.imagenUrl);
-    document.getElementById('portal-form-overlay').style.display = 'flex';
-  }
-
-  async function eliminar(id, titulo) {
-    if (!confirm('Eliminar "' + titulo + '"?')) return;
-    try { await db.collection(COL).doc(id).delete(); }
-    catch(e) { alert('Error: ' + e.message); }
-  }
-
-  function filtrar() {
-    const q    = (document.getElementById('portal-search')?.value || '').toLowerCase();
-    const tipo = document.getElementById('portal-filter-tipo')?.value || '';
-    const dest = document.getElementById('portal-filter-dest')?.value || '';
-    _filtrados = _registros.filter(r => {
-      if (tipo && r.tipo !== tipo) return false;
-      if (dest === '1' && !r.destacado) return false;
-      if (q && !((r.titulo||'').toLowerCase().includes(q) || (r.texto||'').toLowerCase().includes(q))) return false;
-      return true;
-    });
-    _renderGrid(_filtrados);
-  }
-
-  function _renderStats() {
-    const el = document.getElementById('portal-stats');
-    if (!el) return;
-    const t = _registros.length;
-    const n = _registros.filter(r=>r.tipo==='noticia').length;
-    const i = _registros.filter(r=>r.tipo==='imagen').length;
-    const v = _registros.filter(r=>r.tipo==='video').length;
-    const d = _registros.filter(r=>r.destacado).length;
-    el.innerHTML = [['Total',t],['Noticias',n],['Imagenes',i],['Videos',v],['Destacadas',d]]
-      .map(([l,c]) => `<div class="portal-stat-chip"><strong style="color:var(--text)">${c}</strong>${l}</div>`).join('');
-  }
-
-  function _ytEmbed(url) {
-    if (!url) return null;
-    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
-    if (m) return 'https://www.youtube.com/embed/' + m[1];
-    const v = url.match(/vimeo\.com\/(\d+)/);
-    if (v) return 'https://player.vimeo.com/video/' + v[1];
-    return url;
-  }
-
-  function _renderGrid(list) {
-    const grid  = document.getElementById('portal-grid');
-    const empty = document.getElementById('portal-empty');
-    if (!grid) return;
-    if (!list.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
-    if (empty) empty.style.display = 'none';
-    const labels = { noticia:'Noticia', imagen:'Imagen', video:'Video' };
-    grid.innerHTML = list.map(r => {
-      const fecha = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('es-AR') : '');
-      let media = '';
-      if (r.tipo === 'imagen' && r.imagenUrl) media = `<img class="portal-card-img" src="${r.imagenUrl}" alt="" onerror="this.style.display='none'">`;
-      else if (r.tipo === 'video' && r.videoUrl) media = `<iframe class="portal-card-video" src="${_ytEmbed(r.videoUrl)}" allowfullscreen loading="lazy"></iframe>`;
-      const star = r.destacado ? ' <span style="color:var(--m1)">&#9733;</span>' : '';
-      const safeTit = (r.titulo||'').replace(/'/g,"\\'");
-      return `<div class="portal-card">
-        ${media}
-        <div class="portal-card-body">
-          <div class="portal-card-badge">${labels[r.tipo]||r.tipo}</div>
-          <div class="portal-card-title">${r.titulo||''}${star}</div>
-          ${r.texto ? `<div class="portal-card-text">${r.texto.replace(/\n/g,'<br>').slice(0,200)}${r.texto.length>200?'...':''}</div>` : ''}
-        </div>
-        <div class="portal-card-footer">
-          <span>${fecha}</span>
-          <div style="display:flex;gap:8px">
-            <button onclick="portal.editar('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px">&#x270F;</button>
-            <button onclick="portal.eliminar('${r.id}','${safeTit}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 4px">&#x2715;</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  return { init, abrirNuevo, cerrarForm, setTipo, previewImagen, guardar, editar, eliminar, filtrar };
-})();
-
-// -----------------------------------------------------------------
-//  PORTAL PUBLICO - vista solo lectura para empleados
-// -----------------------------------------------------------------
-function _initPortalPublico() {
-  document.body.innerHTML = '';
-  const style = document.createElement('style');
-  style.textContent = [
-    '*{box-sizing:border-box;margin:0;padding:0}',
-    'body{background:#0e0f11;color:#e8e9ec;font-family:Syne,sans-serif;min-height:100vh}',
-    '.pph{background:linear-gradient(135deg,#1a0a2e,#0e0f11);border-bottom:1px solid #2a2b2f;padding:28px 32px;display:flex;align-items:center;gap:16px}',
-    '.ppl{width:42px;height:42px;background:linear-gradient(135deg,#ff4ab4,#c026d3);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}',
-    '.pph h1{font-size:20px;font-weight:800}',
-    '.pph p{font-size:12px;color:#8b8c91;font-family:"DM Mono",monospace;margin-top:2px}',
-    '.ppb{max-width:1100px;margin:0 auto;padding:32px 20px}',
-    '.ppf{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px}',
-    '.ppfb{padding:7px 16px;border-radius:20px;border:1px solid #2a2b2f;background:#18191d;color:#8b8c91;font-family:"DM Mono",monospace;font-size:11px;cursor:pointer;transition:all .2s}',
-    '.ppfb.on{border-color:#ff4ab4;color:#ff4ab4;background:rgba(255,74,180,.1)}',
-    '.ppg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}',
-    '.ppc{background:#18191d;border:1px solid #2a2b2f;border-radius:16px;overflow:hidden;transition:border-color .2s,transform .2s;display:flex;flex-direction:column;cursor:pointer}',
-    '.ppc:hover{border-color:#ff4ab4;transform:translateY(-3px)}',
-    '.ppc-img-wrap{width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#111;overflow:hidden}',
-    '.ppc img{max-width:100%;max-height:180px;width:auto;height:auto;object-fit:contain;display:block}',
-    '.ppc-vid-wrap{width:100%;aspect-ratio:16/9;overflow:hidden;pointer-events:none}',
-    '.ppcv{width:100%;height:100%;border:none;display:block}',
-    '.ppcb{padding:16px 18px;display:flex;flex-direction:column;gap:10px;flex:1}',
-    '.ppbg{display:inline-flex;align-items:center;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(255,74,180,.12);color:#ff4ab4;width:fit-content}',
-    '.ppct{font-size:16px;font-weight:700;line-height:1.3}',
-    '.ppcx{font-size:13px;color:#8b8c91;line-height:1.7;flex:1}',
-    '.ppcd{font-family:"DM Mono",monospace;font-size:10px;color:#555;padding:10px 18px;border-top:1px solid #2a2b2f}',
-    '.pp-ov{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}',
-    '.pp-ov.open{display:flex}',
-    '.pp-mwrap{position:relative;width:100%;max-width:700px}',
-    '.pp-modal{background:#18191d;border:1px solid #333;border-radius:20px;width:100%;max-height:90dvh;overflow-y:auto;display:flex;flex-direction:column;animation:ppIn .2s ease}',
-    '@keyframes ppIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}',
-    '.pp-mcls{position:absolute;top:-14px;right:-14px;background:#ff4ab4;border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10000;font-weight:700}',
-    '.pp-mmedia{width:100%;display:flex;align-items:center;justify-content:center;background:#111;border-radius:20px 20px 0 0;overflow:hidden}',
-    '.pp-mmedia img{max-width:100%;height:auto;max-height:500px;object-fit:contain;display:block}',
-    '.pp-mmedia iframe{width:100%;aspect-ratio:16/9;border:none;display:block}',
-    '.pp-mbody{padding:24px 28px;display:flex;flex-direction:column;gap:12px}',
-    '.pp-mtit{font-size:20px;font-weight:800;line-height:1.3}',
-    '.pp-mtxt{font-size:14px;color:#8b8c91;line-height:1.8}',
-    '.pp-mdate{font-family:"DM Mono",monospace;font-size:11px;color:#444}',
-    '.pps{flex:1;min-width:200px;background:#18191d;border:1px solid #2a2b2f;border-radius:10px;padding:9px 14px;color:#e8e9ec;font-size:13px;outline:none}',
-    '.pps:focus{border-color:#ff4ab4}',
-    '.ppe{text-align:center;padding:80px 0;color:#555;font-family:"DM Mono",monospace;font-size:13px}',
-  ].join('');
-  document.head.appendChild(style);
-
-  document.body.innerHTML = `
-    <div class="pph">
-      <div class="ppl">&#x1F310;</div>
-      <div><h1>Portal de Empleados</h1><p>Novedades y comunicados internos</p></div>
-    </div>
-    <div class="ppb">
-      <div class="ppf">
-        <input class="pps" id="ppsrch" placeholder="Buscar..." oninput="ppF()">
-        <button class="ppfb on" data-t="" onclick="ppT('',this)">Todo</button>
-        <button class="ppfb" data-t="noticia" onclick="ppT('noticia',this)">&#x1F4F0; Noticias</button>
-        <button class="ppfb" data-t="imagen"  onclick="ppT('imagen',this)">&#x1F5BC; Imagenes</button>
-        <button class="ppfb" data-t="video"   onclick="ppT('video',this)">&#x25B6; Videos</button>
-      </div>
-      <div id="ppg" class="ppg"><div class="ppe">Cargando...</div></div>
-    </div>
-    <!-- MODAL -->
-    <div class="pp-ov" id="pp-ov" onclick="ppClose(event)">
-      <div class="pp-mwrap">
-        <button class="pp-mcls" onclick="ppCloseBtn()">✕</button>
-        <div class="pp-modal" id="pp-modal"></div>
-      </div>
-    </div>`;
-
-  let _t = '', _docs = [];
-
-  window.ppClose = (e) => { if (e.target === document.getElementById('pp-ov')) ppCloseBtn(); };
-  window.ppCloseBtn = () => {
-    document.getElementById('pp-ov').classList.remove('open');
-    document.getElementById('pp-modal').innerHTML = '';
-  };
-  window.ppOpen = (id) => {
-    const r = _docs.find(x => x.id === id);
-    if (!r) return;
-    const fecha = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('es-AR') : '');
-    const lb = { noticia:'📰 Noticia', imagen:'🖼 Imagen', video:'▶ Video' };
-    let media = '';
-    if (r.tipo === 'imagen' && r.imagenUrl) media = `<div class="pp-mmedia"><img src="${r.imagenUrl}" alt=""></div>`;
-    else if (r.tipo === 'video' && r.videoUrl) media = `<div class="pp-mmedia"><iframe src="${_emb(r.videoUrl)}" allowfullscreen></iframe></div>`;
-    const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
-    document.getElementById('pp-modal').innerHTML = `
-      ${media}
-      <div class="pp-mbody">
-        <div class="ppbg">${lb[r.tipo]||r.tipo}</div>
-        <div class="pp-mtit">${r.titulo||''}${star}</div>
-        ${r.texto ? `<div class="pp-mtxt">${r.texto.replace(/\n/g,'<br>')}</div>` : ''}
-        ${fecha ? `<div class="pp-mdate">${fecha}</div>` : ''}
-      </div>`;
-    document.getElementById('pp-ov').classList.add('open');
-  };
-
-  window.ppT = (tipo, btn) => {
-    _t = tipo;
-    document.querySelectorAll('.ppfb[data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === tipo));
-    ppF();
-  };
-
-  function _emb(url) {
-    const m = (url||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
-    if (m) return 'https://www.youtube.com/embed/' + m[1];
-    const v = (url||'').match(/vimeo\.com\/(\d+)/);
-    if (v) return 'https://player.vimeo.com/video/' + v[1];
-    return url||'';
-  }
-
-  window.ppF = () => {
-    const q = (document.getElementById('ppsrch')?.value || '').toLowerCase();
-    const list = _docs.filter(r => {
-      if (_t && r.tipo !== _t) return false;
-      return !q || (r.titulo||'').toLowerCase().includes(q) || (r.texto||'').toLowerCase().includes(q);
-    });
-    const g = document.getElementById('ppg');
-    if (!g) return;
-    if (!list.length) { g.innerHTML = '<div class="ppe">No hay publicaciones.</div>'; return; }
-    const lb = { noticia:'Noticia', imagen:'Imagen', video:'Video' };
-    g.innerHTML = list.map(r => {
-      const fecha = r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('es-AR') : (r.updatedAt ? new Date(r.updatedAt).toLocaleDateString('es-AR') : '');
-      let media = '';
-      if (r.tipo === 'imagen' && r.imagenUrl) media = `<div class="ppc-img-wrap"><img src="${r.imagenUrl}" alt="" onerror="this.parentElement.style.display='none'"></div>`;
-      else if (r.tipo === 'video' && r.videoUrl) media = `<div class="ppc-vid-wrap"><iframe class="ppcv" src="${_emb(r.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`;
-      const star = r.destacado ? ' <span style="color:#f59e0b">★</span>' : '';
-      const textoCorto = r.texto ? (r.texto.length > 120 ? r.texto.slice(0,120)+'…' : r.texto) : '';
-      return `<div class="ppc" onclick="ppOpen('${r.id}')">${media}<div class="ppcb"><div class="ppbg">${lb[r.tipo]||r.tipo}</div><div class="ppct">${r.titulo||''}${star}</div>${textoCorto?`<div class="ppcx">${textoCorto.replace(/\n/g,'<br>')}</div>`:''}</div><div class="ppcd">${fecha}</div></div>`;
-    }).join('');
-  };
-
-  if (typeof db !== 'undefined' && db) {
-    db.collection('portal-publicaciones').orderBy('createdAt','desc')
-      .onSnapshot(s => { _docs = s.docs.map(d=>({id:d.id,...d.data()})); ppF(); },
-        () => db.collection('portal-publicaciones').onSnapshot(s => {
-          _docs = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.updatedAt||'')>(a.updatedAt||'')?1:-1); ppF();
-        })
-      );
-  } else {
-    document.getElementById('ppg').innerHTML = '<div class="ppe">Firebase no configurado.</div>';
-  }
-}
-
-if (new URLSearchParams(location.search).get('vista') === 'portal') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initPortalPublico);
-  } else {
-    _initPortalPublico();
-  }
-}
-
-// =============================================================
-//  MÓDULO USUARIOS (solo RRHH)
-// =============================================================
-const usuarios = (() => {
-  const COL = 'usuarios';
-
-  function init() { _renderLista(); }
-
+  // ── RENDER LISTA DE USUARIOS DEL SISTEMA ───────────────────
   async function _renderLista() {
     const cont = document.getElementById('usr-list');
     if (!cont) return;
     if (!db) { cont.innerHTML = '<div style="color:var(--muted);font-size:12px">Firebase no configurado.</div>'; return; }
     cont.innerHTML = '<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px">Cargando…</div>';
     try {
-      const snap = await db.collection(COL).orderBy('email').get();
+      const snap = await db.collection('usuarios').orderBy('email').get();
       if (snap.empty) {
         cont.innerHTML = '<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px">No hay usuarios creados todavía.</div>';
         return;
@@ -7699,11 +5050,12 @@ const usuarios = (() => {
         const u = d.data();
         const rolLabel = u.rol === 'gerente' ? 'Gerente' : 'RRHH';
         const rolColor = u.rol === 'gerente' ? 'var(--m5)' : 'var(--m4)';
+        const initiales = u.nombre ? u.nombre.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() : (u.email||'?').slice(0,2).toUpperCase();
         return `<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:12px">
-          <div style="width:38px;height:38px;border-radius:50%;background:color-mix(in srgb,${rolColor} 20%,var(--surface));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:${rolColor};flex-shrink:0">${(u.email||'?').slice(0,2).toUpperCase()}</div>
+          <div style="width:38px;height:38px;border-radius:50%;background:color-mix(in srgb,${rolColor} 20%,var(--surface));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:${rolColor};flex-shrink:0">${initiales}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px">${rolLabel}${u.local ? ' · ' + u.local : ''}</div>
+            <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.nombre || u.email || '—'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px">${u.email||''}${u.email?' · ':''}${rolLabel}${u.local ? ' · ' + u.local : ''}</div>
           </div>
           <button onclick="usuarios.eliminar('${d.id}','${(u.email||'').replace(/'/g,"\\'")}','${u.uid||''}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;padding:4px 8px;opacity:.7" title="Eliminar usuario">✕</button>
         </div>`;
@@ -7714,6 +5066,7 @@ const usuarios = (() => {
   }
 
   function abrirNuevo() {
+    document.getElementById('usr-nombre').value = '';
     document.getElementById('usr-email').value = '';
     document.getElementById('usr-pass').value = '';
     document.getElementById('usr-rol').value = '';
@@ -7744,6 +5097,7 @@ const usuarios = (() => {
   }
 
   async function guardar() {
+    const nombre   = document.getElementById('usr-nombre').value.trim();
     const email    = document.getElementById('usr-email').value.trim();
     const pass     = document.getElementById('usr-pass').value;
     const rol      = document.getElementById('usr-rol').value;
@@ -7752,6 +5106,7 @@ const usuarios = (() => {
     const btn      = document.getElementById('usr-save-btn');
 
     errEl.textContent = '';
+    if (!nombre) { errEl.textContent = 'Ingresá el nombre completo.'; return; }
     if (!email) { errEl.textContent = 'Ingresá un email.'; return; }
     if (!pass || pass.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
     if (!rol) { errEl.textContent = 'Seleccioná un rol.'; return; }
@@ -7768,11 +5123,12 @@ const usuarios = (() => {
       await secondaryAuth.signOut();
       await secondaryApp.delete();
 
-      // Guardar perfil en Firestore
-      await db.collection(COL).add({ email, uid, rol, local: local || '', createdAt: new Date().toISOString() });
+      // Guardar perfil en Firestore con nombre
+      await db.collection(COL).add({ nombre, email, uid, rol, local: local || '', createdAt: new Date().toISOString() });
 
       document.getElementById('usr-modal-overlay').classList.remove('open');
       _renderLista();
+      if (db) _cargarOrg();
     } catch(e) {
       const msgs = {
         'auth/email-already-in-use': 'Ese email ya está registrado.',
@@ -7795,10 +5151,1118 @@ const usuarios = (() => {
     }
   }
 
-  return { init, abrirNuevo, cerrar, guardar, eliminar };
+
+  // ══════════════════════════════════════════════════════════════
+  //  ORGANIGRAMA
+  // ══════════════════════════════════════════════════════════════
+  let _orgNodes    = [];   // { id, nombre, rol, local, x, y }
+  let _orgDragging = null;
+  let _orgOffset   = { x: 0, y: 0 };
+  let _orgPan      = { x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
+
+  const ORG_COLORS = {
+    rrhh:     { bg: 'rgba(99,102,241,.18)',  text: '#818cf8' },
+    gerente:  { bg: 'rgba(168,85,247,.18)',  text: '#c084fc' },
+    empleado: { bg: 'rgba(148,163,184,.12)', text: '#94a3b8' },
+  };
+
+  async function _cargarOrg() {
+    // Cargar usuarios del sistema
+    const usrSnap  = db ? await db.collection('usuarios').get() : { docs: [] };
+    const usuarios = usrSnap.docs.map(d => ({ ...d.data(), _tipo: 'usuario' }));
+
+    // Cargar empleados de Info Personal
+    const ipSnap   = db ? await db.collection('info_personal').get() : { docs: [] };
+    const empleados = ipSnap.docs.map(d => ({ ...d.data(), _tipo: 'empleado' }));
+
+    // Combinar: usuarios del sistema primero, luego empleados no repetidos
+    const todos = [...usuarios];
+    empleados.forEach(emp => {
+      const yaEsta = usuarios.some(u =>
+        (u.nombre && emp.nombre && u.nombre.trim().toLowerCase() === emp.nombre.trim().toLowerCase()) ||
+        (u.email && emp.email && u.email === emp.email)
+      );
+      if (!yaEsta) todos.push(emp);
+    });
+
+    // Distribuir en layout automático
+    _orgNodes = _layoutOrg(todos);
+    _renderOrg();
+  }
+
+  function _layoutOrg(personas) {
+    const wrap = document.getElementById('org-canvas-wrap');
+    const W = wrap ? wrap.offsetWidth : 800;
+    const NODE_W = 150, NODE_H = 90, GAP_X = 40, GAP_Y = 60;
+
+    // Grupos: rrhh → gerentes por local → empleados por local
+    const rrhh     = personas.filter(p => p.rol === 'rrhh' || p._tipo === 'usuario' && !p.rol);
+    const gerentes = personas.filter(p => p.rol === 'gerente');
+    const locales  = [...new Set(personas.map(p => p.local).filter(Boolean))];
+    const sinLocal = personas.filter(p => !p.local && p._tipo === 'empleado');
+
+    const nodes = [];
+    let x = 40, y = 40;
+    const rowH = NODE_H + GAP_Y;
+
+    // RRHH en la cima — centrado
+    const rhCenter = Math.max(0, (W / 2) - (rrhh.length * (NODE_W + GAP_X)) / 2);
+    rrhh.forEach((p, i) => {
+      nodes.push({ ...p, id: p.uid || p.email || i, x: rhCenter + i * (NODE_W + GAP_X), y: 40 });
+    });
+
+    // Gerentes por local — segunda fila
+    y = 40 + rowH;
+    const gerByLocal = {};
+    gerentes.forEach(g => { (gerByLocal[g.local||'—'] = gerByLocal[g.local||'—'] || []).push(g); });
+    locales.forEach((loc, li) => {
+      const gers = gerByLocal[loc] || [];
+      gers.forEach((g, gi) => {
+        nodes.push({ ...g, id: g.uid || g.email || 'g'+li+gi, x: 40 + (li * (NODE_W + GAP_X) * 2) + gi * (NODE_W + GAP_X), y });
+      });
+    });
+    // Gerentes sin local
+    const gerSinLoc = gerentes.filter(g => !g.local);
+    gerSinLoc.forEach((g, i) => nodes.push({ ...g, id: g.uid || g.email || 'gsl'+i, x: 40 + i * (NODE_W + GAP_X), y }));
+
+    // Empleados por local — filas siguientes
+    y += rowH;
+    locales.forEach((loc, li) => {
+      const emps = personas.filter(p => p.local === loc && p._tipo === 'empleado' && p.rol !== 'gerente' && p.rol !== 'rrhh');
+      emps.forEach((emp, ei) => {
+        nodes.push({ ...emp, id: emp.uid || emp.email || 'e'+li+ei, x: 40 + (li * (NODE_W + GAP_X) * 2) + (ei % 3) * (NODE_W + GAP_X), y: y + Math.floor(ei / 3) * rowH });
+      });
+    });
+    sinLocal.forEach((emp, i) => {
+      nodes.push({ ...emp, id: emp.uid || emp.email || 'esl'+i, x: 40 + (i % 4) * (NODE_W + GAP_X), y: y + Math.floor(i / 4) * rowH });
+    });
+
+    return nodes;
+  }
+
+  function _renderOrg() {
+    const wrap  = document.getElementById('org-canvas-wrap');
+    const nodesEl = document.getElementById('org-nodes');
+    const linesEl = document.getElementById('org-lines');
+    if (!nodesEl || !linesEl) return;
+
+    if (!_orgNodes.length) {
+      nodesEl.innerHTML = '<div class="org-empty">Sin personal cargado todavía.<br>Agregá usuarios o personal en Info Personal.</div>';
+      linesEl.innerHTML = '';
+      return;
+    }
+
+    // Renderizar nodos
+    nodesEl.innerHTML = _orgNodes.map(n => {
+      const rol    = n.rol || (n._tipo === 'empleado' ? 'empleado' : 'rrhh');
+      const colors = ORG_COLORS[rol] || ORG_COLORS.empleado;
+      const nombre = n.nombre || n.email || '—';
+      const initials = nombre.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      const rolLabel = rol === 'rrhh' ? 'RRHH' : rol === 'gerente' ? 'Gerente' : (n.puesto || 'Empleado');
+      return `<div class="org-node ${rol}" id="orgn-${n.id}"
+        style="left:${n.x}px;top:${n.y}px;transform:translate(${_orgPan.x}px,${_orgPan.y}px)"
+        onmousedown="usuarios.orgDragStart(event,'${n.id}')">
+        <div class="org-node-avatar" style="background:${colors.bg};color:${colors.text}">${initials}</div>
+        <div class="org-node-name">${nombre.length > 18 ? nombre.slice(0,16)+'…' : nombre}</div>
+        <div class="org-node-role">${rolLabel}</div>
+        ${n.local ? `<div class="org-node-local">${n.local}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    // Renderizar conexiones (RRHH → Gerentes, Gerentes → Empleados de su local)
+    const rrhhs    = _orgNodes.filter(n => n.rol === 'rrhh' || (!n.rol && n._tipo !== 'empleado'));
+    const gerentes = _orgNodes.filter(n => n.rol === 'gerente');
+    const lines    = [];
+
+    const NODE_W = 150, NODE_H = 90;
+    const cx = n => n.x + NODE_W / 2 + _orgPan.x;
+    const cy = n => n.y + NODE_H / 2 + _orgPan.y;
+
+    // RRHH → cada Gerente
+    rrhhs.forEach(r => {
+      gerentes.forEach(g => {
+        lines.push(`<line x1="${cx(r)}" y1="${cy(r)}" x2="${cx(g)}" y2="${cy(g)}"/>`);
+      });
+    });
+
+    // Gerente → empleados de su local
+    gerentes.forEach(g => {
+      const emps = _orgNodes.filter(n => n.local === g.local && n._tipo === 'empleado' && n.rol !== 'gerente' && n.rol !== 'rrhh');
+      emps.forEach(e => {
+        lines.push(`<line x1="${cx(g)}" y1="${cy(g)}" x2="${cx(e)}" y2="${cy(e)}"/>`);
+      });
+    });
+
+    linesEl.innerHTML = lines.join('');
+
+    // Eventos de pan del canvas
+    _setupPan();
+  }
+
+  function _setupPan() {
+    const wrap = document.getElementById('org-canvas-wrap');
+    if (!wrap || wrap._panSetup) return;
+    wrap._panSetup = true;
+    wrap.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('org-node') || e.target.closest('.org-node')) return;
+      _orgPan.dragging = true;
+      _orgPan.startX = e.clientX - _orgPan.x;
+      _orgPan.startY = e.clientY - _orgPan.y;
+    });
+    window.addEventListener('mousemove', e => {
+      if (_orgPan.dragging && !_orgDragging) {
+        _orgPan.x = e.clientX - _orgPan.startX;
+        _orgPan.y = e.clientY - _orgPan.startY;
+        document.querySelectorAll('.org-node').forEach(el => {
+          el.style.transform = `translate(${_orgPan.x}px,${_orgPan.y}px)`;
+        });
+        _updateLines();
+      }
+    });
+    window.addEventListener('mouseup', () => { _orgPan.dragging = false; });
+  }
+
+  function orgDragStart(e, id) {
+    e.stopPropagation();
+    const node = _orgNodes.find(n => String(n.id) === String(id));
+    if (!node) return;
+    _orgDragging = node;
+    const el = document.getElementById('orgn-' + id);
+    const rect = el.getBoundingClientRect();
+    _orgOffset.x = e.clientX - rect.left;
+    _orgOffset.y = e.clientY - rect.top;
+
+    const onMove = ev => {
+      if (!_orgDragging) return;
+      const wrap = document.getElementById('org-canvas-wrap');
+      const wRect = wrap.getBoundingClientRect();
+      node.x = ev.clientX - wRect.left - _orgOffset.x - _orgPan.x;
+      node.y = ev.clientY - wRect.top  - _orgOffset.y - _orgPan.y;
+      el.style.left = node.x + 'px';
+      el.style.top  = node.y + 'px';
+      _updateLines();
+    };
+    const onUp = () => {
+      _orgDragging = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  function _updateLines() {
+    const linesEl = document.getElementById('org-lines');
+    if (!linesEl) return;
+    const NODE_W = 150, NODE_H = 90;
+    const cx = n => n.x + NODE_W / 2 + _orgPan.x;
+    const cy = n => n.y + NODE_H / 2 + _orgPan.y;
+    const rrhhs    = _orgNodes.filter(n => n.rol === 'rrhh' || (!n.rol && n._tipo !== 'empleado'));
+    const gerentes = _orgNodes.filter(n => n.rol === 'gerente');
+    const lines    = [];
+    rrhhs.forEach(r => { gerentes.forEach(g => { lines.push(`<line x1="${cx(r)}" y1="${cy(r)}" x2="${cx(g)}" y2="${cy(g)}"/>`); }); });
+    gerentes.forEach(g => {
+      _orgNodes.filter(n => n.local === g.local && n._tipo === 'empleado' && n.rol !== 'gerente' && n.rol !== 'rrhh')
+        .forEach(e => { lines.push(`<line x1="${cx(g)}" y1="${cy(g)}" x2="${cx(e)}" y2="${cy(e)}"/>`); });
+    });
+    linesEl.innerHTML = lines.join('');
+  }
+
+  function orgCentrar() {
+    _orgPan = { x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
+    _renderOrg();
+  }
+
+  function orgReorganizar() {
+    const personas = _orgNodes.map(n => ({ ...n }));
+    _orgNodes = _layoutOrg(personas);
+    _renderOrg();
+  }
+
+
+  // ── Funciones de nómina pendientes de implementación ────────
+  function abrirConfigNomina() {
+    document.getElementById('ip-nomina-config-overlay')?.classList.add('open');
+    _poblarNominaLocalSelect();
+    cargarSeccionesLocal(document.getElementById('ip-nc-local')?.value || '');
+  }
+  function cerrarConfigNomina(e) {
+    const ov = document.getElementById('ip-nomina-config-overlay');
+    if (e && e.target !== ov) return;
+    ov?.classList.remove('open');
+  }
+  function cargarSeccionesLocal(localNombre) {
+    const cont = document.getElementById('ip-nc-secciones');
+    if (!cont) return;
+    const secs = _nominaConfig[localNombre]?.secciones || [];
+    cont.innerHTML = secs.length
+      ? secs.map((s, i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <input class="bj-input" style="flex:1" value="${String(s.nombre||'').replace(/"/g,'&quot;')}"
+              oninput="infoPersonal._editSeccion('${localNombre}',${i},'nombre',this.value)">
+            <input class="bj-input" style="width:70px" type="number" min="1" value="${s.dotacion||1}"
+              oninput="infoPersonal._editSeccion('${localNombre}',${i},'dotacion',this.value)">
+            <button onclick="infoPersonal._eliminarSeccion('${localNombre}',${i})"
+              style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px">✕</button>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12px;padding:8px 0">Sin secciones. Agregá una.</div>';
+  }
+  function agregarSeccion() {
+    const localNombre = document.getElementById('ip-nc-local')?.value;
+    if (!localNombre) { alert('Seleccioná un local primero.'); return; }
+    if (!_nominaConfig[localNombre]) _nominaConfig[localNombre] = { secciones: [] };
+    _nominaConfig[localNombre].secciones.push({ nombre: 'Nueva sección', dotacion: 1 });
+    _guardarNominaConfig(localNombre).then(() => cargarSeccionesLocal(localNombre));
+  }
+  function _editSeccion(localNombre, idx, campo, valor) {
+    if (!_nominaConfig[localNombre]?.secciones[idx]) return;
+    _nominaConfig[localNombre].secciones[idx][campo] = campo === 'dotacion' ? parseInt(valor)||1 : valor;
+    _guardarNominaConfig(localNombre);
+  }
+  function _eliminarSeccion(localNombre, idx) {
+    if (!_nominaConfig[localNombre]?.secciones) return;
+    _nominaConfig[localNombre].secciones.splice(idx, 1);
+    _guardarNominaConfig(localNombre).then(() => cargarSeccionesLocal(localNombre));
+  }
+  async function _guardarNominaConfig(localNombre) {
+    if (!db) return;
+    const cfg = _nominaConfig[localNombre];
+    try {
+      if (cfg?.id) {
+        await db.collection(COL_NOM).doc(cfg.id).update({ secciones: cfg.secciones });
+      } else {
+        const ref = await db.collection(COL_NOM).add({ localNombre, secciones: cfg?.secciones || [] });
+        if (!_nominaConfig[localNombre]) _nominaConfig[localNombre] = {};
+        _nominaConfig[localNombre].id = ref.id;
+      }
+    } catch(e) { console.warn('Error guardando nómina config:', e); }
+  }
+  function darDeBaja(ipId) {
+    // Redirige al módulo Bajas pre-cargando el empleado
+    const emp = _registros.find(r => r.id === ipId);
+    if (!emp) return;
+    navigate('bajas', document.querySelector('[data-module="bajas"]'));
+    setTimeout(() => {
+      if (typeof bajas !== 'undefined' && bajas._buscarEmpleado) {
+        document.getElementById('bj-emp-search').value = emp.nombre;
+        bajas._buscarEmpleado(emp.nombre);
+      }
+    }, 300);
+  }
+
+  // ── Return completo ──────────────────────────────────────────
+  return {
+    // Info Personal
+    init, openForm, closeForm, edit, guardar,
+    askDelete, cancelDelete, confirmDelete,
+    filtrar, filtrarLocal, filtrarProv, exportCSV,
+    setTab, renderNomina,
+    _actualizarSelectSeccion, _poblarLocalSelect: _poblarNominaLocalSelect,
+    abrirConfigNomina, cerrarConfigNomina,
+    cargarSeccionesLocal, agregarSeccion,
+    _editSeccion, _eliminarSeccion,
+    darDeBaja,
+    getRegistros: () => _registros,
+    onUpdate: (fn) => { _updateListeners.push(fn); },
+    // Usuarios / Organigrama
+    _renderLista, _cargarOrg, abrirNuevo, cerrar,
+    eliminar, orgDragStart, orgCentrar, orgReorganizar,
+  };
 })();
 
-// Módulo usuarios se inicializa via navigate() ya configurado arriba
+// infoPersonal es alias de usuarios (comparten el mismo IIFE)
+const infoPersonal = usuarios;
+
+// ==============================================================
+//  MÓDULO 05 — HORARIOS
+// ==============================================================
+const horarios = (() => {
+  const COL_TURNOS  = 'turnos';   // {localId, semana, empId, dia(0-6), entrada, salida, nota}
+  const COL_CIERRES = 'cierres';  // {local, fecha, empleados:[...], creadoPor, ts}
+
+  // ── Estado interno ──────────────────────────────────────────
+  let _localActivo = '';          // nombre del local activo en tabs
+  let _semanaBase  = null;        // Date del lunes de la semana visible
+  let _turnos      = {};          // { empId_dia: {entrada,salida,nota,id} }
+  let _unsubTurnos = null;
+  let _empsPlanilla = [];         // IDs de empleados en la planilla de esta semana/local
+  let _mailRecipients = [];
+
+  // Cierre
+  let _cierreDia    = null;       // fecha ISO del día seleccionado en el modal
+  let _cierreData   = {};         // { empId: {asistencia, entrada, salida, desempeño, nota} }
+  let _cierreEmps   = [];         // empleados que tienen turno ese día
+
+  // ── Helpers ─────────────────────────────────────────────────
+  const _lunes = (d) => {
+    const dt = new Date(d);
+    const day = dt.getDay();
+    dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
+    dt.setHours(0,0,0,0);
+    return dt;
+  };
+
+  const _isoFecha = (d) => {
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  };
+
+  const _semanaKey = () => _isoFecha(_semanaBase);
+
+  const _diasSemana = () => {
+    const dias = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(_semanaBase);
+      d.setDate(d.getDate() + i);
+      dias.push(d);
+    }
+    return dias;
+  };
+
+  const _diasNombres = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const _mesesNombres = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  const _turnoKey = (empId, diaIdx) => `${empId}_${diaIdx}`;
+
+  const _esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  const _initiales = (nombre) => (nombre||'?').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+
+  const _toast = (msg, color='var(--m2)') => {
+    const el = document.createElement('div');
+    el.className = 'hr-toast';
+    el.style.borderColor = color;
+    el.innerHTML = `<span style="color:${color}">●</span> ${_esc(msg)}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2800);
+  };
+
+  // ── Locales ─────────────────────────────────────────────────
+  function _getLocales() {
+    if (typeof adminLocales !== 'undefined') return adminLocales.getLocales();
+    return [];
+  }
+
+  function _getEmpleados() {
+    if (typeof infoPersonal !== 'undefined') return infoPersonal.getRegistros();
+    return [];
+  }
+
+  // ── Init ────────────────────────────────────────────────────
+  function init() {
+    _semanaBase = _lunes(new Date());
+    _renderTabs();
+    _renderGrid();
+
+    // Botón agregar: solo rrhh/gerente
+    const btnAgregar = document.getElementById('hr-btn-agregar');
+    if (btnAgregar) btnAgregar.style.display = '';
+
+    // Escuchar actualizaciones de infoPersonal
+    if (typeof infoPersonal !== 'undefined' && infoPersonal.onUpdate) {
+      infoPersonal.onUpdate(() => { _renderTabs(); _renderGrid(); });
+    }
+  }
+
+  // ── Tabs de locales ─────────────────────────────────────────
+  function _renderTabs() {
+    const cont = document.getElementById('hr-local-tabs');
+    if (!cont) return;
+    const locales = _getLocales();
+    const rol = window._currentRol || 'rrhh';
+    const localUsuario = window._currentLocal || '';
+
+    // Gerente: solo ve su local
+    const visibles = rol === 'gerente'
+      ? locales.filter(l => l.nombre === localUsuario)
+      : locales;
+
+    if (!visibles.length) {
+      cont.innerHTML = '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--muted);padding:10px 0">Sin locales configurados</span>';
+      return;
+    }
+
+    // Setear local activo si no hay uno o si el activo ya no existe
+    if (!_localActivo || !visibles.find(l => l.nombre === _localActivo)) {
+      _localActivo = visibles[0].nombre;
+    }
+
+    cont.innerHTML = visibles.map(l => `
+      <button class="hr-local-tab${l.nombre === _localActivo ? ' active' : ''}"
+        onclick="horarios._setLocal('${_esc(l.nombre)}')">${_esc(l.nombre)}</button>
+    `).join('');
+  }
+
+  function _setLocal(nombre) {
+    _localActivo = nombre;
+    document.querySelectorAll('.hr-local-tab').forEach(b => {
+      b.classList.toggle('active', b.textContent === nombre);
+    });
+    _renderGrid();
+  }
+
+  // ── Semana ──────────────────────────────────────────────────
+  function semanaAnterior() {
+    _semanaBase.setDate(_semanaBase.getDate() - 7);
+    _renderGrid();
+  }
+
+  function semanaSiguiente() {
+    _semanaBase.setDate(_semanaBase.getDate() + 7);
+    _renderGrid();
+  }
+
+  function irHoy() {
+    _semanaBase = _lunes(new Date());
+    _renderGrid();
+  }
+
+  // ── Grid principal ───────────────────────────────────────────
+  async function _renderGrid() {
+    const cont = document.getElementById('hr-grid-container');
+    if (!cont) return;
+
+    const dias = _diasSemana();
+    const hoy  = _isoFecha(new Date());
+
+    // Label semana
+    const labelEl = document.getElementById('hr-week-label');
+    if (labelEl) {
+      const inicio = dias[0], fin = dias[6];
+      labelEl.textContent =
+        `${inicio.getDate()} ${_mesesNombres[inicio.getMonth()]} — ${fin.getDate()} ${_mesesNombres[fin.getMonth()]} ${fin.getFullYear()}`;
+    }
+
+    if (!_localActivo) {
+      cont.innerHTML = '<div class="hr-empty"><div class="hr-empty-icon">🕐</div>Configurá un local primero en Admin Locales.</div>';
+      return;
+    }
+
+    // Empleados del local
+    const todos = _getEmpleados();
+    const emps = todos.filter(e => e.local === _localActivo);
+
+    // IDs en planilla esta semana (guardado en localStorage para que persista sin Firestore extra)
+    const planillaKey = `hr_planilla_${_localActivo}_${_semanaKey()}`;
+    try { _empsPlanilla = JSON.parse(localStorage.getItem(planillaKey) || '[]'); }
+    catch(e) { _empsPlanilla = []; }
+
+    // Primera vez: incluir todos del local
+    if (!_empsPlanilla.length && emps.length) {
+      _empsPlanilla = emps.map(e => e.id);
+      localStorage.setItem(planillaKey, JSON.stringify(_empsPlanilla));
+    }
+
+    const empsPlanilla = emps.filter(e => _empsPlanilla.includes(e.id));
+
+    // Cargar turnos de esta semana/local desde Firestore
+    await _cargarTurnos();
+
+    if (!empsPlanilla.length) {
+      cont.innerHTML = `
+        <div class="hr-empty">
+          <div class="hr-empty-icon">👥</div>
+          Sin empleados en la planilla.<br>
+          <span style="font-size:11px">Usá "+ Agregar empleado" para añadir.</span>
+        </div>`;
+      return;
+    }
+
+    // Header
+    const headCells = ['Empleado', ...dias.map((d, i) => {
+      const iso = _isoFecha(d);
+      const esHoy = iso === hoy;
+      return `<div class="hr-grid-head-cell${esHoy ? ' today' : ''}">${_diasNombres[i]}<br><span style="font-size:9px">${d.getDate()}/${d.getMonth()+1}</span></div>`;
+    })];
+
+    const rows = empsPlanilla.map(emp => {
+      const ini = _initiales(emp.nombre);
+      const avatarInner = emp.foto
+        ? `<img src="${emp.foto}" onerror="this.parentNode.textContent='${ini}'">`
+        : ini;
+
+      const celdas = dias.map((d, i) => {
+        const key = _turnoKey(emp.id, i);
+        const t   = _turnos[key];
+        if (t) {
+          const esTarde = t.entrada && t.entrada >= '12:00';
+          const tipo    = esTarde ? 'PM' : 'AM';
+          const col     = esTarde ? 'var(--m2)' : '#fbbf24';
+          return `<div class="hr-day-cell" onclick="horarios._abrirModalTurno('${_esc(emp.id)}',${i},'${_esc(emp.nombre)}')">
+            <div class="hr-turno-chip" style="background:color-mix(in srgb,${col} 12%,transparent);border-color:color-mix(in srgb,${col} 30%,transparent)">
+              <div class="hr-turno-time" style="color:${col}">${tipo} ${t.entrada}–${t.salida}</div>
+              ${t.nota ? `<div style="font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(t.nota)}</div>` : ''}
+            </div>
+          </div>`;
+        }
+        return `<div class="hr-day-cell libre" onclick="horarios._abrirModalTurno('${_esc(emp.id)}',${i},'${_esc(emp.nombre)}')">
+          <div class="hr-turno-libre">—</div>
+        </div>`;
+      });
+
+      return `<div class="hr-emp-row">
+        <div class="hr-emp-cell">
+          <div class="hr-emp-avatar">${avatarInner}</div>
+          <div>
+            <div class="hr-emp-name">${_esc(emp.nombre)}</div>
+            <div class="hr-emp-puesto">${_esc(emp['puesto-real'] || emp['categoria-alta'] || '')}</div>
+          </div>
+        </div>
+        ${celdas.join('')}
+      </div>`;
+    });
+
+    cont.innerHTML = `
+      <div class="hr-grid">
+        <div class="hr-grid-head">
+          <div class="hr-grid-head-cell" style="text-align:left;padding-left:14px">Empleado</div>
+          ${dias.map((d, i) => {
+            const iso = _isoFecha(d);
+            const esHoy = iso === hoy;
+            return `<div class="hr-grid-head-cell${esHoy ? ' today' : ''}">${_diasNombres[i]}<br><span style="font-size:9px">${d.getDate()}/${d.getMonth()+1}</span></div>`;
+          }).join('')}
+        </div>
+        ${rows.join('')}
+      </div>`;
+  }
+
+  // ── Turnos Firestore ─────────────────────────────────────────
+  async function _cargarTurnos() {
+    _turnos = {};
+    if (!db || !_localActivo) return;
+    try {
+      const snap = await db.collection(COL_TURNOS)
+        .where('local', '==', _localActivo)
+        .where('semana', '==', _semanaKey())
+        .get();
+      snap.forEach(doc => {
+        const d = doc.data();
+        _turnos[_turnoKey(d.empId, d.dia)] = { id: doc.id, entrada: d.entrada, salida: d.salida, nota: d.nota || '' };
+      });
+    } catch(e) { console.warn('Error cargando turnos:', e); }
+  }
+
+  // ── Modal editar turno ───────────────────────────────────────
+  let _turnoEditEmpId = null, _turnoEditDia = null, _turnoEditDocId = null;
+
+  function _abrirModalTurno(empId, diaIdx, nombre) {
+    _turnoEditEmpId = empId;
+    _turnoEditDia   = diaIdx;
+
+    const dias   = _diasSemana();
+    const fecha  = dias[diaIdx];
+    const titulo = `${nombre} · ${_diasNombres[diaIdx]} ${fecha.getDate()}/${fecha.getMonth()+1}`;
+
+    document.getElementById('hr-turno-modal-title').textContent = 'Asignar turno';
+    document.getElementById('hr-turno-modal-sub').textContent   = titulo;
+
+    const key = _turnoKey(empId, diaIdx);
+    const t   = _turnos[key];
+    _turnoEditDocId = t ? t.id : null;
+
+    // Reset botones AM/PM
+    document.getElementById('hr-btn-am').className = 'hr-turno-tipo-btn';
+    document.getElementById('hr-btn-pm').className = 'hr-turno-tipo-btn';
+    document.getElementById('hr-t-nota').value = t ? (t.nota || '') : '';
+
+    if (t) {
+      const esPM = t.entrada >= '12:00';
+      _setTurnoTipo(esPM ? 'PM' : 'AM');
+    }
+
+    document.getElementById('hr-turno-overlay').classList.add('open');
+  }
+
+  function _setTurnoTipo(tipo) {
+    document.getElementById('hr-btn-am').className = 'hr-turno-tipo-btn' + (tipo === 'AM' ? ' sel-am' : '');
+    document.getElementById('hr-btn-pm').className = 'hr-turno-tipo-btn' + (tipo === 'PM' ? ' sel-pm' : '');
+    document.getElementById('hr-t-entrada').value = tipo === 'AM' ? '09:00' : '17:00';
+    document.getElementById('hr-t-salida').value  = tipo === 'AM' ? '17:00' : '01:00';
+  }
+
+  function cerrarModalTurno(e) {
+    if (e && e.target !== document.getElementById('hr-turno-overlay')) return;
+    document.getElementById('hr-turno-overlay').classList.remove('open');
+  }
+
+  async function guardarTurno() {
+    const entrada = document.getElementById('hr-t-entrada').value;
+    const salida  = document.getElementById('hr-t-salida').value;
+    const nota    = document.getElementById('hr-t-nota').value.trim();
+
+    if (!entrada || !salida) { alert('Seleccioná AM o PM primero.'); return; }
+    if (!db) { _toast('Firebase no configurado', 'var(--danger)'); return; }
+
+    const data = {
+      local:  _localActivo,
+      semana: _semanaKey(),
+      empId:  _turnoEditEmpId,
+      dia:    _turnoEditDia,
+      entrada, salida, nota,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      if (_turnoEditDocId) {
+        await db.collection(COL_TURNOS).doc(_turnoEditDocId).update(data);
+      } else {
+        await db.collection(COL_TURNOS).add(data);
+      }
+      document.getElementById('hr-turno-overlay').classList.remove('open');
+      await _renderGrid();
+      _toast('Turno guardado');
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function eliminarTurno() {
+    if (!_turnoEditDocId || !db) {
+      document.getElementById('hr-turno-overlay').classList.remove('open');
+      return;
+    }
+    try {
+      await db.collection(COL_TURNOS).doc(_turnoEditDocId).delete();
+      document.getElementById('hr-turno-overlay').classList.remove('open');
+      await _renderGrid();
+      _toast('Turno quitado', 'var(--danger)');
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── Picker de empleados ──────────────────────────────────────
+  function abrirPickerEmpleado() {
+    filtrarPicker('');
+    document.getElementById('hr-emp-pick-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('hr-pick-search').focus(), 80);
+  }
+
+  function cerrarPickerEmpleado(e) {
+    if (e && e.target !== document.getElementById('hr-emp-pick-overlay')) return;
+    document.getElementById('hr-emp-pick-overlay').classList.remove('open');
+  }
+
+  function filtrarPicker(q) {
+    const todos = _getEmpleados().filter(e => e.local === _localActivo);
+    const filtrados = q
+      ? todos.filter(e => (e.nombre||'').toLowerCase().includes(q.toLowerCase()))
+      : todos;
+
+    const list = document.getElementById('hr-pick-list');
+    if (!filtrados.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted)">Sin resultados</div>';
+      return;
+    }
+
+    list.innerHTML = filtrados.map(e => {
+      const yaEnPlanilla = _empsPlanilla.includes(e.id);
+      return `<div class="hr-emp-pick-item${yaEnPlanilla ? ' ya-en-planilla' : ''}" onclick="horarios._agregarEmpAPlanilla('${_esc(e.id)}')">
+        <div class="hr-emp-avatar" style="width:32px;height:32px">${_initiales(e.nombre)}</div>
+        <div>
+          <div class="hr-emp-pick-name">${_esc(e.nombre)}</div>
+          <div class="hr-emp-pick-meta">${_esc(e['puesto-real'] || e['categoria-alta'] || '')}${yaEnPlanilla ? ' · ya en planilla' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function _agregarEmpAPlanilla(empId) {
+    if (_empsPlanilla.includes(empId)) return;
+    _empsPlanilla.push(empId);
+    const planillaKey = `hr_planilla_${_localActivo}_${_semanaKey()}`;
+    localStorage.setItem(planillaKey, JSON.stringify(_empsPlanilla));
+    cerrarPickerEmpleado();
+    _renderGrid();
+    _toast('Empleado agregado a la planilla');
+  }
+
+  // ── CIERRE DE TURNO ──────────────────────────────────────────
+  const DESEMPENOS = ['C','D','E','B','A','S'];
+  const DESEMPENO_COLORS = {
+    S: '#ffd700', A: 'var(--m2)', B: 'var(--m3)',
+    E: '#a78bfa', C: 'var(--m5)', D: 'var(--danger)'
+  };
+
+  function abrirCierre() {
+    // Subtítulo
+    document.getElementById('hr-cierre-sub').textContent = _localActivo || '—';
+
+    // Renderizar chips de días de la semana
+    const dias = _diasSemana();
+    const hoy  = _isoFecha(new Date());
+    const diasEl = document.getElementById('hr-cierre-dias');
+    diasEl.innerHTML = dias.map((d, i) => {
+      const iso = _isoFecha(d);
+      const esHoy = iso === hoy;
+      return `<button class="hr-asist-btn${esHoy ? ' sel-P' : ''}"
+        style="border-radius:8px;padding:5px 12px;font-size:11px"
+        onclick="horarios._selCierreDia('${iso}', this)">
+        ${_diasNombres[i]} ${d.getDate()}/${d.getMonth()+1}
+      </button>`;
+    }).join('');
+
+    // Limpiar estado
+    _cierreDia  = null;
+    _cierreData = {};
+    _cierreEmps = [];
+    document.getElementById('hr-cierre-lista').innerHTML =
+      '<div class="hr-empty" style="padding:24px">Seleccioná un día</div>';
+    document.getElementById('hr-cierre-save-btn').disabled = true;
+
+    // Si hoy está en la semana visible, seleccionarlo automáticamente
+    const hoyIdx = dias.findIndex(d => _isoFecha(d) === hoy);
+    if (hoyIdx >= 0) {
+      const chips = diasEl.querySelectorAll('button');
+      _selCierreDia(hoy, chips[hoyIdx]);
+    }
+
+    document.getElementById('hr-cierre-overlay').classList.add('open');
+  }
+
+  async function _selCierreDia(fechaISO, btnEl) {
+    // Actualizar chip seleccionado
+    document.getElementById('hr-cierre-dias').querySelectorAll('button').forEach(b => {
+      b.className = 'hr-asist-btn';
+      b.style.borderRadius = '8px'; b.style.padding = '5px 12px'; b.style.fontSize = '11px';
+    });
+    btnEl.classList.add('sel-P');
+
+    _cierreDia = fechaISO;
+
+    // Empleados con turno ese día
+    const dias   = _diasSemana();
+    const diaIdx = dias.findIndex(d => _isoFecha(d) === fechaISO);
+    if (diaIdx < 0) return;
+
+    // Cargar turnos si no están cargados
+    await _cargarTurnos();
+
+    const todosEmps = _getEmpleados().filter(e => e.local === _localActivo);
+    _cierreEmps = todosEmps.filter(e => {
+      const key = _turnoKey(e.id, diaIdx);
+      return !!_turnos[key];
+    });
+
+    // Verificar si ya existe un cierre para este día y cargarlo
+    let cierreExistente = null;
+    if (db) {
+      try {
+        const docId = `${_localActivo.replace(/\s+/g,'_')}_${fechaISO}`;
+        const snap  = await db.collection(COL_CIERRES).doc(docId).get();
+        if (snap.exists) cierreExistente = snap.data();
+      } catch(e) { /* no hay cierre previo */ }
+    }
+
+    // Pre-cargar datos existentes
+    _cierreData = {};
+    _cierreEmps.forEach(emp => {
+      const prev = cierreExistente?.empleados?.find(x => x.uid === emp.id);
+      const turnoKey = _turnoKey(emp.id, diaIdx);
+      const turno    = _turnos[turnoKey];
+      _cierreData[emp.id] = {
+        asistencia: prev?.asistencia || 'P',
+        entrada:    prev?.entrada    || turno?.entrada || '',
+        salida:     prev?.salida     || turno?.salida  || '',
+        desempeno:  prev?.desempeno  || '',
+        nota:       prev?.nota       || '',
+      };
+    });
+
+    _renderCierreEmps(diaIdx);
+    document.getElementById('hr-cierre-save-btn').disabled = false;
+  }
+
+  function _renderCierreEmps(diaIdx) {
+    const lista = document.getElementById('hr-cierre-lista');
+
+    if (!_cierreEmps.length) {
+      lista.innerHTML = '<div class="hr-empty" style="padding:24px">No hay empleados con turno asignado este día</div>';
+      return;
+    }
+
+    lista.innerHTML = _cierreEmps.map(emp => {
+      const d  = _cierreData[emp.id];
+      const turno = _turnos[_turnoKey(emp.id, diaIdx)];
+      const ini = _initiales(emp.nombre);
+
+      // Botones asistencia
+      const asistBtns = ['P','A','T'].map(v => {
+        const label = v === 'P' ? 'Presente' : v === 'A' ? 'Ausente' : 'Tarde';
+        return `<button class="hr-asist-btn${d.asistencia===v ? ' sel-'+v : ''}"
+          onclick="horarios._setCierreAsist('${emp.id}','${v}',this)">${label}</button>`;
+      }).join('');
+
+      // Botones desempeño
+      const rankBtns = DESEMPENOS.map(r => {
+        const col = DESEMPENO_COLORS[r] || 'var(--muted)';
+        const sel = d.desempeno === r;
+        return `<button class="hr-rank-btn${sel ? ' sel' : ''}" data-r="${r}"
+          onclick="horarios._setCierreDesempeno('${emp.id}','${r}',this)"
+          style="${sel ? `background:color-mix(in srgb,${col} 20%,transparent);border-color:${col};color:${col}` : ''}"
+          title="Desempeño ${r}">${r}</button>`;
+      }).join('');
+
+      const mostrarTarda = d.asistencia === 'T';
+
+      return `<div class="hr-cierre-emp" style="grid-template-columns:1fr;gap:8px;padding:14px 24px;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent)">
+        <!-- Cabecera empleado -->
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="hr-emp-avatar" style="width:32px;height:32px;flex-shrink:0">${ini}</div>
+          <div style="flex:1;min-width:0">
+            <div class="hr-cierre-name">${_esc(emp.nombre)}</div>
+            <div class="hr-cierre-time">${_esc(emp['puesto-real']||'')} · Turno: ${turno?.entrada||'?'}–${turno?.salida||'?'}</div>
+          </div>
+        </div>
+        <!-- Asistencia -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);width:70px">Asistencia</span>
+          <div class="hr-asist-btns">${asistBtns}</div>
+          <div id="hr-tarda-wrap-${emp.id}" style="display:${mostrarTarda?'flex':'none'};align-items:center;gap:4px;margin-left:4px">
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">llegó</span>
+            <input class="hr-tard-inp" id="hr-tarda-${emp.id}" type="time"
+              value="${d.entrada||''}"
+              onchange="horarios._setCierreEntrada('${emp.id}',this.value)">
+          </div>
+        </div>
+        <!-- Horarios reales -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);width:70px">Horario real</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input class="hr-tard-inp" style="width:68px" type="time" value="${d.entrada||''}"
+              onchange="horarios._setCierreEntrada('${emp.id}',this.value)"
+              placeholder="entrada">
+            <span style="font-size:10px;color:var(--muted)">→</span>
+            <input class="hr-tard-inp" style="width:68px" type="time" value="${d.salida||''}"
+              onchange="horarios._setCierreSalida('${emp.id}',this.value)"
+              placeholder="salida">
+          </div>
+        </div>
+        <!-- Desempeño -->
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);width:70px">Desempeño</span>
+          <div class="hr-rank-btns">${rankBtns}</div>
+        </div>
+        <!-- Nota -->
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);width:70px">Nota</span>
+          <input class="bj-input" style="flex:1;font-size:12px;padding:6px 10px"
+            value="${_esc(d.nota)}" placeholder="Opcional…"
+            oninput="horarios._setCierreNota('${emp.id}',this.value)">
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Setters estado cierre
+  function _setCierreAsist(empId, val, btn) {
+    _cierreData[empId].asistencia = val;
+    // Actualizar botones
+    btn.closest('.hr-asist-btns').querySelectorAll('.hr-asist-btn').forEach(b => {
+      b.className = 'hr-asist-btn';
+    });
+    btn.classList.add('sel-' + val);
+    // Mostrar/ocultar campo tardanza
+    const tardaWrap = document.getElementById('hr-tarda-wrap-' + empId);
+    if (tardaWrap) tardaWrap.style.display = val === 'T' ? 'flex' : 'none';
+  }
+
+  function _setCierreEntrada(empId, val) { _cierreData[empId].entrada = val; }
+  function _setCierreSalida(empId, val)  { _cierreData[empId].salida  = val; }
+  function _setCierreNota(empId, val)    { _cierreData[empId].nota    = val; }
+
+  function _setCierreDesempeno(empId, val, btn) {
+    _cierreData[empId].desempeno = val;
+    const col = DESEMPENO_COLORS[val] || 'var(--muted)';
+    btn.closest('.hr-rank-btns').querySelectorAll('.hr-rank-btn').forEach(b => {
+      b.classList.remove('sel');
+      b.style.background = '';
+      b.style.borderColor = '';
+      b.style.color = '';
+    });
+    btn.classList.add('sel');
+    btn.style.background   = `color-mix(in srgb,${col} 20%,transparent)`;
+    btn.style.borderColor  = col;
+    btn.style.color        = col;
+  }
+
+  async function guardarCierre() {
+    if (!_cierreDia || !_localActivo) return;
+    if (!db) { _toast('Firebase no configurado', 'var(--danger)'); return; }
+
+    const btn = document.getElementById('hr-cierre-save-btn');
+    btn.textContent = 'Guardando…'; btn.disabled = true;
+
+    const empleados = _cierreEmps.map(emp => {
+      const d = _cierreData[emp.id];
+      return {
+        uid:       emp.id,
+        nombre:    emp.nombre,
+        puesto:    emp['puesto-real'] || emp['categoria-alta'] || '',
+        asistencia: d.asistencia,
+        entrada:   d.entrada  || '',
+        salida:    d.salida   || '',
+        desempeno: d.desempeno || '',
+        nota:      d.nota     || '',
+      };
+    });
+
+    const docId = `${_localActivo.replace(/\s+/g,'_')}_${_cierreDia}`;
+    const data  = {
+      local:      _localActivo,
+      fecha:      _cierreDia,
+      empleados,
+      creadoPor:  window._currentUser?.email || '—',
+      ts:         firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await db.collection(COL_CIERRES).doc(docId).set(data);
+      btn.textContent = 'Guardado ✓';
+      _toast(`Cierre guardado · ${_cierreDia}`);
+      setTimeout(() => {
+        btn.textContent = 'Guardar cierre';
+        btn.disabled = false;
+      }, 2000);
+    } catch(e) {
+      alert('Error al guardar: ' + e.message);
+      btn.textContent = 'Guardar cierre';
+      btn.disabled = false;
+    }
+  }
+
+  function cerrarCierre(e) {
+    if (e && e.target !== document.getElementById('hr-cierre-overlay')) return;
+    document.getElementById('hr-cierre-overlay').classList.remove('open');
+  }
+
+  // ── Export PDF ───────────────────────────────────────────────
+  async function exportarPDF() {
+    const el = document.getElementById('hr-grid-container');
+    if (!el || typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+      alert('Librería PDF no disponible.'); return;
+    }
+    try {
+      const canvas = await html2canvas(el, { backgroundColor: '#0e0f11', scale: 1.5 });
+      const { jsPDF } = jspdf;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`horarios_${_localActivo}_${_semanaKey()}.pdf`);
+    } catch(e) { alert('Error al generar PDF: ' + e.message); }
+  }
+
+  // ── Modal envío email ────────────────────────────────────────
+  function abrirModalMail() {
+    _mailRecipients = [];
+    _renderMailChips();
+    document.getElementById('hr-mail-inp').value = '';
+    document.getElementById('hr-mail-subject').value = `Horario semana del ${_semanaKey()} · ${_localActivo}`;
+    document.getElementById('hr-mail-msg').value = '';
+    document.getElementById('hr-mail-status').textContent = '';
+    document.getElementById('hr-mail-status').className = 'hr-mail-status';
+    document.getElementById('hr-mail-semana-lbl').textContent = _localActivo;
+    document.getElementById('hr-mail-overlay').classList.add('open');
+  }
+
+  function cerrarModalMail(e) {
+    if (e && e.target !== document.getElementById('hr-mail-overlay')) return;
+    document.getElementById('hr-mail-overlay').classList.remove('open');
+  }
+
+  function _renderMailChips() {
+    const cont = document.getElementById('hr-mail-recipients');
+    const inp  = document.getElementById('hr-mail-inp');
+    cont.innerHTML = '';
+    _mailRecipients.forEach((email, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'hr-mail-chip';
+      chip.innerHTML = `${_esc(email)} <button class="hr-mail-chip-del" onclick="horarios._removeMailChip(${i})">×</button>`;
+      cont.appendChild(chip);
+    });
+    cont.appendChild(inp);
+  }
+
+  function _removeMailChip(i) {
+    _mailRecipients.splice(i, 1);
+    _renderMailChips();
+  }
+
+  function _mailInpKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      _mailInpBlur();
+    }
+  }
+
+  function _mailInpBlur() {
+    const inp = document.getElementById('hr-mail-inp');
+    const val = (inp.value || '').trim().replace(/,$/, '');
+    if (val && val.includes('@') && !_mailRecipients.includes(val)) {
+      _mailRecipients.push(val);
+      _renderMailChips();
+    }
+    inp.value = '';
+  }
+
+  async function enviarEmail() {
+    if (!_mailRecipients.length) { alert('Agregá al menos un destinatario.'); return; }
+    if (typeof EMAILJS_PUBLIC_KEY === 'undefined' || EMAILJS_PUBLIC_KEY === 'TU_PUBLIC_KEY') {
+      alert('EmailJS no configurado.'); return;
+    }
+
+    const btn    = document.getElementById('hr-mail-send-btn');
+    const status = document.getElementById('hr-mail-status');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    status.className = 'hr-mail-status'; status.textContent = '';
+
+    try {
+      const canvas = await html2canvas(document.getElementById('hr-grid-container'), { backgroundColor: '#0e0f11', scale: 1.5 });
+      const imgData = canvas.toDataURL('image/png');
+
+      let ok = true;
+      for (const dest of _mailRecipients) {
+        try {
+          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            to_email:  dest,
+            asunto:    document.getElementById('hr-mail-subject').value,
+            mensaje:   document.getElementById('hr-mail-msg').value,
+            semana:    _semanaKey(),
+            local:     _localActivo,
+            horario_img: imgData,
+          });
+        } catch(e) { ok = false; console.error('Email error:', e); }
+      }
+
+      if (ok) {
+        status.className = 'hr-mail-status ok';
+        status.textContent = `Enviado a ${_mailRecipients.length} destinatario${_mailRecipients.length > 1 ? 's' : ''}`;
+        btn.textContent = 'Enviado ✓';
+        setTimeout(() => cerrarModalMail(), 2000);
+      } else {
+        status.className = 'hr-mail-status err';
+        status.textContent = 'Algunos envíos fallaron';
+        btn.disabled = false; btn.textContent = 'Reintentar';
+      }
+    } catch(e) {
+      status.className = 'hr-mail-status err';
+      status.textContent = 'Error: ' + e.message;
+      btn.disabled = false; btn.textContent = 'Enviar';
+    }
+  }
+
+  // ── API pública ──────────────────────────────────────────────
+  return {
+    init,
+    semanaAnterior, semanaSiguiente, irHoy,
+    _setLocal,
+    _abrirModalTurno, _setTurnoTipo,
+    cerrarModalTurno, guardarTurno, eliminarTurno,
+    abrirPickerEmpleado, cerrarPickerEmpleado, filtrarPicker, _agregarEmpAPlanilla,
+    abrirCierre, cerrarCierre, guardarCierre,
+    _selCierreDia,
+    _setCierreAsist, _setCierreEntrada, _setCierreSalida,
+    _setCierreDesempeno, _setCierreNota,
+    exportarPDF,
+    abrirModalMail, cerrarModalMail, enviarEmail,
+    _mailInpKey, _mailInpBlur, _removeMailChip,
+  };
+})();
 
 // =============================================================
 //  PANTALLA PÚBLICA: CONFIRMAR PRESENTACIÓN

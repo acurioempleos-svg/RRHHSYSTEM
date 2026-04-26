@@ -3920,6 +3920,30 @@ function navigate(moduleId, navEl) {
   closeSidebar();
 
   // Inicializar módulos según destino
+  if (moduleId === 'reclutamiento' && typeof reclutamiento !== 'undefined') {
+    setTimeout(() => reclutamiento.init(), 50);
+  }
+
+  if (moduleId === 'formulario' && typeof formulario !== 'undefined') {
+    setTimeout(() => formulario.init(), 50);
+  }
+
+  if (moduleId === 'liquidaciones' && typeof liquidaciones !== 'undefined') {
+    setTimeout(() => liquidaciones.init(), 50);
+  }
+
+  if (moduleId === 'info-personal' && typeof usuarios !== 'undefined') {
+    setTimeout(() => usuarios.init(), 50);
+  }
+
+  if (moduleId === 'admin-locales' && typeof adminLocales !== 'undefined') {
+    setTimeout(() => adminLocales.init(), 50);
+  }
+
+  if (moduleId === 'ingresos' && typeof ingresos !== 'undefined') {
+    setTimeout(() => ingresos.init(), 50);
+  }
+
   if (moduleId === 'usuarios' && typeof usuarios !== 'undefined') {
     setTimeout(() => { usuarios._renderLista(); if (db) usuarios._cargarOrg(); }, 50);
   }
@@ -3963,6 +3987,1086 @@ document.addEventListener('click', e => {
   }
 });
 
+
+// ==============================================================
+//  MÓDULO ADMIN LOCALES
+// ==============================================================
+const adminLocales = (() => {
+  const COL = 'locales';
+  let _locales  = [];   // cache en memoria
+  let _unsub    = null;
+  let _editId   = null;
+
+  const $  = id => document.getElementById(id);
+  const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // ── Init: listener en tiempo real ──────────────────────────
+  function init() {
+    if (!db) { _renderGrid(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('nombre').onSnapshot(snap => {
+      _locales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _renderGrid();
+    }, err => {
+      console.warn('adminLocales error:', err);
+      _renderGrid();
+    });
+  }
+
+  // ── Grid ───────────────────────────────────────────────────
+  function _renderGrid() {
+    const cont = $('al-grid');
+    if (!cont) return;
+    if (!_locales.length) {
+      cont.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:8px 0">
+        Sin locales configurados. Usá "+ Agregar local" para empezar.</div>`;
+      return;
+    }
+    cont.innerHTML = _locales.map(l => `
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;
+           background:color-mix(in srgb,var(--surface) 60%,transparent);
+           border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${esc(l.nombre)}</div>
+          ${l.razon ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${esc(l.razon)}</div>` : ''}
+          ${l.emails ? `<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px">
+            📧 ${esc(l.emails.split('\n').filter(Boolean).join(', '))}</div>` : ''}
+        </div>
+        <button onclick="adminLocales.edit('${l.id}')"
+          style="background:none;border:1px solid var(--border);border-radius:6px;
+                 padding:5px 12px;color:var(--text);cursor:pointer;font-size:12px">
+          Editar
+        </button>
+        <button onclick="adminLocales.askDelete('${l.id}','${esc(l.nombre)}')"
+          style="background:none;border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);
+                 border-radius:6px;padding:5px 10px;color:var(--danger);cursor:pointer;font-size:12px">
+          ✕
+        </button>
+      </div>`).join('');
+  }
+
+  // ── Form ───────────────────────────────────────────────────
+  function openForm() {
+    _editId = null;
+    $('al-modal-title').textContent = 'Agregar local';
+    $('al-doc-id').value = '';
+    $('al-nombre').value = '';
+    $('al-razon').value  = '';
+    $('al-email').value  = '';
+    $('al-form-error').textContent = '';
+    $('al-modal-overlay').classList.add('open');
+    setTimeout(() => $('al-nombre').focus(), 80);
+  }
+
+  function edit(id) {
+    const l = _locales.find(x => x.id === id);
+    if (!l) return;
+    _editId = id;
+    $('al-modal-title').textContent = 'Editar local';
+    $('al-doc-id').value = id;
+    $('al-nombre').value = l.nombre || '';
+    $('al-razon').value  = l.razon  || '';
+    $('al-email').value  = l.emails || '';
+    $('al-form-error').textContent = '';
+    $('al-modal-overlay').classList.add('open');
+    setTimeout(() => $('al-nombre').focus(), 80);
+  }
+
+  function closeForm(e) {
+    if (e && e.target !== $('al-modal-overlay')) return;
+    $('al-modal-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const nombre = $('al-nombre').value.trim();
+    if (!nombre) { $('al-form-error').textContent = 'El nombre es obligatorio.'; return; }
+    if (!db) { alert('Firebase no configurado.'); return; }
+
+    const btn = $('al-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    const data = {
+      nombre,
+      razon:  $('al-razon').value.trim(),
+      emails: $('al-email').value.trim(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      if (_editId) {
+        await db.collection(COL).doc(_editId).update(data);
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        await db.collection(COL).add(data);
+      }
+      closeForm();
+    } catch(e) {
+      $('al-form-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar';
+    }
+  }
+
+  // ── Delete ──────────────────────────────────────────────────
+  let _deleteId = null;
+  function askDelete(id, nombre) {
+    _deleteId = id;
+    $('al-del-name').textContent = nombre;
+    $('al-del-overlay').classList.add('open');
+  }
+  function cancelDelete(e) {
+    if (e && e.target !== $('al-del-overlay')) return;
+    $('al-del-overlay').classList.remove('open');
+    _deleteId = null;
+  }
+  async function confirmDelete() {
+    if (!_deleteId || !db) return;
+    try {
+      await db.collection(COL).doc(_deleteId).delete();
+    } catch(e) { alert('Error: ' + e.message); }
+    $('al-del-overlay').classList.remove('open');
+    _deleteId = null;
+  }
+
+  // ── API pública ─────────────────────────────────────────────
+  function getLocales() { return _locales; }
+
+  return { init, openForm, edit, closeForm, guardar,
+           askDelete, cancelDelete, confirmDelete,
+           getLocales };
+})();
+
+// ==============================================================
+//  MÓDULO INGRESOS
+// ==============================================================
+const ingresos = (() => {
+  const COL = 'ingresos';
+  let _registros = [];
+  let _unsub     = null;
+  let _editId    = null;
+  let _queryTxt  = '';
+  let _filterLoc = '';
+  let _lastGuardado = null;  // datos del último ingreso guardado (para email)
+
+  const $   = id => document.getElementById(id);
+  const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmtFecha = v => {
+    if (!v) return '—';
+    const [y,m,d] = v.split('-');
+    return d && m && y ? `${d}/${m}/${y}` : v;
+  };
+
+  // ── Init ───────────────────────────────────────────────────
+  function init() {
+    _poblarSelectLocal();
+    if (!db) { _renderTabla(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snap => {
+        _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _renderTabla();
+      }, err => {
+        console.warn('ingresos error:', err);
+        _renderTabla();
+      });
+  }
+
+  function _poblarSelectLocal() {
+    const sel  = $('in-local');
+    const filt = $('in-filter-local');
+    const locs = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">— seleccionar —</option>' +
+        locs.map(l => `<option value="${esc(l.nombre)}"${l.nombre===cur?' selected':''}>${esc(l.nombre)}</option>`).join('');
+    }
+    if (filt) {
+      const cur = filt.value;
+      filt.innerHTML = '<option value="">Todos los locales</option>' +
+        locs.map(l => `<option value="${esc(l.nombre)}"${l.nombre===cur?' selected':''}>${esc(l.nombre)}</option>`).join('');
+    }
+  }
+
+  // ── Tabla ───────────────────────────────────────────────────
+  function _renderTabla() {
+    const tbody = $('in-tbody');
+    const count = $('in-count');
+    if (!tbody) return;
+
+    let rows = _registros;
+    if (_queryTxt) {
+      const q = _queryTxt.toLowerCase();
+      rows = rows.filter(r =>
+        (r.nombre||'').toLowerCase().includes(q) ||
+        (r.codigo||'').toLowerCase().includes(q)
+      );
+    }
+    if (_filterLoc) rows = rows.filter(r => r.local === _filterLoc);
+
+    if (count) count.textContent = `${rows.length} registro${rows.length !== 1 ? 's' : ''}`;
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="bj-empty-cell">${
+        _registros.length ? 'Sin resultados para ese filtro.' : 'Sin ingresos registrados.'
+      }</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><span class="bj-code">${esc(r.codigo||'—')}</span></td>
+        <td>${esc(r.local||'—')}</td>
+        <td style="font-weight:600">${esc(r.nombre||'—')}</td>
+        <td>${fmtFecha(r.fecha)}</td>
+        <td>${esc(r.puesto||'—')}</td>
+        <td>${esc(r.origen||'—')}</td>
+        <td>${r.presentacion
+          ? `<span class="bj-badge bj-badge-ok">✓ Presentado</span>`
+          : `<span class="bj-badge bj-badge-warn">Pendiente</span>`}</td>
+        <td>${r.legajoCreado
+          ? `<span class="bj-badge bj-badge-ok">✓ Legajo</span>`
+          : `<span class="bj-badge" style="background:color-mix(in srgb,var(--muted) 15%,transparent);color:var(--muted)">Sin legajo</span>`}</td>
+        <td class="col-acc" style="display:flex;gap:6px;align-items:center">
+          <button class="bj-icon-btn" title="Editar" onclick="ingresos.edit('${r.id}')">✏️</button>
+          <button class="bj-icon-btn" title="Eliminar" style="color:var(--danger)"
+            onclick="ingresos.askDelete('${r.id}','${esc(r.nombre)}')">🗑</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ── Filtros ─────────────────────────────────────────────────
+  function filtrar(v)     { _queryTxt  = v; _renderTabla(); }
+  function filtrarLocal(v){ _filterLoc = v; _renderTabla(); }
+
+  // ── Form ───────────────────────────────────────────────────
+  function openForm(rcData) {
+    _editId = null;
+    $('in-modal-tag').textContent   = 'Nuevo ingreso';
+    $('in-modal-title').textContent = 'Registrar ingreso';
+    $('in-doc-id').value  = '';
+    $('in-rc-ref').value  = '';
+    $('in-codigo').value  = '';
+    $('in-nombre').value  = '';
+    $('in-fecha').value   = new Date().toISOString().slice(0,10);
+    $('in-puesto').value  = '';
+    $('in-horario').value = '';
+    $('in-form-error').textContent = '';
+
+    _poblarSelectLocal();
+
+    // Si viene desde reclutamiento
+    if (rcData) {
+      $('in-rc-ref').value = rcData.id || '';
+      $('in-nombre').value = rcData.nombre || '';
+      $('in-puesto').value = rcData.puesto  || '';
+      const chip = $('in-origen-chip');
+      if (chip) {
+        chip.style.display = 'flex';
+        $('in-origen-nombre').textContent = rcData.nombre || '';
+      }
+    } else {
+      const chip = $('in-origen-chip');
+      if (chip) chip.style.display = 'none';
+    }
+
+    $('in-modal-overlay').classList.add('open');
+    setTimeout(() => $('in-codigo').focus(), 80);
+  }
+
+  function edit(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    _editId = id;
+    $('in-modal-tag').textContent   = 'Editar ingreso';
+    $('in-modal-title').textContent = r.nombre || 'Editar';
+    $('in-doc-id').value  = id;
+    $('in-rc-ref').value  = r.rcRef   || '';
+    $('in-codigo').value  = r.codigo  || '';
+    $('in-nombre').value  = r.nombre  || '';
+    $('in-fecha').value   = r.fecha   || '';
+    $('in-puesto').value  = r.puesto  || '';
+    $('in-horario').value = r.horario || '';
+    $('in-form-error').textContent = '';
+    _poblarSelectLocal();
+    setTimeout(() => { const sel = $('in-local'); if (sel) sel.value = r.local || ''; }, 50);
+    const chip = $('in-origen-chip');
+    if (chip) chip.style.display = 'none';
+    $('in-modal-overlay').classList.add('open');
+  }
+
+  function closeForm(e) {
+    if (e && e.target !== $('in-modal-overlay')) return;
+    $('in-modal-overlay').classList.remove('open');
+  }
+
+  function _clearOrigen() {
+    $('in-rc-ref').value = '';
+    $('in-origen-chip').style.display = 'none';
+  }
+
+  async function guardar() {
+    const codigo  = $('in-codigo').value.trim();
+    const nombre  = $('in-nombre').value.trim();
+    const local   = $('in-local').value;
+    const fecha   = $('in-fecha').value;
+    const puesto  = $('in-puesto').value.trim();
+    const horario = $('in-horario').value.trim();
+    const rcRef   = $('in-rc-ref').value;
+
+    if (!nombre || !local || !fecha) {
+      $('in-form-error').textContent = 'Nombre, local y fecha son obligatorios.';
+      return;
+    }
+    if (!db) { alert('Firebase no configurado.'); return; }
+
+    const btn = $('in-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    const data = {
+      codigo, nombre, local, fecha, puesto, horario, rcRef,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      if (_editId) {
+        await db.collection(COL).doc(_editId).update(data);
+        closeForm();
+      } else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        data.presentacion = false;
+        data.legajoCreado = false;
+        const ref = await db.collection(COL).add(data);
+        _lastGuardado = { id: ref.id, ...data };
+        closeForm();
+        _mostrarSuccess(_lastGuardado);
+      }
+    } catch(e) {
+      $('in-form-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar';
+    }
+  }
+
+  // ── Success overlay ─────────────────────────────────────────
+  function _mostrarSuccess(r) {
+    $('in-succ-nombre').textContent  = r.nombre  || '—';
+    $('in-succ-puesto').textContent  = r.puesto  || '—';
+    $('in-succ-fecha').textContent   = fmtFecha(r.fecha);
+    $('in-succ-horario').textContent = r.horario || '—';
+    $('in-succ-local').textContent   = r.local   || '—';
+    $('in-success-overlay').classList.add('open');
+  }
+
+  function cerrarSuccess() {
+    $('in-success-overlay').classList.remove('open');
+  }
+
+  // ── Mail ingreso ────────────────────────────────────────────
+  function abrirMailIngreso() {
+    cerrarSuccess();
+    if (!_lastGuardado) return;
+    const r = _lastGuardado;
+    $('in-mail-subtitulo').textContent = `${r.nombre} · ${r.local}`;
+
+    // Cargar emails del local
+    const loc = typeof adminLocales !== 'undefined'
+      ? adminLocales.getLocales().find(l => l.nombre === r.local)
+      : null;
+    const emails = loc?.emails ? loc.emails.split('\n').filter(Boolean) : [];
+    const chipsEl = $('in-mail-chips-auto');
+    chipsEl.innerHTML = emails.length
+      ? emails.map(e => `<span class="hr-mail-chip">${esc(e)}</span>`).join('')
+      : `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Sin emails configurados en el local.</span>`;
+
+    // Preview
+    $('in-mail-preview').innerHTML = `
+      <div style="font-size:13px;line-height:1.6">
+        <strong>${esc(r.nombre)}</strong> ingresó al local <strong>${esc(r.local)}</strong>
+        el <strong>${fmtFecha(r.fecha)}</strong> como <strong>${esc(r.puesto||'—')}</strong>.
+        ${r.horario ? `Horario: ${esc(r.horario)}.` : ''}
+      </div>`;
+
+    $('in-mail-status').textContent = '';
+    $('in-mail-send-btn').disabled  = false;
+    $('in-mail-send-btn').textContent = 'Enviar';
+    $('in-mail-overlay').classList.add('open');
+  }
+
+  function cerrarMailIngreso(e) {
+    if (e && e.target !== $('in-mail-overlay')) return;
+    $('in-mail-overlay').classList.remove('open');
+  }
+
+  async function enviarMailModal() {
+    if (!_lastGuardado) return;
+    const r   = _lastGuardado;
+    const loc = typeof adminLocales !== 'undefined'
+      ? adminLocales.getLocales().find(l => l.nombre === r.local)
+      : null;
+    const emails = loc?.emails ? loc.emails.split('\n').filter(Boolean) : [];
+
+    if (!emails.length) {
+      $('in-mail-status').textContent = 'Sin destinatarios configurados.';
+      return;
+    }
+    if (typeof EMAILJS_PUBLIC_KEY === 'undefined' || EMAILJS_PUBLIC_KEY === 'TU_PUBLIC_KEY') {
+      $('in-mail-status').textContent = 'EmailJS no configurado.';
+      return;
+    }
+
+    const btn = $('in-mail-send-btn');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+
+    let ok = true;
+    for (const dest of emails) {
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: dest,
+          asunto:   `Nuevo ingreso: ${r.nombre} · ${r.local}`,
+          mensaje:  `${r.nombre} ingresó al local ${r.local} el ${fmtFecha(r.fecha)} como ${r.puesto||'—'}. ${r.horario ? 'Horario: '+r.horario : ''}`,
+          nombre:   r.nombre,
+          local:    r.local,
+          puesto:   r.puesto || '—',
+          fecha:    fmtFecha(r.fecha),
+          horario:  r.horario || '—',
+        });
+      } catch(e) { ok = false; console.error('mail error:', e); }
+    }
+
+    $('in-mail-status').textContent = ok
+      ? `✓ Enviado a ${emails.length} destinatario${emails.length>1?'s':''}`
+      : '⚠ Algunos envíos fallaron';
+    btn.textContent = ok ? 'Enviado ✓' : 'Reintentar';
+    btn.disabled = !ok;
+    if (ok) setTimeout(() => cerrarMailIngreso(), 2000);
+  }
+
+  // ── Export CSV ──────────────────────────────────────────────
+  function exportCSV() {
+    const cols = ['codigo','nombre','local','fecha','puesto','horario','origen','presentacion','legajoCreado'];
+    const head = ['Código','Nombre','Local','Fecha','Puesto','Horario','Origen','Presentación','Legajo'];
+    const rows = _registros.map(r => cols.map(c => `"${String(r[c]??'').replace(/"/g,'""')}"`).join(','));
+    const csv  = [head.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `ingresos_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  // ── Delete ──────────────────────────────────────────────────
+  let _delId = null;
+  function askDelete(id, nombre) {
+    _delId = id;
+    $('in-del-name').textContent = nombre;
+    $('in-del-overlay').classList.add('open');
+  }
+  function cancelDelete(e) {
+    if (e && e.target !== $('in-del-overlay')) return;
+    $('in-del-overlay').classList.remove('open');
+    _delId = null;
+  }
+  async function confirmDelete() {
+    if (!_delId || !db) return;
+    try { await db.collection(COL).doc(_delId).delete(); }
+    catch(e) { alert('Error: ' + e.message); }
+    $('in-del-overlay').classList.remove('open');
+    _delId = null;
+  }
+
+  // ── Render público (para portal, etc.) ──────────────────────
+  function _renderTablaPublic() { init(); }
+
+  return {
+    init, filtrar, filtrarLocal, exportCSV,
+    openForm, edit, closeForm, guardar, _clearOrigen,
+    askDelete, cancelDelete, confirmDelete,
+    cerrarSuccess, abrirMailIngreso, cerrarMailIngreso, enviarMailModal,
+    _renderTablaPublic,
+    getRegistros: () => _registros,
+  };
+})();
+
+// ==============================================================
+//  MÓDULO RECLUTAMIENTO
+// ==============================================================
+const reclutamiento = (() => {
+  const COL = 'reclutamiento';
+  let _registros = [];
+  let _unsub     = null;
+  let _editId    = null;
+  let _queryTxt  = '';
+  let _filterEst = '';
+  let _filterLoc = '';
+
+  const $   = id => document.getElementById(id);
+  const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmtFecha = v => { if(!v) return '—'; const [y,m,d]=v.split('-'); return d?`${d}/${m}/${y}`:v; };
+
+  const ESTADO_COLORS = {
+    'Nuevo': 'var(--m2)', 'En revisión': 'var(--m5)', 'Entrevistado': 'var(--m3)',
+    'Aprobado': '#4ade80', 'Rechazado': 'var(--danger)',
+  };
+
+  function init() {
+    _poblarSelectLocal();
+    if (!db) { _renderGrid(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
+      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _renderGrid();
+    }, err => { console.warn('reclutamiento:', err); _renderGrid(); });
+  }
+
+  function _poblarSelectLocal() {
+    const sel  = $('rc-local');
+    const filt = $('rc-filter-local');
+    const locs = typeof adminLocales !== 'undefined' ? adminLocales.getLocales() : [];
+    if (sel)  sel.innerHTML  = '<option value="">— seleccionar —</option>' + locs.map(l=>`<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+    if (filt) filt.innerHTML = '<option value="">Todos los locales</option>'  + locs.map(l=>`<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+  }
+
+  function _renderGrid() {
+    const grid  = $('rc-grid');
+    const count = $('rc-count');
+    if (!grid) return;
+
+    let rows = _registros;
+    if (_queryTxt) { const q=_queryTxt.toLowerCase(); rows=rows.filter(r=>(r.nombre||'').toLowerCase().includes(q)||(r.puesto||'').toLowerCase().includes(q)||(r.local||'').toLowerCase().includes(q)); }
+    if (_filterEst) rows = rows.filter(r => r.estado === _filterEst);
+    if (_filterLoc) rows = rows.filter(r => r.local  === _filterLoc);
+
+    if (count) count.textContent = `${rows.length} candidato${rows.length!==1?'s':''}`;
+
+    if (!rows.length) {
+      grid.innerHTML = `<div class="bj-empty-cell" style="grid-column:1/-1;padding:48px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${_registros.length?'Sin resultados.':'Sin candidatos registrados.'}</div>`;
+      return;
+    }
+
+    grid.innerHTML = rows.map(r => {
+      const col = ESTADO_COLORS[r.estado] || 'var(--muted)';
+      const ini = (r.nombre||'?').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      return `<div class="rc-card" style="border-color:color-mix(in srgb,${col} 20%,var(--border))">
+        <div class="rc-card-top">
+          <div class="rc-avatar">${ini}</div>
+          <div style="flex:1;min-width:0">
+            <div class="rc-name">${esc(r.nombre||'—')}</div>
+            <div class="rc-meta">${esc(r.puesto||'—')} · ${esc(r.local||'—')}</div>
+          </div>
+          <span class="bj-badge" style="background:color-mix(in srgb,${col} 15%,transparent);color:${col};border:1px solid color-mix(in srgb,${col} 30%,transparent);white-space:nowrap">${esc(r.estado||'Nuevo')}</span>
+        </div>
+        ${r.notas?`<div class="rc-notas">${esc(r.notas)}</div>`:''}
+        <div class="rc-card-footer">
+          <span class="rc-fecha">${fmtFecha(r.fecha)}</span>
+          <div style="display:flex;gap:6px">
+            ${r.cvLink?`<a href="${esc(r.cvLink)}" target="_blank" class="bj-btn bj-btn-outline" style="font-size:11px;padding:4px 10px;border-color:var(--m1);color:var(--m1)">CV 🔗</a>`:''}
+            ${r.estado!=='Rechazado'?`<button class="bj-btn" onclick="reclutamiento.pasarAIngreso('${r.id}')" style="font-size:11px;padding:4px 10px;background:var(--m2);color:#0e0f11">→ Ingreso</button>`:''}
+            <button class="bj-icon-btn" onclick="reclutamiento.edit('${r.id}')" title="Editar">✏️</button>
+            <button class="bj-icon-btn" onclick="reclutamiento.askDelete('${r.id}','${esc(r.nombre)}')" style="color:var(--danger)" title="Eliminar">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function filtrar(v)       { _queryTxt  = v; _renderGrid(); }
+  function filtrarEstado(v) { _filterEst = v; _renderGrid(); }
+  function filtrarLocal(v)  { _filterLoc = v; _renderGrid(); }
+
+  function openForm() {
+    _editId = null;
+    $('rc-modal-tag').textContent   = 'Nuevo candidato';
+    $('rc-modal-title').textContent = 'Agregar CV';
+    $('rc-doc-id').value = '';
+    ['rc-nombre','rc-puesto','rc-telefono','rc-email','rc-cv-link','rc-notas'].forEach(id => { const el=$(id); if(el) el.value=''; });
+    $('rc-fecha').value  = new Date().toISOString().slice(0,10);
+    $('rc-estado').value = 'Nuevo';
+    $('rc-form-error').textContent = '';
+    _poblarSelectLocal();
+    $('rc-modal-overlay').classList.add('open');
+    setTimeout(() => $('rc-nombre').focus(), 80);
+  }
+
+  function edit(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    _editId = id;
+    $('rc-modal-tag').textContent   = 'Editar candidato';
+    $('rc-modal-title').textContent = r.nombre || 'Editar';
+    $('rc-doc-id').value     = id;
+    $('rc-nombre').value     = r.nombre   || '';
+    $('rc-fecha').value      = r.fecha    || '';
+    $('rc-puesto').value     = r.puesto   || '';
+    $('rc-telefono').value   = r.telefono || '';
+    $('rc-email').value      = r.email    || '';
+    $('rc-cv-link').value    = r.cvLink   || '';
+    $('rc-notas').value      = r.notas    || '';
+    $('rc-estado').value     = r.estado   || 'Nuevo';
+    $('rc-form-error').textContent = '';
+    _poblarSelectLocal();
+    setTimeout(() => { const sel=$('rc-local'); if(sel) sel.value=r.local||''; }, 50);
+    $('rc-modal-overlay').classList.add('open');
+  }
+
+  function closeForm(e) {
+    if (e && e.target !== $('rc-modal-overlay')) return;
+    $('rc-modal-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const nombre = $('rc-nombre').value.trim();
+    if (!nombre) { $('rc-form-error').textContent = 'El nombre es obligatorio.'; return; }
+    if (!db) { alert('Firebase no configurado.'); return; }
+    const btn = $('rc-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const data = {
+      nombre, fecha: $('rc-fecha').value,
+      local:    $('rc-local').value,
+      puesto:   $('rc-puesto').value.trim(),
+      telefono: $('rc-telefono').value.trim(),
+      email:    $('rc-email').value.trim(),
+      cvLink:   $('rc-cv-link').value.trim(),
+      notas:    $('rc-notas').value.trim(),
+      estado:   $('rc-estado').value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      if (_editId) { await db.collection(COL).doc(_editId).update(data); }
+      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection(COL).add(data); }
+      closeForm();
+    } catch(e) { $('rc-form-error').textContent = 'Error: ' + e.message; }
+    finally { btn.disabled=false; btn.textContent='Guardar'; }
+  }
+
+  function pasarAIngreso(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    navigate('ingresos', null);
+    setTimeout(() => {
+      if (typeof ingresos !== 'undefined') ingresos.openForm({ id: r.id, nombre: r.nombre, puesto: r.puesto });
+    }, 300);
+  }
+
+  function exportCSV() {
+    const cols = ['nombre','local','puesto','estado','fecha','telefono','email','cvLink','notas'];
+    const head = ['Nombre','Local','Puesto','Estado','Fecha','Teléfono','Email','CV Link','Notas'];
+    const rows = _registros.map(r => cols.map(c=>`"${String(r[c]??'').replace(/"/g,'""')}"`).join(','));
+    const csv  = [head.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `reclutamiento_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  let _delId = null;
+  function askDelete(id, nombre) { _delId=id; $('rc-del-name').textContent=nombre; $('rc-del-overlay').classList.add('open'); }
+  function cancelDelete(e) { if(e&&e.target!==$('rc-del-overlay'))return; $('rc-del-overlay').classList.remove('open'); _delId=null; }
+  async function confirmDelete() {
+    if (!_delId||!db) return;
+    try { await db.collection(COL).doc(_delId).delete(); } catch(e) { alert('Error: '+e.message); }
+    $('rc-del-overlay').classList.remove('open'); _delId=null;
+  }
+
+  return { init, filtrar, filtrarEstado, filtrarLocal, exportCSV,
+           openForm, edit, closeForm, guardar, pasarAIngreso,
+           askDelete, cancelDelete, confirmDelete,
+           getRegistros: () => _registros };
+})();
+
+// ==============================================================
+//  MÓDULO FORMULARIO
+// ==============================================================
+const formulario = (() => {
+  const $ = id => document.getElementById(id);
+  let _pendingRows = [];
+
+  const CAMPO_MAP = {
+    'nombre':    ['nombre','name','apellido y nombre','apellido'],
+    'dni':       ['dni','documento','nro. documento'],
+    'cuil':      ['cuil','cuit'],
+    'telefono':  ['teléfono','telefono','celular','cel'],
+    'email':     ['email','correo','mail','e-mail'],
+    'domicilio': ['domicilio','dirección','direccion','domicilio completo'],
+    'fecha-nacimiento': ['fecha de nacimiento','nacimiento'],
+    'local':     ['local','sucursal','lugar de trabajo'],
+    'puesto-real': ['puesto','cargo','posición'],
+  };
+
+  function init() {
+    const saved = localStorage.getItem('gform_url');
+    if (saved) { $('gform-url').value = saved; }
+  }
+
+  function guardarURL(val) {
+    localStorage.setItem('gform_url', val);
+  }
+
+  function cargarForm() {
+    const url = ($('gform-url').value || '').trim();
+    if (!url) { alert('Pegá la URL del formulario primero.'); return; }
+    const cont = $('gform-container');
+    cont.innerHTML = `<iframe src="${url}" width="100%" height="600" frameborder="0" marginheight="0" marginwidth="0" style="border:none;min-height:600px">Cargando…</iframe>`;
+  }
+
+  function importarRespuestas() {
+    $('gform-csv-input').click();
+  }
+
+  function procesarCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { alert('CSV sin datos.'); return; }
+
+      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim().toLowerCase());
+      _pendingRows = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.replace(/^"|"$/g,'').trim());
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+
+        // Mapear campos
+        const mapped = {};
+        for (const [campo, aliases] of Object.entries(CAMPO_MAP)) {
+          for (const alias of aliases) {
+            const found = Object.keys(obj).find(k => k.includes(alias));
+            if (found) { mapped[campo] = obj[found]; break; }
+          }
+        }
+        mapped._raw = obj;
+        return mapped;
+      }).filter(r => r.nombre);
+
+      _renderPreview();
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  function _renderPreview() {
+    if (!_pendingRows.length) { alert('No se encontraron filas con nombre.'); return; }
+    const campos = ['nombre','dni','cuil','telefono','email','local','puesto-real'];
+    const labels = ['Nombre','DNI','CUIL','Teléfono','Email','Local','Puesto'];
+    const esc = v => String(v||'').replace(/</g,'&lt;');
+
+    $('gform-preview-table').innerHTML = `
+      <table class="bj-table" style="font-size:12px">
+        <thead><tr>${labels.map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+        <tbody>${_pendingRows.map(r=>`<tr>${campos.map(c=>`<td>${esc(r[c]||'—')}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>`;
+    $('gform-preview').style.display = 'flex';
+    $('gform-import-status').textContent = `${_pendingRows.length} registro${_pendingRows.length!==1?'s':''} listos para importar.`;
+  }
+
+  function cancelarImport() {
+    _pendingRows = [];
+    $('gform-preview').style.display = 'none';
+    $('gform-import-status').textContent = '';
+  }
+
+  async function confirmarImport() {
+    if (!_pendingRows.length || !db) return;
+    const btn = $('gform-import-btn');
+    btn.disabled = true; btn.textContent = 'Importando…';
+    let ok = 0, err = 0;
+    for (const r of _pendingRows) {
+      try {
+        await db.collection('infoPersonal').add({
+          ...r, _raw: undefined,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          origen: 'Formulario',
+        });
+        ok++;
+      } catch(e) { err++; console.warn('import error:', e); }
+    }
+    $('gform-import-status').textContent = `✓ ${ok} importados${err?` · ${err} errores`:''}. Revisalos en Info Personal.`;
+    btn.disabled = false; btn.textContent = '✓ Importar a Info Personal';
+    _pendingRows = [];
+    $('gform-preview').style.display = 'none';
+  }
+
+  return { init, guardarURL, cargarForm, importarRespuestas, procesarCSV, cancelarImport, confirmarImport };
+})();
+
+// ==============================================================
+//  MÓDULO LIQUIDACIONES
+// ==============================================================
+const liquidaciones = (() => {
+  const COL = 'liquidaciones';
+  let _registros = [];
+  let _unsub     = null;
+  let _editId    = null;
+  let _query     = '';
+  let _isDirty   = false;
+
+  const $   = id => document.getElementById(id);
+  const num = id => parseFloat($(id)?.value || 0) || 0;
+  const esc = v => String(v||'').replace(/</g,'&lt;');
+  const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+
+  function init() {
+    if (!db) { _renderLista(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
+      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _renderLista();
+      const btn = $('lq-btn-export');
+      if (btn) btn.disabled = !_registros.length;
+    }, err => { console.warn('liquidaciones:', err); _renderLista(); });
+  }
+
+  function _renderLista() {
+    const list = $('lq-list');
+    if (!list) return;
+    let rows = _registros;
+    if (_query) { const q=_query.toLowerCase(); rows=rows.filter(r=>(r.nombre||'').toLowerCase().includes(q)); }
+    if (!rows.length) {
+      list.innerHTML = `<div class="lq-empty-state">${_registros.length?'Sin resultados.':'Sin liquidaciones guardadas.'}</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(r => `
+      <div class="lq-list-item${_editId===r.id?' active':''}" onclick="liquidaciones._seleccionar('${r.id}')">
+        <div class="lq-list-name">${esc(r.nombre||'—')}</div>
+        <div class="lq-list-meta">${esc(r.local||'')} · ${esc(r.fechaCese||'—')}</div>
+        <div class="lq-list-total">${fmt(r.total||0)}</div>
+      </div>`).join('');
+  }
+
+  function filtrar(v) { _query = v; _renderLista(); }
+
+  function nueva() {
+    _editId   = null;
+    _isDirty  = false;
+    $('lq-doc-id').value      = '';
+    $('lq-baja-ref').value    = '';
+    $('lq-emp-name').textContent = 'Nueva liquidación';
+    $('lq-emp-meta').textContent = '';
+    $('lq-emp-avatar').textContent = '?';
+    $('lq-emp-baja-tag').style.display = 'none';
+    ['lq-sueldo','lq-fecha-ingreso','lq-fecha-cese','lq-feriados','lq-hs-extra50','lq-hs-extra100','lq-descuento','lq-bono'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+    ['lq-desc-nota','lq-bono-nota','lq-observaciones','lq-baja-search'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+    $('lq-results-section').style.display = 'none';
+    $('lq-form-error').textContent = '';
+    $('lq-no-sel').style.display   = 'none';
+    $('lq-form').style.display     = 'block';
+    $('lq-baja-dropdown').innerHTML = '';
+  }
+
+  function _seleccionar(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    _editId  = id;
+    _isDirty = false;
+    $('lq-doc-id').value   = id;
+    $('lq-baja-ref').value = r.bajaRef || '';
+    $('lq-emp-name').textContent   = r.nombre   || '—';
+    $('lq-emp-meta').textContent   = (r.local||'') + (r.fechaCese ? ' · Cese: ' + r.fechaCese : '');
+    $('lq-emp-avatar').textContent = (r.nombre||'?').slice(0,2).toUpperCase();
+    $('lq-emp-baja-tag').style.display = r.bajaRef ? '' : 'none';
+    $('lq-sueldo').value        = r.sueldo       || '';
+    $('lq-fecha-ingreso').value = r.fechaIngreso  || '';
+    $('lq-fecha-cese').value    = r.fechaCese     || '';
+    $('lq-feriados').value      = r.feriados      || '';
+    $('lq-hs-extra50').value    = r.hsExtra50     || '';
+    $('lq-hs-extra100').value   = r.hsExtra100    || '';
+    $('lq-descuento').value     = r.descuento     || '';
+    $('lq-desc-nota').value     = r.descNota      || '';
+    $('lq-bono').value          = r.bono          || '';
+    $('lq-bono-nota').value     = r.bonoNota      || '';
+    $('lq-observaciones').value = r.observaciones || '';
+    $('lq-form-error').textContent = '';
+    $('lq-no-sel').style.display   = 'none';
+    $('lq-form').style.display     = 'block';
+    calcular();
+    _renderLista();
+  }
+
+  function calcular() {
+    _isDirty = true;
+    const sueldo      = num('lq-sueldo');
+    const fechaIng    = $('lq-fecha-ingreso').value;
+    const fechaCese   = $('lq-fecha-cese').value;
+    const feriados    = num('lq-feriados');
+    const hsExtra50   = num('lq-hs-extra50');
+    const hsExtra100  = num('lq-hs-extra100');
+    const descuento   = num('lq-descuento');
+    const bono        = num('lq-bono');
+
+    if (!sueldo || !fechaIng || !fechaCese) {
+      $('lq-results-section').style.display = 'none';
+      return;
+    }
+
+    const dtIng  = new Date(fechaIng + 'T00:00:00');
+    const dtCese = new Date(fechaCese + 'T00:00:00');
+    if (dtCese <= dtIng) { $('lq-results-section').style.display='none'; return; }
+
+    // Días del mes de cese
+    const diasMes   = new Date(dtCese.getFullYear(), dtCese.getMonth()+1, 0).getDate();
+    const diaCese   = dtCese.getDate();
+    const haberes   = (sueldo / diasMes) * diaCese;
+
+    // SAC proporcional (días desde 1/1 o 1/7 hasta cese)
+    const mitadAnio = dtCese.getMonth() < 6
+      ? new Date(dtCese.getFullYear(), 0, 1)
+      : new Date(dtCese.getFullYear(), 6, 1);
+    const diasSAC   = Math.ceil((dtCese - mitadAnio) / 86400000);
+    const sac       = (sueldo / 365) * diasSAC;
+
+    // Vacaciones proporcionales (ley argentina: 14 días base hasta 5 años)
+    const años      = (dtCese - dtIng) / (365.25 * 86400000);
+    const diasVac   = años < 5 ? 14 : años < 10 ? 21 : años < 20 ? 28 : 35;
+    const vacaciones = (sueldo / 25) * Math.ceil((diasVac / 12) * dtCese.getMonth()+1);
+
+    // Adicionales
+    const valorDia      = sueldo / diasMes;
+    const valorHora     = sueldo / (diasMes * 8);
+    const feriTotal     = feriados * valorDia * 2;
+    const extra50Total  = hsExtra50  * valorHora * 1.5;
+    const extra100Total = hsExtra100 * valorHora * 2;
+    const extrasTotal   = extra50Total + extra100Total;
+
+    const total = haberes + sac + vacaciones + feriTotal + extrasTotal + bono - descuento;
+
+    // Render resultados
+    $('lq-sub-dias').textContent    = `${diaCese} días de ${diasMes} en ${dtCese.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
+    $('lq-val-haberes').textContent = fmt(haberes);
+    $('lq-sub-sac').textContent     = `${diasSAC} días del semestre`;
+    $('lq-val-sac').textContent     = fmt(sac);
+    $('lq-sub-vac').textContent     = `${diasVac} días base · ${Math.round(años*12)} meses de antigüedad`;
+    $('lq-val-vac').textContent     = fmt(vacaciones);
+
+    const rowF = $('lq-row-feriados');
+    if (feriados > 0) {
+      rowF.style.display = '';
+      $('lq-sub-feriados').textContent = `${feriados} días × $${Math.round(valorDia * 2).toLocaleString('es-AR')}`;
+      $('lq-val-feriados').textContent = fmt(feriTotal);
+    } else { rowF.style.display = 'none'; }
+
+    const rowE = $('lq-row-extras');
+    if (extrasTotal > 0) {
+      rowE.style.display = '';
+      $('lq-sub-extras').textContent = [
+        hsExtra50  ? `${hsExtra50}hs al 50%`  : '',
+        hsExtra100 ? `${hsExtra100}hs al 100%` : '',
+      ].filter(Boolean).join(' · ');
+      $('lq-val-extras').textContent = fmt(extrasTotal);
+    } else { rowE.style.display = 'none'; }
+
+    $('lq-total').textContent = fmt(total);
+    $('lq-results-section').style.display = '';
+  }
+
+  function _markDirty() { _isDirty = true; }
+
+  function descartar() {
+    if (_isDirty && !confirm('¿Descartás los cambios?')) return;
+    $('lq-no-sel').style.display = '';
+    $('lq-form').style.display   = 'none';
+    _editId = null; _isDirty = false;
+    _renderLista();
+  }
+
+  async function guardar() {
+    const nombre = $('lq-emp-name').textContent;
+    if (!$('lq-sueldo').value || !$('lq-fecha-cese').value) {
+      $('lq-form-error').textContent = 'Completá sueldo y fechas para guardar.'; return;
+    }
+    if (!db) { alert('Firebase no configurado.'); return; }
+    const btn = $('lq-btn-guardar');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    const total = parseFloat(($('lq-total').textContent||'0').replace(/[^0-9.-]/g,'')) || 0;
+    const data = {
+      nombre:       nombre !== 'Nueva liquidación' ? nombre : '',
+      bajaRef:      $('lq-baja-ref').value,
+      sueldo:       num('lq-sueldo'),
+      fechaIngreso: $('lq-fecha-ingreso').value,
+      fechaCese:    $('lq-fecha-cese').value,
+      feriados:     num('lq-feriados'),
+      hsExtra50:    num('lq-hs-extra50'),
+      hsExtra100:   num('lq-hs-extra100'),
+      descuento:    num('lq-descuento'),
+      descNota:     $('lq-desc-nota').value,
+      bono:         num('lq-bono'),
+      bonoNota:     $('lq-bono-nota').value,
+      observaciones: $('lq-observaciones').value,
+      total,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      if (_editId) { await db.collection(COL).doc(_editId).update(data); }
+      else {
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        const ref = await db.collection(COL).add(data);
+        _editId = ref.id;
+      }
+      _isDirty = false;
+      $('lq-form-error').textContent = '';
+    } catch(e) { $('lq-form-error').textContent = 'Error: ' + e.message; }
+    finally { btn.disabled=false; btn.textContent='Guardar liquidación'; }
+  }
+
+  function exportCSV() {
+    const cols = ['nombre','fechaIngreso','fechaCese','sueldo','total','observaciones'];
+    const head = ['Nombre','Fecha Ingreso','Fecha Cese','Sueldo','Total','Observaciones'];
+    const rows = _registros.map(r => cols.map(c=>`"${String(r[c]??'').replace(/"/g,'""')}"`).join(','));
+    const csv  = [head.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `liquidaciones_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  // Búsqueda de baja para vincular
+  function _buscarBaja(q) {
+    const dd = $('lq-baja-dropdown');
+    if (!q || q.length < 2) { dd.classList.remove('open'); return; }
+    const bajasRegs = typeof bajas !== 'undefined' ? bajas.getRegistros() : [];
+    const matches = bajasRegs.filter(r => (r.nombre||'').toLowerCase().includes(q.toLowerCase())).slice(0,6);
+    if (!matches.length) { dd.innerHTML='<div class="bj-emp-opt-empty">Sin resultados</div>'; dd.classList.add('open'); return; }
+    dd.innerHTML = matches.map(r => `
+      <div class="bj-emp-opt" onclick="liquidaciones._vincularBaja('${r.id}')">
+        <div class="bj-emp-opt-name">${esc(r.nombre||'—')}</div>
+        <div class="bj-emp-opt-meta">${r.local||''} · Cese: ${r['fecha-cese']||'—'}</div>
+      </div>`).join('');
+    dd.classList.add('open');
+  }
+
+  function _vincularBaja(id) {
+    const bajasRegs = typeof bajas !== 'undefined' ? bajas.getRegistros() : [];
+    const r = bajasRegs.find(x => x.id === id);
+    if (!r) return;
+    $('lq-baja-ref').value    = id;
+    $('lq-baja-search').value = '';
+    $('lq-baja-dropdown').classList.remove('open');
+    $('lq-emp-name').textContent   = r.nombre || '—';
+    $('lq-emp-meta').textContent   = (r.local||'') + ' · Cese: ' + (r['fecha-cese']||'—');
+    $('lq-emp-avatar').textContent = (r.nombre||'?').slice(0,2).toUpperCase();
+    $('lq-emp-baja-tag').style.display = '';
+    if (r['fecha-ingreso'])  $('lq-fecha-ingreso').value = r['fecha-ingreso'];
+    if (r['fecha-cese'])     $('lq-fecha-cese').value    = r['fecha-cese'];
+    // Pre-cargar sueldo desde infoPersonal si existe
+    const ipRegs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
+    const emp = ipRegs.find(e => e.id === r.ipRef || e.nombre === r.nombre);
+    if (emp?.sueldo) $('lq-sueldo').value = emp.sueldo;
+    calcular();
+  }
+
+  function abrirDesdeBaja(bajaId) {
+    navigate('liquidaciones', null);
+    setTimeout(() => {
+      nueva();
+      _vincularBaja(bajaId);
+    }, 300);
+  }
+
+  return { init, filtrar, nueva, _seleccionar, calcular, _markDirty, descartar, guardar, exportCSV,
+           _buscarBaja, _vincularBaja, abrirDesdeBaja,
+           getRegistros: () => _registros };
+})();
 
 // ==============================================================
 //  MÓDULO HOME — Frases, TODO, Novedades

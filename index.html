@@ -1703,6 +1703,201 @@
     font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
     text-align: center; margin-top: 18px; letter-spacing: .08em;
   }
+
+  /* ─── PERFIL MODAL ─────────────────────────────────────────── */
+  #ip-perfil-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 300ms ease;
+  }
+  #ip-perfil-overlay.open {
+    opacity: 1; pointer-events: all;
+  }
+  #ip-perfil-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 92vw; max-width: 820px;
+    max-height: 92vh;
+    overflow-y: auto;
+    transform: translateY(-60px) scale(.96);
+    transition: transform 320ms cubic-bezier(.34,1.56,.64,1);
+    position: relative;
+  }
+  #ip-perfil-overlay.open #ip-perfil-modal {
+    transform: translateY(0) scale(1);
+  }
+  .ip-perfil-top {
+    display: flex; align-items: flex-start; gap: 24px;
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--m4) 5%, var(--surface));
+    border-radius: 16px 16px 0 0;
+  }
+  .ip-perfil-avatar-wrap {
+    width: 88px; height: 88px; flex-shrink: 0;
+    border-radius: 50%;
+    border: 3px solid var(--m4);
+    overflow: hidden;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: var(--m4);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--m4) 15%, transparent);
+  }
+  .ip-perfil-avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .ip-perfil-info { flex: 1; min-width: 0; }
+  .ip-perfil-nombre {
+    font-size: 22px; font-weight: 800; line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .ip-perfil-meta {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); letter-spacing: .08em;
+    margin-bottom: 10px;
+  }
+  .ip-perfil-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ip-perfil-badge {
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    font-family: 'DM Mono', monospace;
+  }
+  .ip-perfil-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--transition);
+  }
+  .ip-perfil-close:hover { border-color: var(--danger); color: var(--danger); }
+  .ip-perfil-body {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 600px) {
+    .ip-perfil-body { grid-template-columns: 1fr; }
+  }
+  .ip-perfil-datos {
+    padding: 24px 28px;
+    border-right: 1px solid var(--border);
+  }
+  @media (max-width: 600px) {
+    .ip-perfil-datos { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  .ip-perfil-dato-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; padding: 7px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    font-size: 13px;
+  }
+  .ip-perfil-dato-row:last-child { border-bottom: none; }
+  .ip-perfil-dato-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .ip-perfil-dato-val { text-align: right; font-size: 12px; font-weight: 600; }
+
+  /* ─── FALLOUT DOLL ──────────────────────────────────────────── */
+  .ip-fallout-panel {
+    padding: 24px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .ip-fallout-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--m4); letter-spacing: .18em; text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .ip-fallout-wrap {
+    position: relative; width: 180px;
+  }
+  .ip-fallout-wrap svg {
+    width: 100%; height: auto; display: block;
+  }
+  /* Zonas interactivas del muñeco */
+  .fo-zone {
+    cursor: pointer;
+    transition: all 200ms ease;
+  }
+  .fo-zone path, .fo-zone ellipse, .fo-zone rect, .fo-zone polygon {
+    transition: fill 200ms ease, stroke 200ms ease;
+  }
+  .fo-zone:hover path, .fo-zone:hover ellipse,
+  .fo-zone:hover rect, .fo-zone:hover polygon {
+    fill: color-mix(in srgb, var(--m4) 40%, currentColor) !important;
+    stroke: var(--m4) !important;
+  }
+  .fo-zone.tiene-ropa path, .fo-zone.tiene-ropa ellipse,
+  .fo-zone.tiene-ropa rect, .fo-zone.tiene-ropa polygon {
+    fill: color-mix(in srgb, var(--accent2) 35%, #1e2127) !important;
+    stroke: var(--accent2) !important;
+    stroke-width: 2px !important;
+  }
+  .fo-zone.tiene-ropa:hover path, .fo-zone.tiene-ropa:hover ellipse,
+  .fo-zone.tiene-ropa:hover rect, .fo-zone.tiene-ropa:hover polygon {
+    fill: color-mix(in srgb, var(--accent2) 55%, #1e2127) !important;
+  }
+  /* Tooltip del muñeco */
+  .fo-tooltip {
+    position: absolute; pointer-events: none;
+    background: var(--surface2); border: 1px solid var(--m4);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 11px; white-space: nowrap;
+    z-index: 10; opacity: 0;
+    transition: opacity 150ms; min-width: 140px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  }
+  .fo-tooltip.show { opacity: 1; }
+  .fo-tooltip-part {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--m4); letter-spacing: .1em; margin-bottom: 3px;
+  }
+  .fo-tooltip-val { font-size: 12px; font-weight: 600; }
+  .fo-tooltip-empty { color: var(--muted); font-style: italic; }
+
+  /* Panel de edición de indumentaria */
+  .ip-indum-panel {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .ip-indum-panel-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .ip-indum-fields {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ip-indum-field { display: flex; flex-direction: column; gap: 3px; }
+  .ip-indum-field label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  }
+  .ip-indum-field input {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; padding: 6px 9px;
+    color: var(--text); font-size: 12px; font-family: 'Syne', sans-serif;
+    outline: none; transition: border-color var(--transition);
+  }
+  .ip-indum-field input:focus { border-color: var(--m4); }
+  .ip-indum-save {
+    width: 100%; margin-top: 10px;
+    padding: 9px; border: none; border-radius: 6px;
+    background: var(--m4); color: #0e0f11;
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px;
+    cursor: pointer; transition: opacity var(--transition);
+  }
+  .ip-indum-save:hover { opacity: .85; }
+  .ip-indum-save:disabled { opacity: .5; cursor: default; }
+  /* Indicador de zona seleccionada */
+  .fo-zone.selected path, .fo-zone.selected ellipse,
+  .fo-zone.selected rect, .fo-zone.selected polygon {
+    stroke: var(--m4) !important; stroke-width: 2.5px !important;
+  }
 </style>
 </head>
 <body>
@@ -2846,6 +3041,156 @@
       </div>
     </div>
 
+    <!-- ── MODAL PERFIL EMPLEADO ─────────────────────────── -->
+    <div id="ip-perfil-overlay" onclick="infoPersonal.cerrarPerfil(event)">
+      <div id="ip-perfil-modal" onclick="event.stopPropagation()">
+        <button class="ip-perfil-close" onclick="infoPersonal.cerrarPerfil()">✕</button>
+
+        <!-- CABECERA: foto + datos básicos -->
+        <div class="ip-perfil-top">
+          <div class="ip-perfil-avatar-wrap" id="ip-perfil-avatar">??</div>
+          <div class="ip-perfil-info">
+            <div class="ip-perfil-nombre" id="ip-perfil-nombre">—</div>
+            <div class="ip-perfil-meta" id="ip-perfil-meta">—</div>
+            <div class="ip-perfil-badges" id="ip-perfil-badges"></div>
+          </div>
+        </div>
+
+        <!-- CUERPO: datos + muñeco -->
+        <div class="ip-perfil-body">
+
+          <!-- COLUMNA IZQUIERDA: datos del legajo -->
+          <div class="ip-perfil-datos">
+            <div id="ip-perfil-datos-list"></div>
+          </div>
+
+          <!-- COLUMNA DERECHA: muñeco Fallout + indumentaria -->
+          <div class="ip-fallout-panel">
+            <div class="ip-fallout-title">🧥 Indumentaria entregada</div>
+
+            <div class="ip-fallout-wrap" id="fo-wrap">
+              <!-- Tooltip flotante -->
+              <div class="fo-tooltip" id="fo-tooltip">
+                <div class="fo-tooltip-part" id="fo-tip-part">—</div>
+                <div class="fo-tooltip-val" id="fo-tip-val">—</div>
+              </div>
+
+              <!-- SVG del muñeco estilo Fallout/Vault Boy -->
+              <svg viewBox="0 0 160 340" xmlns="http://www.w3.org/2000/svg" id="fo-svg">
+                <defs>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                </defs>
+
+                <!-- CABEZA -->
+                <g class="fo-zone" id="fo-cabeza" data-part="cabeza" onclick="infoPersonal.foClick(this)">
+                  <ellipse cx="80" cy="38" rx="28" ry="32" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- cara -->
+                  <ellipse cx="80" cy="40" rx="22" ry="25" fill="#1e2127"/>
+                  <!-- ojos -->
+                  <ellipse cx="70" cy="34" rx="5" ry="5.5" fill="#2a2d35"/>
+                  <ellipse cx="90" cy="34" rx="5" ry="5.5" fill="#2a2d35"/>
+                  <ellipse cx="70" cy="34" rx="3" ry="3.5" fill="#b44aff" opacity=".8"/>
+                  <ellipse cx="90" cy="34" rx="3" ry="3.5" fill="#b44aff" opacity=".8"/>
+                  <!-- boca -->
+                  <path d="M72 50 Q80 56 88 50" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
+                  <!-- nariz -->
+                  <path d="M78 42 L80 47 L82 42" fill="none" stroke="#3a3f4a" stroke-width="1" stroke-linecap="round"/>
+                  <!-- orejas -->
+                  <ellipse cx="52" cy="38" rx="5" ry="8" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                  <ellipse cx="108" cy="38" rx="5" ry="8" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                </g>
+
+                <!-- TORSO / CAMISETA -->
+                <g class="fo-zone" id="fo-torso" data-part="torso" onclick="infoPersonal.foClick(this)">
+                  <path d="M52 75 Q46 80 44 120 L116 120 Q114 80 108 75 L96 70 L80 78 L64 70 Z"
+                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- cuello -->
+                  <rect x="72" y="68" width="16" height="12" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                  <!-- línea del torso -->
+                  <path d="M80 78 L80 118" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
+                  <!-- bolsillos -->
+                  <rect x="56" y="95" width="18" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="86" y="95" width="18" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                </g>
+
+                <!-- BRAZO IZQUIERDO -->
+                <g class="fo-zone" id="fo-brazo-izq" data-part="brazo-izq" onclick="infoPersonal.foClick(this)">
+                  <path d="M44 80 Q32 90 28 130 Q26 145 30 150 L40 152 Q44 148 46 132 L52 105 Z"
+                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- mano -->
+                  <ellipse cx="34" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                </g>
+
+                <!-- BRAZO DERECHO -->
+                <g class="fo-zone" id="fo-brazo-der" data-part="brazo-der" onclick="infoPersonal.foClick(this)">
+                  <path d="M116 80 Q128 90 132 130 Q134 145 130 150 L120 152 Q116 148 114 132 L108 105 Z"
+                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- mano -->
+                  <ellipse cx="126" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                </g>
+
+                <!-- PANTALÓN -->
+                <g class="fo-zone" id="fo-pantalon" data-part="pantalon" onclick="infoPersonal.foClick(this)">
+                  <path d="M44 120 L50 200 L66 200 L80 160 L94 200 L110 200 L116 120 Z"
+                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- línea central -->
+                  <path d="M80 124 L80 158" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
+                  <!-- cinturón -->
+                  <rect x="44" y="118" width="72" height="8" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="74" y="118" width="12" height="8" rx="1" fill="#3a3f4a"/>
+                </g>
+
+                <!-- PIE IZQUIERDO / CALZADO -->
+                <g class="fo-zone" id="fo-calzado" data-part="calzado" onclick="infoPersonal.foClick(this)">
+                  <rect x="44" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <path d="M44 210 Q40 218 38 220 L72 220 L72 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <!-- PIE DERECHO -->
+                  <rect x="88" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <path d="M116 210 Q120 218 122 220 L88 220 L88 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                </g>
+
+                <!-- Etiquetas de partes -->
+                <text x="80" y="15" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">GORRO/CAP</text>
+                <text x="14" y="118" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" transform="rotate(-90,14,118)">MANGA IZQ</text>
+                <text x="146" y="118" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" transform="rotate(90,146,118)">MANGA DER</text>
+                <text x="80" y="232" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">CALZADO</text>
+              </svg>
+            </div>
+
+            <!-- Panel de edición: aparece al clickear una zona -->
+            <div class="ip-indum-panel" id="fo-edit-panel" style="display:none">
+              <div class="ip-indum-panel-title" id="fo-edit-title">Editar prenda</div>
+              <input type="hidden" id="fo-edit-part">
+              <div class="ip-indum-fields">
+                <div class="ip-indum-field" style="grid-column:1/-1">
+                  <label>Descripción / Prenda</label>
+                  <input type="text" id="fo-edit-desc" placeholder="Ej: Remera negra talle M">
+                </div>
+                <div class="ip-indum-field">
+                  <label>Talle</label>
+                  <input type="text" id="fo-edit-talle" placeholder="M, 42, XL…">
+                </div>
+                <div class="ip-indum-field">
+                  <label>Fecha entrega</label>
+                  <input type="date" id="fo-edit-fecha">
+                </div>
+              </div>
+              <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar indumentaria</button>
+            </div>
+
+            <!-- Leyenda -->
+            <div style="display:flex;gap:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--accent2) 35%,#1e2127);border:1.5px solid var(--accent2);margin-right:4px;vertical-align:middle"></span>Con ropa</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2a2d35;border:1.5px solid #3a3f4a;margin-right:4px;vertical-align:middle"></span>Sin ropa</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── MÓDULO 05: HORARIOS ────────────────────────────── -->
     <div class="module" id="module-horarios">
       <div class="module-header" style="--item-color: var(--m5)">
@@ -3776,6 +4121,16 @@ document.getElementById('auth-pass').addEventListener('keydown', e => {
 });
 document.getElementById('auth-email').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('auth-pass').focus();
+});
+
+// Cerrar perfil con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('ip-perfil-overlay');
+    if (overlay && overlay.classList.contains('open')) {
+      infoPersonal.cerrarPerfil();
+    }
+  }
 });
 
 // Observer de auth
@@ -5793,6 +6148,7 @@ const usuarios = (() => {
         <td class="col-mono" style="text-align:center">${r['dias-suspendidos'] || '<span style="color:var(--muted)">0</span>'}</td>
         <td>
           <div class="bj-row-actions">
+            <button class="bj-icon-btn" title="Ver perfil" style="color:var(--m4)" onclick="infoPersonal.abrirPerfil('${r.id}')">👤</button>
             <button class="bj-icon-btn" title="Editar" onclick="infoPersonal.edit('${r.id}')">✏</button>
             <button class="bj-icon-btn" title="Dar de baja" style="color:var(--m6)" onclick="infoPersonal.darDeBaja('${r.id}')">🚪</button>
             <button class="bj-icon-btn del" title="Eliminar" onclick="infoPersonal.askDelete('${r.id}','${esc(r.nombre)}')">✕</button>
@@ -6554,6 +6910,191 @@ const usuarios = (() => {
     }, 300);
   }
 
+  // ── PERFIL MODAL ─────────────────────────────────────────────
+  let _perfilId = null;
+  let _perfilIndum = {};
+
+  const _PARTES = {
+    'cabeza':    'Gorro / Cap / Headwear',
+    'torso':     'Remera / Camisa / Chaleco',
+    'brazo-izq': 'Manga izquierda / Accesorio',
+    'brazo-der': 'Manga derecha / Accesorio',
+    'pantalon':  'Pantalón / Short',
+    'calzado':   'Calzado',
+  };
+
+  function abrirPerfil(docId) {
+    const emp = _registros.find(r => r.id === docId);
+    if (!emp) return;
+    _perfilId = docId;
+
+    // Avatar
+    const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const avWrap = document.getElementById('ip-perfil-avatar');
+    if (emp.foto) {
+      avWrap.innerHTML = `<img src="${esc(emp.foto)}" onerror="this.parentNode.textContent='${initials}'">`;
+    } else {
+      avWrap.textContent = initials;
+    }
+
+    // Nombre + meta
+    document.getElementById('ip-perfil-nombre').textContent = emp.nombre || '—';
+    document.getElementById('ip-perfil-meta').textContent =
+      [emp.local, emp['puesto-real'], emp.cuil ? 'CUIL: ' + emp.cuil : ''].filter(Boolean).join(' · ');
+
+    // Badges
+    const badges = document.getElementById('ip-perfil-badges');
+    const badgeColor = emp.alta === 'Sí' ? 'var(--accent2)' : 'var(--muted)';
+    badges.innerHTML = [
+      emp.alta ? `<span class="ip-perfil-badge" style="background:color-mix(in srgb,${badgeColor} 18%,transparent);color:${badgeColor};border:1px solid ${badgeColor}">Alta ${emp.alta}</span>` : '',
+      emp['tipo-alta'] ? `<span class="ip-perfil-badge" style="background:color-mix(in srgb,var(--m4) 15%,transparent);color:var(--m4);border:1px solid var(--m4)">${esc(emp['tipo-alta'])}</span>` : '',
+      emp['puesto-real'] ? `<span class="ip-perfil-badge" style="background:color-mix(in srgb,var(--m3) 12%,transparent);color:var(--m3);border:1px solid var(--m3)">${esc(emp['puesto-real'])}</span>` : '',
+    ].join('');
+
+    // Datos del legajo
+    const datos = [
+      ['Razón social', emp['razon-social']],
+      ['Sección', emp.seccion],
+      ['Categoría alta', emp['categoria-alta']],
+      ['Fecha ingreso', fmtFecha(emp['fecha-ingreso'])],
+      ['Fin prueba', fmtFecha(emp['fecha-fin-prueba'])],
+      ['Fecha alta', fmtFecha(emp['fecha-alta'])],
+      ['DNI', emp.dni],
+      ['CBU', emp.cbu],
+      ['Sueldo', emp.sueldo ? '$' + Number(emp.sueldo).toLocaleString('es-AR') : null],
+      ['Teléfono', emp.telefono],
+      ['Email', emp.email],
+      ['F. Nac.', fmtFecha(emp['fecha-nac'])],
+      ['Edad', emp.edad ? emp.edad + ' años' : null],
+      ['Domicilio', emp.domicilio],
+      ['Localidad', [emp.localidad, emp.provincia, emp.cp].filter(Boolean).join(', ')],
+      ['Contacto emerg.', emp['contacto-emergencia']],
+      ['Apercibimientos', emp.apercibimientos || '0'],
+      ['Días suspendidos', emp['dias-suspendidos'] || '0'],
+      ['Notas', emp['notas-evaluacion']],
+    ];
+    document.getElementById('ip-perfil-datos-list').innerHTML = datos
+      .filter(([,v]) => v)
+      .map(([l,v]) => `
+        <div class="ip-perfil-dato-row">
+          <span class="ip-perfil-dato-label">${l}</span>
+          <span class="ip-perfil-dato-val">${v}</span>
+        </div>
+      `).join('');
+
+    // Cargar indumentaria desde Firestore
+    _perfilIndum = {};
+    document.getElementById('fo-edit-panel').style.display = 'none';
+    _foLimpiarSeleccion();
+    if (db) {
+      db.collection('indumentaria').doc(docId).get().then(snap => {
+        if (snap.exists) _perfilIndum = snap.data() || {};
+        _foActualizarZonas();
+      }).catch(() => {});
+    }
+
+    // Abrir overlay
+    document.getElementById('ip-perfil-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarPerfil(e) {
+    if (e && e.target !== document.getElementById('ip-perfil-overlay')) return;
+    document.getElementById('ip-perfil-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    _perfilId = null;
+    document.getElementById('fo-edit-panel').style.display = 'none';
+    _foLimpiarSeleccion();
+  }
+
+  function _foActualizarZonas() {
+    Object.keys(_PARTES).forEach(part => {
+      const zone = document.getElementById('fo-' + part);
+      if (!zone) return;
+      const d = _perfilIndum[part];
+      if (d && d.desc) {
+        zone.classList.add('tiene-ropa');
+      } else {
+        zone.classList.remove('tiene-ropa');
+      }
+    });
+  }
+
+  function _foLimpiarSeleccion() {
+    document.querySelectorAll('.fo-zone.selected').forEach(z => z.classList.remove('selected'));
+    document.getElementById('fo-tooltip').classList.remove('show');
+  }
+
+  function foClick(el) {
+    const part = el.dataset.part;
+    if (!part) return;
+
+    // Toggle selección
+    const wasSelected = el.classList.contains('selected');
+    _foLimpiarSeleccion();
+    if (!wasSelected) {
+      el.classList.add('selected');
+      // Mostrar panel de edición
+      const d = _perfilIndum[part] || {};
+      document.getElementById('fo-edit-part').value = part;
+      document.getElementById('fo-edit-title').textContent = '🧥 ' + (_PARTES[part] || part);
+      document.getElementById('fo-edit-desc').value  = d.desc  || '';
+      document.getElementById('fo-edit-talle').value = d.talle || '';
+      document.getElementById('fo-edit-fecha').value = d.fecha || '';
+      document.getElementById('fo-edit-panel').style.display = '';
+      document.getElementById('fo-save-btn').textContent = 'Guardar indumentaria';
+      document.getElementById('fo-save-btn').disabled = false;
+
+      // Tooltip
+      const tip = document.getElementById('fo-tooltip');
+      document.getElementById('fo-tip-part').textContent = _PARTES[part] || part;
+      if (d.desc) {
+        document.getElementById('fo-tip-val').innerHTML =
+          `<span style="color:var(--accent2)">${esc(d.desc)}</span>` +
+          (d.talle ? ` <span style="color:var(--muted)">T.${esc(d.talle)}</span>` : '') +
+          (d.fecha ? `<br><span style="color:var(--muted);font-size:10px">${d.fecha.split('-').reverse().join('/')}</span>` : '');
+      } else {
+        document.getElementById('fo-tip-val').innerHTML = '<span class="fo-tooltip-empty">Sin ropa asignada</span>';
+      }
+      // Posicionar tooltip relativo al SVG
+      const wrap = document.getElementById('fo-wrap');
+      const bbox = el.getBoundingClientRect();
+      const wbbox = wrap.getBoundingClientRect();
+      tip.style.left = Math.max(0, bbox.left - wbbox.left - 10) + 'px';
+      tip.style.top  = (bbox.top - wbbox.top - 62) + 'px';
+      tip.classList.add('show');
+    } else {
+      document.getElementById('fo-edit-panel').style.display = 'none';
+    }
+  }
+
+  async function foGuardar() {
+    if (!_perfilId || !db) return;
+    const part  = document.getElementById('fo-edit-part').value;
+    const desc  = document.getElementById('fo-edit-desc').value.trim();
+    const talle = document.getElementById('fo-edit-talle').value.trim();
+    const fecha = document.getElementById('fo-edit-fecha').value;
+    if (!part) return;
+
+    const btn = document.getElementById('fo-save-btn');
+    btn.textContent = 'Guardando…'; btn.disabled = true;
+
+    _perfilIndum[part] = { desc, talle, fecha, updatedAt: new Date().toISOString() };
+    try {
+      await db.collection('indumentaria').doc(_perfilId).set(_perfilIndum, { merge: true });
+      _foActualizarZonas();
+      btn.textContent = '✓ Guardado';
+      setTimeout(() => {
+        btn.textContent = 'Guardar indumentaria';
+        btn.disabled = false;
+      }, 1500);
+    } catch(err) {
+      btn.textContent = 'Error – reintentar';
+      btn.disabled = false;
+      console.error('foGuardar error:', err);
+    }
+  }
+
   // ── Return completo ──────────────────────────────────────────
   return {
     // Info Personal
@@ -6568,6 +7109,8 @@ const usuarios = (() => {
     darDeBaja,
     getRegistros: () => _registros,
     onUpdate: (fn) => { _updateListeners.push(fn); },
+    // Perfil + Fallout doll
+    abrirPerfil, cerrarPerfil, foClick, foGuardar,
     // Usuarios / Organigrama
     _renderLista, _cargarOrg, abrirNuevo, cerrar,
     eliminar, orgDragStart, orgCentrar, orgReorganizar,

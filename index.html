@@ -579,7 +579,18 @@
   .dropdown-item.danger { color: var(--danger); }
   .dropdown-sep { height: 1px; background: var(--border); margin: 4px 0; }
   .dropdown-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); padding: 6px 12px 2px; letter-spacing: .1em; }
-
+  /* ─── PROMEDIOS BADGES ─────────────────────────────────── */
+  .prom-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: .04em; margin-left: 4px; vertical-align: middle; }
+  .prom-badge-S { background: color-mix(in srgb,#ffd700 18%,transparent); color: #ffd700; border: 1px solid color-mix(in srgb,#ffd700 35%,transparent); }
+  .prom-badge-A { background: color-mix(in srgb,var(--m2) 18%,transparent); color: var(--m2); border: 1px solid color-mix(in srgb,var(--m2) 35%,transparent); }
+  .prom-badge-B { background: color-mix(in srgb,var(--m3) 18%,transparent); color: var(--m3); border: 1px solid color-mix(in srgb,var(--m3) 35%,transparent); }
+  .prom-badge-C { background: color-mix(in srgb,var(--m9) 18%,transparent); color: var(--m9); border: 1px solid color-mix(in srgb,var(--m9) 35%,transparent); }
+  .prom-badge-D { background: color-mix(in srgb,var(--m5) 18%,transparent); color: var(--m5); border: 1px solid color-mix(in srgb,var(--m5) 35%,transparent); }
+  .prom-badge-F { background: color-mix(in srgb,var(--danger) 18%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 35%,transparent); }
+  .pres-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: .04em; margin-left: 4px; vertical-align: middle; }
+  .pres-badge-high { background: color-mix(in srgb,var(--accent2) 18%,transparent); color: var(--accent2); border: 1px solid color-mix(in srgb,var(--accent2) 35%,transparent); }
+  .pres-badge-mid { background: color-mix(in srgb,var(--m9) 18%,transparent); color: var(--m9); border: 1px solid color-mix(in srgb,var(--m9) 35%,transparent); }
+  .pres-badge-low { background: color-mix(in srgb,var(--danger) 18%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 35%,transparent); }
   /* ─── SCROLLBAR ───────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1375,11 +1386,12 @@
     font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 800;
     flex-shrink: 0;
   }
-  .hr-rank-S { background: color-mix(in srgb,#ffd700 20%,transparent); color: #ffd700; border: 1px solid color-mix(in srgb,#ffd700 40%,transparent); }
+    .hr-rank-S { background: color-mix(in srgb,#ffd700 20%,transparent); color: #ffd700; border: 1px solid color-mix(in srgb,#ffd700 40%,transparent); }
   .hr-rank-A { background: color-mix(in srgb,var(--m2)  20%,transparent); color: var(--m2);  border: 1px solid color-mix(in srgb,var(--m2)  40%,transparent); }
   .hr-rank-B { background: color-mix(in srgb,var(--m3)  20%,transparent); color: var(--m3);  border: 1px solid color-mix(in srgb,var(--m3)  40%,transparent); }
-  .hr-rank-C { background: color-mix(in srgb,var(--m5)  20%,transparent); color: var(--m5);  border: 1px solid color-mix(in srgb,var(--m5)  40%,transparent); }
-  .hr-rank-D { background: color-mix(in srgb,var(--danger) 20%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 40%,transparent); }
+  .hr-rank-C { background: color-mix(in srgb,var(--m9)  20%,transparent); color: var(--m9);  border: 1px solid color-mix(in srgb,var(--m9)  40%,transparent); }
+  .hr-rank-D { background: color-mix(in srgb,var(--m5)  20%,transparent); color: var(--m5);  border: 1px solid color-mix(in srgb,var(--m5)  40%,transparent); }
+  .hr-rank-F { background: color-mix(in srgb,var(--danger) 20%,transparent); color: var(--danger); border: 1px solid color-mix(in srgb,var(--danger) 40%,transparent); }
 
   /* Selector AM / PM */
   .hr-turno-tipo-btn {
@@ -1806,7 +1818,7 @@
   }
   .ip-perfil-dato-val { text-align: right; font-size: 12px; font-weight: 600; }
 
-  /* ─── FALLOUT DOLL ──────────────────────────────────────────── */
+  /  /* ─── PANEL DE ROPA EN PERFIL ───────────────────────────── */
   .ip-fallout-panel {
     padding: 20px 16px;
     display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -1817,54 +1829,53 @@
     color: var(--m4); letter-spacing: .18em; text-transform: uppercase;
     align-self: flex-start;
   }
-  .ip-fallout-wrap {
-    position: relative; width: 130px;
+  .fo-slots {
+    display: flex; flex-direction: column; gap: 8px; width: 100%;
   }
-  .ip-fallout-wrap svg {
-    width: 100%; height: auto; display: block;
+  .fo-slot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    cursor: pointer; transition: all var(--transition);
+    min-height: 48px;
   }
-  /* Zonas interactivas del muñeco */
-  .fo-zone {
-    cursor: pointer;
-    transition: all 200ms ease;
+  .fo-slot:hover {
+    border-color: var(--m4); transform: translateX(3px);
   }
-  .fo-zone path, .fo-zone ellipse, .fo-zone rect, .fo-zone polygon {
-    transition: fill 200ms ease, stroke 200ms ease;
+  .fo-slot.selected {
+    border-color: var(--m4); background: color-mix(in srgb, var(--m4) 12%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--m4) 20%, transparent);
   }
-  .fo-zone:hover path, .fo-zone:hover ellipse,
-  .fo-zone:hover rect, .fo-zone:hover polygon {
-    fill: color-mix(in srgb, var(--m4) 40%, currentColor) !important;
-    stroke: var(--m4) !important;
+  .fo-slot.tiene-ropa {
+    border-color: color-mix(in srgb, var(--accent2) 50%, transparent);
+    background: color-mix(in srgb, var(--accent2) 6%, transparent);
   }
-  .fo-zone.tiene-ropa path, .fo-zone.tiene-ropa ellipse,
-  .fo-zone.tiene-ropa rect, .fo-zone.tiene-ropa polygon {
-    fill: color-mix(in srgb, var(--accent2) 35%, #1e2127) !important;
-    stroke: var(--accent2) !important;
-    stroke-width: 2px !important;
+  .fo-slot.tiene-ropa.selected {
+    border-color: var(--accent2);
+    background: color-mix(in srgb, var(--accent2) 14%, transparent);
   }
-  .fo-zone.tiene-ropa:hover path, .fo-zone.tiene-ropa:hover ellipse,
-  .fo-zone.tiene-ropa:hover rect, .fo-zone.tiene-ropa:hover polygon {
-    fill: color-mix(in srgb, var(--accent2) 55%, #1e2127) !important;
+  .fo-slot-icon {
+    font-size: 22px; flex-shrink: 0; width: 32px; text-align: center;
   }
-  /* Tooltip del muñeco */
-  .fo-tooltip {
-    position: absolute; pointer-events: none;
-    background: var(--surface2); border: 1px solid var(--m4);
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 11px; white-space: nowrap;
-    z-index: 10; opacity: 0;
-    transition: opacity 150ms; min-width: 140px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  .fo-slot-info {
+    flex: 1; min-width: 0;
   }
-  .fo-tooltip.show { opacity: 1; }
-  .fo-tooltip-part {
+  .fo-slot-label {
     font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--m4); letter-spacing: .1em; margin-bottom: 3px;
+    color: var(--muted); letter-spacing: .08em; text-transform: uppercase;
   }
-  .fo-tooltip-val { font-size: 12px; font-weight: 600; }
-  .fo-tooltip-empty { color: var(--muted); font-style: italic; }
+  .fo-slot-val {
+    font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3;
+  }
+  .fo-slot-val.empty {
+    color: var(--muted); font-style: italic;
+  }
+  .fo-slot-talle {
+    font-size: 10px; color: var(--accent2);
+    font-family: 'DM Mono', monospace; margin-top: 2px;
+  }
 
-  /* Panel de edición de indumentaria */
+  /* ─── PANEL DE EDICIÓN DE INDUMENTARIA ──────────────────── */
   .ip-indum-panel {
     width: 100%; background: var(--surface2);
     border: 1px solid var(--border); border-radius: 10px;
@@ -1879,18 +1890,22 @@
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .ip-indum-field { display: flex; flex-direction: column; gap: 3px; }
+  .ip-indum-field {
+    display: flex; flex-direction: column; gap: 3px;
+  }
   .ip-indum-field label {
     font-family: 'DM Mono', monospace; font-size: 9px;
     letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
   }
-  .ip-indum-field input {
+  .ip-indum-field input, .ip-indum-field select {
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 5px; padding: 6px 9px;
     color: var(--text); font-size: 12px; font-family: 'Syne', sans-serif;
-    outline: none; transition: border-color var(--transition);
+    outline: none;
   }
-  .ip-indum-field input:focus { border-color: var(--m4); }
+  .ip-indum-field input:focus, .ip-indum-field select:focus {
+    border-color: var(--m4);
+  }
   .ip-indum-save {
     width: 100%; margin-top: 10px;
     padding: 9px; border: none; border-radius: 6px;
@@ -1900,11 +1915,6 @@
   }
   .ip-indum-save:hover { opacity: .85; }
   .ip-indum-save:disabled { opacity: .5; cursor: default; }
-  /* Indicador de zona seleccionada */
-  .fo-zone.selected path, .fo-zone.selected ellipse,
-  .fo-zone.selected rect, .fo-zone.selected polygon {
-    stroke: var(--m4) !important; stroke-width: 2.5px !important;
-  }
   /* ─── MÓDULO INDUMENTARIA ──────────────────────────────────── */
   .ind-toolbar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -2105,13 +2115,17 @@
   }
   .home-alertas-toggle:hover { color: var(--text); }
   /* CONTENEDOR DE ALERTAS: Lista vertical con scroll */
-  .alertas-grid {
+    .alertas-grid {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 360px;
+    gap: 6px;
+    max-height: 400px;
     overflow-y: auto;
     padding-right: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
   }
   .alerta-card {
     background: var(--surface2);
@@ -3355,60 +3369,38 @@
                 <div class="fo-tooltip-val" id="fo-tip-val">—</div>
               </div>
 
-              <!-- SVG del muñeco estilo Fallout/Vault Boy -->
-              <svg viewBox="0 0 120 280" xmlns="http://www.w3.org/2000/svg" id="fo-svg">
+                         <!-- Slots de ropa ordenados -->
+            <div class="fo-slots" id="fo-slots">
+              <!-- Se generan dinámicamente: 🎩 Gorra → 👕 Remera → 🥼 Delantal → 👖 Pantalón → 👟 Calzado -->
+            </div>
 
-                <!-- CABEZA -->
-                <g class="fo-zone" id="fo-cabeza" data-part="cabeza" onclick="infoPersonal.foClick(this)">
-                  <ellipse cx="60" cy="30" rx="22" ry="24" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <ellipse cx="52" cy="28" rx="4" ry="4" fill="#1e2127"/>
-                  <ellipse cx="68" cy="28" rx="4" ry="4" fill="#1e2127"/>
-                  <ellipse cx="52" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
-                  <ellipse cx="68" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
-                  <path d="M53 39 Q60 44 67 39" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                </g>
-
-                <!-- TORSO / REMERA -->
-                <g class="fo-zone" id="fo-torso" data-part="torso" onclick="infoPersonal.foClick(this)">
-                  <path d="M34 60 L86 60 L88 115 L32 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
-                  <!-- cuello -->
-                  <rect x="52" y="52" width="16" height="10" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
-                  <!-- hombros -->
-                  <path d="M34 60 L22 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                  <path d="M86 60 L98 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                </g>
-
-                <!-- BRAZOS decorativos -->
-                <g style="pointer-events:none">
-                  <rect x="14" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="21" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <rect x="92" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="99" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                </g>
-
-                <!-- DELANTAL -->
-                <g class="fo-zone" id="fo-delantal" data-part="delantal" onclick="infoPersonal.foClick(this)">
-                  <path d="M42 62 L78 62 L80 115 L40 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" fill-opacity=".9"/>
-                  <path d="M52 62 Q60 56 68 62" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                  <rect x="50" y="85" width="20" height="13" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                </g>
-
-                <!-- PANTALÓN -->
-                <g class="fo-zone" id="fo-pantalon" data-part="pantalon" onclick="infoPersonal.foClick(this)">
-                  <path d="M32 113 L40 175 L56 175 L60 145 L64 175 L80 175 L88 113 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
-                  <rect x="32" y="111" width="56" height="6" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <rect x="54" y="111" width="12" height="6" rx="1" fill="#3a3f4a"/>
-                </g>
-
-                <!-- CALZADO -->
-                <g class="fo-zone" id="fo-calzado" data-part="calzado" onclick="infoPersonal.foClick(this)">
-                  <rect x="34" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M34 181 Q28 188 26 190 L56 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <rect x="64" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M86 181 Q92 188 94 190 L64 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                </g>
-
-              </svg>
+            <!-- Panel de edición: aparece al clickear una zona -->
+            <div class="ip-indum-panel" id="fo-edit-panel" style="display:none">
+              <div class="ip-indum-panel-title" id="fo-edit-title">Editar prenda</div>
+              <input type="hidden" id="fo-edit-part">
+              <div class="ip-indum-fields">
+                <div class="ip-indum-field" style="grid-column:1/-1">
+                  <label>Prenda</label>
+                  <select id="fo-edit-prenda" style="background:var(--bg);border:1px solid var(--border);
+                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
+                    font-family:'Syne',sans-serif;outline:none;width:100%">
+                    <option value="">— Sin asignar —</option>
+                  </select>
+                </div>
+                <div class="ip-indum-field">
+                  <label>Talle</label>
+                  <select id="fo-edit-talle" style="background:var(--bg);border:1px solid var(--border);
+                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
+                    font-family:'Syne',sans-serif;outline:none;width:100%">
+                    <option value="">—</option>
+                  </select>
+                </div>
+                <div class="ip-indum-field">
+                  <label>Fecha entrega</label>
+                  <input type="date" id="fo-edit-fecha">
+                </div>
+              </div>
+              <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar</button>
             </div>
 
             <!-- Panel de edición: aparece al clickear una zona -->
@@ -6581,6 +6573,11 @@ const usuarios = (() => {
         <td>${esc(r.seccion)}</td>
         <td class="col-muted">${esc(r['categoria-alta'])}</td>
         <td class="col-mono">${esc(r.cuil)}</td>
+              <td>
+        ${(r['promedio-desempeno'] ? `<span class="prom-badge prom-badge-${r['promedio-desempeno']}">Desemp: ${r['promedio-desempeno']}</span>` : '')}
+        ${(r['promedio-presencialidad'] !== undefined && r['promedio-presencialidad'] !== null ? `<span class="pres-badge ${Number(r['promedio-presencialidad']) >= 80 ? 'pres-badge-high' : Number(r['promedio-presencialidad']) >= 60 ? 'pres-badge-mid' : 'pres-badge-low'}">Pres: ${r['promedio-presencialidad']}%</span>` : '')}
+        ${(!r['promedio-desempeno'] && (r['promedio-presencialidad'] === undefined || r['promedio-presencialidad'] === null)) ? '<span style="color:var(--muted)">—</span>' : ''}
+      </td>
         <td class="col-mono col-muted">${esc(r.dni)}</td>
         <td class="col-mono" style="color:var(--m4)">${r.sueldo ? '$' + Number(r.sueldo).toLocaleString('es-AR') : '<span style="color:var(--muted)">-</span>'}</td>
         <td class="col-mono col-muted">${esc(r.telefono)}</td>
@@ -7354,21 +7351,21 @@ const usuarios = (() => {
   // ── PERFIL MODAL ─────────────────────────────────────────────
   let _perfilId = null;
   let _perfilIndum = {};
+  
+  const _PARTES_ORDEN = [
+    { key: 'cabeza',   label: '🎩 Gorra / Cap',       icon: '🎩' },
+    { key: 'torso',    label: '👕 Remera / Camisa',    icon: '👕' },
+    { key: 'delantal', label: '🥼 Delantal',            icon: '🥼' },
+    { key: 'pantalon', label: '👖 Pantalón / Short',   icon: '👖' },
+    { key: 'calzado',  label: '👟 Calzado',             icon: '👟' },
+  ];
 
-  const _PARTES = {
-    'cabeza':    'Gorro / Cap / Headwear',
-    'torso':     'Remera / Camisa',
-    'delantal':  'Delantal',
-    'pantalon':  'Pantalón / Short',
-    'calzado':   'Calzado',
-  };
-
-  function abrirPerfil(docId) {
+  
+    function abrirPerfil(docId) {
     const emp = _registros.find(r => r.id === docId);
     if (!emp) return;
     _perfilId = docId;
 
-    // Avatar
     const initials = (emp.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const avWrap = document.getElementById('ip-perfil-avatar');
     if (emp.foto) {
@@ -7377,12 +7374,10 @@ const usuarios = (() => {
       avWrap.textContent = initials;
     }
 
-    // Nombre + meta
     document.getElementById('ip-perfil-nombre').textContent = emp.nombre || '—';
     document.getElementById('ip-perfil-meta').textContent =
       [emp.local, emp['puesto-real'], emp.cuil ? 'CUIL: ' + emp.cuil : ''].filter(Boolean).join(' · ');
 
-    // Badges
     const badges = document.getElementById('ip-perfil-badges');
     const badgeColor = emp.alta === 'Sí' ? 'var(--accent2)' : 'var(--muted)';
     badges.innerHTML = [
@@ -7391,7 +7386,8 @@ const usuarios = (() => {
       emp['puesto-real'] ? `<span class="ip-perfil-badge" style="background:color-mix(in srgb,var(--m3) 12%,transparent);color:var(--m3);border:1px solid var(--m3)">${esc(emp['puesto-real'])}</span>` : '',
     ].join('');
 
-    // Datos del legajo
+    const promDes = emp['promedio-desempeno'];
+    const promPres = emp['promedio-presencialidad'];
     const datos = [
       ['Razón social', emp['razon-social']],
       ['Sección', emp.seccion],
@@ -7412,8 +7408,8 @@ const usuarios = (() => {
       ['Apercibimientos', emp.apercibimientos || '0'],
       ['Días suspendidos', emp['dias-suspendidos'] || '0'],
       ['Notas', emp['notas-evaluacion']],
-      ['Prom. Desempeño', emp['promedio-desempeno'] || '—'],
-      ['Prom. Presencialidad', emp['promedio-presencialidad'] !== undefined ? emp['promedio-presencialidad'] + '%' : '—'],
+      ['Prom. Desempeño', promDes || '—'],
+      ['Prom. Presencialidad', promPres !== undefined && promPres !== null ? promPres + '%' : '—'],
     ];
     document.getElementById('ip-perfil-datos-list').innerHTML = datos
       .filter(([,v]) => v !== null && v !== undefined)
@@ -7427,11 +7423,11 @@ const usuarios = (() => {
     // Cargar indumentaria desde Firestore
     _perfilIndum = {};
     document.getElementById('fo-edit-panel').style.display = 'none';
-    _foLimpiarSeleccion();
+    _foRenderSlots();
     if (db) {
       db.collection('indumentaria').doc(docId).get().then(snap => {
         if (snap.exists) _perfilIndum = snap.data() || {};
-        _foActualizarZonas();
+        _foRenderSlots();
       }).catch(() => {});
     }
 
@@ -7446,133 +7442,76 @@ const usuarios = (() => {
     document.body.style.overflow = '';
     _perfilId = null;
     document.getElementById('fo-edit-panel').style.display = 'none';
-    _foLimpiarSeleccion();
   }
 
-  function _foActualizarZonas() {
-    Object.keys(_PARTES).forEach(part => {
-      const zone = document.getElementById('fo-' + part);
-      if (!zone) return;
-      const d = _perfilIndum[part];
-      if (d && d.desc) {
-        zone.classList.add('tiene-ropa');
-      } else {
-        zone.classList.remove('tiene-ropa');
-      }
-    });
+  function _foRenderSlots() {
+    const cont = document.getElementById('fo-slots');
+    if (!cont) return;
+    cont.innerHTML = _PARTES_ORDEN.map(p => {
+      const d = _perfilIndum[p.key];
+      const tieneRopa = d && d.desc;
+      return `<div class="fo-slot${tieneRopa ? ' tiene-ropa' : ''}" data-part="${p.key}" onclick="infoPersonal.foClick('${p.key}', this)">
+        <span class="fo-slot-icon">${p.icon}</span>
+        <div class="fo-slot-info">
+          <div class="fo-slot-label">${p.label}</div>
+          <div class="fo-slot-val${!tieneRopa ? ' empty' : ''}">${tieneRopa ? esc(d.desc) : 'Sin asignar'}</div>
+          ${tieneRopa && d.talle ? `<div class="fo-slot-talle">Talle: ${esc(d.talle)} · ${d.fecha ? d.fecha.split('-').reverse().join('/') : ''}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
   }
 
-  function _foLimpiarSeleccion() {
-    document.querySelectorAll('.fo-zone.selected').forEach(z => z.classList.remove('selected'));
-    document.getElementById('fo-tooltip').classList.remove('show');
+  function foClick(part, el) {
+    document.querySelectorAll('.fo-slot').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('fo-edit-part').value = part;
+    document.getElementById('fo-edit-title').textContent = '🧥 ' + (_PARTES_ORDEN.find(p => p.key === part)?.label || part);
+    const d = _perfilIndum[part] || {};
+    document.getElementById('fo-edit-fecha').value = d.fecha || new Date().toISOString().slice(0,10);
+    document.getElementById('fo-edit-panel').style.display = '';
+    // Poblar select solo con prendas existentes del módulo 09
+    _foPoblarPrendaSelect(part, d.desc);
+    setTimeout(() => {
+      const talleSel = document.getElementById('fo-edit-talle');
+      if (talleSel && d.talle) talleSel.value = d.talle;
+    }, 50);
   }
 
-  function _foPoblarPrendaSelect(part, localEmpleado, currentDesc) {
+  function _foPoblarPrendaSelect(part, currentDesc) {
     const sel = document.getElementById('fo-edit-prenda');
     if (!sel) return;
-
-    const _poblar = (todasPrendas) => {
-      const _localMatch = (pLocal, empLocal) => {
-        if (!empLocal) return true;
-        const a = (pLocal  ||'').toLowerCase();
-        const b = (empLocal||'').toLowerCase();
-        return a === b || b.includes(a) || a.includes(b);
-      };
-      const delCat   = todasPrendas.filter(p => p.cat === part);
-      const filtradas = delCat.filter(p => _localMatch(p.local, localEmpleado));
-      const lista     = filtradas.length ? filtradas : delCat;
-
-      sel.innerHTML = '<option value="">\u2014 Sin asignar \u2014</option>' +
-        lista.map(p => {
-          const localTag = (lista === delCat && delCat !== filtradas) ? ` (${esc(p.local)})` : '';
-          const selected = p.nombre === currentDesc ? 'selected' : '';
-          return `<option value="${esc(p.id)}|${esc(p.nombre)}|${esc(p.talles||'')}" ${selected}>${esc(p.nombre)}${localTag}</option>`;
-        }).join('');
-
-      _foPoblarTalleSelect(lista.find(p => p.nombre === currentDesc) || null);
-      sel.onchange = () => {
-        const parts = (sel.value||'').split('|');
-        _foPoblarTalleSelect(parts[0] ? { talles: parts[2] } : null);
-      };
-    };
-
-    const cached = (typeof indumentaria !== 'undefined' && indumentaria._getPrendas)
+    const prendas = (typeof indumentaria !== 'undefined' && indumentaria._getPrendas)
       ? indumentaria._getPrendas() : [];
-
-    if (cached.length > 0) {
-      _poblar(cached);
-    } else if (db) {
-      sel.innerHTML = '<option value="">Cargando prendas\u2026</option>';
-      db.collection('prendas').get().then(snap => {
-        _poblar(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }).catch(() => {
-        sel.innerHTML = '<option value="">Sin prendas cargadas</option>';
-      });
-    } else {
-      sel.innerHTML = '<option value="">Sin prendas cargadas</option>';
+    const emp = _registros.find(r => r.id === _perfilId);
+    const delCat = prendas.filter(p => p.cat === part);
+    const delLocal = delCat.filter(p => !emp?.local || p.local === emp.local);
+    const lista = delLocal.length ? delLocal : delCat;
+    if (!lista.length) {
+      sel.innerHTML = '<option value="">Sin prendas cargadas en Indumentaria</option>';
+      document.getElementById('fo-edit-talle').innerHTML = '<option value="">—</option>';
+      return;
     }
+    sel.innerHTML = '<option value="">— Sin asignar —</option>' + lista.map(p => {
+      const selAttr = p.nombre === currentDesc ? ' selected' : '';
+      return `<option value="${esc(p.id)}|${esc(p.nombre)}|${esc(p.talles||'')}"${selAttr}>${esc(p.nombre)} (${esc(p.local)})</option>`;
+    }).join('');
+    const prendaSel = lista.find(p => p.nombre === currentDesc);
+    _foPoblarTalleSelect(prendaSel);
+    sel.onchange = () => {
+      const parts = (sel.value||'').split('|');
+      _foPoblarTalleSelect(parts[0] ? { talles: parts[2] } : null);
+    };
   }
+
   function _foPoblarTalleSelect(prenda) {
     const sel = document.getElementById('fo-edit-talle');
     if (!sel) return;
     const tallesStr = prenda?.talles || '';
+    if (!tallesStr) { sel.innerHTML = '<option value="">—</option>'; return; }
     const esUnico = tallesStr.toLowerCase().includes('único') || tallesStr.toLowerCase().includes('unico');
-    if (!tallesStr) {
-      sel.innerHTML = '<option value="">—</option>';
-    } else if (esUnico) {
-      sel.innerHTML = '<option value="Único">Único</option>';
-    } else {
-      const lista = tallesStr.split(',').map(t => t.trim()).filter(Boolean);
-      sel.innerHTML = '<option value="">— Talle —</option>' +
-        lista.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
-    }
-  }
-
-  function foClick(el) {
-    const part = el.dataset.part;
-    if (!part) return;
-
-    const wasSelected = el.classList.contains('selected');
-    _foLimpiarSeleccion();
-    if (!wasSelected) {
-      el.classList.add('selected');
-      const d = _perfilIndum[part] || {};
-      document.getElementById('fo-edit-part').value = part;
-      document.getElementById('fo-edit-title').textContent = '🧥 ' + (_PARTES[part] || part);
-      document.getElementById('fo-edit-fecha').value = d.fecha || new Date().toISOString().slice(0,10);
-      document.getElementById('fo-edit-panel').style.display = '';
-      document.getElementById('fo-save-btn').textContent = 'Guardar';
-      document.getElementById('fo-save-btn').disabled = false;
-
-      // Poblar select de prendas filtradas por cat y local del empleado
-      const emp = _registros ? _registros.find(r => r.id === _perfilId) : null;
-      _foPoblarPrendaSelect(part, emp?.local, d.desc);
-      // Restaurar talle si había uno guardado
-      setTimeout(() => {
-        const talleSel = document.getElementById('fo-edit-talle');
-        if (talleSel && d.talle) talleSel.value = d.talle;
-      }, 50);
-
-      // Tooltip
-      const tip = document.getElementById('fo-tooltip');
-      document.getElementById('fo-tip-part').textContent = _PARTES[part] || part;
-      if (d.desc) {
-        document.getElementById('fo-tip-val').innerHTML =
-          `<span style="color:var(--accent2)">${esc(d.desc)}</span>` +
-          (d.talle ? ` <span style="color:var(--muted)">T.${esc(d.talle)}</span>` : '') +
-          (d.fecha ? `<br><span style="color:var(--muted);font-size:10px">${d.fecha.split('-').reverse().join('/')}</span>` : '');
-      } else {
-        document.getElementById('fo-tip-val').innerHTML = '<span class="fo-tooltip-empty">Sin ropa asignada</span>';
-      }
-      const wrap = document.getElementById('fo-wrap');
-      const bbox = el.getBoundingClientRect();
-      const wbbox = wrap.getBoundingClientRect();
-      tip.style.left = Math.max(0, bbox.left - wbbox.left - 10) + 'px';
-      tip.style.top  = (bbox.top - wbbox.top - 62) + 'px';
-      tip.classList.add('show');
-    } else {
-      document.getElementById('fo-edit-panel').style.display = 'none';
-    }
+    if (esUnico) { sel.innerHTML = '<option value="Único">Único</option>'; return; }
+    const lista = tallesStr.split(',').map(t => t.trim()).filter(Boolean);
+    sel.innerHTML = '<option value="">— Talle —</option>' + lista.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
   }
 
   async function foGuardar() {
@@ -7598,7 +7537,7 @@ const usuarios = (() => {
     };
     try {
       await db.collection('indumentaria').doc(_perfilId).set(_perfilIndum, { merge: true });
-      _foActualizarZonas();
+      _foRenderSlots();
       btn.textContent = '✓ Guardado';
       setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);
     } catch(err) {
@@ -7607,7 +7546,6 @@ const usuarios = (() => {
       console.error('foGuardar error:', err);
     }
   }
-
   // ── Return completo ──────────────────────────────────────────
   return {
     // Info Personal
@@ -8035,7 +7973,7 @@ const horarios = (() => {
 
   // ── CIERRE DE TURNO ──────────────────────────────────────────
   // Orden correcto: F D C B A S
-  const DESEMPENOS = ['F','D','C','B','A','S'];
+    const DESEMPENOS = ['F','D','C','B','A','S'];
   const DESEMPENO_COLORS = {
     S: '#ffd700', A: 'var(--m2)', B: 'var(--m3)',
     C: 'var(--m9)', D: 'var(--m5)', F: 'var(--danger)'
@@ -8294,50 +8232,39 @@ const horarios = (() => {
 
   // ── ACTUALIZAR PROMEDIOS EN INFO PERSONAL ─────────────────────
   async function _actualizarPromediosEmpleados(empleadosCierre) {
+      async function _actualizarPromediosEmpleados(empleadosCierre) {
     if (!db || typeof infoPersonal === 'undefined') return;
     const ipRegs = infoPersonal.getRegistros();
-
+    const DESEMPENOS = ['F','D','C','B','A','S'];
     for (const emp of empleadosCierre) {
       const ip = ipRegs.find(r => r.id === emp.uid);
       if (!ip) continue;
-
-      // Obtener todos los cierres de este empleado para calcular promedio
       let totalDes = 0, countDes = 0, totalPres = 0, countPres = 0;
       try {
         const snap = await db.collection(COL_CIERRES)
-          .where('empleados', 'array-contains', { uid: emp.uid })
-          .get();
+          .where('empleados', 'array-contains', { uid: emp.uid }).get();
         snap.forEach(doc => {
           const data = doc.data();
-          const empleadoCierre = data.empleados.find(e => e.uid === emp.uid);
-          if (empleadoCierre) {
-            if (empleadoCierre.desempeno) {
-              const score = DESEMPENOS.indexOf(empleadoCierre.desempeno) + 1;
-              totalDes += score;
-              countDes++;
-            }
-            if (empleadoCierre.asistencia) {
-              const presScore = empleadoCierre.asistencia === 'P' ? 100 : empleadoCierre.asistencia === 'T' ? 50 : 0;
-              totalPres += presScore;
-              countPres++;
-            }
+          const ec = data.empleados.find(e => e.uid === emp.uid);
+          if (ec) {
+            if (ec.desempeno) { const score = DESEMPENOS.indexOf(ec.desempeno) + 1; totalDes += score; countDes++; }
+            if (ec.asistencia) { const ps = ec.asistencia === 'P' ? 100 : ec.asistencia === 'T' ? 50 : 0; totalPres += ps; countPres++; }
           }
         });
       } catch(e) { console.warn('Error cargando cierres para promedios:', e); }
-
       if (countDes > 0 || countPres > 0) {
-        const avgDes = countDes > 0 ? DESEMPENOS[Math.round(totalDes / countDes) - 1] || '—' : '—';
-        const avgPres = countPres > 0 ? Math.round(totalPres / countPres) : '—';
+        const avgDesIdx = countDes > 0 ? Math.floor(totalDes / countDes) - 1 : -1;
+        const avgDes = avgDesIdx >= 0 && avgDesIdx < DESEMPENOS.length ? DESEMPENOS[avgDesIdx] : null;
+        const avgPres = countPres > 0 ? Math.round(totalPres / countPres) : null;
         try {
-          // Usar la misma colección 'info-personal' que usa usuarios
-          const collectionName = 'info-personal';
-          await db.collection(collectionName).doc(emp.uid).update({
-            'promedio-desempeno': avgDes,
-            'promedio-presencialidad': avgPres,
-          });
+          const upd = {};
+          if (avgDes) upd['promedio-desempeno'] = avgDes;
+          if (avgPres !== null) upd['promedio-presencialidad'] = avgPres;
+          if (Object.keys(upd).length > 0) await db.collection('info-personal').doc(emp.uid).update(upd);
         } catch(e) { console.warn('Error actualizando promedios:', e); }
       }
     }
+  }
   }
 
   function cerrarCierre(e) {
@@ -9379,13 +9306,36 @@ const alertas = (() => {
   };
   const NIVEL_ORDER = { critico: 0, warn: 1, cumple: 2, info: 3 };
 
-  function calcular() {
-    const todas = [
-      ..._alertasInfoPersonal(),
-      ..._alertasIndumentaria(),
-      ..._alertasIngresos(),
-    ].sort((a, b) => (NIVEL_ORDER[a.nivel] ?? 9) - (NIVEL_ORDER[b.nivel] ?? 9));
-
+    function calcular() {
+    const todas = [];
+    const vistos = new Set();
+    const regs = typeof infoPersonal !== 'undefined' ? infoPersonal.getRegistros() : [];
+    const hoy = _hoy();
+    regs.forEach(r => {
+      const nombre = r.nombre || 'Sin nombre';
+      if (r['fecha-fin-prueba']) {
+        const diff = _diffDias(r['fecha-fin-prueba']), k = `${r.id}_fin`;
+        if (!vistos.has(k) && diff >= 0 && diff <= 14) { vistos.add(k); todas.push({ nivel: diff <= 3 ? 'critico' : 'warn', icono: '🔔', titulo: nombre, desc: `Fin de prueba: ${_fmtFecha(r['fecha-fin-prueba'])}${diff === 0 ? ' (HOY)' : ` (en ${diff}d)`}`, badge: diff === 0 ? 'HOY' : `${diff}d`, modulo: 'info-personal' }); }
+        if (!vistos.has(k + '_v') && diff < 0 && diff >= -30 && r.alta !== 'Sí') { vistos.add(k + '_v'); todas.push({ nivel: 'critico', icono: '⚠️', titulo: nombre, desc: `Prueba vencida hace ${Math.abs(diff)}d sin alta`, badge: `${Math.abs(diff)}d venc.`, modulo: 'info-personal' }); }
+      }
+      const ap = Number(r.apercibimientos) || 0, kA = `${r.id}_ap`;
+      if (!vistos.has(kA) && ap >= 3) { vistos.add(kA); todas.push({ nivel: ap >= 5 ? 'critico' : 'warn', icono: '🚨', titulo: nombre, desc: `${ap} apercibimiento${ap > 1 ? 's' : ''}`, badge: `${ap} aperc.`, modulo: 'info-personal' }); }
+      const kC = `${r.id}_cuil`;
+      if (!vistos.has(kC) && (!r.cuil || r.cuil.length < 11)) { vistos.add(kC); todas.push({ nivel: 'info', icono: '📋', titulo: nombre, desc: 'Sin CUIL registrado', badge: 'Dato faltante', modulo: 'info-personal' }); }
+      const kCb = `${r.id}_cbu`;
+      if (!vistos.has(kCb) && (!r.cbu || r.cbu.length < 22)) { vistos.add(kCb); todas.push({ nivel: 'info', icono: '🏦', titulo: nombre, desc: 'Sin CBU registrado', badge: 'Dato faltante', modulo: 'info-personal' }); }
+      if (r['fecha-nac']) {
+        const m = r['fecha-nac'].match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (m) {
+          const [, , fm, fd] = m; const anio = hoy.getFullYear(); let cum = new Date(`${anio}-${fm}-${fd}`);
+          if (cum < hoy) cum = new Date(`${anio + 1}-${fm}-${fd}`);
+          const dC = Math.ceil((cum - hoy) / 86400000), kCm = `${r.id}_cum`;
+          if (!vistos.has(kCm) && dC <= 7) { vistos.add(kCm); todas.push({ nivel: dC === 0 ? 'cumple' : 'info', icono: '🎂', titulo: nombre, desc: dC === 0 ? '¡Cumpleaños hoy!' : `Cumple en ${dC}d`, badge: dC === 0 ? '🎉 HOY' : `${dC}d`, modulo: 'info-personal' }); }
+        }
+      }
+    });
+    const NIVEL_ORDER = { critico: 0, warn: 1, cumple: 2, info: 3 };
+    todas.sort((a, b) => (NIVEL_ORDER[a.nivel] ?? 9) - (NIVEL_ORDER[b.nivel] ?? 9));
     _render(todas);
   }
 

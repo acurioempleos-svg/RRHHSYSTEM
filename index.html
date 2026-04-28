@@ -842,19 +842,22 @@
   }
 
   /* Item de lista */
-  .lq-item {
+  .lq-item, .lq-list-item {
     padding: 10px 12px; border-radius: 8px; cursor: pointer;
     border: 1px solid transparent;
     transition: background var(--transition), border-color var(--transition);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 2px;
   }
-  .lq-item:hover { background: var(--surface2); }
-  .lq-item.active {
+  .lq-item:hover, .lq-list-item:hover { background: var(--surface2); }
+  .lq-item.active, .lq-list-item.active {
     background: color-mix(in srgb, var(--m7) 8%, transparent);
     border-color: color-mix(in srgb, var(--m7) 30%, transparent);
   }
-  .lq-item-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lq-item-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .lq-item-total { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--m7); margin-top: 4px; font-weight: 500; }
+  .lq-item-name, .lq-list-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lq-item-meta, .lq-list-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .lq-item-total, .lq-list-total { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--m7); margin-top: 4px; font-weight: 500; }
   .lq-empty-state {
     text-align: center; padding: 32px 12px;
     font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
@@ -1462,7 +1465,7 @@
   }
   .hr-tard-inp:focus { outline: none; border-color: var(--m5); }
 
-  /* Selector de ranking Yakuza */
+  /* Selector de ranking Yakuza: ORDEN CORRECTO F D C B A S */
   .hr-rank-btns { display: flex; gap: 4px; }
   .hr-rank-btn {
     width: 26px; height: 26px; border-radius: 6px;
@@ -1470,11 +1473,12 @@
     font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 800;
     cursor: pointer; color: var(--muted); transition: all var(--transition);
   }
+  .hr-rank-btn[data-r="F"].sel { background: color-mix(in srgb,var(--danger) 20%,transparent); border-color: var(--danger); color: var(--danger); }
+  .hr-rank-btn[data-r="D"].sel { background: color-mix(in srgb,var(--m5)  20%,transparent); border-color: var(--m5);  color: var(--m5); }
+  .hr-rank-btn[data-r="C"].sel { background: color-mix(in srgb,var(--m9)  20%,transparent); border-color: var(--m9);  color: var(--m9); }
+  .hr-rank-btn[data-r="B"].sel { background: color-mix(in srgb,var(--m3)  20%,transparent); border-color: var(--m3);  color: var(--m3); }
+  .hr-rank-btn[data-r="A"].sel { background: color-mix(in srgb,var(--m2)  20%,transparent); border-color: var(--m2);  color: var(--m2); }
   .hr-rank-btn[data-r="S"].sel { background: color-mix(in srgb,#ffd700 20%,transparent); border-color: #ffd700; color: #ffd700; }
-  .hr-rank-btn[data-r="A"].sel { background: color-mix(in srgb,var(--m2) 20%,transparent); border-color: var(--m2); color: var(--m2); }
-  .hr-rank-btn[data-r="B"].sel { background: color-mix(in srgb,var(--m3) 20%,transparent); border-color: var(--m3); color: var(--m3); }
-  .hr-rank-btn[data-r="C"].sel { background: color-mix(in srgb,var(--m5) 20%,transparent); border-color: var(--m5); color: var(--m5); }
-  .hr-rank-btn[data-r="D"].sel { background: color-mix(in srgb,var(--danger) 20%,transparent); border-color: var(--danger); color: var(--danger); }
 
   .hr-cierre-footer {
     padding: 16px 24px; border-top: 1px solid var(--border);
@@ -2100,11 +2104,14 @@
     transition: color var(--transition);
   }
   .home-alertas-toggle:hover { color: var(--text); }
-  /* Grid de alertas */
+  /* CONTENEDOR DE ALERTAS: Lista vertical con scroll */
   .alertas-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 8px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 6px;
   }
   .alerta-card {
     background: var(--surface2);
@@ -4145,9 +4152,7 @@
         </div>
       </div>
     </div>
-
-
-    </div>
+    <!-- Se eliminó </div> extra aquí -->
 
 
     <!-- ── MÓDULO 09: INDUMENTARIA ───────────────────────── -->
@@ -6559,9 +6564,12 @@ const usuarios = (() => {
       const badgeBaja = tieneBaja
         ? `<span class="bj-badge" title="Baja registrada${fechaCese}" style="background:color-mix(in srgb,var(--m6) 15%,transparent);color:var(--m6);cursor:default">🚪 Baja${fechaCese}</span>`
         : '';
+      // Promedios
+      const promDes = (r['promedio-desempeno'] !== undefined) ? ` · Desemp: ${r['promedio-desempeno']}` : '';
+      const promPres = (r['promedio-presencialidad'] !== undefined) ? ` · Pres: ${r['promedio-presencialidad']}%` : '';
       return `
       <tr>
-        <td class="col-nombre">${esc(r.nombre)} ${badgeBaja}</td>
+        <td class="col-nombre">${esc(r.nombre)} ${badgeBaja}${promDes}${promPres}</td>
         <td>${esc(r.local)}</td>
         <td class="col-muted">${esc(r['razon-social'])}</td>
         <td>${badgeAlta(r.alta)}</td>
@@ -6570,6 +6578,7 @@ const usuarios = (() => {
         <td class="col-mono col-muted">${fmtFecha(r['fecha-fin-prueba'])}</td>
         <td class="col-mono col-muted">${fmtFecha(r['fecha-alta'])}</td>
         <td>${esc(r['puesto-real'])}</td>
+        <td>${esc(r.seccion)}</td>
         <td class="col-muted">${esc(r['categoria-alta'])}</td>
         <td class="col-mono">${esc(r.cuil)}</td>
         <td class="col-mono col-muted">${esc(r.dni)}</td>
@@ -6926,6 +6935,7 @@ const usuarios = (() => {
     }).join('');
   }
 
+
   // ── RENDER LISTA DE USUARIOS DEL SISTEMA ───────────────────
   async function _renderLista() {
     const cont = document.getElementById('usr-list');
@@ -7042,7 +7052,6 @@ const usuarios = (() => {
       alert('Error al eliminar: ' + e.message);
     }
   }
-
 
   // ══════════════════════════════════════════════════════════════
   //  ORGANIGRAMA
@@ -7403,9 +7412,11 @@ const usuarios = (() => {
       ['Apercibimientos', emp.apercibimientos || '0'],
       ['Días suspendidos', emp['dias-suspendidos'] || '0'],
       ['Notas', emp['notas-evaluacion']],
+      ['Prom. Desempeño', emp['promedio-desempeno'] || '—'],
+      ['Prom. Presencialidad', emp['promedio-presencialidad'] !== undefined ? emp['promedio-presencialidad'] + '%' : '—'],
     ];
     document.getElementById('ip-perfil-datos-list').innerHTML = datos
-      .filter(([,v]) => v)
+      .filter(([,v]) => v !== null && v !== undefined)
       .map(([l,v]) => `
         <div class="ip-perfil-dato-row">
           <span class="ip-perfil-dato-label">${l}</span>
@@ -8023,10 +8034,11 @@ const horarios = (() => {
   }
 
   // ── CIERRE DE TURNO ──────────────────────────────────────────
-  const DESEMPENOS = ['C','D','E','B','A','S'];
+  // Orden correcto: F D C B A S
+  const DESEMPENOS = ['F','D','C','B','A','S'];
   const DESEMPENO_COLORS = {
     S: '#ffd700', A: 'var(--m2)', B: 'var(--m3)',
-    E: '#a78bfa', C: 'var(--m5)', D: 'var(--danger)'
+    C: 'var(--m9)', D: 'var(--m5)', F: 'var(--danger)'
   };
 
   function abrirCierre() {
@@ -8138,7 +8150,7 @@ const horarios = (() => {
           onclick="horarios._setCierreAsist('${emp.id}','${v}',this)">${label}</button>`;
       }).join('');
 
-      // Botones desempeño
+      // Botones desempeño según orden correcto
       const rankBtns = DESEMPENOS.map(r => {
         const col = DESEMPENO_COLORS[r] || 'var(--muted)';
         const sel = d.desempeno === r;
@@ -8263,6 +8275,10 @@ const horarios = (() => {
 
     try {
       await db.collection(COL_CIERRES).doc(docId).set(data);
+
+      // Actualizar promedios en Info Personal
+      _actualizarPromediosEmpleados(empleados);
+
       btn.textContent = 'Guardado ✓';
       _toast(`Cierre guardado · ${_cierreDia}`);
       setTimeout(() => {
@@ -8273,6 +8289,54 @@ const horarios = (() => {
       alert('Error al guardar: ' + e.message);
       btn.textContent = 'Guardar cierre';
       btn.disabled = false;
+    }
+  }
+
+  // ── ACTUALIZAR PROMEDIOS EN INFO PERSONAL ─────────────────────
+  async function _actualizarPromediosEmpleados(empleadosCierre) {
+    if (!db || typeof infoPersonal === 'undefined') return;
+    const ipRegs = infoPersonal.getRegistros();
+
+    for (const emp of empleadosCierre) {
+      const ip = ipRegs.find(r => r.id === emp.uid);
+      if (!ip) continue;
+
+      // Obtener todos los cierres de este empleado para calcular promedio
+      let totalDes = 0, countDes = 0, totalPres = 0, countPres = 0;
+      try {
+        const snap = await db.collection(COL_CIERRES)
+          .where('empleados', 'array-contains', { uid: emp.uid })
+          .get();
+        snap.forEach(doc => {
+          const data = doc.data();
+          const empleadoCierre = data.empleados.find(e => e.uid === emp.uid);
+          if (empleadoCierre) {
+            if (empleadoCierre.desempeno) {
+              const score = DESEMPENOS.indexOf(empleadoCierre.desempeno) + 1;
+              totalDes += score;
+              countDes++;
+            }
+            if (empleadoCierre.asistencia) {
+              const presScore = empleadoCierre.asistencia === 'P' ? 100 : empleadoCierre.asistencia === 'T' ? 50 : 0;
+              totalPres += presScore;
+              countPres++;
+            }
+          }
+        });
+      } catch(e) { console.warn('Error cargando cierres para promedios:', e); }
+
+      if (countDes > 0 || countPres > 0) {
+        const avgDes = countDes > 0 ? DESEMPENOS[Math.round(totalDes / countDes) - 1] || '—' : '—';
+        const avgPres = countPres > 0 ? Math.round(totalPres / countPres) : '—';
+        try {
+          // Usar la misma colección 'info-personal' que usa usuarios
+          const collectionName = 'info-personal';
+          await db.collection(collectionName).doc(emp.uid).update({
+            'promedio-desempeno': avgDes,
+            'promedio-presencialidad': avgPres,
+          });
+        } catch(e) { console.warn('Error actualizando promedios:', e); }
+      }
     }
   }
 
@@ -8623,62 +8687,6 @@ const indumentaria = (() => {
     grid.innerHTML = _filtradas.map(p => {
       const stock     = Number(p.stock) || 0;
       const entregas  = p.entregas || [];
-      const entregadas = entregas.length;
-      const pct       = stock > 0 ? Math.min(100, Math.round(entregadas/stock*100)) : 0;
-      const fillClass = pct >= 90 ? 'low' : pct >= 50 ? '' : 'ok';
-
-  function _renderStockTalles(p) {
-    const stockTalles = p.stockTalles || {};
-    const entregas    = p.entregas || [];
-    const esUnico = (p.talles||'').toLowerCase().includes('único') || (p.talles||'').toLowerCase().includes('unico');
-    const lista   = esUnico ? ['Único'] : (p.talles||'').split(',').map(t=>t.trim()).filter(Boolean);
-    if (!lista.length) return '<span class="ind-stock-label">Sin stock cargado</span>';
-    const chips = lista.map(t => {
-      const total     = Number(stockTalles[t]) || 0;
-      const entregado = entregas.filter(e => e.talle === t).length;
-      const libre     = Math.max(0, total - entregado);
-      const col = libre === 0 && total === 0 ? 'var(--muted)'
-                : libre === 0 ? 'var(--danger)'
-                : libre <= 2  ? 'var(--m9)'
-                : 'var(--accent2)';
-      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
-        padding:3px 7px;border-radius:6px;
-        background:color-mix(in srgb,${col} 12%,transparent);
-        border:1px solid color-mix(in srgb,${col} 35%,transparent)">
-        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${esc(t)}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text)">${libre}<span style="color:var(--muted)">/${total}</span></span>
-      </span>`;
-    }).join('');
-    return `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 0;width:100%">${chips}</div>`;
-  }
-
-  function _countdown(fechaStr) {
-    if (!fechaStr) return '';
-    const entrega  = new Date(fechaStr);
-    const vence    = new Date(entrega);
-    vence.setMonth(vence.getMonth() + 6);
-    const hoy      = new Date();
-    hoy.setHours(0,0,0,0);
-    const diffMs   = vence - hoy;
-    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDias < 0) {
-      return `<span class="ind-countdown vence">Venció hace ${Math.abs(diffDias)}d</span>`;
-    }
-    if (diffDias === 0) {
-      return `<span class="ind-countdown vence">Vence hoy</span>`;
-    }
-    if (diffDias <= 30) {
-      return `<span class="ind-countdown warn">Vence en ${diffDias}d</span>`;
-    }
-    const meses = Math.floor(diffDias / 30);
-    const dias  = diffDias % 30;
-    const label = meses > 0
-      ? `${meses}m${dias > 0 ? ` ${dias}d` : ''}`
-      : `${diffDias}d`;
-    return `<span class="ind-countdown ok">${label} restantes</span>`;
-  }
-
       // Filas de entregas (últimas 4)
       const entregasHTML = entregas.slice(-4).reverse().map(e => {
         const emp = ipRegs.find(r => r.id === e.empId);
@@ -8734,6 +8742,58 @@ const indumentaria = (() => {
           </div>
         </div>`;
     }).join('');
+  }
+
+  function _renderStockTalles(p) {
+    const stockTalles = p.stockTalles || {};
+    const entregas    = p.entregas || [];
+    const esUnico = (p.talles||'').toLowerCase().includes('único') || (p.talles||'').toLowerCase().includes('unico');
+    const lista   = esUnico ? ['Único'] : (p.talles||'').split(',').map(t=>t.trim()).filter(Boolean);
+    if (!lista.length) return '<span class="ind-stock-label">Sin stock cargado</span>';
+    const chips = lista.map(t => {
+      const total     = Number(stockTalles[t]) || 0;
+      const entregado = entregas.filter(e => e.talle === t).length;
+      const libre     = Math.max(0, total - entregado);
+      const col = libre === 0 && total === 0 ? 'var(--muted)'
+                : libre === 0 ? 'var(--danger)'
+                : libre <= 2  ? 'var(--m9)'
+                : 'var(--accent2)';
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+        padding:3px 7px;border-radius:6px;
+        background:color-mix(in srgb,${col} 12%,transparent);
+        border:1px solid color-mix(in srgb,${col} 35%,transparent)">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${esc(t)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text)">${libre}<span style="color:var(--muted)">/${total}</span></span>
+      </span>`;
+    }).join('');
+    return `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 0;width:100%">${chips}</div>`;
+  }
+
+  function _countdown(fechaStr) {
+    if (!fechaStr) return '';
+    const entrega  = new Date(fechaStr);
+    const vence    = new Date(entrega);
+    vence.setMonth(vence.getMonth() + 6);
+    const hoy      = new Date();
+    hoy.setHours(0,0,0,0);
+    const diffMs   = vence - hoy;
+    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDias < 0) {
+      return `<span class="ind-countdown vence">Venció hace ${Math.abs(diffDias)}d</span>`;
+    }
+    if (diffDias === 0) {
+      return `<span class="ind-countdown vence">Vence hoy</span>`;
+    }
+    if (diffDias <= 30) {
+      return `<span class="ind-countdown warn">Vence en ${diffDias}d</span>`;
+    }
+    const meses = Math.floor(diffDias / 30);
+    const dias  = diffDias % 30;
+    const label = meses > 0
+      ? `${meses}m${dias > 0 ? ` ${dias}d` : ''}`
+      : `${diffDias}d`;
+    return `<span class="ind-countdown ok">${label} restantes</span>`;
   }
 
   function _setStat(id, val) {
@@ -9348,7 +9408,7 @@ const alertas = (() => {
     }
 
     if (!_visible) { grid.style.display = 'none'; toggle.textContent = 'mostrar'; return; }
-    grid.style.display = '';
+    grid.style.display = 'flex';
     toggle.textContent = 'ocultar';
 
     if (total === 0) {

@@ -7459,24 +7459,48 @@ const usuarios = (() => {
   function _foPoblarPrendaSelect(part, localEmpleado, currentDesc) {
     const sel = document.getElementById('fo-edit-prenda');
     if (!sel) return;
-    // Obtener prendas del módulo de indumentaria filtradas por cat y local
-    const todasPrendas = (typeof indumentaria !== 'undefined' && indumentaria._getPrendas)
-      ? indumentaria._getPrendas() : [];
-    const filtradas = todasPrendas.filter(p => p.cat === part && (!localEmpleado || p.local === localEmpleado));
-    sel.innerHTML = '<option value="">— Sin asignar —</option>' +
-      filtradas.map(p => {
-        const selected = p.nombre === currentDesc ? 'selected' : '';
-        return `<option value="${esc(p.id)}|${esc(p.nombre)}|${esc(p.talles||'')}" ${selected}>${esc(p.nombre)}</option>`;
-      }).join('');
-    // Poblar talles del select según prenda actual
-    _foPoblarTalleSelect(filtradas.find(p => p.nombre === currentDesc));
-    // Al cambiar prenda repoblar talles
-    sel.onchange = () => {
-      const [pid, pnombre, ptalles] = (sel.value||'').split('|');
-      _foPoblarTalleSelect(pid ? { talles: ptalles } : null);
-    };
-  }
 
+    const _poblar = (todasPrendas) => {
+      const _localMatch = (pLocal, empLocal) => {
+        if (!empLocal) return true;
+        const a = (pLocal  ||'').toLowerCase();
+        const b = (empLocal||'').toLowerCase();
+        return a === b || b.includes(a) || a.includes(b);
+      };
+      const delCat   = todasPrendas.filter(p => p.cat === part);
+      const filtradas = delCat.filter(p => _localMatch(p.local, localEmpleado));
+      const lista     = filtradas.length ? filtradas : delCat;
+
+      sel.innerHTML = '<option value="">\u2014 Sin asignar \u2014</option>' +
+        lista.map(p => {
+          const localTag = (lista === delCat && delCat !== filtradas) ? ` (${esc(p.local)})` : '';
+          const selected = p.nombre === currentDesc ? 'selected' : '';
+          return `<option value="${esc(p.id)}|${esc(p.nombre)}|${esc(p.talles||'')}" ${selected}>${esc(p.nombre)}${localTag}</option>`;
+        }).join('');
+
+      _foPoblarTalleSelect(lista.find(p => p.nombre === currentDesc) || null);
+      sel.onchange = () => {
+        const parts = (sel.value||'').split('|');
+        _foPoblarTalleSelect(parts[0] ? { talles: parts[2] } : null);
+      };
+    };
+
+    const cached = (typeof indumentaria !== 'undefined' && indumentaria._getPrendas)
+      ? indumentaria._getPrendas() : [];
+
+    if (cached.length > 0) {
+      _poblar(cached);
+    } else if (db) {
+      sel.innerHTML = '<option value="">Cargando prendas\u2026</option>';
+      db.collection('prendas').get().then(snap => {
+        _poblar(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }).catch(() => {
+        sel.innerHTML = '<option value="">Sin prendas cargadas</option>';
+      });
+    } else {
+      sel.innerHTML = '<option value="">Sin prendas cargadas</option>';
+    }
+  }
   function _foPoblarTalleSelect(prenda) {
     const sel = document.getElementById('fo-edit-talle');
     if (!sel) return;

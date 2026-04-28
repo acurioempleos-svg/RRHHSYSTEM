@@ -44,6 +44,7 @@
     --m6: #ff5f5f; /* bajas */
     --m7: #4afff0; /* liquidaciones */
     --m8: #ff4ab4; /* portal empleados */
+    --m9: #ffcc4a; /* indumentaria */
   }
 
   /* ─── RESET ───────────────────────────────────────────────── */
@@ -1898,6 +1899,252 @@
   .fo-zone.selected rect, .fo-zone.selected polygon {
     stroke: var(--m4) !important; stroke-width: 2.5px !important;
   }
+  /* ─── MÓDULO INDUMENTARIA ──────────────────────────────────── */
+  .ind-toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .ind-local-tabs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .ind-local-tab {
+    padding: 7px 16px; border-radius: 20px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+    border: 1.5px solid var(--border); background: none; color: var(--muted);
+    transition: all var(--transition);
+  }
+  .ind-local-tab:hover { border-color: var(--m9); color: var(--m9); }
+  .ind-local-tab.active {
+    background: color-mix(in srgb, var(--m9) 18%, transparent);
+    border-color: var(--m9); color: var(--m9);
+  }
+  /* Grid de prendas */
+  .ind-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .ind-prenda-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+    transition: border-color var(--transition), transform var(--transition);
+  }
+  .ind-prenda-card:hover { border-color: var(--m9); transform: translateY(-1px); }
+  .ind-prenda-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--m9) 6%, transparent);
+  }
+  .ind-prenda-icon {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m9) 20%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .ind-prenda-name {
+    font-size: 14px; font-weight: 700; flex: 1;
+  }
+  .ind-prenda-meta {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: .06em;
+  }
+  .ind-prenda-actions {
+    display: flex; gap: 4px;
+  }
+  .ind-prenda-actions button {
+    width: 28px; height: 28px; border: none; background: none;
+    cursor: pointer; color: var(--muted); border-radius: 6px; font-size: 13px;
+    transition: all var(--transition);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ind-prenda-actions button:hover { background: var(--surface); color: var(--text); }
+  .ind-prenda-actions button.del:hover { color: var(--danger); }
+  /* Stock bar */
+  .ind-stock-bar {
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ind-stock-track {
+    flex: 1; height: 5px; border-radius: 3px;
+    background: var(--border); overflow: hidden;
+  }
+  .ind-stock-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--m9); transition: width 400ms ease;
+  }
+  .ind-stock-fill.low { background: var(--danger); }
+  .ind-stock-fill.ok  { background: var(--accent2); }
+  .ind-stock-label {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); white-space: nowrap;
+  }
+  /* Lista de entregas */
+  .ind-entregas-list { padding: 0 16px 14px; }
+  .ind-entrega-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    font-size: 12px;
+  }
+  .ind-entrega-row:last-child { border-bottom: none; }
+  .ind-entrega-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m4) 20%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--m4) 40%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: var(--m4);
+    overflow: hidden;
+  }
+  .ind-entrega-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .ind-entrega-nombre { flex: 1; font-weight: 600; }
+  .ind-entrega-talle {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--m9); background: color-mix(in srgb, var(--m9) 15%, transparent);
+    padding: 2px 7px; border-radius: 10px;
+  }
+  .ind-entrega-fecha { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; }
+  .ind-countdown {
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; white-space: nowrap;
+  }
+  .ind-countdown.ok    { background: color-mix(in srgb,var(--accent2) 15%,transparent); color: var(--accent2); }
+  .ind-countdown.warn  { background: color-mix(in srgb,var(--m9) 18%,transparent);      color: var(--m9); }
+  .ind-countdown.vence { background: color-mix(in srgb,var(--danger) 15%,transparent);  color: var(--danger); }
+  .ind-entrega-del {
+    width: 20px; height: 20px; border: none; background: none;
+    cursor: pointer; color: var(--muted); border-radius: 4px; font-size: 11px;
+    transition: color var(--transition);
+  }
+  .ind-entrega-del:hover { color: var(--danger); }
+  /* Asignar entrega inline */
+  .ind-asignar-btn {
+    width: 100%; padding: 7px; margin-top: 2px;
+    background: none; border: 1px dashed var(--border); border-radius: 7px;
+    color: var(--muted); cursor: pointer; font-size: 12px;
+    font-family: 'Syne', sans-serif;
+    transition: all var(--transition);
+  }
+  .ind-asignar-btn:hover { border-color: var(--m9); color: var(--m9); }
+  /* Modal nueva prenda */
+  #ind-prenda-overlay { z-index: 210; }
+  /* Modal asignar entrega */
+  #ind-asignar-overlay { z-index: 220; }
+  .ind-emp-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .ind-emp-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 7px; cursor: pointer;
+    transition: background var(--transition);
+    border: 1px solid transparent;
+  }
+  .ind-emp-opt:hover { background: color-mix(in srgb, var(--m9) 12%, transparent); border-color: var(--m9); }
+  .ind-emp-opt-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m4) 20%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; color: var(--m4); overflow: hidden;
+  }
+  .ind-emp-opt-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .ind-emp-opt-name { font-size: 13px; font-weight: 600; flex: 1; }
+  .ind-emp-opt-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  /* Empty state */
+  .ind-empty {
+    grid-column: 1/-1; text-align: center; padding: 60px 20px;
+    color: var(--muted); font-size: 14px;
+  }
+  .ind-empty-icon { font-size: 48px; margin-bottom: 12px; }
+  /* Stats bar */
+  .ind-stats {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .ind-stat {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px; flex: 1; min-width: 120px;
+  }
+  .ind-stat-val {
+    font-size: 24px; font-weight: 800; color: var(--m9); line-height: 1;
+    margin-bottom: 3px;
+  }
+  .ind-stat-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+  }
+  /* ─── ALERTAS HOME ────────────────────────────────────────── */
+  .home-alertas {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .home-alertas-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .home-alertas-title {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .home-alertas-badge {
+    background: var(--danger); color: #fff;
+    font-size: 10px; font-weight: 800;
+    padding: 1px 7px; border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+  .home-alertas-badge.warn { background: var(--m9); color: #0e0f11; }
+  .home-alertas-toggle {
+    font-size: 11px; color: var(--muted); cursor: pointer;
+    font-family: 'DM Mono', monospace; letter-spacing: .06em;
+    background: none; border: none; padding: 0;
+    transition: color var(--transition);
+  }
+  .home-alertas-toggle:hover { color: var(--text); }
+  /* Grid de alertas */
+  .alertas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+  }
+  .alerta-card {
+    background: var(--surface2);
+    border-radius: 10px;
+    border-left: 3px solid var(--alerta-color, var(--muted));
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: transform var(--transition), border-color var(--transition);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .alerta-card:hover { transform: translateX(2px); border-top-color: var(--alerta-color); }
+  .alerta-icon {
+    font-size: 18px; flex-shrink: 0; line-height: 1.3;
+  }
+  .alerta-body { flex: 1; min-width: 0; }
+  .alerta-titulo {
+    font-size: 12px; font-weight: 700; line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .alerta-desc {
+    font-size: 11px; color: var(--muted); line-height: 1.4;
+  }
+  .alerta-badge {
+    font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px; flex-shrink: 0; align-self: flex-start;
+    background: color-mix(in srgb, var(--alerta-color) 18%, transparent);
+    color: var(--alerta-color);
+    border: 1px solid color-mix(in srgb, var(--alerta-color) 35%, transparent);
+  }
+  /* Empty alertas */
+  .alertas-ok {
+    padding: 16px 20px;
+    background: color-mix(in srgb, var(--accent2) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent2) 25%, transparent);
+    border-radius: 10px;
+    font-size: 13px; color: var(--accent2);
+    display: flex; align-items: center; gap: 10px;
+  }
 </style>
 </head>
 <body>
@@ -2064,6 +2311,11 @@
       <span class="nav-item-text">Portal Empleados</span>
       <span class="nav-item-num">08</span>
     </a>
+    <a class="nav-item" data-rol="rrhh" data-module="indumentaria" style="--item-color: var(--m9)" onclick="navigate('indumentaria', this)">
+      <span class="nav-dot"></span>
+      <span class="nav-item-text">Indumentaria</span>
+      <span class="nav-item-num">09</span>
+    </a>
 
     <!-- Sección Admin -->
     <div class="sidebar-section-label" id="sidebar-admin-label" style="margin-top:8px">Administración</div>
@@ -2107,6 +2359,20 @@
         <div class="home-frase" id="home-frase-box">
           <div class="home-frase-text" id="home-frase-text">—</div>
           <div class="home-frase-author" id="home-frase-author"></div>
+        </div>
+
+        <!-- Panel de alertas -->
+        <div class="home-alertas" id="home-alertas-panel">
+          <div class="home-alertas-header">
+            <div class="home-alertas-title">
+              ⚡ Requiere atención
+              <span class="home-alertas-badge" id="home-alertas-count" style="display:none">0</span>
+            </div>
+            <button class="home-alertas-toggle" id="home-alertas-toggle" onclick="alertas.toggle()">ocultar</button>
+          </div>
+          <div id="home-alertas-grid" class="alertas-grid">
+            <div class="alertas-ok">✓ Calculando alertas…</div>
+          </div>
         </div>
 
         <!-- Widgets: TODO + Novedades -->
@@ -2206,6 +2472,11 @@
             <div class="module-card-icon">🌐</div>
             <div class="module-card-num">08</div>
             <div class="module-card-name">Portal Empleados</div>
+          </div>
+          <div class="module-card" style="--card-color: var(--m9)" onclick="navigate('indumentaria', null)">
+            <div class="module-card-icon">🧥</div>
+            <div class="module-card-num">09</div>
+            <div class="module-card-name">Indumentaria</div>
           </div>
         </div>
       </div>
@@ -3103,59 +3374,56 @@
                   <ellipse cx="108" cy="38" rx="5" ry="8" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
                 </g>
 
-                <!-- TORSO / CAMISETA -->
+                <!-- TORSO / REMERA / CAMISA -->
                 <g class="fo-zone" id="fo-torso" data-part="torso" onclick="infoPersonal.foClick(this)">
                   <path d="M52 75 Q46 80 44 120 L116 120 Q114 80 108 75 L96 70 L80 78 L64 70 Z"
                     fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- cuello -->
                   <rect x="72" y="68" width="16" height="12" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
-                  <!-- línea del torso -->
                   <path d="M80 78 L80 118" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
-                  <!-- bolsillos -->
-                  <rect x="56" y="95" width="18" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <rect x="86" y="95" width="18" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                 </g>
 
-                <!-- BRAZO IZQUIERDO -->
-                <g class="fo-zone" id="fo-brazo-izq" data-part="brazo-izq" onclick="infoPersonal.foClick(this)">
+                <!-- BRAZOS (decorativos) -->
+                <g style="pointer-events:none">
                   <path d="M44 80 Q32 90 28 130 Q26 145 30 150 L40 152 Q44 148 46 132 L52 105 Z"
-                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- mano -->
+                    fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                   <ellipse cx="34" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <path d="M116 80 Q128 90 132 130 Q134 145 130 150 L120 152 Q116 148 114 132 L108 105 Z"
+                    fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <ellipse cx="126" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                 </g>
 
-                <!-- BRAZO DERECHO -->
-                <g class="fo-zone" id="fo-brazo-der" data-part="brazo-der" onclick="infoPersonal.foClick(this)">
-                  <path d="M116 80 Q128 90 132 130 Q134 145 130 150 L120 152 Q116 148 114 132 L108 105 Z"
-                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- mano -->
-                  <ellipse cx="126" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                <!-- DELANTAL -->
+                <g class="fo-zone" id="fo-delantal" data-part="delantal" onclick="infoPersonal.foClick(this)">
+                  <path d="M62 82 L60 120 L100 120 L98 82 Q90 78 80 80 Q70 78 62 82 Z"
+                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" fill-opacity=".85"/>
+                  <path d="M72 80 Q80 74 88 80" fill="none" stroke="#3a3f4a" stroke-width="2" stroke-linecap="round"/>
+                  <rect x="68" y="98" width="24" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <path d="M62 88 L98 88" stroke="#3a3f4a" stroke-width=".8" stroke-dasharray="2,2"/>
+                  <path d="M60 92 Q50 96 48 110" fill="none" stroke="#3a3f4a" stroke-width="1.2" stroke-dasharray="2,2"/>
+                  <path d="M100 92 Q110 96 112 110" fill="none" stroke="#3a3f4a" stroke-width="1.2" stroke-dasharray="2,2"/>
                 </g>
 
                 <!-- PANTALÓN -->
                 <g class="fo-zone" id="fo-pantalon" data-part="pantalon" onclick="infoPersonal.foClick(this)">
                   <path d="M44 120 L50 200 L66 200 L80 160 L94 200 L110 200 L116 120 Z"
                     fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- línea central -->
                   <path d="M80 124 L80 158" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
-                  <!-- cinturón -->
                   <rect x="44" y="118" width="72" height="8" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                   <rect x="74" y="118" width="12" height="8" rx="1" fill="#3a3f4a"/>
                 </g>
 
-                <!-- PIE IZQUIERDO / CALZADO -->
+                <!-- CALZADO -->
                 <g class="fo-zone" id="fo-calzado" data-part="calzado" onclick="infoPersonal.foClick(this)">
                   <rect x="44" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
                   <path d="M44 210 Q40 218 38 220 L72 220 L72 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- PIE DERECHO -->
                   <rect x="88" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
                   <path d="M116 210 Q120 218 122 220 L88 220 L88 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
                 </g>
 
-                <!-- Etiquetas de partes -->
-                <text x="80" y="15" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">GORRO/CAP</text>
-                <text x="14" y="118" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" transform="rotate(-90,14,118)">MANGA IZQ</text>
-                <text x="146" y="118" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" transform="rotate(90,146,118)">MANGA DER</text>
+                <!-- Etiquetas -->
+                <!-- Etiquetas -->
+                <text x="80" y="15" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">GORRO / CAP</text>
+                <text x="80" y="93" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" letter-spacing=".04em">DELANTAL</text>
                 <text x="80" y="232" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">CALZADO</text>
               </svg>
             </div>
@@ -3895,6 +4163,166 @@
     </div>
 
 
+    </div>
+
+
+    <!-- ── MÓDULO 09: INDUMENTARIA ───────────────────────── -->
+    <div class="module" id="module-indumentaria">
+      <div class="module-header" style="--item-color: var(--m9)">
+        <div class="module-icon" style="--item-color: var(--m9)">🧥</div>
+        <div class="module-title-group">
+          <div class="module-eyebrow">Módulo 09</div>
+          <div class="module-title">Indumentaria</div>
+          <div class="module-desc">Stock de ropa por local y registro de entregas por empleado.</div>
+        </div>
+        <div class="module-actions">
+          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#0e0f11" onclick="indumentaria.abrirNuevaPrenda()">+ Nueva prenda</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="ind-stats" id="ind-stats">
+        <div class="ind-stat"><div class="ind-stat-val" id="ind-stat-prendas">0</div><div class="ind-stat-label">Prendas registradas</div></div>
+        <div class="ind-stat"><div class="ind-stat-val" id="ind-stat-stock">0</div><div class="ind-stat-label">Unidades en stock</div></div>
+        <div class="ind-stat"><div class="ind-stat-val" id="ind-stat-entregadas">0</div><div class="ind-stat-label">Entregas realizadas</div></div>
+        <div class="ind-stat"><div class="ind-stat-val" id="ind-stat-empleados">0</div><div class="ind-stat-label">Empleados con ropa</div></div>
+        <div class="ind-stat" style="border-color:color-mix(in srgb,var(--danger) 40%,var(--border))">
+          <div class="ind-stat-val" id="ind-stat-vencen" style="color:var(--danger)">0</div>
+          <div class="ind-stat-label">Vencen en 30 días</div>
+        </div>
+      </div>
+
+      <!-- Filtros por local -->
+      <div class="ind-local-tabs" id="ind-local-tabs"></div>
+
+      <!-- Toolbar búsqueda -->
+      <div class="ind-toolbar">
+        <input class="bj-search" type="text" placeholder="Buscar prenda…" id="ind-search"
+          oninput="indumentaria.filtrar(this.value)"
+          style="flex:1;min-width:180px;max-width:320px;border-color:color-mix(in srgb,var(--m9) 40%,var(--border))">
+        <select class="bj-select" id="ind-filter-cat" onchange="indumentaria.filtrarCat(this.value)">
+          <option value="">Todas las categorías</option>
+          <option value="cabeza">Gorro / Cap</option>
+          <option value="torso">Remera / Camisa</option>
+          <option value="delantal">Delantal</option>
+          <option value="pantalon">Pantalón / Short</option>
+          <option value="calzado">Calzado</option>
+          <option value="otro">Otro</option>
+        </select>
+        <span id="ind-count" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">—</span>
+      </div>
+
+      <!-- Grid de prendas -->
+      <div class="ind-grid" id="ind-grid">
+        <div class="ind-empty">
+          <div class="ind-empty-icon">🧥</div>
+          Cargando indumentaria…
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Nueva / Editar prenda -->
+    <div class="bj-modal-overlay" id="ind-prenda-overlay" onclick="indumentaria.cerrarPrenda(event)">
+      <div class="bj-modal" style="max-width:520px" onclick="event.stopPropagation()">
+        <div class="bj-modal-header">
+          <div>
+            <div class="bj-modal-tag" style="color:var(--m9)" id="ind-prenda-tag">Nueva prenda</div>
+            <div class="bj-modal-title" id="ind-prenda-title">Agregar prenda al stock</div>
+          </div>
+          <button class="bj-modal-close" onclick="indumentaria.cerrarPrenda()">✕</button>
+        </div>
+        <div class="bj-modal-body">
+          <input type="hidden" id="ind-prenda-doc-id">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="bj-field" style="grid-column:1/-1">
+              <label class="bj-label">Prenda *</label>
+              <select class="bj-input" id="ind-p-nombre" onchange="indumentaria.onPrendaSelect(this.value)">
+                <option value="">— Elegir prenda —</option>
+                <optgroup label="🟦 Barra Chalaca">
+                  <option value="Remera blanca|torso|Barra Chalaca|XS,S,M,L,XL,XXL|Remera manga corta blanca institucional">Remera blanca</option>
+                  <option value="Delantal|delantal|Barra Chalaca|Único|Delantal de trabajo Barra Chalaca">Delantal</option>
+                  <option value="Pantalón azul|pantalon|Barra Chalaca|36,38,40,42,44,46|Pantalón de cocina azul">Pantalón azul</option>
+                  <option value="Botines de trabajo|calzado|Barra Chalaca|35-46|Botines de seguridad">Botines de trabajo</option>
+                  <option value="Gorra|cabeza|Barra Chalaca|Único|Gorra institucional Barra Chalaca">Gorra</option>
+                  <option value="Botas bachero|calzado|Barra Chalaca|35-46|Botas de goma para bachero">Botas bachero</option>
+                </optgroup>
+                <optgroup label="🟠 Tanta">
+                  <option value="Camisa salón|torso|Tanta|XS,S,M,L,XL,XXL|Camisa de salón Tanta">Camisa salón</option>
+                  <option value="Delantal salón|delantal|Tanta|Único|Delantal de salón Tanta">Delantal salón</option>
+                  <option value="Delantal bartender|delantal|Tanta|Único|Delantal de bartender Tanta">Delantal bartender</option>
+                  <option value="Camisa cocina|torso|Tanta|XS,S,M,L,XL,XXL|Camisa de cocina Tanta">Camisa cocina</option>
+                  <option value="Delantal cocina|delantal|Tanta|Único|Delantal de cocina Tanta">Delantal cocina</option>
+                </optgroup>
+                <optgroup label="🔵 La Mar">
+                  <option value="Camisa salón|torso|La Mar|XS,S,M,L,XL,XXL|Camisa de salón La Mar">Camisa salón</option>
+                  <option value="Delantal salón|delantal|La Mar|Único|Delantal de salón La Mar">Delantal salón</option>
+                  <option value="Delantal bartender|delantal|La Mar|Único|Delantal de bartender La Mar">Delantal bartender</option>
+                  <option value="Remera cocina|torso|La Mar|XS,S,M,L,XL,XXL|Remera de cocina La Mar">Remera cocina</option>
+                  <option value="Delantal cocina|delantal|La Mar|Único|Delantal de cocina La Mar">Delantal cocina</option>
+                </optgroup>
+              </select>
+            </div>
+            <!-- Preview autocomplete -->
+            <div id="ind-prenda-preview" style="grid-column:1/-1;display:none;
+              background:color-mix(in srgb,var(--m9) 8%,transparent);
+              border:1px solid color-mix(in srgb,var(--m9) 30%,transparent);
+              border-radius:8px;padding:10px 14px;font-size:12px;
+              display:none;gap:20px;flex-wrap:wrap">
+            </div>
+            <input type="hidden" id="ind-p-cat">
+            <input type="hidden" id="ind-p-local">
+            <input type="hidden" id="ind-p-talles">
+            <input type="hidden" id="ind-p-notas">
+            <div class="bj-field" style="grid-column:1/-1">
+              <label class="bj-label">Stock total (unidades)</label>
+              <input class="bj-input" id="ind-p-stock" type="number" min="0" placeholder="0">
+            </div>
+          </div>
+          <div id="ind-prenda-error" style="color:var(--danger);font-size:12px;margin-top:8px"></div>
+        </div>
+        <div class="bj-modal-footer">
+          <button class="bj-btn bj-btn-outline" onclick="indumentaria.cerrarPrenda()">Cancelar</button>
+          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#0e0f11" id="ind-prenda-save-btn" onclick="indumentaria.guardarPrenda()">Guardar prenda</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Asignar entrega -->
+    <div class="bj-modal-overlay" id="ind-asignar-overlay" onclick="indumentaria.cerrarAsignar(event)">
+      <div class="bj-modal" style="max-width:480px" onclick="event.stopPropagation()">
+        <div class="bj-modal-header">
+          <div>
+            <div class="bj-modal-tag" style="color:var(--m9)">Entregar prenda</div>
+            <div class="bj-modal-title" id="ind-asignar-title">Asignar a empleado</div>
+          </div>
+          <button class="bj-modal-close" onclick="indumentaria.cerrarAsignar()">✕</button>
+        </div>
+        <div class="bj-modal-body">
+          <input type="hidden" id="ind-asignar-prenda-id">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+            <div class="bj-field">
+              <label class="bj-label">Talle entregado</label>
+              <select class="bj-input" id="ind-asignar-talle">
+                <option value="">— Elegir talle —</option>
+              </select>
+            </div>
+            <div class="bj-field">
+              <label class="bj-label">Fecha de entrega</label>
+              <input class="bj-input" id="ind-asignar-fecha" type="date">
+            </div>
+          </div>
+          <div class="bj-label" style="margin-bottom:6px">Empleado</div>
+          <input class="bj-input" id="ind-asignar-search" placeholder="Buscar por nombre, DNI, CUIL…"
+            oninput="indumentaria.buscarEmp(this.value)"
+            style="border-color:color-mix(in srgb,var(--m9) 40%,var(--border))">
+          <div class="ind-emp-list" id="ind-emp-list">
+            <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>
+          </div>
+          <div id="ind-asignar-error" style="color:var(--danger);font-size:12px;margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── MÓDULO USUARIOS ──────────────────────────────── -->
     <div class="module" id="module-usuarios">
       <div class="module-header">
@@ -4186,6 +4614,12 @@ async function showApp(user) {
   setTimeout(_checkDevolucionesPendientes, 3000);
   // Inicializar módulo home
   if (typeof homeMod !== 'undefined') homeMod.init(rol, user.email || '');
+  // Inicializar alertas (espera a que Info Personal tenga datos)
+  if (typeof infoPersonal !== 'undefined') {
+    infoPersonal.init();
+    infoPersonal.onUpdate(() => alertas.calcular());
+  }
+  setTimeout(() => alertas.init(), 1500);
 }
 
 function aplicarPermisos(rol, localAsignado) {
@@ -4248,6 +4682,7 @@ const MODULE_LABELS = {
   'bajas':       'Bajas',
   'liquidaciones': 'Liquidaciones',
   'portal':      'Portal Empleados',
+  'indumentaria': 'Indumentaria',
   'admin-locales': 'Locales · Admin',
 };
 
@@ -4279,6 +4714,10 @@ function navigate(moduleId, navEl) {
     setTimeout(() => reclutamiento.init(), 50);
   }
 
+  if (moduleId === 'home' && typeof alertas !== 'undefined') {
+    setTimeout(() => alertas.calcular(), 200);
+  }
+
   if (moduleId === 'formulario' && typeof formulario !== 'undefined') {
     setTimeout(() => formulario.init(), 50);
   }
@@ -4308,6 +4747,13 @@ function navigate(moduleId, navEl) {
       // Asegurar que infoPersonal tenga datos antes de renderizar
       if (typeof infoPersonal !== 'undefined') infoPersonal.init();
       horarios.init();
+    }, 150);
+  }
+
+  if (moduleId === 'indumentaria' && typeof indumentaria !== 'undefined') {
+    setTimeout(() => {
+      if (typeof infoPersonal !== 'undefined') infoPersonal.init();
+      indumentaria.init();
     }, 150);
   }
 }
@@ -6916,9 +7362,8 @@ const usuarios = (() => {
 
   const _PARTES = {
     'cabeza':    'Gorro / Cap / Headwear',
-    'torso':     'Remera / Camisa / Chaleco',
-    'brazo-izq': 'Manga izquierda / Accesorio',
-    'brazo-der': 'Manga derecha / Accesorio',
+    'torso':     'Remera / Camisa',
+    'delantal':  'Delantal',
     'pantalon':  'Pantalón / Short',
     'calzado':   'Calzado',
   };
@@ -7997,6 +8442,841 @@ const horarios = (() => {
 //  devolucionAt <= ahora y devolucionEnviada === false,
 //  y manda el mail de solicitud de devolución.
 // =============================================================
+// ==============================================================
+//  MÓDULO 09 – INDUMENTARIA
+//  Colección Firestore: 'prendas'   (stock por local)
+//  Colección Firestore: 'indumentaria'  (entregas por empleado, ya existe)
+// ==============================================================
+const indumentaria = (() => {
+  const COL_PRENDAS   = 'prendas';
+  const COL_INDUM     = 'indumentaria'; // la misma que usa el perfil
+
+  const CAT_LABEL = {
+    'cabeza':    '🎩 Gorro / Cap',
+    'torso':     '👕 Remera / Camisa',
+    'delantal':  '🥼 Delantal',
+    'pantalon':  '👖 Pantalón / Short',
+    'calzado':   '👟 Calzado',
+    'otro':      '📦 Otro',
+  };
+  const CAT_ICON = {
+    'cabeza':'🎩','torso':'👕','delantal':'🥼','pantalon':'👖','calzado':'👟','otro':'📦',
+  };
+
+  let _prendas    = [];      // docs de 'prendas'
+  let _indum      = {};      // { empleadoId: { partes... } } cargado on-demand
+  let _filtradas  = [];
+  let _localActivo = '';
+  let _queryTxt   = '';
+  let _queryCat   = '';
+  let _unsub      = null;
+  let _asignarPrendaId = null;
+
+  // ── INIT ──────────────────────────────────────────────────────
+  function init() {
+    if (_unsub) { render(); return; }
+    if (!db) { _renderVacio('⚠ Firebase no configurado'); return; }
+
+    _unsub = db.collection(COL_PRENDAS).orderBy('createdAt','desc')
+      .onSnapshot(snap => {
+        _prendas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _poblarLocalTabs();
+        _aplicarFiltros();
+      }, err => {
+        console.error('Prendas snapshot:', err);
+        _renderVacio('Error de conexión');
+      });
+  }
+
+  // ── LOCALES TABS ──────────────────────────────────────────────
+  function _poblarLocalTabs() {
+    const locales = [...new Set(_prendas.map(p => p.local).filter(Boolean))].sort();
+    const cont = document.getElementById('ind-local-tabs');
+    if (!cont) return;
+    cont.innerHTML = [
+      `<button class="ind-local-tab ${!_localActivo ? 'active' : ''}" onclick="indumentaria.setLocal('')">Todos</button>`,
+      ...locales.map(l => {
+        const col = _localColor(l);
+        const activeStyle = _localActivo===l ? `background:color-mix(in srgb,${col} 18%,transparent);border-color:${col};color:${col}` : '';
+        return `<button class="ind-local-tab ${_localActivo===l ? 'active' : ''}"
+          style="${activeStyle}"
+          onmouseover="if(!this.classList.contains('active')){this.style.borderColor='${col}';this.style.color='${col}'}"
+          onmouseout="if(!this.classList.contains('active')){this.style.borderColor='';this.style.color=''}"
+          onclick="indumentaria.setLocal('${esc(l)}')">${esc(l)}</button>`;
+      })
+    ].join('');
+  }
+
+  function setLocal(l) {
+    _localActivo = l;
+    _poblarLocalTabs();
+    _aplicarFiltros();
+  }
+
+  // ── FILTROS ───────────────────────────────────────────────────
+  function filtrar(v)    { _queryTxt  = v.toLowerCase(); _aplicarFiltros(); }
+  function filtrarCat(v) { _queryCat  = v;               _aplicarFiltros(); }
+
+  function _aplicarFiltros() {
+    _filtradas = _prendas.filter(p => {
+      if (_localActivo && p.local !== _localActivo) return false;
+      if (_queryCat    && p.cat   !== _queryCat)    return false;
+      if (_queryTxt && !(p.nombre||'').toLowerCase().includes(_queryTxt) &&
+                       !(p.notas||'').toLowerCase().includes(_queryTxt)) return false;
+      return true;
+    });
+    render();
+  }
+
+  // ── RENDER GRID ───────────────────────────────────────────────
+  async function render() {
+    const grid  = document.getElementById('ind-grid');
+    const count = document.getElementById('ind-count');
+    if (!grid) return;
+
+    // Actualizar stats
+    const totalStock     = _prendas.reduce((s,p) => s + (Number(p.stock)||0), 0);
+    const totalEntregas  = _prendas.reduce((s,p) => s + ((p.entregas||[]).length), 0);
+    const empConRopa     = new Set(_prendas.flatMap(p => (p.entregas||[]).map(e=>e.empId)).filter(Boolean)).size;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const en30 = new Date(hoy); en30.setDate(en30.getDate() + 30);
+    const vencen30 = _prendas.reduce((s,p) => s + (p.entregas||[]).filter(e => {
+      if (!e.fecha) return false;
+      const v = new Date(e.fecha); v.setMonth(v.getMonth() + 6);
+      return v >= hoy && v <= en30;
+    }).length, 0);
+    _setStat('ind-stat-prendas',   _prendas.length);
+    _setStat('ind-stat-stock',     totalStock);
+    _setStat('ind-stat-entregadas',totalEntregas);
+    _setStat('ind-stat-empleados', empConRopa);
+    _setStat('ind-stat-vencen',    vencen30);
+
+    count.textContent = `${_filtradas.length} prenda${_filtradas.length!==1?'s':''}`;
+
+    if (!_filtradas.length) {
+      grid.innerHTML = `<div class="ind-empty"><div class="ind-empty-icon">🧥</div>${
+        _prendas.length ? 'Sin resultados para ese filtro' : 'No hay prendas registradas. ¡Agregá la primera!'
+      }</div>`;
+      return;
+    }
+
+    // Obtener datos de empleados para los avatars
+    const ipRegs = (typeof infoPersonal !== 'undefined') ? infoPersonal.getRegistros() : [];
+
+    grid.innerHTML = _filtradas.map(p => {
+      const stock     = Number(p.stock) || 0;
+      const entregas  = p.entregas || [];
+      const entregadas = entregas.length;
+      const pct       = stock > 0 ? Math.min(100, Math.round(entregadas/stock*100)) : 0;
+      const fillClass = pct >= 90 ? 'low' : pct >= 50 ? '' : 'ok';
+
+  function _countdown(fechaStr) {
+    if (!fechaStr) return '';
+    const entrega  = new Date(fechaStr);
+    const vence    = new Date(entrega);
+    vence.setMonth(vence.getMonth() + 6);
+    const hoy      = new Date();
+    hoy.setHours(0,0,0,0);
+    const diffMs   = vence - hoy;
+    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDias < 0) {
+      return `<span class="ind-countdown vence">Venció hace ${Math.abs(diffDias)}d</span>`;
+    }
+    if (diffDias === 0) {
+      return `<span class="ind-countdown vence">Vence hoy</span>`;
+    }
+    if (diffDias <= 30) {
+      return `<span class="ind-countdown warn">Vence en ${diffDias}d</span>`;
+    }
+    const meses = Math.floor(diffDias / 30);
+    const dias  = diffDias % 30;
+    const label = meses > 0
+      ? `${meses}m${dias > 0 ? ` ${dias}d` : ''}`
+      : `${diffDias}d`;
+    return `<span class="ind-countdown ok">${label} restantes</span>`;
+  }
+
+      // Filas de entregas (últimas 4)
+      const entregasHTML = entregas.slice(-4).reverse().map(e => {
+        const emp = ipRegs.find(r => r.id === e.empId);
+        const nombre   = emp ? (emp.nombre||'?') : (e.empNombre||'Empleado eliminado');
+        const initials = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const avatarInner = emp?.foto
+          ? `<img src="${esc(emp.foto)}" onerror="this.parentNode.textContent='${initials}'">`
+          : initials;
+        const fechaFmt = e.fecha ? e.fecha.split('-').reverse().join('/') : '—';
+        return `
+          <div class="ind-entrega-row">
+            <div class="ind-entrega-avatar">${avatarInner}</div>
+            <div class="ind-entrega-nombre">${esc(nombre)}</div>
+            ${e.talle ? `<span class="ind-entrega-talle">${esc(e.talle)}</span>` : ''}
+            <span class="ind-entrega-fecha">${fechaFmt}</span>
+            ${_countdown(e.fecha)}
+            <button class="ind-entrega-del" title="Quitar entrega"
+              onclick="indumentaria.quitarEntrega('${p.id}','${e.id}')">✕</button>
+          </div>`;
+      }).join('');
+
+      const masHTML = entregas.length > 4
+        ? `<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">
+            +${entregas.length - 4} más entregas
+           </div>` : '';
+
+      return `
+        <div class="ind-prenda-card">
+          <div class="ind-prenda-header">
+            <div class="ind-prenda-icon">${CAT_ICON[p.cat]||'📦'}</div>
+            <div style="flex:1;min-width:0">
+              <div class="ind-prenda-name">${esc(p.nombre)}</div>
+              <div class="ind-prenda-meta">
+                <span style="color:${_localColor(p.local)};font-weight:700">${esc(p.local||'Sin local')}</span>
+                <span style="color:var(--muted)"> · ${CAT_LABEL[p.cat]||p.cat}</span>
+              </div>
+              ${p.talles ? `<div class="ind-prenda-meta" style="color:var(--m9)">Talles: ${esc(p.talles)}</div>` : ''}
+            </div>
+            <div class="ind-prenda-actions">
+              <button title="Editar prenda" onclick="indumentaria.editarPrenda('${p.id}')">✏</button>
+              <button class="del" title="Eliminar prenda" onclick="indumentaria.eliminarPrenda('${p.id}','${esc(p.nombre)}')">✕</button>
+            </div>
+          </div>
+          <div class="ind-stock-bar">
+            <div class="ind-stock-track">
+              <div class="ind-stock-fill ${fillClass}" style="width:${pct}%"></div>
+            </div>
+            <span class="ind-stock-label">${entregadas}/${stock} entregadas</span>
+          </div>
+          <div class="ind-entregas-list">
+            ${entregasHTML || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Sin entregas registradas</div>`}
+            ${masHTML}
+            <button class="ind-asignar-btn" onclick="indumentaria.abrirAsignar('${p.id}')">
+              + Registrar entrega a empleado
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function _setStat(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function esc(v) { return String(v??'').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── NUEVA / EDITAR PRENDA ─────────────────────────────────────
+  function _parsePrendaVal(val) {
+    // formato: "nombre|cat|local|talles|notas"
+    if (!val) return null;
+    const [nombre, cat, local, talles, notas] = val.split('|');
+    return { nombre, cat, local, talles, notas };
+  }
+
+  function onPrendaSelect(val) {
+    const p = _parsePrendaVal(val);
+    const preview = document.getElementById('ind-prenda-preview');
+    if (!p) { preview.style.display = 'none'; return; }
+
+    document.getElementById('ind-p-cat').value   = p.cat;
+    document.getElementById('ind-p-local').value = p.local;
+    document.getElementById('ind-p-talles').value= p.talles;
+    document.getElementById('ind-p-notas').value = p.notas;
+
+    const localCol = _localColor(p.local);
+    preview.style.display = 'flex';
+    preview.innerHTML = `
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:center">Local</span>
+      <span style="font-weight:700;color:${localCol}">${esc(p.local)}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:center">Categoría</span>
+      <span style="font-weight:600">${CAT_LABEL[p.cat]||p.cat}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:center">Talles</span>
+      <span style="color:var(--m9);font-weight:600">${esc(p.talles)}</span>
+    `;
+  }
+
+  function abrirNuevaPrenda() {
+    document.getElementById('ind-prenda-doc-id').value = '';
+    document.getElementById('ind-prenda-tag').textContent   = 'Nueva prenda';
+    document.getElementById('ind-prenda-title').textContent = 'Agregar prenda al stock';
+    document.getElementById('ind-p-nombre').value = '';
+    document.getElementById('ind-p-cat').value    = '';
+    document.getElementById('ind-p-local').value  = '';
+    document.getElementById('ind-p-stock').value  = '';
+    document.getElementById('ind-p-talles').value = '';
+    document.getElementById('ind-p-notas').value  = '';
+    document.getElementById('ind-prenda-error').textContent = '';
+    const preview = document.getElementById('ind-prenda-preview');
+    if (preview) preview.style.display = 'none';
+    document.getElementById('ind-prenda-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ind-p-nombre').focus(), 120);
+  }
+
+  function editarPrenda(docId) {
+    const p = _prendas.find(x=>x.id===docId);
+    if (!p) return;
+    document.getElementById('ind-prenda-doc-id').value = docId;
+    document.getElementById('ind-prenda-tag').textContent   = 'Editar prenda';
+    document.getElementById('ind-prenda-title').textContent = 'Modificar prenda';
+
+    // Buscar la opción que corresponde en el select
+    const sel = document.getElementById('ind-p-nombre');
+    let matched = '';
+    for (const opt of sel.options) {
+      const parsed = _parsePrendaVal(opt.value);
+      if (parsed && parsed.nombre === p.nombre && parsed.local === p.local) {
+        matched = opt.value; break;
+      }
+    }
+    sel.value = matched;
+
+    document.getElementById('ind-p-cat').value    = p.cat||'';
+    document.getElementById('ind-p-local').value  = p.local||'';
+    document.getElementById('ind-p-stock').value  = p.stock||'';
+    document.getElementById('ind-p-talles').value = p.talles||'';
+    document.getElementById('ind-p-notas').value  = p.notas||'';
+    document.getElementById('ind-prenda-error').textContent = '';
+
+    // Mostrar preview
+    if (matched) onPrendaSelect(matched);
+
+    document.getElementById('ind-prenda-overlay').classList.add('open');
+  }
+
+  function cerrarPrenda(e) {
+    if (e && e.target !== document.getElementById('ind-prenda-overlay')) return;
+    document.getElementById('ind-prenda-overlay').classList.remove('open');
+  }
+
+  async function guardarPrenda() {
+    const errEl = document.getElementById('ind-prenda-error');
+    const btn   = document.getElementById('ind-prenda-save-btn');
+    errEl.textContent = '';
+
+    const selVal = document.getElementById('ind-p-nombre').value;
+    const parsed = _parsePrendaVal(selVal);
+    if (!parsed) { errEl.textContent = 'Seleccioná una prenda.'; return; }
+
+    const data = {
+      nombre: parsed.nombre,
+      cat:    document.getElementById('ind-p-cat').value   || parsed.cat,
+      local:  document.getElementById('ind-p-local').value || parsed.local,
+      stock:  Number(document.getElementById('ind-p-stock').value)||0,
+      talles: parsed.talles,
+      notas:  parsed.notas,
+      updatedAt: new Date().toISOString(),
+    };
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const docId = document.getElementById('ind-prenda-doc-id').value;
+      if (docId) {
+        await db.collection(COL_PRENDAS).doc(docId).update(data);
+      } else {
+        data.createdAt = data.updatedAt;
+        data.entregas  = [];
+        await db.collection(COL_PRENDAS).add(data);
+      }
+      document.getElementById('ind-prenda-overlay').classList.remove('open');
+    } catch(err) {
+      errEl.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar prenda';
+    }
+  }
+
+  async function eliminarPrenda(docId, nombre) {
+    if (!confirm(`¿Eliminar la prenda "${nombre}"? Se perderán también las entregas registradas.`)) return;
+    try { await db.collection(COL_PRENDAS).doc(docId).delete(); }
+    catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── ASIGNAR ENTREGA ───────────────────────────────────────────
+  function abrirAsignar(prendaId) {
+    const p = _prendas.find(x=>x.id===prendaId);
+    if (!p) return;
+    _asignarPrendaId = prendaId;
+    document.getElementById('ind-asignar-title').textContent = p.nombre;
+    document.getElementById('ind-asignar-prenda-id').value   = prendaId;
+    document.getElementById('ind-asignar-fecha').value  = new Date().toISOString().slice(0,10);
+    document.getElementById('ind-asignar-search').value = '';
+    document.getElementById('ind-asignar-error').textContent = '';
+
+    // Poblar select de talles desde la prenda
+    const talleSel = document.getElementById('ind-asignar-talle');
+    const tallesStr = p.talles || '';
+    const esUnico = tallesStr.toLowerCase() === 'único' || tallesStr.toLowerCase() === 'unico';
+    if (esUnico) {
+      talleSel.innerHTML = '<option value="Único">Único</option>';
+    } else {
+      const lista = tallesStr.split(',').map(t => t.trim()).filter(Boolean);
+      talleSel.innerHTML = '<option value="">— Elegir talle —</option>' +
+        lista.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    }
+    document.getElementById('ind-emp-list').innerHTML =
+      '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
+    document.getElementById('ind-asignar-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ind-asignar-search').focus(), 120);
+  }
+
+  function cerrarAsignar(e) {
+    if (e && e.target !== document.getElementById('ind-asignar-overlay')) return;
+    document.getElementById('ind-asignar-overlay').classList.remove('open');
+    _asignarPrendaId = null;
+  }
+
+  function buscarEmp(q) {
+    const list = document.getElementById('ind-emp-list');
+    if (!q || q.length < 2) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
+      return;
+    }
+    const ipRegs = (typeof infoPersonal !== 'undefined') ? infoPersonal.getRegistros() : [];
+    const matches = ipRegs.filter(r =>
+      (r.nombre||'').toLowerCase().includes(q.toLowerCase()) ||
+      (r.cuil||'').includes(q) || (r.dni||'').includes(q)
+    ).slice(0,10);
+
+    if (!matches.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Sin resultados</div>';
+      return;
+    }
+    list.innerHTML = matches.map(r => {
+      const initials = (r.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avatarInner = r.foto
+        ? `<img src="${esc(r.foto)}" onerror="this.parentNode.textContent='${initials}'">`
+        : initials;
+      return `
+        <div class="ind-emp-opt" onclick="indumentaria.seleccionarEmp('${r.id}','${esc(r.nombre)}')">
+          <div class="ind-emp-opt-avatar">${avatarInner}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ind-emp-opt-name">${esc(r.nombre)}</div>
+            <div class="ind-emp-opt-meta">${esc(r.local||'')} · ${esc(r['puesto-real']||'')}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function seleccionarEmp(empId, empNombre) {
+    if (!_asignarPrendaId || !db) return;
+    const errEl = document.getElementById('ind-asignar-error');
+    const talle = document.getElementById('ind-asignar-talle').value.trim();
+    const fecha = document.getElementById('ind-asignar-fecha').value;
+    errEl.textContent = '';
+
+    // Verificar que no esté ya asignada esta prenda a este empleado
+    const prenda = _prendas.find(x=>x.id===_asignarPrendaId);
+    if (prenda && (prenda.entregas||[]).some(e=>e.empId===empId)) {
+      errEl.textContent = `${empNombre} ya tiene esta prenda asignada.`;
+      return;
+    }
+
+    const entregaId = `e_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+    const nueva = { id: entregaId, empId, empNombre, talle, fecha, asignadoAt: new Date().toISOString() };
+
+    try {
+      // Guardar en 'prendas' (array de entregas en la prenda)
+      const prendaRef = db.collection(COL_PRENDAS).doc(_asignarPrendaId);
+      await prendaRef.update({
+        entregas: firebase.firestore.FieldValue.arrayUnion(nueva)
+      });
+
+      // Guardar en 'indumentaria' (perfil del empleado) — conectar con la vista del muñeco
+      const cat = prenda?.cat || 'otro';
+      const prendaRef2 = db.collection(COL_INDUM).doc(empId);
+      const snap = await prendaRef2.get();
+      const current = snap.exists ? snap.data() : {};
+      // Si la parte del muñeco ya tiene algo, concatenar; si no, asignar
+      const partActual = current[cat] || {};
+      const descNueva = partActual.desc
+        ? partActual.desc + '; ' + (prenda?.nombre||'')
+        : (prenda?.nombre||'');
+      await prendaRef2.set({
+        [cat]: {
+          desc:  descNueva,
+          talle: talle || partActual.talle || '',
+          fecha: fecha || partActual.fecha || '',
+          updatedAt: new Date().toISOString(),
+        }
+      }, { merge: true });
+
+      document.getElementById('ind-asignar-overlay').classList.remove('open');
+      _asignarPrendaId = null;
+    } catch(err) {
+      errEl.textContent = 'Error: ' + err.message;
+      console.error(err);
+    }
+  }
+
+  async function quitarEntrega(prendaId, entregaId) {
+    if (!confirm('¿Quitar esta entrega del registro?')) return;
+    const prenda = _prendas.find(x=>x.id===prendaId);
+    if (!prenda) return;
+    const entrega = (prenda.entregas||[]).find(e=>e.id===entregaId);
+    if (!entrega) return;
+    try {
+      await db.collection(COL_PRENDAS).doc(prendaId).update({
+        entregas: firebase.firestore.FieldValue.arrayRemove(entrega)
+      });
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function _renderVacio(msg) {
+    const grid = document.getElementById('ind-grid');
+    if (grid) grid.innerHTML = `<div class="ind-empty"><div class="ind-empty-icon">🧥</div>${msg}</div>`;
+  }
+
+  function _localColor(local) {
+    const l = (local||'').toLowerCase();
+    if (l.includes('barra') || l.includes('chalaca')) return '#4afff0'; // m7 cyan
+    if (l.includes('tanta'))  return '#ff9f4a'; // m5 naranja
+    if (l.includes('mar') || l.includes('lamar') || l.includes('la mar')) return '#4ab4ff'; // m3 azul
+    return 'var(--muted)';
+  }
+
+  // ── SEED: prendas por defecto ─────────────────────────────────
+  const PRENDAS_SEED = [
+    // Barra Chalaca
+    { nombre:'Remera blanca',        cat:'torso',    local:'Barra Chalaca', talles:'XS,S,M,L,XL,XXL', notas:'Remera manga corta blanca institucional' },
+    { nombre:'Delantal',             cat:'delantal', local:'Barra Chalaca', talles:'Único',             notas:'Delantal de trabajo Barra Chalaca' },
+    { nombre:'Pantalón azul',        cat:'pantalon', local:'Barra Chalaca', talles:'36,38,40,42,44,46', notas:'Pantalón de cocina azul' },
+    { nombre:'Botines de trabajo',   cat:'calzado',  local:'Barra Chalaca', talles:'35-46',             notas:'Botines de seguridad' },
+    { nombre:'Gorra',                cat:'cabeza',   local:'Barra Chalaca', talles:'Único',             notas:'Gorra institucional Barra Chalaca' },
+    { nombre:'Botas bachero',        cat:'calzado',  local:'Barra Chalaca', talles:'35-46',             notas:'Botas de goma para bachero' },
+    // Tanta
+    { nombre:'Camisa salón',         cat:'torso',    local:'Tanta',         talles:'XS,S,M,L,XL,XXL', notas:'Camisa de salón Tanta' },
+    { nombre:'Delantal salón',       cat:'delantal', local:'Tanta',         talles:'Único',             notas:'Delantal de salón Tanta' },
+    { nombre:'Delantal bartender',   cat:'delantal', local:'Tanta',         talles:'Único',             notas:'Delantal de bartender Tanta' },
+    { nombre:'Camisa cocina',        cat:'torso',    local:'Tanta',         talles:'XS,S,M,L,XL,XXL', notas:'Camisa de cocina Tanta' },
+    { nombre:'Delantal cocina',      cat:'delantal', local:'Tanta',         talles:'Único',             notas:'Delantal de cocina Tanta' },
+    // La Mar
+    { nombre:'Camisa salón',         cat:'torso',    local:'La Mar',        talles:'XS,S,M,L,XL,XXL', notas:'Camisa de salón La Mar' },
+    { nombre:'Delantal salón',       cat:'delantal', local:'La Mar',        talles:'Único',             notas:'Delantal de salón La Mar' },
+    { nombre:'Delantal bartender',   cat:'delantal', local:'La Mar',        talles:'Único',             notas:'Delantal de bartender La Mar' },
+    { nombre:'Remera cocina',        cat:'torso',    local:'La Mar',        talles:'XS,S,M,L,XL,XXL', notas:'Remera de cocina La Mar' },
+    { nombre:'Delantal cocina',      cat:'delantal', local:'La Mar',        talles:'Único',             notas:'Delantal de cocina La Mar' },
+  ];
+
+  async function seedPrendas() {
+    if (!db) return;
+    // Solo carga si la colección está vacía
+    const snap = await db.collection(COL_PRENDAS).limit(1).get();
+    if (!snap.empty) return; // ya hay datos, no sobreescribir
+    const now = new Date().toISOString();
+    const batch = db.batch();
+    PRENDAS_SEED.forEach(p => {
+      const ref = db.collection(COL_PRENDAS).doc();
+      batch.set(ref, { ...p, stock: 0, entregas: [], createdAt: now, updatedAt: now });
+    });
+    await batch.commit();
+    console.log('✓ Prendas seed cargadas:', PRENDAS_SEED.length);
+  }
+
+  // Llama al seed en el init, antes de arrancar el listener
+  const _initOrig = init;
+  function initConSeed() {
+    if (!db) { _renderVacio('⚠ Firebase no configurado'); return; }
+    seedPrendas().catch(e => console.warn('seed error:', e)).finally(() => {
+      if (_unsub) { render(); return; }
+      _unsub = db.collection(COL_PRENDAS).orderBy('createdAt','desc')
+        .onSnapshot(snap => {
+          _prendas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          _poblarLocalTabs();
+          _aplicarFiltros();
+        }, err => {
+          console.error('Prendas snapshot:', err);
+          _renderVacio('Error de conexión');
+        });
+    });
+  }
+
+  return {
+    init: initConSeed, render,
+    setLocal, filtrar, filtrarCat,
+    abrirNuevaPrenda, editarPrenda, cerrarPrenda, guardarPrenda, eliminarPrenda,
+    onPrendaSelect,
+    abrirAsignar, cerrarAsignar, buscarEmp, seleccionarEmp, quitarEntrega,
+    _getPrendas: () => _prendas,
+  };
+})();
+
+// ==============================================================
+//  MÓDULO ALERTAS — Panel de atención en el Home
+//  Se recalcula cada vez que se abre el Home y cada 5 minutos
+// ==============================================================
+const alertas = (() => {
+  let _visible  = true;
+  let _interval = null;
+
+  // ── HELPERS ───────────────────────────────────────────────────
+  function _hoy() {
+    const d = new Date(); d.setHours(0,0,0,0); return d;
+  }
+  function _diffDias(fecha) {
+    // días desde hoy hasta fecha (negativo = ya pasó)
+    return Math.ceil((new Date(fecha) - _hoy()) / 86400000);
+  }
+  function _fmtFecha(str) {
+    if (!str) return '—';
+    return str.split('-').reverse().join('/');
+  }
+
+  // ── GENERADORES DE ALERTAS ────────────────────────────────────
+
+  function _alertasInfoPersonal() {
+    const lista = [];
+    if (typeof infoPersonal === 'undefined') return lista;
+    const regs = infoPersonal.getRegistros();
+    const hoy  = _hoy();
+
+    regs.forEach(r => {
+      const nombre = r.nombre || 'Sin nombre';
+
+      // 1) Fin de período de prueba en los próximos 14 días
+      if (r['fecha-fin-prueba']) {
+        const diff = _diffDias(r['fecha-fin-prueba']);
+        if (diff >= 0 && diff <= 14) {
+          lista.push({
+            nivel: diff <= 3 ? 'critico' : 'warn',
+            icono: '🔔',
+            titulo: nombre,
+            desc: `Fin de prueba: ${_fmtFecha(r['fecha-fin-prueba'])}${diff === 0 ? ' (HOY)' : ` (en ${diff}d)`}`,
+            badge: diff === 0 ? 'HOY' : `${diff}d`,
+            modulo: 'info-personal',
+          });
+        }
+        // Ya venció sin dar de alta
+        if (diff < 0 && diff >= -30 && r.alta !== 'Sí') {
+          lista.push({
+            nivel: 'critico',
+            icono: '⚠️',
+            titulo: nombre,
+            desc: `Prueba vencida hace ${Math.abs(diff)}d sin confirmación de alta`,
+            badge: `${Math.abs(diff)}d vencido`,
+            modulo: 'info-personal',
+          });
+        }
+      }
+
+      // 2) Apercibimientos acumulados (≥ 3)
+      const aperc = Number(r.apercibimientos) || 0;
+      if (aperc >= 3) {
+        lista.push({
+          nivel: aperc >= 5 ? 'critico' : 'warn',
+          icono: '🚨',
+          titulo: nombre,
+          desc: `${aperc} apercibimiento${aperc > 1 ? 's' : ''} acumulado${aperc > 1 ? 's' : ''}`,
+          badge: `${aperc} aperc.`,
+          modulo: 'info-personal',
+        });
+      }
+
+      // 3) Empleados sin CUIL cargado
+      if (!r.cuil || r.cuil.length < 11) {
+        lista.push({
+          nivel: 'info',
+          icono: '📋',
+          titulo: nombre,
+          desc: 'Sin CUIL registrado',
+          badge: 'Dato faltante',
+          modulo: 'info-personal',
+        });
+      }
+
+      // 4) Empleados sin CBU
+      if (!r.cbu || r.cbu.length < 22) {
+        lista.push({
+          nivel: 'info',
+          icono: '🏦',
+          titulo: nombre,
+          desc: 'Sin CBU registrado',
+          badge: 'Dato faltante',
+          modulo: 'info-personal',
+        });
+      }
+
+      // 5) Cumpleaños hoy o en los próximos 7 días
+      if (r['fecha-nac']) {
+        const [,, fnMes, fnDia] = r['fecha-nac'].match(/(\d{4})-(\d{2})-(\d{2})/) || [];
+        if (fnMes && fnDia) {
+          const anioActual = hoy.getFullYear();
+          let cumple = new Date(`${anioActual}-${fnMes}-${fnDia}`);
+          if (cumple < hoy) cumple = new Date(`${anioActual + 1}-${fnMes}-${fnDia}`);
+          const diffCumple = Math.ceil((cumple - hoy) / 86400000);
+          if (diffCumple <= 7) {
+            lista.push({
+              nivel: diffCumple === 0 ? 'cumple' : 'info',
+              icono: '🎂',
+              titulo: nombre,
+              desc: diffCumple === 0
+                ? '¡Cumpleaños hoy!'
+                : `Cumpleaños en ${diffCumple} día${diffCumple > 1 ? 's' : ''} (${_fmtFecha(r['fecha-nac'].slice(5).replace('-', '/') + '/' + anioActual)})`,
+              badge: diffCumple === 0 ? '🎉 HOY' : `en ${diffCumple}d`,
+              modulo: 'info-personal',
+            });
+          }
+        }
+      }
+    });
+
+    return lista;
+  }
+
+  function _alertasIndumentaria() {
+    const lista = [];
+    if (typeof indumentaria === 'undefined') return lista;
+
+    // Acceder a las prendas via la función interna — las tomamos del DOM de stats
+    // como fallback usamos el getter si existe
+    const prendas = indumentaria._getPrendas ? indumentaria._getPrendas() : [];
+    const hoy = _hoy();
+
+    prendas.forEach(p => {
+      const entregas = p.entregas || [];
+
+      // Stock en cero con entregas registradas
+      if ((Number(p.stock) || 0) === 0 && entregas.length > 0) {
+        lista.push({
+          nivel: 'warn',
+          icono: '🧥',
+          titulo: p.nombre,
+          desc: `Sin stock — ${p.local}`,
+          badge: 'Stock 0',
+          modulo: 'indumentaria',
+        });
+      }
+
+      // Entregas vencidas o próximas a vencer (≤ 30 días)
+      entregas.forEach(e => {
+        if (!e.fecha) return;
+        const vence = new Date(e.fecha);
+        vence.setMonth(vence.getMonth() + 6);
+        const diff = Math.ceil((vence - hoy) / 86400000);
+        if (diff <= 0) {
+          lista.push({
+            nivel: 'critico',
+            icono: '🧥',
+            titulo: `${p.nombre} — ${e.empNombre || 'Empleado'}`,
+            desc: `Uniforme vencido hace ${Math.abs(diff)} día${Math.abs(diff) !== 1 ? 's' : ''}`,
+            badge: 'Vencido',
+            modulo: 'indumentaria',
+          });
+        } else if (diff <= 30) {
+          lista.push({
+            nivel: 'warn',
+            icono: '🧥',
+            titulo: `${p.nombre} — ${e.empNombre || 'Empleado'}`,
+            desc: `Renovación en ${diff} día${diff !== 1 ? 's' : ''}`,
+            badge: `${diff}d`,
+            modulo: 'indumentaria',
+          });
+        }
+      });
+    });
+
+    return lista;
+  }
+
+  function _alertasIngresos() {
+    const lista = [];
+    if (typeof ingresos === 'undefined') return lista;
+    const regs = ingresos.getRegistros ? ingresos.getRegistros() : [];
+    // Ingresos sin pasar a Info Personal (pendientes hace > 3 días)
+    regs.forEach(r => {
+      if (r.estado === 'pendiente' || !r.estado) {
+        const diff = r.fecha ? _diffDias(r.fecha) : null;
+        if (diff !== null && diff < -3) {
+          lista.push({
+            nivel: 'warn',
+            icono: '➕',
+            titulo: r.nombre || 'Ingreso sin nombre',
+            desc: `Ingreso pendiente hace ${Math.abs(diff)} días`,
+            badge: 'Pendiente',
+            modulo: 'ingresos',
+          });
+        }
+      }
+    });
+    return lista;
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────
+  const NIVEL_COLOR = {
+    'critico': 'var(--danger)',
+    'warn':    'var(--m9)',
+    'info':    'var(--m3)',
+    'cumple':  'var(--m2)',
+  };
+  const NIVEL_ORDER = { critico: 0, warn: 1, cumple: 2, info: 3 };
+
+  function calcular() {
+    const todas = [
+      ..._alertasInfoPersonal(),
+      ..._alertasIndumentaria(),
+      ..._alertasIngresos(),
+    ].sort((a, b) => (NIVEL_ORDER[a.nivel] ?? 9) - (NIVEL_ORDER[b.nivel] ?? 9));
+
+    _render(todas);
+  }
+
+  function _render(todas) {
+    const grid   = document.getElementById('home-alertas-grid');
+    const badge  = document.getElementById('home-alertas-count');
+    const toggle = document.getElementById('home-alertas-toggle');
+    if (!grid) return;
+
+    const criticas = todas.filter(a => a.nivel === 'critico').length;
+    const total    = todas.length;
+
+    // Badge del encabezado
+    if (total > 0) {
+      badge.style.display = '';
+      badge.textContent   = total;
+      badge.className     = 'home-alertas-badge' + (criticas > 0 ? '' : ' warn');
+    } else {
+      badge.style.display = 'none';
+    }
+
+    if (!_visible) { grid.style.display = 'none'; toggle.textContent = 'mostrar'; return; }
+    grid.style.display = '';
+    toggle.textContent = 'ocultar';
+
+    if (total === 0) {
+      grid.innerHTML = `<div class="alertas-ok">✓ Todo en orden — sin alertas pendientes</div>`;
+      return;
+    }
+
+    grid.innerHTML = todas.map(a => {
+      const col = NIVEL_COLOR[a.nivel] || 'var(--muted)';
+      return `
+        <div class="alerta-card" style="--alerta-color:${col}" onclick="navigate('${a.modulo}', null)">
+          <div class="alerta-icon">${a.icono}</div>
+          <div class="alerta-body">
+            <div class="alerta-titulo" title="${a.titulo}">${a.titulo}</div>
+            <div class="alerta-desc">${a.desc}</div>
+          </div>
+          <span class="alerta-badge">${a.badge}</span>
+        </div>`;
+    }).join('');
+  }
+
+  function toggle() {
+    _visible = !_visible;
+    calcular();
+  }
+
+  function init() {
+    // Esperar a que Info Personal cargue datos antes de calcular
+    if (typeof infoPersonal !== 'undefined' && infoPersonal.getRegistros().length === 0) {
+      infoPersonal.onUpdate(() => calcular());
+    }
+    calcular();
+    // Refrescar cada 5 minutos
+    if (_interval) clearInterval(_interval);
+    _interval = setInterval(calcular, 5 * 60 * 1000);
+  }
+
+  return { init, calcular, toggle, _getPrendas: () => [] };
+})();
+
 async function _checkDevolucionesPendientes() {
   if (!db) return;
   if (EMAILJS_PUBLIC_KEY === 'TU_PUBLIC_KEY') return;

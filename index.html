@@ -1774,15 +1774,16 @@
   }
   .ip-perfil-close:hover { border-color: var(--danger); color: var(--danger); }
   .ip-perfil-body {
-    display: grid; grid-template-columns: 1fr 1fr;
+    display: grid; grid-template-columns: 3fr 2fr;
     gap: 0;
   }
   @media (max-width: 600px) {
     .ip-perfil-body { grid-template-columns: 1fr; }
   }
   .ip-perfil-datos {
-    padding: 24px 28px;
+    padding: 20px 24px;
     border-right: 1px solid var(--border);
+    max-height: 480px; overflow-y: auto;
   }
   @media (max-width: 600px) {
     .ip-perfil-datos { border-right: none; border-bottom: 1px solid var(--border); }
@@ -1803,8 +1804,9 @@
 
   /* ─── FALLOUT DOLL ──────────────────────────────────────────── */
   .ip-fallout-panel {
-    padding: 24px 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 20px 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    background: color-mix(in srgb, var(--m4) 3%, transparent);
   }
   .ip-fallout-title {
     font-family: 'DM Mono', monospace; font-size: 10px;
@@ -1812,7 +1814,7 @@
     align-self: flex-start;
   }
   .ip-fallout-wrap {
-    position: relative; width: 180px;
+    position: relative; width: 130px;
   }
   .ip-fallout-wrap svg {
     width: 100%; height: auto; display: block;
@@ -3347,84 +3349,58 @@
               </div>
 
               <!-- SVG del muñeco estilo Fallout/Vault Boy -->
-              <svg viewBox="0 0 160 340" xmlns="http://www.w3.org/2000/svg" id="fo-svg">
-                <defs>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="2" result="blur"/>
-                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                  </filter>
-                </defs>
+              <svg viewBox="0 0 120 280" xmlns="http://www.w3.org/2000/svg" id="fo-svg">
 
                 <!-- CABEZA -->
                 <g class="fo-zone" id="fo-cabeza" data-part="cabeza" onclick="infoPersonal.foClick(this)">
-                  <ellipse cx="80" cy="38" rx="28" ry="32" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <!-- cara -->
-                  <ellipse cx="80" cy="40" rx="22" ry="25" fill="#1e2127"/>
-                  <!-- ojos -->
-                  <ellipse cx="70" cy="34" rx="5" ry="5.5" fill="#2a2d35"/>
-                  <ellipse cx="90" cy="34" rx="5" ry="5.5" fill="#2a2d35"/>
-                  <ellipse cx="70" cy="34" rx="3" ry="3.5" fill="#b44aff" opacity=".8"/>
-                  <ellipse cx="90" cy="34" rx="3" ry="3.5" fill="#b44aff" opacity=".8"/>
-                  <!-- boca -->
-                  <path d="M72 50 Q80 56 88 50" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                  <!-- nariz -->
-                  <path d="M78 42 L80 47 L82 42" fill="none" stroke="#3a3f4a" stroke-width="1" stroke-linecap="round"/>
-                  <!-- orejas -->
-                  <ellipse cx="52" cy="38" rx="5" ry="8" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="108" cy="38" rx="5" ry="8" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                  <ellipse cx="60" cy="30" rx="22" ry="24" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <ellipse cx="52" cy="28" rx="4" ry="4" fill="#1e2127"/>
+                  <ellipse cx="68" cy="28" rx="4" ry="4" fill="#1e2127"/>
+                  <ellipse cx="52" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
+                  <ellipse cx="68" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
+                  <path d="M53 39 Q60 44 67 39" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
                 </g>
 
-                <!-- TORSO / REMERA / CAMISA -->
+                <!-- TORSO / REMERA -->
                 <g class="fo-zone" id="fo-torso" data-part="torso" onclick="infoPersonal.foClick(this)">
-                  <path d="M52 75 Q46 80 44 120 L116 120 Q114 80 108 75 L96 70 L80 78 L64 70 Z"
-                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <rect x="72" y="68" width="16" height="12" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
-                  <path d="M80 78 L80 118" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
+                  <path d="M34 60 L86 60 L88 115 L32 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
+                  <!-- cuello -->
+                  <rect x="52" y="52" width="16" height="10" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                  <!-- hombros -->
+                  <path d="M34 60 L22 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M86 60 L98 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
                 </g>
 
-                <!-- BRAZOS (decorativos) -->
+                <!-- BRAZOS decorativos -->
                 <g style="pointer-events:none">
-                  <path d="M44 80 Q32 90 28 130 Q26 145 30 150 L40 152 Q44 148 46 132 L52 105 Z"
-                    fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="34" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <path d="M116 80 Q128 90 132 130 Q134 145 130 150 L120 152 Q116 148 114 132 L108 105 Z"
-                    fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="126" cy="157" rx="9" ry="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="14" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <ellipse cx="21" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="92" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <ellipse cx="99" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                 </g>
 
                 <!-- DELANTAL -->
                 <g class="fo-zone" id="fo-delantal" data-part="delantal" onclick="infoPersonal.foClick(this)">
-                  <path d="M62 82 L60 120 L100 120 L98 82 Q90 78 80 80 Q70 78 62 82 Z"
-                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" fill-opacity=".85"/>
-                  <path d="M72 80 Q80 74 88 80" fill="none" stroke="#3a3f4a" stroke-width="2" stroke-linecap="round"/>
-                  <rect x="68" y="98" width="24" height="14" rx="3" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <path d="M62 88 L98 88" stroke="#3a3f4a" stroke-width=".8" stroke-dasharray="2,2"/>
-                  <path d="M60 92 Q50 96 48 110" fill="none" stroke="#3a3f4a" stroke-width="1.2" stroke-dasharray="2,2"/>
-                  <path d="M100 92 Q110 96 112 110" fill="none" stroke="#3a3f4a" stroke-width="1.2" stroke-dasharray="2,2"/>
+                  <path d="M42 62 L78 62 L80 115 L40 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" fill-opacity=".9"/>
+                  <path d="M52 62 Q60 56 68 62" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
+                  <rect x="50" y="85" width="20" height="13" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
                 </g>
 
                 <!-- PANTALÓN -->
                 <g class="fo-zone" id="fo-pantalon" data-part="pantalon" onclick="infoPersonal.foClick(this)">
-                  <path d="M44 120 L50 200 L66 200 L80 160 L94 200 L110 200 L116 120 Z"
-                    fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M80 124 L80 158" stroke="#3a3f4a" stroke-width="1" stroke-dasharray="3,3"/>
-                  <rect x="44" y="118" width="72" height="8" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <rect x="74" y="118" width="12" height="8" rx="1" fill="#3a3f4a"/>
+                  <path d="M32 113 L40 175 L56 175 L60 145 L64 175 L80 175 L88 113 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
+                  <rect x="32" y="111" width="56" height="6" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="54" y="111" width="12" height="6" rx="1" fill="#3a3f4a"/>
                 </g>
 
                 <!-- CALZADO -->
                 <g class="fo-zone" id="fo-calzado" data-part="calzado" onclick="infoPersonal.foClick(this)">
-                  <rect x="44" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M44 210 Q40 218 38 220 L72 220 L72 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <rect x="88" y="198" width="28" height="16" rx="4" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M116 210 Q120 218 122 220 L88 220 L88 214 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <rect x="34" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <path d="M34 181 Q28 188 26 190 L56 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <rect x="64" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <path d="M86 181 Q92 188 94 190 L64 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
                 </g>
 
-                <!-- Etiquetas -->
-                <!-- Etiquetas -->
-                <text x="80" y="15" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">GORRO / CAP</text>
-                <text x="80" y="93" text-anchor="middle" font-family="DM Mono, monospace" font-size="6" fill="#6b7080" letter-spacing=".04em">DELANTAL</text>
-                <text x="80" y="232" text-anchor="middle" font-family="DM Mono, monospace" font-size="7" fill="#6b7080" letter-spacing=".05em">CALZADO</text>
               </svg>
             </div>
 
@@ -3434,19 +3410,27 @@
               <input type="hidden" id="fo-edit-part">
               <div class="ip-indum-fields">
                 <div class="ip-indum-field" style="grid-column:1/-1">
-                  <label>Descripción / Prenda</label>
-                  <input type="text" id="fo-edit-desc" placeholder="Ej: Remera negra talle M">
+                  <label>Prenda</label>
+                  <select id="fo-edit-prenda" style="background:var(--bg);border:1px solid var(--border);
+                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
+                    font-family:'Syne',sans-serif;outline:none;width:100%">
+                    <option value="">— Sin asignar —</option>
+                  </select>
                 </div>
                 <div class="ip-indum-field">
                   <label>Talle</label>
-                  <input type="text" id="fo-edit-talle" placeholder="M, 42, XL…">
+                  <select id="fo-edit-talle" style="background:var(--bg);border:1px solid var(--border);
+                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
+                    font-family:'Syne',sans-serif;outline:none;width:100%">
+                    <option value="">—</option>
+                  </select>
                 </div>
                 <div class="ip-indum-field">
                   <label>Fecha entrega</label>
                   <input type="date" id="fo-edit-fecha">
                 </div>
               </div>
-              <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar indumentaria</button>
+              <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar</button>
             </div>
 
             <!-- Leyenda -->
@@ -4242,9 +4226,9 @@
                   <option value="Remera blanca|torso|Barra Chalaca|XS,S,M,L,XL,XXL|Remera manga corta blanca institucional">Remera blanca</option>
                   <option value="Delantal|delantal|Barra Chalaca|Único|Delantal de trabajo Barra Chalaca">Delantal</option>
                   <option value="Pantalón azul|pantalon|Barra Chalaca|36,38,40,42,44,46|Pantalón de cocina azul">Pantalón azul</option>
-                  <option value="Botines de trabajo|calzado|Barra Chalaca|35-46|Botines de seguridad">Botines de trabajo</option>
+                  <option value="Botines de trabajo|calzado|Barra Chalaca|35,36,37,38,39,40,41,42,43,44,45,46|Botines de seguridad">Botines de trabajo</option>
                   <option value="Gorra|cabeza|Barra Chalaca|Único|Gorra institucional Barra Chalaca">Gorra</option>
-                  <option value="Botas bachero|calzado|Barra Chalaca|35-46|Botas de goma para bachero">Botas bachero</option>
+                  <option value="Botas bachero|calzado|Barra Chalaca|35,36,37,38,39,40,41,42,43,44,45,46|Botas de goma para bachero">Botas bachero</option>
                 </optgroup>
                 <optgroup label="🟠 Tanta">
                   <option value="Camisa salón|torso|Tanta|XS,S,M,L,XL,XXL|Camisa de salón Tanta">Camisa salón</option>
@@ -4267,15 +4251,17 @@
               background:color-mix(in srgb,var(--m9) 8%,transparent);
               border:1px solid color-mix(in srgb,var(--m9) 30%,transparent);
               border-radius:8px;padding:10px 14px;font-size:12px;
-              display:none;gap:20px;flex-wrap:wrap">
+              gap:20px;flex-wrap:wrap">
             </div>
             <input type="hidden" id="ind-p-cat">
             <input type="hidden" id="ind-p-local">
             <input type="hidden" id="ind-p-talles">
             <input type="hidden" id="ind-p-notas">
-            <div class="bj-field" style="grid-column:1/-1">
-              <label class="bj-label">Stock total (unidades)</label>
-              <input class="bj-input" id="ind-p-stock" type="number" min="0" placeholder="0">
+
+            <!-- Stock por talle — se genera dinámicamente -->
+            <div class="bj-field" style="grid-column:1/-1" id="ind-stock-talles-wrap" style="display:none">
+              <label class="bj-label">Stock por talle</label>
+              <div id="ind-stock-talles-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:4px"></div>
             </div>
           </div>
           <div id="ind-prenda-error" style="color:var(--danger);font-size:12px;margin-top:8px"></div>
@@ -7470,25 +7456,67 @@ const usuarios = (() => {
     document.getElementById('fo-tooltip').classList.remove('show');
   }
 
+  function _foPoblarPrendaSelect(part, localEmpleado, currentDesc) {
+    const sel = document.getElementById('fo-edit-prenda');
+    if (!sel) return;
+    // Obtener prendas del módulo de indumentaria filtradas por cat y local
+    const todasPrendas = (typeof indumentaria !== 'undefined' && indumentaria._getPrendas)
+      ? indumentaria._getPrendas() : [];
+    const filtradas = todasPrendas.filter(p => p.cat === part && (!localEmpleado || p.local === localEmpleado));
+    sel.innerHTML = '<option value="">— Sin asignar —</option>' +
+      filtradas.map(p => {
+        const selected = p.nombre === currentDesc ? 'selected' : '';
+        return `<option value="${esc(p.id)}|${esc(p.nombre)}|${esc(p.talles||'')}" ${selected}>${esc(p.nombre)}</option>`;
+      }).join('');
+    // Poblar talles del select según prenda actual
+    _foPoblarTalleSelect(filtradas.find(p => p.nombre === currentDesc));
+    // Al cambiar prenda repoblar talles
+    sel.onchange = () => {
+      const [pid, pnombre, ptalles] = (sel.value||'').split('|');
+      _foPoblarTalleSelect(pid ? { talles: ptalles } : null);
+    };
+  }
+
+  function _foPoblarTalleSelect(prenda) {
+    const sel = document.getElementById('fo-edit-talle');
+    if (!sel) return;
+    const tallesStr = prenda?.talles || '';
+    const esUnico = tallesStr.toLowerCase().includes('único') || tallesStr.toLowerCase().includes('unico');
+    if (!tallesStr) {
+      sel.innerHTML = '<option value="">—</option>';
+    } else if (esUnico) {
+      sel.innerHTML = '<option value="Único">Único</option>';
+    } else {
+      const lista = tallesStr.split(',').map(t => t.trim()).filter(Boolean);
+      sel.innerHTML = '<option value="">— Talle —</option>' +
+        lista.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    }
+  }
+
   function foClick(el) {
     const part = el.dataset.part;
     if (!part) return;
 
-    // Toggle selección
     const wasSelected = el.classList.contains('selected');
     _foLimpiarSeleccion();
     if (!wasSelected) {
       el.classList.add('selected');
-      // Mostrar panel de edición
       const d = _perfilIndum[part] || {};
       document.getElementById('fo-edit-part').value = part;
       document.getElementById('fo-edit-title').textContent = '🧥 ' + (_PARTES[part] || part);
-      document.getElementById('fo-edit-desc').value  = d.desc  || '';
-      document.getElementById('fo-edit-talle').value = d.talle || '';
-      document.getElementById('fo-edit-fecha').value = d.fecha || '';
+      document.getElementById('fo-edit-fecha').value = d.fecha || new Date().toISOString().slice(0,10);
       document.getElementById('fo-edit-panel').style.display = '';
-      document.getElementById('fo-save-btn').textContent = 'Guardar indumentaria';
+      document.getElementById('fo-save-btn').textContent = 'Guardar';
       document.getElementById('fo-save-btn').disabled = false;
+
+      // Poblar select de prendas filtradas por cat y local del empleado
+      const emp = _registros ? _registros.find(r => r.id === _perfilId) : null;
+      _foPoblarPrendaSelect(part, emp?.local, d.desc);
+      // Restaurar talle si había uno guardado
+      setTimeout(() => {
+        const talleSel = document.getElementById('fo-edit-talle');
+        if (talleSel && d.talle) talleSel.value = d.talle;
+      }, 50);
 
       // Tooltip
       const tip = document.getElementById('fo-tooltip');
@@ -7501,7 +7529,6 @@ const usuarios = (() => {
       } else {
         document.getElementById('fo-tip-val').innerHTML = '<span class="fo-tooltip-empty">Sin ropa asignada</span>';
       }
-      // Posicionar tooltip relativo al SVG
       const wrap = document.getElementById('fo-wrap');
       const bbox = el.getBoundingClientRect();
       const wbbox = wrap.getBoundingClientRect();
@@ -7515,24 +7542,30 @@ const usuarios = (() => {
 
   async function foGuardar() {
     if (!_perfilId || !db) return;
-    const part  = document.getElementById('fo-edit-part').value;
-    const desc  = document.getElementById('fo-edit-desc').value.trim();
-    const talle = document.getElementById('fo-edit-talle').value.trim();
-    const fecha = document.getElementById('fo-edit-fecha').value;
+    const part   = document.getElementById('fo-edit-part').value;
+    const pSel   = document.getElementById('fo-edit-prenda');
+    const tSel   = document.getElementById('fo-edit-talle');
+    const fecha  = document.getElementById('fo-edit-fecha').value;
     if (!part) return;
+
+    const pVal = pSel?.value || '';
+    const [prendaId, prendaNombre] = pVal.split('|');
+    const talle  = tSel?.value || '';
 
     const btn = document.getElementById('fo-save-btn');
     btn.textContent = 'Guardando…'; btn.disabled = true;
 
-    _perfilIndum[part] = { desc, talle, fecha, updatedAt: new Date().toISOString() };
+    _perfilIndum[part] = {
+      desc: prendaNombre || '',
+      prendaId: prendaId || '',
+      talle, fecha,
+      updatedAt: new Date().toISOString()
+    };
     try {
       await db.collection('indumentaria').doc(_perfilId).set(_perfilIndum, { merge: true });
       _foActualizarZonas();
       btn.textContent = '✓ Guardado';
-      setTimeout(() => {
-        btn.textContent = 'Guardar indumentaria';
-        btn.disabled = false;
-      }, 1500);
+      setTimeout(() => { btn.textContent = 'Guardar'; btn.disabled = false; }, 1500);
     } catch(err) {
       btn.textContent = 'Error – reintentar';
       btn.disabled = false;
@@ -8570,6 +8603,31 @@ const indumentaria = (() => {
       const pct       = stock > 0 ? Math.min(100, Math.round(entregadas/stock*100)) : 0;
       const fillClass = pct >= 90 ? 'low' : pct >= 50 ? '' : 'ok';
 
+  function _renderStockTalles(p) {
+    const stockTalles = p.stockTalles || {};
+    const entregas    = p.entregas || [];
+    const esUnico = (p.talles||'').toLowerCase().includes('único') || (p.talles||'').toLowerCase().includes('unico');
+    const lista   = esUnico ? ['Único'] : (p.talles||'').split(',').map(t=>t.trim()).filter(Boolean);
+    if (!lista.length) return '<span class="ind-stock-label">Sin stock cargado</span>';
+    const chips = lista.map(t => {
+      const total     = Number(stockTalles[t]) || 0;
+      const entregado = entregas.filter(e => e.talle === t).length;
+      const libre     = Math.max(0, total - entregado);
+      const col = libre === 0 && total === 0 ? 'var(--muted)'
+                : libre === 0 ? 'var(--danger)'
+                : libre <= 2  ? 'var(--m9)'
+                : 'var(--accent2)';
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+        padding:3px 7px;border-radius:6px;
+        background:color-mix(in srgb,${col} 12%,transparent);
+        border:1px solid color-mix(in srgb,${col} 35%,transparent)">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${esc(t)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text)">${libre}<span style="color:var(--muted)">/${total}</span></span>
+      </span>`;
+    }).join('');
+    return `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 0;width:100%">${chips}</div>`;
+  }
+
   function _countdown(fechaStr) {
     if (!fechaStr) return '';
     const entrega  = new Date(fechaStr);
@@ -8641,10 +8699,7 @@ const indumentaria = (() => {
             </div>
           </div>
           <div class="ind-stock-bar">
-            <div class="ind-stock-track">
-              <div class="ind-stock-fill ${fillClass}" style="width:${pct}%"></div>
-            </div>
-            <span class="ind-stock-label">${entregadas}/${stock} entregadas</span>
+            ${_renderStockTalles(p)}
           </div>
           <div class="ind-entregas-list">
             ${entregasHTML || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Sin entregas registradas</div>`}
@@ -8675,12 +8730,17 @@ const indumentaria = (() => {
   function onPrendaSelect(val) {
     const p = _parsePrendaVal(val);
     const preview = document.getElementById('ind-prenda-preview');
-    if (!p) { preview.style.display = 'none'; return; }
-
-    document.getElementById('ind-p-cat').value   = p.cat;
-    document.getElementById('ind-p-local').value = p.local;
-    document.getElementById('ind-p-talles').value= p.talles;
-    document.getElementById('ind-p-notas').value = p.notas;
+    const wrap    = document.getElementById('ind-stock-talles-wrap');
+    const grid    = document.getElementById('ind-stock-talles-grid');
+    if (!p) {
+      preview.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+    document.getElementById('ind-p-cat').value    = p.cat;
+    document.getElementById('ind-p-local').value  = p.local;
+    document.getElementById('ind-p-talles').value = p.talles;
+    document.getElementById('ind-p-notas').value  = p.notas;
 
     const localCol = _localColor(p.local);
     preview.style.display = 'flex';
@@ -8689,9 +8749,27 @@ const indumentaria = (() => {
       <span style="font-weight:700;color:${localCol}">${esc(p.local)}</span>
       <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:center">Categoría</span>
       <span style="font-weight:600">${CAT_LABEL[p.cat]||p.cat}</span>
-      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;align-self:center">Talles</span>
-      <span style="color:var(--m9);font-weight:600">${esc(p.talles)}</span>
     `;
+
+    // Generar inputs de stock por talle
+    if (wrap && grid) {
+      wrap.style.display = '';
+      const docId = document.getElementById('ind-prenda-doc-id').value;
+      const prendaActual = docId ? _prendas.find(x => x.id === docId) : null;
+      const stockActual  = prendaActual?.stockTalles || {};
+      const esUnico = p.talles.toLowerCase().includes('único') || p.talles.toLowerCase().includes('unico');
+      const lista = esUnico ? ['Único'] : p.talles.split(',').map(t => t.trim()).filter(Boolean);
+      grid.innerHTML = lista.map(t => `
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;
+          background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 6px">
+          <label style="font-family:'DM Mono',monospace;font-size:10px;color:var(--m9);font-weight:700">${esc(t)}</label>
+          <input type="number" min="0" value="${stockActual[t]||0}"
+            data-talle="${esc(t)}"
+            style="width:52px;text-align:center;background:transparent;border:none;
+              color:var(--text);font-size:16px;font-weight:800;outline:none;font-family:'Syne',sans-serif"
+            class="ind-stock-talle-inp">
+        </div>`).join('');
+    }
   }
 
   function abrirNuevaPrenda() {
@@ -8701,12 +8779,13 @@ const indumentaria = (() => {
     document.getElementById('ind-p-nombre').value = '';
     document.getElementById('ind-p-cat').value    = '';
     document.getElementById('ind-p-local').value  = '';
-    document.getElementById('ind-p-stock').value  = '';
     document.getElementById('ind-p-talles').value = '';
     document.getElementById('ind-p-notas').value  = '';
     document.getElementById('ind-prenda-error').textContent = '';
     const preview = document.getElementById('ind-prenda-preview');
     if (preview) preview.style.display = 'none';
+    const wrap = document.getElementById('ind-stock-talles-wrap');
+    if (wrap) wrap.style.display = 'none';
     document.getElementById('ind-prenda-overlay').classList.add('open');
     setTimeout(() => document.getElementById('ind-p-nombre').focus(), 120);
   }
@@ -8756,11 +8835,20 @@ const indumentaria = (() => {
     const parsed = _parsePrendaVal(selVal);
     if (!parsed) { errEl.textContent = 'Seleccioná una prenda.'; return; }
 
+    // Leer stock por talle
+    const stockTalles = {};
+    document.querySelectorAll('.ind-stock-talle-inp').forEach(inp => {
+      const t = inp.dataset.talle;
+      if (t) stockTalles[t] = Number(inp.value) || 0;
+    });
+    const stockTotal = Object.values(stockTalles).reduce((a, b) => a + b, 0);
+
     const data = {
       nombre: parsed.nombre,
       cat:    document.getElementById('ind-p-cat').value   || parsed.cat,
       local:  document.getElementById('ind-p-local').value || parsed.local,
-      stock:  Number(document.getElementById('ind-p-stock').value)||0,
+      stock:  stockTotal,
+      stockTalles,
       talles: parsed.talles,
       notas:  parsed.notas,
       updatedAt: new Date().toISOString(),

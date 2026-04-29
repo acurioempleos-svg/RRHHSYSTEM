@@ -8460,6 +8460,427 @@ const horarios = (() => {
 //  devolucionAt <= ahora y devolucionEnviada === false,
 //  y manda el mail de solicitud de devolución.
 // =============================================================
+  <!-- ========================================================== -->
+<!--  MÓDULO 10: DOCUMENTOS - FIRMA DIGITAL SIMPLE             -->
+<!-- ========================================================== -->
+<div class="module" id="module-docs">
+  <div class="module-header" style="--item-color: var(--accent)">
+    <div class="module-icon" style="--item-color: var(--accent)">📄</div>
+    <div class="module-title-group">
+      <div class="module-eyebrow">Módulo 10</div>
+      <div class="module-title">Documentos Firmados</div>
+      <div class="module-desc">Gestioná documentos que los empleados deben leer y aceptar.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;">
+      <button class="bj-btn" style="background:var(--accent);color:#0e0f11" onclick="docsModule.abrirNuevoDocumento()">+ Nuevo documento</button>
+    </div>
+  </div>
+
+  <!-- Lista de documentos -->
+  <div class="bj-table-wrap">
+    <table class="bj-table">
+      <thead>
+        <tr><th>Título</th><th>Tipo</th><th>Link</th><th>Aceptaciones</th><th class="col-acc"></th></tr>
+      </thead>
+      <tbody id="docs-tbody">
+        <tr><td colspan="5" class="bj-empty-cell">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL: Crear documento -->
+<div class="bj-modal-overlay" id="docs-modal-overlay" onclick="docsModule.cerrarModal(event)">
+  <div class="bj-modal" style="max-width:500px" onclick="event.stopPropagation()">
+    <div class="bj-modal-header">
+      <div><div class="bj-modal-tag" style="color:var(--accent)">Nuevo documento</div></div>
+      <button class="bj-modal-close" onclick="docsModule.cerrarModal()">✕</button>
+    </div>
+    <div class="bj-modal-body">
+      <input type="hidden" id="docs-doc-id">
+      <div class="bj-field">
+        <label class="bj-label">Título del documento *</label>
+        <input class="bj-input" id="docs-titulo" placeholder="Ej: Manual de ingreso 2026">
+      </div>
+      <div class="bj-field" style="margin-top:12px">
+        <label class="bj-label">Tipo de contenido</label>
+        <select class="bj-input" id="docs-tipo">
+          <option value="imagen">📷 Imagen (mostrar foto)</option>
+          <option value="texto">📝 Texto (mostrar contenido)</option>
+        </select>
+      </div>
+      <div id="docs-campo-imagen" style="margin-top:12px">
+        <div class="bj-field">
+          <label class="bj-label">URL de la imagen</label>
+          <input class="bj-input" id="docs-imagen-url" placeholder="https://... (link directo a JPG/PNG)">
+        </div>
+      </div>
+      <div id="docs-campo-texto" style="display:none;margin-top:12px">
+        <div class="bj-field">
+          <label class="bj-label">Contenido del documento</label>
+          <textarea class="bj-input" id="docs-contenido" rows="10" placeholder="Escribí el texto que el empleado debe leer..." style="font-family:'DM Mono',monospace;font-size:12px"></textarea>
+        </div>
+      </div>
+      <div id="docs-form-error" class="bj-form-error" style="margin-top:12px"></div>
+    </div>
+    <div class="bj-modal-footer">
+      <button class="bj-btn bj-btn-outline" onclick="docsModule.cerrarModal()">Cancelar</button>
+      <button class="bj-btn" style="background:var(--accent);color:#0e0f11" onclick="docsModule.guardarDocumento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA PÚBLICA PARA FIRMAR (el empleado ve esto) -->
+<div id="firmar-screen" style="display:none;position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;padding:20px">
+  <div style="max-width:600px;margin:0 auto">
+    <div class="conf-card" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+      
+      <!-- Encabezado -->
+      <div class="conf-top" style="padding:28px 24px;text-align:center;background:color-mix(in srgb,var(--accent) 5%,var(--surface));border-bottom:1px solid var(--border)">
+        <div class="conf-logo" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--muted)">DOCUMENTACIÓN LABORAL</div>
+        <div class="conf-icon-wrap" style="width:64px;height:64px;margin:16px auto;background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px">📄</div>
+        <div class="conf-eyebrow" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.12em">DOCUMENTO PARA REVISAR</div>
+        <div class="conf-nombre" id="firmar-doc-titulo" style="font-size:22px;font-weight:800;margin-top:8px">—</div>
+      </div>
+
+      <!-- Contenido del documento -->
+      <div id="firmar-doc-contenido-area" style="padding:20px 24px;background:var(--surface2);border-bottom:1px solid var(--border)">
+        <!-- imagen o texto se carga acá -->
+      </div>
+
+      <!-- Formulario de aceptación -->
+      <div style="padding:24px">
+        <div class="bj-field" style="margin-bottom:20px">
+          <label class="bj-label" style="font-size:11px;letter-spacing:.1em">Tu nombre completo *</label>
+          <input class="bj-input" id="firmar-nombre" type="text" placeholder="Ej: Juan Carlos Pérez" style="font-size:16px;padding:14px">
+        </div>
+
+        <div style="margin-bottom:24px;display:flex;align-items:flex-start;gap:12px">
+          <input type="checkbox" id="firmar-checkbox" style="width:20px;height:20px;margin-top:2px;cursor:pointer">
+          <label for="firmar-checkbox" style="font-size:14px;line-height:1.5;cursor:pointer">
+            Declaro que he leído y comprendido el documento presentado, y acepto sus términos en su totalidad.
+          </label>
+        </div>
+
+        <button class="conf-btn" id="firmar-btn" onclick="docsModule.confirmarFirma()" 
+          style="width:100%;padding:14px;background:var(--accent);color:#0e0f11;border:none;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;transition:all 0.2s">
+          ✅ Acepto y confirmo
+        </button>
+
+        <!-- Mensajes de resultado -->
+        <div id="firmar-resultado" style="margin-top:20px;text-align:center;display:none">
+          <div style="padding:16px;border-radius:12px;background:color-mix(in srgb,var(--m2) 10%,transparent);border:1px solid color-mix(in srgb,var(--m2) 30%,transparent)">
+            <div style="font-size:18px;margin-bottom:6px">✅</div>
+            <div style="font-weight:700;color:var(--m2)">¡Gracias, <span id="resultado-nombre"></span>!</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Tu aceptación ha sido registrada correctamente.</div>
+          </div>
+        </div>
+
+        <div id="firmar-error" style="margin-top:16px;text-align:center;display:none">
+          <div style="padding:14px;border-radius:12px;background:color-mix(in srgb,var(--danger) 12%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);color:var(--danger);font-size:13px">
+            ❌ Error al registrar. Por favor, intentá de nuevo.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==============================================================
+//  MÓDULO 10: DOCUMENTOS - FIRMA DIGITAL SIMPLE
+// ==============================================================
+const docsModule = (() => {
+  const COL_DOCS = 'documentos';
+  const COL_FIRMAS = 'aceptaciones_docs';
+  
+  let _documentos = [];
+  let _unsubDocs = null;
+
+  const $ = id => document.getElementById(id);
+
+  // ── INIT ─────────────────────────────────────────────────────
+  function init() {
+    if (!db) return;
+    if (_unsubDocs) _unsubDocs();
+    _unsubDocs = db.collection(COL_DOCS).orderBy('createdAt', 'desc')
+      .onSnapshot(snap => {
+        _documentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderLista();
+      });
+  }
+
+  function renderLista() {
+    const tbody = $('docs-tbody');
+    if (!tbody) return;
+    if (!_documentos.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="bj-empty-cell">No hay documentos. Creá uno nuevo.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = _documentos.map(doc => {
+      const baseUrl = location.href.split('?')[0];
+      const link = `${baseUrl}?doc=${doc.id}`;
+      return `
+        <tr>
+          <td style="font-weight:600">${esc(doc.titulo)}</td>
+          <td>${doc.tipo === 'imagen' ? '🖼️ Imagen' : '📝 Texto'}</td>
+          <td><input type="text" value="${link}" readonly style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;width:240px" onclick="this.select()"></td>
+          <td>${doc.aceptaciones || 0} persona${doc.aceptaciones !== 1 ? 's' : ''}</td>
+          <td class="col-acc">
+            <div class="bj-row-actions">
+              <button class="bj-icon-btn" title="Copiar link" onclick="docsModule.copiarLink('${link}')">📋</button>
+              <button class="bj-icon-btn del" title="Eliminar" onclick="docsModule.eliminarDoc('${doc.id}','${esc(doc.titulo)}')">✕</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  function copiarLink(link) {
+    navigator.clipboard.writeText(link);
+    alert('📋 Link copiado al portapapeles');
+  }
+
+  // ── CREAR DOCUMENTO ─────────────────────────────────────────
+  function abrirNuevoDocumento() {
+    $('docs-doc-id').value = '';
+    $('docs-titulo').value = '';
+    $('docs-tipo').value = 'imagen';
+    $('docs-imagen-url').value = '';
+    $('docs-contenido').value = '';
+    $('docs-form-error').textContent = '';
+    toggleCamposDoc();
+    $('docs-modal-overlay').classList.add('open');
+  }
+
+  function toggleCamposDoc() {
+    const tipo = $('docs-tipo').value;
+    $('docs-campo-imagen').style.display = tipo === 'imagen' ? '' : 'none';
+    $('docs-campo-texto').style.display = tipo === 'texto' ? '' : 'none';
+  }
+
+  function cerrarModal(e) {
+    if (e && e.target !== $('docs-modal-overlay')) return;
+    $('docs-modal-overlay').classList.remove('open');
+  }
+
+  async function guardarDocumento() {
+    const titulo = $('docs-titulo').value.trim();
+    if (!titulo) { $('docs-form-error').textContent = 'El título es obligatorio.'; return; }
+    
+    const tipo = $('docs-tipo').value;
+    let contenido = '';
+    if (tipo === 'imagen') {
+      contenido = $('docs-imagen-url').value.trim();
+      if (!contenido) { $('docs-form-error').textContent = 'La URL de la imagen es obligatoria.'; return; }
+    } else {
+      contenido = $('docs-contenido').value.trim();
+      if (!contenido) { $('docs-form-error').textContent = 'El contenido del documento es obligatorio.'; return; }
+    }
+
+    if (!db) { alert('Firebase no configurado'); return; }
+
+    const data = {
+      titulo,
+      tipo,
+      contenido,
+      aceptaciones: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const btn = document.querySelector('#docs-modal-overlay .bj-btn[style*="background:var(--accent)"]');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+    try {
+      await db.collection(COL_DOCS).add(data);
+      cerrarModal();
+    } catch(e) {
+      $('docs-form-error').textContent = 'Error: ' + e.message;
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    }
+  }
+
+  async function eliminarDoc(docId, titulo) {
+    if (!confirm(`¿Eliminar "${titulo}"? También se perderán las aceptaciones registradas.`)) return;
+    try {
+      await db.collection(COL_DOCS).doc(docId).delete();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── PANTALLA PÚBLICA (el empleado firma) ────────────────────
+  let _currentDoc = null;
+
+  async function initPantallaPublica() {
+    const params = new URLSearchParams(location.search);
+    const docId = params.get('doc');
+    if (!docId) return;
+
+    const screen = $('firmar-screen');
+    if (!screen) return;
+    screen.style.display = 'flex';
+
+    // Ocultar app si está visible
+    const app = document.getElementById('app');
+    if (app) app.style.display = 'none';
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen) authScreen.style.display = 'none';
+
+    try {
+      const docSnap = await db.collection(COL_DOCS).doc(docId).get();
+      if (!docSnap.exists) {
+        $('firmar-doc-titulo').textContent = 'Documento no encontrado';
+        $('firmar-doc-contenido-area').innerHTML = '<div style="color:var(--danger);text-align:center">El documento que buscás no existe o fue eliminado.</div>';
+        $('firmar-btn').disabled = true;
+        return;
+      }
+      _currentDoc = { id: docSnap.id, ...docSnap.data() };
+      
+      $('firmar-doc-titulo').textContent = _currentDoc.titulo || 'Documento';
+      
+      // Mostrar contenido (imagen o texto)
+      if (_currentDoc.tipo === 'imagen') {
+        $('firmar-doc-contenido-area').innerHTML = `
+          <img src="${esc(_currentDoc.contenido)}" style="width:100%;border-radius:12px;display:block" 
+            onerror="this.style.display='none';this.parentNode.innerHTML='<div style=\\'color:var(--danger);text-align:center\\'>❌ No se pudo cargar la imagen. Verificá la URL.</div>'">
+        `;
+      } else {
+        $('firmar-doc-contenido-area').innerHTML = `
+          <div style="background:var(--bg);border-radius:12px;padding:20px;font-size:14px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto">
+            ${esc(_currentDoc.contenido)}
+          </div>
+        `;
+      }
+
+      // Verificar si este nombre ya aceptó este documento (solo para mostrar, no bloquea)
+      // No bloqueamos porque puede ser otro empleado con el mismo nombre
+      
+    } catch(e) {
+      console.error(e);
+      $('firmar-doc-titulo').textContent = 'Error';
+      $('firmar-doc-contenido-area').innerHTML = '<div style="color:var(--danger);text-align:center">Error al cargar el documento.</div>';
+    }
+  }
+
+  async function confirmarFirma() {
+    if (!_currentDoc) return;
+    
+    const nombre = $('firmar-nombre').value.trim();
+    const checkbox = $('firmar-checkbox').checked;
+    
+    if (!nombre) {
+      mostrarError('Por favor, ingresá tu nombre completo.');
+      return;
+    }
+    if (!checkbox) {
+      mostrarError('Debés marcar la casilla de aceptación.');
+      return;
+    }
+
+    const btn = $('firmar-btn');
+    btn.disabled = true;
+    btn.textContent = 'Registrando...';
+
+    try {
+      // Guardar aceptación
+      await db.collection(COL_FIRMAS).add({
+        docId: _currentDoc.id,
+        docTitulo: _currentDoc.titulo,
+        nombreCompleto: nombre,
+        fecha: firebase.firestore.FieldValue.serverTimestamp(),
+        ip: await getClientIP(),
+        userAgent: navigator.userAgent
+      });
+
+      // Incrementar contador en el documento
+      const docRef = db.collection(COL_DOCS).doc(_currentDoc.id);
+      await docRef.update({
+        aceptaciones: firebase.firestore.FieldValue.increment(1)
+      });
+
+      // Mostrar éxito
+      $('firmar-resultado-nombre').textContent = nombre;
+      $('firmar-resultado').style.display = '';
+      $('firmar-error').style.display = 'none';
+      
+      // Ocultar formulario
+      document.querySelector('#firmar-screen .bj-field').style.display = 'none';
+      document.querySelector('#firmar-screen .conf-btn').style.display = 'none';
+      document.querySelector('#firmar-screen input[type="checkbox"]').closest('div').style.display = 'none';
+      
+    } catch(e) {
+      console.error(e);
+      mostrarError('Error al registrar: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '✅ Acepto y confirmo';
+    }
+  }
+
+  function mostrarError(msg) {
+    const errDiv = $('firmar-error');
+    errDiv.querySelector('div').innerHTML = `❌ ${msg}`;
+    errDiv.style.display = '';
+    setTimeout(() => { errDiv.style.display = 'none'; }, 4000);
+  }
+
+  async function getClientIP() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return data.ip;
+    } catch(e) {
+      return 'desconocida';
+    }
+  }
+
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  return {
+    init,
+    abrirNuevoDocumento,
+    cerrarModal,
+    guardarDocumento,
+    eliminarDoc,
+    copiarLink,
+    initPantallaPublica,
+    confirmarFirma
+  };
+})();
+
+// Inicializar
+// Inicializar
+setTimeout(() => {
+  if (typeof infoPersonal !== 'undefined') {
+    docsModule.init();
+  }
+  docsModule.initPantallaPublica();
+  
+  // ==========================================================
+  // AGREGAR EL MÓDULO 10 AL SIDEBAR
+  // ==========================================================
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    // Verificar si ya existe para no duplicar
+    const existe = document.querySelector('[data-module="docs"]');
+    if (!existe) {
+      const newNav = document.createElement('a');
+      newNav.className = 'nav-item';
+      newNav.setAttribute('data-module', 'docs');
+      newNav.style.setProperty('--item-color', 'var(--accent)');
+      newNav.setAttribute('onclick', "navigate('docs', this)");
+      newNav.innerHTML = '<span class="nav-dot"></span><span class="nav-item-text">Documentos firmados</span><span class="nav-item-num">10</span>';
+      
+      // Insertar antes del footer del sidebar
+      const footer = sidebar.querySelector('.sidebar-footer');
+      if (footer) {
+        sidebar.insertBefore(newNav, footer);
+      } else {
+        sidebar.appendChild(newNav);
+      }
+    }
+  }
+}, 300);
+</script>
 // ==============================================================
 //  MÓDULO 09 – INDUMENTARIA
 //  Colección Firestore: 'prendas'   (stock por local)

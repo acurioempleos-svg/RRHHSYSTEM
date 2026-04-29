@@ -10452,6 +10452,7 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
 
   function abrirNuevo() {
     $('man-doc-id').value = '';
+    $('man-pdf-inp').value       = '';
     $('man-nuevo-tag').textContent    = 'Nuevo documento';
     $('man-nuevo-titulo').textContent = 'Crear documento para firma';
     $('man-nombre-inp').value    = '';
@@ -10470,6 +10471,7 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     $('man-nuevo-titulo').textContent = 'Editar: ' + (d.nombre||'');
     $('man-nombre-inp').value    = d.nombre    || '';
     $('man-contenido-inp').value = d.contenido || '';
+    $('man-pdf-inp').value       = d.pdfUrl || '';
     $('man-nuevo-error').textContent = '';
     _poblarLocalSelect();
     $('man-local-inp').value = d.local || '';
@@ -10486,7 +10488,7 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     const contenido = ($('man-contenido-inp').value||'').trim();
     if (!nombre)    { $('man-nuevo-error').textContent = 'El nombre es obligatorio.'; return; }
     if (!contenido) { $('man-nuevo-error').textContent = 'El contenido no puede estar vacío.'; return; }
-    const data = { nombre, contenido, local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
+    const data = { nombre, contenido, pdfUrl, local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
     const btn = $('man-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try {
@@ -10546,6 +10548,10 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) fn();
     else if (n < 40) setTimeout(() => _waitFirebase(fn, n+1), 150);
     else { document.getElementById('firma-titulo').textContent = 'Error de conexión'; }
+    const d = snap.data();
+      window._currentDocPdf = d.pdfUrl || ''; // Agregá esta línea para guardar la URL
+
+      document.getElementById('firma-empresa-badge').textContent = d.local || 'BC Gestión';
   }
 
   _waitFirebase(async () => {
@@ -10593,6 +10599,14 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
       await db.collection('manuales').doc(docId).update({ firmas });
       document.getElementById('firma-cuerpo').style.display = 'none';
       document.getElementById('firma-result-ok-sub').textContent = `${nombre}, tu aceptación quedó registrada correctamente. ¡Gracias!`;
+      
+      // NUEVO BLOQUE: Mostrar botón si hay PDF
+      if (window._currentDocPdf) {
+        const pdfBtn = document.getElementById('firma-pdf-btn');
+        pdfBtn.href = window._currentDocPdf;
+        pdfBtn.style.display = 'block';
+      }
+      
       document.getElementById('firma-result-ok').classList.add('show');
     } catch(e) {
       document.getElementById('firma-result-err-sub').textContent = e.message || 'Error desconocido.';

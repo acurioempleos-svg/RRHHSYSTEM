@@ -1791,18 +1791,18 @@
   .ip-perfil-close:hover { border-color: var(--danger); color: var(--danger); }
   .ip-perfil-body {
     display: grid; grid-template-columns: 3fr 2fr;
-    gap: 0;
+    gap: 0; min-height: 0;
   }
-  @media (max-width: 600px) {
+  @media (max-width: 640px) {
     .ip-perfil-body { grid-template-columns: 1fr; }
   }
   .ip-perfil-datos {
     padding: 20px 24px;
     border-right: 1px solid var(--border);
-    max-height: 480px; overflow-y: auto;
+    overflow-y: auto; max-height: 500px;
   }
-  @media (max-width: 600px) {
-    .ip-perfil-datos { border-right: none; border-bottom: 1px solid var(--border); }
+  @media (max-width: 640px) {
+    .ip-perfil-datos { border-right: none; border-bottom: 1px solid var(--border); max-height: 280px; }
   }
   .ip-perfil-dato-row {
     display: flex; justify-content: space-between; align-items: baseline;
@@ -1820,101 +1820,124 @@
 
   /  /* ─── PANEL DE ROPA EN PERFIL ───────────────────────────── */
   .ip-fallout-panel {
-    padding: 20px 16px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
-    background: color-mix(in srgb, var(--m4) 3%, transparent);
+    padding: 20px 18px 18px;
+    display: flex; flex-direction: column; gap: 14px;
+    background: color-mix(in srgb, var(--m4) 4%, var(--surface2));
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
   }
   .ip-fallout-title {
     font-family: 'DM Mono', monospace; font-size: 10px;
     color: var(--m4); letter-spacing: .18em; text-transform: uppercase;
-    align-self: flex-start;
+    padding-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--m4) 20%, transparent);
   }
+  /* Slots de ropa — lista lateral */
   .fo-slots {
-    display: flex; flex-direction: column; gap: 8px; width: 100%;
+    display: flex; flex-direction: column; gap: 6px; width: 100%;
   }
   .fo-slot {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-radius: 10px;
-    background: var(--surface2); border: 1.5px solid var(--border);
-    cursor: pointer; transition: all var(--transition);
-    min-height: 48px;
+    padding: 10px 12px; border-radius: 10px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    cursor: pointer; transition: all 180ms ease;
   }
   .fo-slot:hover {
-    border-color: var(--m4); transform: translateX(3px);
+    border-color: var(--m4);
+    background: color-mix(in srgb, var(--m4) 6%, var(--surface));
+    transform: translateX(2px);
   }
   .fo-slot.selected {
-    border-color: var(--m4); background: color-mix(in srgb, var(--m4) 12%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--m4) 20%, transparent);
+    border-color: var(--m4);
+    background: color-mix(in srgb, var(--m4) 12%, var(--surface));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--m4) 15%, transparent);
   }
   .fo-slot.tiene-ropa {
-    border-color: color-mix(in srgb, var(--accent2) 50%, transparent);
-    background: color-mix(in srgb, var(--accent2) 6%, transparent);
+    border-color: color-mix(in srgb, var(--accent2) 55%, transparent);
+    background: color-mix(in srgb, var(--accent2) 7%, var(--surface));
   }
   .fo-slot.tiene-ropa.selected {
     border-color: var(--accent2);
-    background: color-mix(in srgb, var(--accent2) 14%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent2) 18%, transparent);
   }
   .fo-slot-icon {
-    font-size: 22px; flex-shrink: 0; width: 32px; text-align: center;
+    font-size: 20px; flex-shrink: 0; width: 28px; text-align: center;
   }
-  .fo-slot-info {
-    flex: 1; min-width: 0;
-  }
+  .fo-slot-info { flex: 1; min-width: 0; }
   .fo-slot-label {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--muted); letter-spacing: .08em; text-transform: uppercase;
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+    margin-bottom: 2px;
   }
   .fo-slot-val {
-    font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3;
+    font-size: 12px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .fo-slot-val.empty {
-    color: var(--muted); font-style: italic;
-  }
+  .fo-slot-val.empty { color: var(--muted); font-style: italic; font-weight: 400; }
   .fo-slot-talle {
     font-size: 10px; color: var(--accent2);
-    font-family: 'DM Mono', monospace; margin-top: 2px;
+    font-family: 'DM Mono', monospace; margin-top: 1px;
   }
+  .fo-slot-arrow {
+    font-size: 10px; color: var(--muted); flex-shrink: 0;
+    transition: color 180ms;
+  }
+  .fo-slot:hover .fo-slot-arrow,
+  .fo-slot.selected .fo-slot-arrow { color: var(--m4); }
 
   /* ─── PANEL DE EDICIÓN DE INDUMENTARIA ──────────────────── */
   .ip-indum-panel {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 14px 16px;
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid color-mix(in srgb, var(--m4) 35%, transparent);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    animation: slideDown 180ms ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .ip-indum-panel-title {
     font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
-    margin-bottom: 10px;
+    color: var(--m4); letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
   }
   .ip-indum-fields {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .ip-indum-field {
-    display: flex; flex-direction: column; gap: 3px;
-  }
+  .ip-indum-field { display: flex; flex-direction: column; gap: 4px; }
   .ip-indum-field label {
     font-family: 'DM Mono', monospace; font-size: 9px;
-    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted);
   }
-  .ip-indum-field input, .ip-indum-field select {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 5px; padding: 6px 9px;
-    color: var(--text); font-size: 12px; font-family: 'Syne', sans-serif;
+  .ip-indum-field input,
+  .ip-indum-field select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 10px;
+    color: var(--text); font-size: 12px;
+    font-family: 'Syne', sans-serif;
     outline: none;
+    transition: border-color 160ms;
   }
-  .ip-indum-field input:focus, .ip-indum-field select:focus {
-    border-color: var(--m4);
-  }
+  .ip-indum-field input:focus,
+  .ip-indum-field select:focus { border-color: var(--m4); }
   .ip-indum-save {
     width: 100%; margin-top: 10px;
-    padding: 9px; border: none; border-radius: 6px;
+    padding: 9px 0; border: none; border-radius: 8px;
     background: var(--m4); color: #0e0f11;
-    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px;
-    cursor: pointer; transition: opacity var(--transition);
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 12px;
+    cursor: pointer; letter-spacing: .04em;
+    transition: opacity 160ms, transform 160ms;
   }
-  .ip-indum-save:hover { opacity: .85; }
-  .ip-indum-save:disabled { opacity: .5; cursor: default; }
+  .ip-indum-save:hover { opacity: .88; transform: translateY(-1px); }
+  .ip-indum-save:active { transform: translateY(0); }
+  .ip-indum-save:disabled { opacity: .4; cursor: default; transform: none; }
   /* ─── MÓDULO INDUMENTARIA ──────────────────────────────────── */
   .ind-toolbar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -3358,42 +3381,23 @@
             <div id="ip-perfil-datos-list"></div>
           </div>
 
-          <!-- COLUMNA DERECHA: muñeco Fallout + indumentaria -->
+          <!-- COLUMNA DERECHA: slots de indumentaria + panel edición -->
           <div class="ip-fallout-panel">
             <div class="ip-fallout-title">🧥 Indumentaria entregada</div>
 
-            <div class="ip-fallout-wrap" id="fo-wrap">
-              <!-- Tooltip flotante -->
-              <div class="fo-tooltip" id="fo-tooltip">
-                <div class="fo-tooltip-part" id="fo-tip-part">—</div>
-                <div class="fo-tooltip-val" id="fo-tip-val">—</div>
-              </div>
+            <div class="fo-slots" id="fo-slots"></div>
 
-                         <!-- Slots de ropa ordenados -->
-            <div class="fo-slots" id="fo-slots">
-              <!-- Se generan dinámicamente: 🎩 Gorra → 👕 Remera → 🥼 Delantal → 👖 Pantalón → 👟 Calzado -->
-            </div>
-
-            <!-- Panel de edición: aparece al clickear una zona -->
             <div class="ip-indum-panel" id="fo-edit-panel" style="display:none">
               <div class="ip-indum-panel-title" id="fo-edit-title">Editar prenda</div>
               <input type="hidden" id="fo-edit-part">
               <div class="ip-indum-fields">
                 <div class="ip-indum-field" style="grid-column:1/-1">
                   <label>Prenda</label>
-                  <select id="fo-edit-prenda" style="background:var(--bg);border:1px solid var(--border);
-                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
-                    font-family:'Syne',sans-serif;outline:none;width:100%">
-                    <option value="">— Sin asignar —</option>
-                  </select>
+                  <select id="fo-edit-prenda"><option value="">— Sin asignar —</option></select>
                 </div>
                 <div class="ip-indum-field">
                   <label>Talle</label>
-                  <select id="fo-edit-talle" style="background:var(--bg);border:1px solid var(--border);
-                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
-                    font-family:'Syne',sans-serif;outline:none;width:100%">
-                    <option value="">—</option>
-                  </select>
+                  <select id="fo-edit-talle"><option value="">—</option></select>
                 </div>
                 <div class="ip-indum-field">
                   <label>Fecha entrega</label>
@@ -3401,41 +3405,6 @@
                 </div>
               </div>
               <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar</button>
-            </div>
-
-            <!-- Panel de edición: aparece al clickear una zona -->
-            <div class="ip-indum-panel" id="fo-edit-panel" style="display:none">
-              <div class="ip-indum-panel-title" id="fo-edit-title">Editar prenda</div>
-              <input type="hidden" id="fo-edit-part">
-              <div class="ip-indum-fields">
-                <div class="ip-indum-field" style="grid-column:1/-1">
-                  <label>Prenda</label>
-                  <select id="fo-edit-prenda" style="background:var(--bg);border:1px solid var(--border);
-                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
-                    font-family:'Syne',sans-serif;outline:none;width:100%">
-                    <option value="">— Sin asignar —</option>
-                  </select>
-                </div>
-                <div class="ip-indum-field">
-                  <label>Talle</label>
-                  <select id="fo-edit-talle" style="background:var(--bg);border:1px solid var(--border);
-                    border-radius:5px;padding:6px 9px;color:var(--text);font-size:12px;
-                    font-family:'Syne',sans-serif;outline:none;width:100%">
-                    <option value="">—</option>
-                  </select>
-                </div>
-                <div class="ip-indum-field">
-                  <label>Fecha entrega</label>
-                  <input type="date" id="fo-edit-fecha">
-                </div>
-              </div>
-              <button class="ip-indum-save" id="fo-save-btn" onclick="infoPersonal.foGuardar()">Guardar</button>
-            </div>
-
-            <!-- Leyenda -->
-            <div style="display:flex;gap:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--accent2) 35%,#1e2127);border:1.5px solid var(--accent2);margin-right:4px;vertical-align:middle"></span>Con ropa</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2a2d35;border:1.5px solid #3a3f4a;margin-right:4px;vertical-align:middle"></span>Sin ropa</span>
             </div>
           </div>
         </div>
@@ -4726,10 +4695,11 @@ function navigate(moduleId, navEl) {
   }
 
   if (moduleId === 'horarios' && typeof horarios !== 'undefined') {
+    // Asegurar adminLocales, infoPersonal y luego horarios
+    if (typeof adminLocales !== 'undefined') adminLocales.init();
     setTimeout(() => {
-      // Asegurar que infoPersonal tenga datos antes de renderizar
       if (typeof infoPersonal !== 'undefined') infoPersonal.init();
-      horarios.init();
+      setTimeout(() => horarios.init(), 200);
     }, 150);
   }
 

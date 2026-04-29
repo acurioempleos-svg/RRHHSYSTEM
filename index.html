@@ -821,153 +821,246 @@
      MÓDULO LIQUIDACIONES (07)
   ========================================================== */
 
-  /* Layout split: lista izq + calc der */
+  /* ══════════════════════════════════════════════════════════
+     MÓDULO 07 — LIQUIDACIONES
+  ══════════════════════════════════════════════════════════ */
+  :root { --m7: #4afff0; }
+
+  /* Layout split */
   .lq-split {
     display: flex; flex: 1; overflow: hidden; min-height: 0;
   }
+
+  /* ── Panel izquierdo: lista ─────────────────────────────── */
   .lq-list-panel {
-    width: 260px; flex-shrink: 0;
+    width: 280px; flex-shrink: 0;
     border-right: 1px solid var(--border);
     display: flex; flex-direction: column; overflow: hidden;
+    background: var(--surface2);
   }
   .lq-list-search-wrap {
-    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid var(--border);
   }
   .lq-list {
-    flex: 1; overflow-y: auto; padding: 8px 6px;
-    display: flex; flex-direction: column; gap: 4px;
+    flex: 1; overflow-y: auto;
+    padding: 10px 10px;
+    display: flex; flex-direction: column; gap: 6px;
   }
+
+  /* Item de lista — card con recuadro */
+  .lq-list-item {
+    padding: 11px 13px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all 160ms ease;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .lq-list-item:hover {
+    border-color: color-mix(in srgb, var(--m7) 40%, transparent);
+    background: color-mix(in srgb, var(--m7) 5%, var(--surface));
+    transform: translateX(2px);
+  }
+  .lq-list-item.active {
+    background: color-mix(in srgb, var(--m7) 10%, var(--surface));
+    border-color: var(--m7);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--m7) 15%, transparent),
+                inset 3px 0 0 var(--m7);
+  }
+  .lq-list-name {
+    font-size: 13px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .lq-list-meta {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: .04em;
+  }
+  .lq-list-total {
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    color: var(--m7); font-weight: 800; margin-top: 2px;
+    letter-spacing: .02em;
+  }
+  .lq-empty-state {
+    text-align: center; padding: 36px 12px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    color: var(--muted); line-height: 1.6;
+  }
+
+  /* ── Panel derecho: calculadora ─────────────────────────── */
   .lq-calc-panel {
     flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+    background: var(--bg);
   }
 
-  /* Item de lista */
-  .lq-item {
-    padding: 10px 12px; border-radius: 8px; cursor: pointer;
-    border: 1px solid transparent;
-    transition: background var(--transition), border-color var(--transition);
-  }
-  .lq-item:hover { background: var(--surface2); }
-  .lq-item.active {
-    background: color-mix(in srgb, var(--m7) 8%, transparent);
-    border-color: color-mix(in srgb, var(--m7) 30%, transparent);
-  }
-  .lq-item-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lq-item-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .lq-item-total { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--m7); margin-top: 4px; font-weight: 500; }
-  .lq-empty-state {
-    text-align: center; padding: 32px 12px;
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-  }
-
-  /* Estado vacío panel derecho */
+  /* Estado vacío */
   .lq-no-sel {
     flex: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    padding: 40px;
+    padding: 48px; gap: 12px;
+  }
+  .lq-no-sel-icon {
+    font-size: 48px; opacity: .15;
+  }
+  .lq-no-sel-text {
+    color: var(--muted); font-size: 13px;
+    font-family: 'DM Mono', monospace; letter-spacing: .06em;
+    text-align: center; line-height: 1.6;
   }
 
-  /* Formulario calculadora */
-  .lq-form { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; flex: 1; }
-  .lq-section { margin-bottom: 20px; }
+  /* Formulario */
+  .lq-form {
+    padding: 22px 26px;
+    display: flex; flex-direction: column; gap: 0; flex: 1;
+  }
+  .lq-section { margin-bottom: 22px; }
   .lq-section-label {
     font-family: 'DM Mono', monospace; font-size: 10px;
     letter-spacing: .18em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 10px;
-    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    color: var(--muted); margin-bottom: 12px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .lq-section-label::before {
+    content: ''; display: inline-block;
+    width: 3px; height: 12px; border-radius: 2px;
+    background: var(--m7); flex-shrink: 0;
   }
   .lq-row2 { display: flex; gap: 12px; flex-wrap: wrap; }
   .lq-row2 .bj-field { min-width: 140px; flex: 1; }
 
-  /* Tag de fuente de dato */
+  /* Tag de fuente IP/Baja */
   .lq-src-tag {
-    display: inline-block; padding: 1px 5px; border-radius: 4px;
-    font-size: 9px; letter-spacing: .1em;
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 9px; letter-spacing: .1em; font-weight: 700;
     background: color-mix(in srgb, var(--m4) 15%, transparent);
-    color: var(--m4); font-family: 'DM Mono', monospace; vertical-align: middle;
+    color: var(--m4); font-family: 'DM Mono', monospace;
+    vertical-align: middle; border: 1px solid color-mix(in srgb, var(--m4) 25%, transparent);
   }
 
   /* Cabecera empleado */
   .lq-emp-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; background: var(--surface2);
-    border-radius: 10px; margin-bottom: 20px;
-    border: 1px solid color-mix(in srgb, var(--m7) 20%, var(--border));
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; border-radius: 12px; margin-bottom: 22px;
+    background: color-mix(in srgb, var(--m7) 6%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--m7) 25%, var(--border));
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
   }
   .lq-emp-avatar {
-    width: 38px; height: 38px; border-radius: 50%;
-    background: color-mix(in srgb, var(--m7) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--m7) 30%, transparent);
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--m7) 18%, transparent);
+    border: 2px solid color-mix(in srgb, var(--m7) 40%, transparent);
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 800; color: var(--m7); flex-shrink: 0;
-    overflow: hidden;
+    font-size: 14px; font-weight: 800; color: var(--m7); overflow: hidden;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--m7) 10%, transparent);
   }
   .lq-emp-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .lq-emp-name { font-size: 14px; font-weight: 800; }
-  .lq-emp-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .lq-emp-baja-tag {
+  .lq-emp-name { font-size: 15px; font-weight: 800; }
+  .lq-emp-meta {
     font-family: 'DM Mono', monospace; font-size: 10px;
-    padding: 3px 8px; border-radius: 20px;
+    color: var(--muted); margin-top: 3px; letter-spacing: .04em;
+  }
+  .lq-emp-baja-tag {
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
     background: color-mix(in srgb, var(--m6) 15%, transparent);
     color: var(--m6); letter-spacing: .08em; flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--m6) 30%, transparent);
   }
 
-  /* Input con ícono $ */
+  /* Input con prefijo $ */
   .lq-input-icon-wrap { position: relative; }
   .lq-prefix {
     position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
     color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
-    pointer-events: none;
+    pointer-events: none; z-index: 1;
   }
 
-  /* Sección resultados */
+  /* ── Sección resultados (recibo) ────────────────────────── */
   .lq-results-section { animation: fadeIn 180ms ease; }
-  .lq-result-grid { display: flex; flex-direction: column; gap: 0; }
+  .lq-result-grid {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
   .lq-result-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 0; gap: 12px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    padding: 11px 16px; gap: 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    transition: background 120ms;
   }
+  .lq-result-row:last-child { border-bottom: none; }
+  .lq-result-row:hover { background: color-mix(in srgb, var(--m7) 4%, transparent); }
   .lq-result-label {
     display: flex; align-items: flex-start; gap: 10px; flex: 1;
     font-size: 13px; font-weight: 600;
   }
-  .lq-result-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-  .lq-result-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .lq-result-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .lq-result-sub {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); margin-top: 3px;
+  }
   .lq-result-val {
     font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 700;
     color: var(--m7); text-align: right; flex-shrink: 0;
   }
-  .lq-divider { height: 1px; background: var(--border); margin: 4px 0; }
-  .lq-total-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 0 4px;
-  }
-  .lq-total-val {
-    font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 700;
-    color: var(--m7);
+  .lq-divider {
+    height: 1px; background: var(--border); margin: 0;
   }
 
-  /* Fila de ajuste (descuento/bono) */
-  .lq-adjust-row { align-items: flex-start; padding: 10px 0; }
+  /* Fila total */
+  .lq-total-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 16px;
+    background: color-mix(in srgb, var(--m7) 8%, var(--surface));
+    border-top: 2px solid color-mix(in srgb, var(--m7) 40%, transparent);
+  }
+  .lq-total-label {
+    font-weight: 800; font-size: 14px; letter-spacing: .02em;
+  }
+  .lq-total-val {
+    font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 800;
+    color: var(--m7);
+    text-shadow: 0 0 20px color-mix(in srgb, var(--m7) 40%, transparent);
+  }
+
+  /* Ajustes descuento/bono */
+  .lq-adjust-row { align-items: flex-start; padding: 10px 16px; }
   .lq-note-input {
-    margin-top: 5px; padding: 6px 10px !important;
+    margin-top: 5px; padding: 5px 9px !important;
     font-size: 11px !important; height: auto !important;
+    border-radius: 6px !important;
   }
   .lq-adj-inp { width: 130px; text-align: right; }
 
-  /* Acciones del form */
+  /* Acciones */
   .lq-form-actions {
-    margin-top: auto; padding-top: 16px;
+    margin-top: auto; padding-top: 18px;
     display: flex; justify-content: flex-end; gap: 10px;
     border-top: 1px solid var(--border);
+    flex-wrap: wrap;
   }
 
-  /* Mobile: stack vertical */
+  /* Botón exportar PDF / WhatsApp */
+  .lq-share-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    font-family: 'Syne', sans-serif; cursor: pointer; transition: all 160ms;
+    border: 1.5px solid color-mix(in srgb, var(--m7) 35%, transparent);
+    background: color-mix(in srgb, var(--m7) 10%, transparent);
+    color: var(--m7);
+  }
+  .lq-share-btn:hover {
+    background: color-mix(in srgb, var(--m7) 20%, transparent);
+    transform: translateY(-1px);
+  }
+
+  /* Mobile */
   @media (max-width: 640px) {
     .lq-split { flex-direction: column; }
-    .lq-list-panel { width: 100%; height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
+    .lq-list-panel { width: 100%; height: 220px; border-right: none; border-bottom: 1px solid var(--border); }
     .lq-adj-inp { width: 100px; }
+    .lq-form { padding: 16px; }
   }
 
   /* ── SELECTOR EMPLEADO (conexión 04→06) ──────────────────── */
@@ -2246,103 +2339,264 @@
   }
 
   /* ─── MÓDULO: MANUALES ───────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════════
+     MÓDULO 10 — MANUALES & DOCUMENTOS
+  ══════════════════════════════════════════════════════════ */
+  :root { --mA: #ff9f1c; }
+
+  /* Toolbar + tabs */
   .man-toolbar {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 24px; flex-wrap: wrap;
+    padding: 0 2px;
   }
   .man-tabs {
     display: flex; gap: 6px; flex-wrap: wrap; flex: 1;
   }
   .man-tab {
-    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--muted); font-size: 12px; font-weight: 700;
-    cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: .06em;
+    padding: 6px 16px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: none; color: var(--muted);
+    font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Mono', monospace;
+    letter-spacing: .08em; text-transform: uppercase;
     transition: all 160ms;
   }
-  .man-tab.active { background: #ff9f1c; color: #0e0f11; border-color: #ff9f1c; }
-
-  .man-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 16px; }
-
-  .man-card {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden;
-    transition: border-color 180ms;
+  .man-tab:hover { border-color: var(--mA); color: var(--mA); }
+  .man-tab.active {
+    background: var(--mA); color: #0e0f11;
+    border-color: var(--mA);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--mA) 30%, transparent);
   }
-  .man-card:hover { border-color: color-mix(in srgb,#ff9f1c 40%,var(--border)); }
 
+  /* Grid */
+  .man-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* Card */
+  .man-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+    transition: border-color 200ms, transform 200ms, box-shadow 200ms;
+    display: flex; flex-direction: column;
+  }
+  .man-card:hover {
+    border-color: color-mix(in srgb, var(--mA) 50%, transparent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  }
+
+  /* Card header */
   .man-card-head {
-    padding: 16px 18px 12px; display: flex; align-items: flex-start; gap: 12px;
-    border-bottom: 1px solid var(--border);
+    padding: 18px 18px 14px;
+    display: flex; align-items: flex-start; gap: 12px;
+    background: color-mix(in srgb, var(--mA) 5%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--mA) 15%, var(--border));
+    position: relative;
+  }
+  .man-card-head::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--mA);
+    border-radius: 0;
   }
   .man-card-icon {
-    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-    background: color-mix(in srgb,#ff9f1c 12%,transparent);
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    background: color-mix(in srgb, var(--mA) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mA) 25%, transparent);
   }
-  .man-card-name { font-size: 14px; font-weight: 800; line-height: 1.2; }
-  .man-card-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
-  .man-card-actions { margin-left: auto; display: flex; gap: 4px; }
+  .man-card-name {
+    font-size: 14px; font-weight: 800; line-height: 1.3;
+    color: var(--text);
+  }
+  .man-card-meta {
+    font-size: 11px; color: var(--muted);
+    font-family: 'DM Mono', monospace; margin-top: 4px;
+    letter-spacing: .04em;
+  }
+  .man-card-actions {
+    margin-left: auto; display: flex; gap: 4px; flex-shrink: 0;
+  }
 
-  .man-card-body { padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
-  .man-stat-row { display: flex; gap: 10px; }
+  /* Card body */
+  .man-card-body {
+    padding: 14px 18px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    flex: 1;
+  }
+
+  /* Stats */
+  .man-stat-row {
+    display: flex; gap: 8px;
+  }
   .man-stat {
-    flex: 1; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 12px;
-    display: flex; flex-direction: column; gap: 1px;
+    flex: 1; background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 2px;
   }
-  .man-stat-val { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 800; color: #ff9f1c; }
-  .man-stat-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  .man-stat-val.pct { color: var(--m2); }
+  .man-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px; font-weight: 800;
+    color: var(--mA); line-height: 1;
+  }
+  .man-stat-lbl {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-top: 1px;
+  }
+  .man-stat-val.pct { color: var(--m2); font-size: 16px; }
 
-  .man-firmas-list { display: flex; flex-direction: column; gap: 4px; }
+  /* Progress bar de firmas */
+  .man-progress-wrap {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .man-progress-track {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--border); overflow: hidden;
+  }
+  .man-progress-fill {
+    height: 100%; border-radius: 2px;
+    background: var(--mA);
+    transition: width 400ms ease;
+  }
+  .man-progress-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); white-space: nowrap;
+  }
+
+  /* Link copy */
+  .man-link-copy {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px 8px 12px;
+    transition: border-color 160ms;
+  }
+  .man-link-copy:hover { border-color: color-mix(in srgb, var(--mA) 35%, transparent); }
+  .man-link-url {
+    flex: 1; font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .man-link-copy-btn {
+    background: color-mix(in srgb, var(--mA) 15%, transparent);
+    color: var(--mA);
+    border: 1px solid color-mix(in srgb, var(--mA) 30%, transparent);
+    border-radius: 7px; padding: 5px 12px;
+    font-size: 11px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-weight: 700;
+    flex-shrink: 0; transition: all 160ms; white-space: nowrap;
+  }
+  .man-link-copy-btn:hover {
+    background: color-mix(in srgb, var(--mA) 25%, transparent);
+    transform: scale(1.02);
+  }
+
+  /* Firmas list */
+  .man-firmas-header {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .man-firmas-list {
+    display: flex; flex-direction: column; gap: 5px;
+  }
   .man-firma-row {
     display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; border-radius: 8px;
-    background: var(--surface); font-size: 12px;
+    padding: 7px 10px; border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid transparent;
+    font-size: 12px;
+    transition: border-color 160ms;
   }
+  .man-firma-row:hover { border-color: color-mix(in srgb, var(--mA) 20%, transparent); }
   .man-firma-avatar {
-    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
-    background: color-mix(in srgb,#ff9f1c 20%,var(--surface));
-    color: #ff9f1c; font-size: 9px; font-weight: 800;
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--mA) 20%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--mA) 35%, transparent);
+    color: var(--mA); font-size: 9px; font-weight: 800;
     display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
   }
-  .man-firma-nombre { flex: 1; font-weight: 600; }
-  .man-firma-fecha { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
-  .man-firma-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; }
-  .man-firma-del:hover { color: var(--danger); }
+  .man-firma-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .man-firma-nombre { flex: 1; font-weight: 600; font-size: 12px; }
+  .man-firma-fecha {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted);
+  }
+  .man-firma-check {
+    font-size: 11px; color: var(--m2); flex-shrink: 0;
+  }
+  .man-firma-del {
+    background: none; border: none; color: transparent;
+    cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px;
+    transition: all 160ms; flex-shrink: 0;
+  }
+  .man-firma-row:hover .man-firma-del { color: var(--muted); }
+  .man-firma-del:hover { color: var(--danger) !important; }
 
+  /* Empty state de firmas */
+  .man-empty-firmas {
+    text-align: center; padding: 14px 0;
+    color: var(--muted); font-size: 12px; font-style: italic;
+    border: 1px dashed var(--border); border-radius: 9px;
+  }
+
+  /* Link btn */
   .man-link-btn {
-    font-family: 'DM Mono', monospace; font-size: 10px; color: #ff9f1c;
-    background: none; border: none; cursor: pointer; letter-spacing: .06em;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--mA); background: none; border: none;
+    cursor: pointer; letter-spacing: .06em;
     padding: 0; transition: opacity 160ms; text-align: left;
   }
   .man-link-btn:hover { opacity: .7; }
-  .man-link-copy {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 7px 10px;
-  }
-  .man-link-url {
-    flex: 1; font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .man-link-copy-btn {
-    background: color-mix(in srgb,#ff9f1c 12%,transparent);
-    color: #ff9f1c; border: 1px solid color-mix(in srgb,#ff9f1c 25%,transparent);
-    border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;
-    font-family: 'DM Mono', monospace; font-weight: 700; flex-shrink: 0;
-    transition: opacity 160ms;
-  }
-  .man-link-copy-btn:hover { opacity: .8; }
 
-  /* Modal nuevo manual */
-  .man-modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  /* Tag chips */
   .man-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .man-tag-chip {
-    padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--muted); font-size: 11px;
-    cursor: pointer; font-family: 'DM Mono', monospace; transition: all 160ms;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--muted);
+    font-size: 11px; cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 160ms; font-weight: 700;
+    letter-spacing: .06em;
   }
-  .man-tag-chip.sel { background: color-mix(in srgb,#ff9f1c 15%,transparent); color: #ff9f1c; border-color: color-mix(in srgb,#ff9f1c 40%,transparent); }
+  .man-tag-chip:hover { border-color: var(--mA); color: var(--mA); }
+  .man-tag-chip.sel {
+    background: color-mix(in srgb, var(--mA) 15%, transparent);
+    color: var(--mA);
+    border-color: color-mix(in srgb, var(--mA) 50%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--mA) 20%, transparent);
+  }
+
+  /* Badge OFICIAL */
+  .man-badge-oficial {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 10px;
+    background: color-mix(in srgb, var(--mA) 15%, transparent);
+    color: var(--mA); font-size: 9px; font-weight: 800;
+    font-family: 'DM Mono', monospace; letter-spacing: .1em;
+    border: 1px solid color-mix(in srgb, var(--mA) 35%, transparent);
+    vertical-align: middle;
+  }
+
+  /* Empty state general */
+  .man-empty-state {
+    grid-column: 1/-1; text-align: center;
+    padding: 60px 20px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
+  }
+  .man-empty-state-icon { font-size: 48px; margin-bottom: 14px; }
 </style>
 <body>
 
@@ -4103,8 +4357,8 @@
 
           <!-- Estado vacío -->
           <div class="lq-no-sel" id="lq-no-sel">
-            <div style="font-size:36px;opacity:.2">💰</div>
-            <div style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;margin-top:12px">Seleccioná o creá una liquidación</div>
+            <div class="lq-no-sel-icon">💰</div>
+            <div class="lq-no-sel-text">Seleccioná una liquidación<br>o creá una nueva</div>
           </div>
 
           <!-- Formulario de cálculo -->
@@ -4279,7 +4533,7 @@
 
                 <!-- TOTAL -->
                 <div class="lq-total-row">
-                  <div style="font-weight:800;font-size:15px">Total a liquidar</div>
+                  <div class="lq-total-label">Total a liquidar</div>
                   <div class="lq-total-val" id="lq-total">$0</div>
                 </div>
 
@@ -4296,6 +4550,9 @@
 
             <!-- Acciones -->
             <div class="lq-form-actions">
+              <button class="lq-share-btn" id="lq-btn-copiar" onclick="liquidaciones.copiarResumen()" style="display:none">📋 Copiar resumen</button>
+              <button class="lq-share-btn" id="lq-btn-wsp" onclick="liquidaciones.enviarWhatsapp()" style="display:none">💬 WhatsApp</button>
+              <div style="flex:1"></div>
               <button class="bj-btn bj-btn-outline" onclick="liquidaciones.descartar()" id="lq-btn-descartar">Descartar</button>
               <button class="bj-btn" style="background:var(--m7);color:#0e0f11" onclick="liquidaciones.guardar()" id="lq-btn-guardar">Guardar liquidación</button>
             </div>
@@ -6088,6 +6345,46 @@ const liquidaciones = (() => {
 
     $('lq-total').textContent = fmt(total);
     $('lq-results-section').style.display = '';
+    // Mostrar botones de compartir
+    const btnCopiar = $('lq-btn-copiar');
+    const btnWsp    = $('lq-btn-wsp');
+    if (btnCopiar) btnCopiar.style.display = '';
+    if (btnWsp)    btnWsp.style.display    = '';
+  }
+
+  function _resumenTexto() {
+    const nombre  = $('lq-emp-name')?.textContent || '—';
+    const total   = $('lq-total')?.textContent    || '$0';
+    const haberes = $('lq-val-haberes')?.textContent || '$0';
+    const sac     = $('lq-val-sac')?.textContent     || '$0';
+    const vac     = $('lq-val-vac')?.textContent     || '$0';
+    const cese    = $('lq-fecha-cese')?.value || '—';
+    const desc    = $('lq-descuento')?.value;
+    const bono    = $('lq-bono')?.value;
+    const descNota = $('lq-desc-nota')?.value;
+    const bonoNota = $('lq-bono-nota')?.value;
+    let txt = `💰 LIQUIDACIÓN — ${nombre}\n`;
+    txt += `Fecha de cese: ${cese.split('-').reverse().join('/')}\n\n`;
+    txt += `📅 Haberes proporcionales: ${haberes}\n`;
+    txt += `📆 SAC proporcional: ${sac}\n`;
+    txt += `🏖 Vacaciones proporcionales: ${vac}\n`;
+    if (Number(desc) > 0) txt += `➖ Descuento (${descNota||'—'}): -$${Number(desc).toLocaleString('es-AR')}\n`;
+    if (Number(bono) > 0) txt += `➕ Bono (${bonoNota||'—'}): $${Number(bono).toLocaleString('es-AR')}\n`;
+    txt += `\n✅ TOTAL A LIQUIDAR: ${total}`;
+    return txt;
+  }
+
+  function copiarResumen() {
+    const txt = _resumenTexto();
+    navigator.clipboard?.writeText(txt).then(() => {
+      const btn = $('lq-btn-copiar');
+      if (btn) { btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = '📋 Copiar resumen', 2000); }
+    }).catch(() => prompt('Copiá el resumen:', txt));
+  }
+
+  function enviarWhatsapp() {
+    const txt = encodeURIComponent(_resumenTexto());
+    window.open(`https://wa.me/?text=${txt}`, '_blank');
   }
 
   function _markDirty() { _isDirty = true; }
@@ -10051,24 +10348,37 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     const cnt = $('man-count');
     if (cnt) cnt.textContent = `${lista.length} doc${lista.length!==1?'s':''}`;
     if (!lista.length) {
-      grid.innerHTML = `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:13px">Sin documentos. Creá el primero con "+ Nuevo documento".</div>`;
+      grid.innerHTML = `<div class="man-empty-state">
+        <div class="man-empty-state-icon">📋</div>
+        ${_docs.length ? 'Sin resultados para ese filtro.' : 'No hay documentos aún.<br>Creá el primero con "+ Nuevo documento".'}
+      </div>`;
       return;
     }
     grid.innerHTML = lista.map(d => _cardHTML(d)).join('');
   }
 
   function _cardHTML(d) {
-    const firmas = d.firmas || [];
-    const total  = firmas.length;
-    const url    = `${location.href.split('?')[0]}?firma=${d.id}`;
-    const shortUrl = url.length > 58 ? url.slice(0,55)+'…' : url;
+    const firmas  = d.firmas || [];
+    const total   = firmas.length;
+    const url     = `${location.href.split('?')[0]}?firma=${d.id}`;
+    const shortUrl = url.length > 55 ? url.slice(0,52)+'…' : url;
+    const ipRegs  = (typeof infoPersonal !== 'undefined') ? infoPersonal.getRegistros() : [];
+
+    const firmaNombre = d.nombre || d.id;
+
     return `
     <div class="man-card">
       <div class="man-card-head">
         <div class="man-card-icon">📋</div>
         <div style="flex:1;min-width:0">
-          <div class="man-card-name">${esc(d.nombre)}</div>
-          <div class="man-card-meta">${d.local ? esc(d.local) : 'Todos los locales'} · ${_fmtFecha(d.creadoAt)}${d.predefinido ? ' · <span style="color:#ff9f1c;font-size:9px;font-family:\'DM Mono\',monospace;letter-spacing:.08em">OFICIAL</span>' : ''}</div>
+          <div class="man-card-name">
+            ${esc(d.nombre)}
+            ${d.predefinido ? '<span class="man-badge-oficial">OFICIAL</span>' : ''}
+          </div>
+          <div class="man-card-meta">
+            ${d.local ? `<span style="color:var(--mA)">${esc(d.local)}</span> · ` : 'Todos los locales · '}
+            ${_fmtFecha(d.creadoAt)}
+          </div>
         </div>
         <div class="man-card-actions">
           <button class="bj-icon-btn" title="Editar" onclick="manuales.editar('${d.id}')">✏</button>
@@ -10076,33 +10386,50 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
         </div>
       </div>
       <div class="man-card-body">
+
+        <!-- Stats -->
         <div class="man-stat-row">
           <div class="man-stat">
             <div class="man-stat-val">${total}</div>
             <div class="man-stat-lbl">Firmas recibidas</div>
           </div>
-          <div class="man-stat">
-            <div class="man-stat-val pct" style="font-size:14px">${d.contenido ? d.contenido.length : 0}c</div>
-            <div class="man-stat-lbl">Contenido</div>
+          <div class="man-stat" style="border-color:color-mix(in srgb,var(--m2) 25%,var(--border))">
+            <div class="man-stat-val pct">${d.contenido ? Math.ceil(d.contenido.length / 5) : 0}</div>
+            <div class="man-stat-lbl">Palabras aprox.</div>
           </div>
         </div>
+
+        <!-- Link para compartir -->
         <div class="man-link-copy">
           <span class="man-link-url" title="${esc(url)}">${esc(shortUrl)}</span>
           <button class="man-link-copy-btn" onclick="manuales.copiarLink('${esc(url)}',this)">📋 Copiar link</button>
         </div>
+
+        <!-- Lista de firmantes -->
         ${total > 0 ? `
-          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px">Firmantes</div>
+          <div class="man-firmas-header">
+            <span>Firmantes recientes</span>
+            ${total > 5 ? `<span style="color:var(--mA)">+${total-5} más</span>` : ''}
+          </div>
           <div class="man-firmas-list">
-            ${firmas.slice(-5).reverse().map(f=>`
+            ${firmas.slice(-5).reverse().map(f => {
+              const emp = ipRegs.find(r => (r.nombre||'').toLowerCase() === (f.nombre||'').toLowerCase());
+              const initials = (f.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+              const avatarInner = emp?.foto
+                ? `<img src="${esc(emp.foto)}" onerror="this.parentNode.textContent='${initials}'">`
+                : initials;
+              return `
               <div class="man-firma-row">
-                <div class="man-firma-avatar">${(f.nombre||'?').slice(0,2).toUpperCase()}</div>
+                <div class="man-firma-avatar">${avatarInner}</div>
                 <span class="man-firma-nombre">${esc(f.nombre)}</span>
                 <span class="man-firma-fecha">${_fmtFecha(f.at)}</span>
-                <button class="man-firma-del" onclick="manuales.quitarFirma('${d.id}','${esc(f.nombre).replace(/'/g,"\\'")}','${f.at}')" title="Quitar">✕</button>
-              </div>`).join('')}
-            ${total > 5 ? `<div style="font-size:11px;color:var(--muted);text-align:center">+${total-5} más…</div>` : ''}
+                <span class="man-firma-check">✓</span>
+                <button class="man-firma-del" onclick="manuales.quitarFirma('${d.id}','${esc(f.nombre).replace(/'/g,"\\'")}','${f.at}')" title="Quitar firma">✕</button>
+              </div>`;
+            }).join('')}
           </div>` :
-          `<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px 0">Sin firmas aún — compartí el link</div>`}
+          `<div class="man-empty-firmas">Sin firmas aún — compartí el link con los empleados</div>`
+        }
       </div>
     </div>`;
   }

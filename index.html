@@ -45,6 +45,7 @@
     --m7: #4afff0; /* liquidaciones */
     --m8: #ff4ab4; /* portal empleados */
     --m9: #ffcc4a; /* indumentaria */
+    --fg: #f0f0ec; /* alias de --text, evita textos invisibles */
   }
 
   /* ─── RESET ───────────────────────────────────────────────── */
@@ -384,7 +385,7 @@
   .todo-input:focus { border-color: var(--accent); }
   .todo-add-btn {
     background: var(--accent); border: none; border-radius: 8px;
-    color: #fff; font-weight: 700; font-size: 18px;
+    color: #0e0f11; font-weight: 700; font-size: 18px;
     width: 34px; height: 34px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: opacity var(--transition);
@@ -446,7 +447,7 @@
   .nov-form-row { display: flex; gap: 6px; }
   .nov-pub-btn {
     background: var(--accent); border: none; border-radius: 8px;
-    color: #fff; font-weight: 700; font-size: 12px;
+    color: #0e0f11; font-weight: 700; font-size: 12px;
     padding: 7px 14px; cursor: pointer; align-self: flex-end;
     transition: opacity var(--transition);
   }
@@ -601,9 +602,9 @@
   .bj-btn-primary:hover { filter: brightness(1.1); }
   .bj-btn-outline {
     background: transparent; color: var(--text);
-    border: 1px solid var(--border);
+    border: 1px solid color-mix(in srgb, var(--border) 200%, transparent);
   }
-  .bj-btn-outline:hover { border-color: var(--m6); color: var(--m6); }
+  .bj-btn-outline:hover { border-color: var(--m6); color: var(--m6); background: color-mix(in srgb, var(--m6) 8%, transparent); }
   .bj-btn-danger { background: var(--danger); color: #fff; }
   .bj-btn-danger:hover { filter: brightness(1.1); }
 
@@ -772,11 +773,12 @@
   }
   .bj-modal-title { font-size: 18px; font-weight: 800; }
   .bj-modal-close {
-    background: none; border: none; color: var(--muted);
-    font-size: 16px; cursor: pointer; padding: 4px;
-    transition: color var(--transition);
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 4px 8px;
+    border-radius: 6px;
+    transition: color var(--transition), border-color var(--transition), background var(--transition);
   }
-  .bj-modal-close:hover { color: var(--text); }
+  .bj-modal-close:hover { color: var(--text); border-color: var(--text); background: var(--surface2); }
 
   .bj-modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
   .bj-modal-footer {
@@ -2696,6 +2698,13 @@
       <div class="firma-result-icon">🎉</div>
       <div class="firma-result-title" style="color:var(--m2)">¡Gracias por confirmar!</div>
       <div class="firma-result-sub" id="firma-result-ok-sub">Tu aceptación fue registrada correctamente.</div>
+      <a id="firma-pdf-btn" href="#" target="_blank" rel="noopener"
+        style="display:none;margin-top:12px;padding:12px 24px;border-radius:10px;background:#ff9f1c;color:#0e0f11;
+               font-family:'Syne',sans-serif;font-size:14px;font-weight:800;text-decoration:none;
+               transition:opacity 0.2s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        📄 Descargar PDF
+      </a>
     </div>
     <div class="firma-result" id="firma-result-ya">
       <div class="firma-result-icon">✅</div>
@@ -4982,6 +4991,12 @@
           <textarea class="bj-input" id="man-contenido-inp" rows="10"
             placeholder="Escribí aquí el contenido del documento que el empleado deberá leer y aceptar…"
             style="resize:vertical;font-family:'Syne',sans-serif;font-size:13px;line-height:1.6"></textarea>
+
+          <div class="bj-section-sep">PDF adjunto (opcional)</div>
+          <div class="bj-field">
+            <label class="bj-label">URL del PDF (Google Drive, Dropbox, etc.)</label>
+            <input class="bj-input" id="man-pdf-inp" type="url" placeholder="https://…">
+          </div>
 
           <div id="man-nuevo-error" style="color:var(--danger);font-size:12px;min-height:16px"></div>
         </div>
@@ -10488,7 +10503,7 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     const contenido = ($('man-contenido-inp').value||'').trim();
     if (!nombre)    { $('man-nuevo-error').textContent = 'El nombre es obligatorio.'; return; }
     if (!contenido) { $('man-nuevo-error').textContent = 'El contenido no puede estar vacío.'; return; }
-    const data = { nombre, contenido, pdfUrl, local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
+    const data = { nombre, contenido, pdfUrl: ($('man-pdf-inp').value||'').trim(), local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
     const btn = $('man-save-btn');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try {
@@ -10548,10 +10563,6 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
     if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) fn();
     else if (n < 40) setTimeout(() => _waitFirebase(fn, n+1), 150);
     else { document.getElementById('firma-titulo').textContent = 'Error de conexión'; }
-    const d = snap.data();
-      window._currentDocPdf = d.pdfUrl || ''; // Agregá esta línea para guardar la URL
-
-      document.getElementById('firma-empresa-badge').textContent = d.local || 'BC Gestión';
   }
 
   _waitFirebase(async () => {
@@ -10563,6 +10574,7 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
         return;
       }
       const d = snap.data();
+      window._currentDocPdf = d.pdfUrl || '';
       document.getElementById('firma-empresa-badge').textContent = d.local || 'BC Gestión';
       document.getElementById('firma-titulo').textContent  = d.nombre || 'Documento';
       document.getElementById('firma-sub').textContent     = 'Leé el contenido completo antes de confirmar tu aceptación.';

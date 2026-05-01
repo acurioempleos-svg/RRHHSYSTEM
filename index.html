@@ -21,31 +21,31 @@
 <style>
   /* ─── VARIABLES ───────────────────────────────────────────── */
   :root {
-    --bg:        #0e0f11;
-    --surface:   #16181c;
-    --surface2:  #1e2127;
-    --border:    #2a2d35;
-    --accent:    #e8ff4a;
-    --accent2:   #4affb4;
-    --text:      #f0f0ec;
-    --muted:     #6b7080;
-    --danger:    #ff5f5f;
+    --bg:        #f7f8fa;
+    --surface:   #ffffff;
+    --surface2:  #f0f2f5;
+    --border:    #e0e3ea;
+    --accent:    #2563eb;
+    --accent2:   #059669;
+    --text:      #111827;
+    --muted:     #6b7280;
+    --danger:    #dc2626;
     --nav-h:     60px;
     --sidebar-w: 240px;
     --radius:    10px;
     --transition: 180ms ease;
 
     /* Colores por módulo */
-    --m1: #e8ff4a; /* reclutamiento */
-    --m2: #4affb4; /* ingresos */
-    --m3: #4ab4ff; /* formulario */
-    --m4: #b44aff; /* info personal */
-    --m5: #ff9f4a; /* horarios */
-    --m6: #ff5f5f; /* bajas */
-    --m7: #4afff0; /* liquidaciones */
-    --m8: #ff4ab4; /* portal empleados */
-    --m9: #ffcc4a; /* indumentaria */
-    --fg: #f0f0ec; /* alias de --text, evita textos invisibles */
+    --m1: #d97706; /* reclutamiento */
+    --m2: #059669; /* ingresos */
+    --m3: #2563eb; /* formulario */
+    --m4: #7c3aed; /* info personal */
+    --m5: #ea580c; /* horarios */
+    --m6: #dc2626; /* bajas */
+    --m7: #0891b2; /* liquidaciones */
+    --m8: #db2777; /* portal empleados */
+    --m9: #b45309; /* indumentaria */
+    --fg: #111827; /* alias de --text, evita textos invisibles */
   }
 
   /* ─── RESET ───────────────────────────────────────────────── */
@@ -63,7 +63,7 @@
   body::before {
     content: '';
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    opacity: .03;
+    opacity: .015;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
     background-size: 200px;
   }
@@ -105,7 +105,7 @@
   .auth-field input:focus { border-color: var(--accent); }
   .btn-primary {
     width: 100%; padding: 14px;
-    background: var(--accent); color: #0e0f11;
+    background: var(--accent); color: #ffffff;
     border: none; border-radius: 6px;
     font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
     cursor: pointer; margin-top: 8px;
@@ -195,7 +195,7 @@
 
   #sidebar-overlay {
     display: none; position: fixed; inset: 0; z-index: 39;
-    background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+    background: rgba(0,0,0,.25); backdrop-filter: blur(2px);
   }
   #sidebar-overlay.show { display: block; }
 
@@ -339,8 +339,8 @@
 
   /* Frase motivacional */
   .home-frase {
-    background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(168,85,247,.08));
-    border: 1px solid rgba(99,102,241,.25);
+    background: linear-gradient(135deg, rgba(99,102,241,.07), rgba(168,85,247,.04));
+    border: 1px solid rgba(99,102,241,.15);
     border-radius: var(--radius);
     padding: 18px 20px;
     margin-bottom: 4px;
@@ -385,7 +385,7 @@
   .todo-input:focus { border-color: var(--accent); }
   .todo-add-btn {
     background: var(--accent); border: none; border-radius: 8px;
-    color: #0e0f11; font-weight: 700; font-size: 18px;
+    color: #ffffff; font-weight: 700; font-size: 18px;
     width: 34px; height: 34px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: opacity var(--transition);
@@ -447,7 +447,7 @@
   .nov-form-row { display: flex; gap: 6px; }
   .nov-pub-btn {
     background: var(--accent); border: none; border-radius: 8px;
-    color: #0e0f11; font-weight: 700; font-size: 12px;
+    color: #ffffff; font-weight: 700; font-size: 12px;
     padding: 7px 14px; cursor: pointer; align-self: flex-end;
     transition: opacity var(--transition);
   }
@@ -567,7 +567,7 @@
     border-radius: var(--radius); padding: 8px;
     min-width: 180px; z-index: 60;
     display: none; flex-direction: column; gap: 4px;
-    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    box-shadow: 0 8px 32px rgba(0,0,0,.1);
   }
   .user-dropdown.show { display: flex; }
   .dropdown-item {
@@ -598,7 +598,7 @@
     cursor: pointer; transition: all var(--transition); border: none;
     white-space: nowrap;
   }
-  .bj-btn-primary { background: var(--m6); color: #0e0f11; }
+  .bj-btn-primary { background: var(--m6); color: #ffffff; }
   .bj-btn-primary:hover { filter: brightness(1.1); }
   .bj-btn-outline {
     background: transparent; color: var(--text);
@@ -744,7 +744,7 @@
   /* ─── MODAL ───────────────────────────────────────────────── */
   .bj-modal-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
     display: none; align-items: flex-start; justify-content: center;
     padding: 16px; overflow-y: auto;
   }
@@ -756,7 +756,7 @@
     border-radius: 12px;
     width: 100%; max-width: 680px;
     margin: auto;
-    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    box-shadow: 0 24px 64px rgba(0,0,0,.12);
     animation: modalIn 180ms cubic-bezier(.4,0,.2,1);
   }
   .bj-modal-sm { max-width: 380px; }
@@ -826,7 +826,7 @@
   /* ══════════════════════════════════════════════════════════
      MÓDULO 07 — LIQUIDACIONES
   ══════════════════════════════════════════════════════════ */
-  :root { --m7: #4afff0; }
+  :root { --m7: #0891b2; }
 
   /* Layout split */
   .lq-split {
@@ -1087,7 +1087,7 @@
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; z-index: 300;
     max-height: 220px; overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,.1);
     display: none;
   }
   .bj-emp-dropdown.open { display: block; }
@@ -1200,7 +1200,7 @@
   /* ─── INGRESOS: modal éxito + modal mail ──────────────────── */
   .in-success-overlay {
     position: fixed; inset: 0; z-index: 220;
-    background: rgba(0,0,0,.72); backdrop-filter: blur(5px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .in-success-overlay.open { display: flex; }
@@ -1252,7 +1252,7 @@
   /* Modal mail ingreso */
   .in-mail-overlay {
     position: fixed; inset: 0; z-index: 230;
-    background: rgba(0,0,0,.78); backdrop-filter: blur(5px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .in-mail-overlay.open { display: flex; }
@@ -1324,10 +1324,10 @@
     background:var(--surface2);border:1px solid var(--border);
     border-radius:8px;transition:border-color var(--transition);
   }
-  .al-local-row:hover { border-color:#a0a8b8; }
+  .al-local-row:hover { border-color:#6b7280; }
   .al-local-dot {
     width:8px;height:8px;border-radius:50%;
-    background:#a0a8b8;flex-shrink:0;
+    background:#6b7280;flex-shrink:0;
   }
   .al-local-name { font-size:14px;font-weight:700;flex:1; }
   .al-local-razon { font-family:'DM Mono',monospace;font-size:11px;color:var(--muted); }
@@ -1481,18 +1481,18 @@
     cursor: pointer; transition: all var(--transition);
   }
   .hr-turno-tipo-btn.sel-am {
-    background: rgba(251,191,36,0.35);
-    border-color: #fbbf24; color: #fbbf24;
-    box-shadow: 0 0 0 2px rgba(251,191,36,0.25);
+    background: rgba(217,119,6,0.12);
+    border-color: #d97706; color: #d97706;
+    box-shadow: 0 0 0 2px rgba(217,119,6,0.15);
   }
   .hr-turno-tipo-btn.sel-pm {
-    background: rgba(74,255,180,0.28);
-    border-color: #4affb4; color: #4affb4;
-    box-shadow: 0 0 0 2px rgba(74,255,180,0.22);
+    background: rgba(5,150,105,0.12);
+    border-color: #059669; color: #059669;
+    box-shadow: 0 0 0 2px rgba(5,150,105,0.12);
   }
   .hr-modal-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+    background: rgba(0,0,0,.25); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .hr-modal-overlay.open { display: flex; }
@@ -1510,7 +1510,7 @@
   /* Modal cierre de turno (supervisor) */
   .hr-cierre-overlay {
     position: fixed; inset: 0; z-index: 201;
-    background: rgba(0,0,0,.72); backdrop-filter: blur(6px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(4px);
     display: none; align-items: flex-start; justify-content: center;
     padding: 20px; overflow-y: auto;
   }
@@ -1601,7 +1601,7 @@
   /* Modal de envío por email */
   .hr-mail-overlay {
     position: fixed; inset: 0; z-index: 210;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(5px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .hr-mail-overlay.open { display: flex; }
@@ -1677,7 +1677,7 @@
     border-radius: 10px; padding: 12px 18px;
     font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text);
     display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,.1);
     animation: fadeIn 200ms ease;
     max-width: 320px;
   }
@@ -1685,7 +1685,7 @@
   /* Modal selector empleado para agregar a planilla */
   .hr-emp-pick-overlay {
     position: fixed; inset: 0; z-index: 202;
-    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    background: rgba(0,0,0,.25); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .hr-emp-pick-overlay.open { display: flex; }
@@ -1778,7 +1778,7 @@
   .conf-action { padding: 0 24px 24px; }
   .conf-btn {
     width: 100%; padding: 14px;
-    background: var(--m2); color: #0e0f11;
+    background: var(--m2); color: #ffffff;
     border: none; border-radius: 10px;
     font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
     cursor: pointer; transition: opacity var(--transition), transform var(--transition);
@@ -1803,7 +1803,7 @@
   /* ─── PERFIL MODAL ─────────────────────────────────────────── */
   #ip-perfil-overlay {
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+    background: rgba(0,0,0,.3); backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center;
     opacity: 0; pointer-events: none;
     transition: opacity 300ms ease;
@@ -1945,7 +1945,7 @@
     font-size: 11px; white-space: nowrap;
     z-index: 10; opacity: 0;
     transition: opacity 150ms; min-width: 140px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
   }
   .fo-tooltip.show { opacity: 1; }
   .fo-tooltip-part {
@@ -1985,7 +1985,7 @@
   .ip-indum-save {
     width: 100%; margin-top: 10px;
     padding: 9px; border: none; border-radius: 6px;
-    background: var(--m4); color: #0e0f11;
+    background: var(--m4); color: #ffffff;
     font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px;
     cursor: pointer; transition: opacity var(--transition);
   }
@@ -2187,7 +2187,7 @@
     padding: 1px 7px; border-radius: 20px;
     font-family: 'DM Mono', monospace;
   }
-  .home-alertas-badge.warn { background: var(--m9); color: #0e0f11; }
+  .home-alertas-badge.warn { background: var(--m9); color: #ffffff; }
   .home-alertas-toggle {
     font-size: 11px; color: var(--muted); cursor: pointer;
     font-family: 'DM Mono', monospace; letter-spacing: .06em;
@@ -2245,7 +2245,7 @@
   /* ─── PANTALLA PÚBLICA: FIRMA DE MANUAL ─────────────────── */
   #firma-screen {
     display: none; position: fixed; inset: 0; z-index: 9999;
-    background: #0e0f11;
+    background: var(--bg);
     align-items: center; justify-content: center;
     flex-direction: column; padding: 20px;
     font-family: 'Syne', sans-serif;
@@ -2258,13 +2258,13 @@
     border-radius: 18px;
     width: 100%; max-width: 520px;
     overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    box-shadow: 0 24px 60px rgba(0,0,0,.25);
   }
 
   .firma-header {
     padding: 28px 28px 20px;
     border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, color-mix(in srgb, #ff9f1c 8%, var(--surface)), var(--surface));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--m9) 8%, var(--surface)), var(--surface));
   }
   .firma-logo {
     font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .18em;
@@ -2274,8 +2274,8 @@
     display: inline-block;
     font-size: 13px; font-weight: 800;
     padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
-    background: color-mix(in srgb, #ff9f1c 15%, transparent);
-    color: #ff9f1c; border: 1px solid color-mix(in srgb, #ff9f1c 30%, transparent);
+    background: color-mix(in srgb, var(--m9) 15%, transparent);
+    color: var(--m9); border: 1px solid color-mix(in srgb, var(--m9) 30%, transparent);
   }
   .firma-titulo {
     font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 4px;
@@ -2305,7 +2305,7 @@
     transition: border-color 160ms;
     box-sizing: border-box;
   }
-  .firma-nombre-input:focus { outline: none; border-color: #ff9f1c; }
+  .firma-nombre-input:focus { outline: none; border-color: var(--m9); }
   .firma-nombre-input::placeholder { color: var(--muted); }
 
   .firma-aviso {
@@ -2316,7 +2316,7 @@
 
   .firma-btn {
     width: 100%; padding: 16px; border: none; border-radius: 12px;
-    background: #ff9f1c; color: #0e0f11;
+    background: var(--m9); color: #ffffff;
     font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
     cursor: pointer; letter-spacing: .02em;
     transition: opacity 200ms, transform 100ms;
@@ -2344,7 +2344,7 @@
   /* ══════════════════════════════════════════════════════════
      MÓDULO 10 — MANUALES & DOCUMENTOS
   ══════════════════════════════════════════════════════════ */
-  :root { --mA: #ff9f1c; }
+  :root { --mA: var(--m9); }
 
   /* Toolbar + tabs */
   .man-toolbar {
@@ -2366,7 +2366,7 @@
   }
   .man-tab:hover { border-color: var(--mA); color: var(--mA); }
   .man-tab.active {
-    background: var(--mA); color: #0e0f11;
+    background: var(--mA); color: #ffffff;
     border-color: var(--mA);
     box-shadow: 0 0 12px color-mix(in srgb, var(--mA) 30%, transparent);
   }
@@ -2390,7 +2390,7 @@
   .man-card:hover {
     border-color: color-mix(in srgb, var(--mA) 50%, transparent);
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0,0,0,.25);
+    box-shadow: 0 8px 32px rgba(0,0,0,.08);
   }
 
   /* Card header */
@@ -2699,7 +2699,7 @@
       <div class="firma-result-title" style="color:var(--m2)">¡Gracias por confirmar!</div>
       <div class="firma-result-sub" id="firma-result-ok-sub">Tu aceptación fue registrada correctamente.</div>
       <a id="firma-pdf-btn" href="#" target="_blank" rel="noopener"
-        style="display:none;margin-top:12px;padding:12px 24px;border-radius:10px;background:#ff9f1c;color:#0e0f11;
+        style="display:none;margin-top:12px;padding:12px 24px;border-radius:10px;background:var(--m9);color:#ffffff;
                font-family:'Syne',sans-serif;font-size:14px;font-weight:800;text-decoration:none;
                transition:opacity 0.2s"
         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
@@ -2833,7 +2833,7 @@
       <span class="nav-item-text">Indumentaria</span>
       <span class="nav-item-num">09</span>
     </a>
-    <a class="nav-item" data-rol="rrhh" data-module="manuales" style="--item-color: #ff9f1c" onclick="navigate('manuales', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="manuales" style="--item-color: var(--m9)" onclick="navigate('manuales', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Manuales / Docs</span>
       <span class="nav-item-num">10</span>
@@ -2841,7 +2841,7 @@
 
     <!-- Sección Admin -->
     <div class="sidebar-section-label" id="sidebar-admin-label" style="margin-top:8px">Administración</div>
-    <a class="nav-item" data-rol="rrhh" data-module="admin-locales" style="--item-color: #a0a8b8" onclick="navigate('admin-locales', this)">
+    <a class="nav-item" data-rol="rrhh" data-module="admin-locales" style="--item-color: #6b7280" onclick="navigate('admin-locales', this)">
       <span class="nav-dot"></span>
       <span class="nav-item-text">Locales</span>
       <span class="nav-item-num">⚙</span>
@@ -3000,7 +3000,7 @@
             <div class="module-card-num">09</div>
             <div class="module-card-name">Indumentaria</div>
           </div>
-          <div class="module-card" style="--card-color: #ff9f1c" onclick="navigate('manuales', null)">
+          <div class="module-card" style="--card-color: var(--m9)" onclick="navigate('manuales', null)">
             <div class="module-card-icon">📋</div>
             <div class="module-card-num">10</div>
             <div class="module-card-name">Manuales / Docs</div>
@@ -3025,7 +3025,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center;">
           <button class="bj-btn bj-btn-outline" onclick="reclutamiento.exportCSV()">↓ Exportar CSV</button>
-          <button class="bj-btn bj-btn-primary" style="background:var(--m1);color:#0e0f11" onclick="reclutamiento.openForm()">+ Nuevo candidato</button>
+          <button class="bj-btn bj-btn-primary" style="background:var(--m1);color:#ffffff" onclick="reclutamiento.openForm()">+ Nuevo candidato</button>
         </div>
       </div>
 
@@ -3127,7 +3127,7 @@
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="reclutamiento.closeForm()">Cancelar</button>
-          <button class="bj-btn bj-btn-primary" id="rc-save-btn" style="background:var(--m1);color:#0e0f11" onclick="reclutamiento.guardar()">Guardar</button>
+          <button class="bj-btn bj-btn-primary" id="rc-save-btn" style="background:var(--m1);color:#ffffff" onclick="reclutamiento.guardar()">Guardar</button>
         </div>
       </div>
     </div>
@@ -3159,7 +3159,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center;">
           <button class="bj-btn bj-btn-outline" onclick="ingresos.exportCSV()">↓ Exportar CSV</button>
-          <button class="bj-btn bj-btn-primary" style="background:var(--m2);color:#0e0f11" onclick="ingresos.openForm()">+ Nuevo ingreso</button>
+          <button class="bj-btn bj-btn-primary" style="background:var(--m2);color:#ffffff" onclick="ingresos.openForm()">+ Nuevo ingreso</button>
         </div>
       </div>
 
@@ -3255,7 +3255,7 @@
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="ingresos.closeForm()">Cancelar</button>
-          <button class="bj-btn bj-btn-primary" id="in-save-btn" style="background:var(--m2);color:#0e0f11" onclick="ingresos.guardar()">Guardar</button>
+          <button class="bj-btn bj-btn-primary" id="in-save-btn" style="background:var(--m2);color:#ffffff" onclick="ingresos.guardar()">Guardar</button>
         </div>
       </div>
     </div>
@@ -3335,22 +3335,22 @@
         <div class="in-mail-footer">
           <div class="in-mail-status" id="in-mail-status"></div>
           <button class="bj-btn bj-btn-outline" onclick="ingresos.cerrarMailIngreso()">Cancelar</button>
-          <button class="bj-btn" style="background:var(--m3);color:#0e0f11" id="in-mail-send-btn" onclick="ingresos.enviarMailModal()">Enviar</button>
+          <button class="bj-btn" style="background:var(--m3);color:#ffffff" id="in-mail-send-btn" onclick="ingresos.enviarMailModal()">Enviar</button>
         </div>
       </div>
     </div>
 
     <!-- ── MÓDULO ADMIN: LOCALES ────────────────────────────── -->
     <div class="module" id="module-admin-locales">
-      <div class="module-header" style="--item-color: #a0a8b8">
-        <div class="module-icon" style="--item-color: #a0a8b8">⚙</div>
+      <div class="module-header" style="--item-color: #6b7280">
+        <div class="module-icon" style="--item-color: #6b7280">⚙</div>
         <div class="module-title-group">
           <div class="module-eyebrow">Administración</div>
           <div class="module-title">Gestión de Locales</div>
           <div class="module-desc">Agregá o quitá los locales que aparecen en todos los módulos.</div>
         </div>
         <div style="margin-left:auto">
-          <button class="bj-btn bj-btn-primary" style="background:#a0a8b8;color:#0e0f11" onclick="adminLocales.openForm()">+ Agregar local</button>
+          <button class="bj-btn bj-btn-primary" style="background:#6b7280;color:#ffffff" onclick="adminLocales.openForm()">+ Agregar local</button>
         </div>
       </div>
 
@@ -3366,7 +3366,7 @@
       <div class="bj-modal bj-modal-sm" onclick="event.stopPropagation()">
         <div class="bj-modal-header">
           <div>
-            <div class="bj-modal-tag" style="color:#a0a8b8">Administración</div>
+            <div class="bj-modal-tag" style="color:#6b7280">Administración</div>
             <div class="bj-modal-title" id="al-modal-title">Agregar local</div>
           </div>
           <button class="bj-modal-close" onclick="adminLocales.closeForm()">✕</button>
@@ -3390,7 +3390,7 @@
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="adminLocales.closeForm()">Cancelar</button>
-          <button class="bj-btn bj-btn-primary" id="al-save-btn" style="background:#a0a8b8;color:#0e0f11" onclick="adminLocales.guardar()">Guardar</button>
+          <button class="bj-btn bj-btn-primary" id="al-save-btn" style="background:#6b7280;color:#ffffff" onclick="adminLocales.guardar()">Guardar</button>
         </div>
       </div>
     </div>
@@ -3436,7 +3436,7 @@
                 style="border-color:color-mix(in srgb,var(--m3) 30%,var(--border));font-size:12px"
                 oninput="formulario.guardarURL(this.value)">
             </div>
-            <button class="bj-btn" onclick="formulario.cargarForm()" style="background:var(--m3);color:#0e0f11;margin-bottom:1px">Cargar formulario</button>
+            <button class="bj-btn" onclick="formulario.cargarForm()" style="background:var(--m3);color:#ffffff;margin-bottom:1px">Cargar formulario</button>
           </div>
           <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
             En Google Forms → Enviar → icono &lt;&gt; → copiá la URL del src del iframe
@@ -3472,7 +3472,7 @@
           <div id="gform-preview-table" style="overflow-x:auto"></div>
           <div style="display:flex;gap:10px">
             <button class="bj-btn bj-btn-outline" onclick="formulario.cancelarImport()">Cancelar</button>
-            <button class="bj-btn" id="gform-import-btn" onclick="formulario.confirmarImport()" style="background:var(--m3);color:#0e0f11">✓ Importar a Info Personal</button>
+            <button class="bj-btn" id="gform-import-btn" onclick="formulario.confirmarImport()" style="background:var(--m3);color:#ffffff">✓ Importar a Info Personal</button>
           </div>
           <div id="gform-import-status" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--muted)"></div>
         </div>
@@ -3594,7 +3594,7 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <input class="bj-input" id="ip-nc-nueva-nombre" placeholder="Nombre de la sección (Ej: Cocina)" style="flex:1;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
               <input class="bj-input" id="ip-nc-nueva-dot" type="number" min="1" placeholder="Dotación" style="width:100px;border-color:color-mix(in srgb,var(--m4) 30%,var(--border))">
-              <button class="bj-btn" onclick="infoPersonal.agregarSeccion()" style="background:var(--m4);color:#0e0f11">Agregar</button>
+              <button class="bj-btn" onclick="infoPersonal.agregarSeccion()" style="background:var(--m4);color:#ffffff">Agregar</button>
             </div>
           </div>
           <div id="ip-nc-status" style="font-size:12px;font-family:'DM Mono',monospace;min-height:16px;color:var(--accent2)"></div>
@@ -3878,9 +3878,9 @@
 
                 <!-- CABEZA -->
                 <g class="fo-zone" id="fo-cabeza" data-part="cabeza" onclick="infoPersonal.foClick(this)">
-                  <ellipse cx="60" cy="30" rx="22" ry="24" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <ellipse cx="52" cy="28" rx="4" ry="4" fill="#1e2127"/>
-                  <ellipse cx="68" cy="28" rx="4" ry="4" fill="#1e2127"/>
+                  <ellipse cx="60" cy="30" rx="22" ry="24" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5"/>
+                  <ellipse cx="52" cy="28" rx="4" ry="4" fill="#c8cfd9"/>
+                  <ellipse cx="68" cy="28" rx="4" ry="4" fill="#c8cfd9"/>
                   <ellipse cx="52" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
                   <ellipse cx="68" cy="28" rx="2" ry="2" fill="#b44aff" opacity=".9"/>
                   <path d="M53 39 Q60 44 67 39" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
@@ -3888,9 +3888,9 @@
 
                 <!-- TORSO / REMERA -->
                 <g class="fo-zone" id="fo-torso" data-part="torso" onclick="infoPersonal.foClick(this)">
-                  <path d="M34 60 L86 60 L88 115 L32 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
+                  <path d="M34 60 L86 60 L88 115 L32 115 Z" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5" stroke-linejoin="round"/>
                   <!-- cuello -->
-                  <rect x="52" y="52" width="16" height="10" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="52" y="52" width="16" height="10" rx="3" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1"/>
                   <!-- hombros -->
                   <path d="M34 60 L22 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
                   <path d="M86 60 L98 72" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
@@ -3898,32 +3898,32 @@
 
                 <!-- BRAZOS decorativos -->
                 <g style="pointer-events:none">
-                  <rect x="14" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="21" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <rect x="92" y="68" width="14" height="50" rx="7" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
-                  <ellipse cx="99" cy="124" rx="7" ry="6" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="14" y="68" width="14" height="50" rx="7" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
+                  <ellipse cx="21" cy="124" rx="7" ry="6" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
+                  <rect x="92" y="68" width="14" height="50" rx="7" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
+                  <ellipse cx="99" cy="124" rx="7" ry="6" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
                 </g>
 
                 <!-- DELANTAL -->
                 <g class="fo-zone" id="fo-delantal" data-part="delantal" onclick="infoPersonal.foClick(this)">
-                  <path d="M42 62 L78 62 L80 115 L40 115 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" fill-opacity=".9"/>
+                  <path d="M42 62 L78 62 L80 115 L40 115 Z" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5" fill-opacity=".9"/>
                   <path d="M52 62 Q60 56 68 62" fill="none" stroke="#3a3f4a" stroke-width="1.5" stroke-linecap="round"/>
-                  <rect x="50" y="85" width="20" height="13" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <rect x="50" y="85" width="20" height="13" rx="2" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
                 </g>
 
                 <!-- PANTALÓN -->
                 <g class="fo-zone" id="fo-pantalon" data-part="pantalon" onclick="infoPersonal.foClick(this)">
-                  <path d="M32 113 L40 175 L56 175 L60 145 L64 175 L80 175 L88 113 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5" stroke-linejoin="round"/>
-                  <rect x="32" y="111" width="56" height="6" rx="2" fill="#1e2127" stroke="#3a3f4a" stroke-width="1"/>
+                  <path d="M32 113 L40 175 L56 175 L60 145 L64 175 L80 175 L88 113 Z" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5" stroke-linejoin="round"/>
+                  <rect x="32" y="111" width="56" height="6" rx="2" fill="#c8cfd9" stroke="#b0b8c8" stroke-width="1"/>
                   <rect x="54" y="111" width="12" height="6" rx="1" fill="#3a3f4a"/>
                 </g>
 
                 <!-- CALZADO -->
                 <g class="fo-zone" id="fo-calzado" data-part="calzado" onclick="infoPersonal.foClick(this)">
-                  <rect x="34" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M34 181 Q28 188 26 190 L56 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <rect x="64" y="173" width="22" height="12" rx="3" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
-                  <path d="M86 181 Q92 188 94 190 L64 190 Z" fill="#2a2d35" stroke="#3a3f4a" stroke-width="1.5"/>
+                  <rect x="34" y="173" width="22" height="12" rx="3" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5"/>
+                  <path d="M34 181 Q28 188 26 190 L56 190 Z" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5"/>
+                  <rect x="64" y="173" width="22" height="12" rx="3" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5"/>
+                  <path d="M86 181 Q92 188 94 190 L64 190 Z" fill="#dde1ea" stroke="#b0b8c8" stroke-width="1.5"/>
                 </g>
 
               </svg>
@@ -3960,8 +3960,8 @@
 
             <!-- Leyenda -->
             <div style="display:flex;gap:16px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--accent2) 35%,#1e2127);border:1.5px solid var(--accent2);margin-right:4px;vertical-align:middle"></span>Con ropa</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2a2d35;border:1.5px solid #3a3f4a;margin-right:4px;vertical-align:middle"></span>Sin ropa</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:color-mix(in srgb,var(--accent2) 35%,#f0f2f5);border:1.5px solid var(--accent2);margin-right:4px;vertical-align:middle"></span>Con ropa</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e0e3ea;border:1.5px solid #9ca3af;margin-right:4px;vertical-align:middle"></span>Sin ropa</span>
             </div>
           </div>
         </div>
@@ -4037,7 +4037,7 @@
           <div class="hr-modal-actions">
             <button class="bj-btn bj-btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="horarios.eliminarTurno()">Quitar turno</button>
             <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarModalTurno()">Cancelar</button>
-            <button class="bj-btn" style="background:var(--m5);color:#0e0f11" onclick="horarios.guardarTurno()">Guardar</button>
+            <button class="bj-btn" style="background:var(--m5);color:#ffffff" onclick="horarios.guardarTurno()">Guardar</button>
           </div>
         </div>
       </div>
@@ -4063,7 +4063,7 @@
 
           <div class="hr-cierre-footer">
             <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarCierre()">Cerrar</button>
-            <button class="bj-btn" style="background:var(--m2);color:#0e0f11" id="hr-cierre-save-btn" onclick="horarios.guardarCierre()" disabled>Guardar cierre</button>
+            <button class="bj-btn" style="background:var(--m2);color:#ffffff" id="hr-cierre-save-btn" onclick="horarios.guardarCierre()" disabled>Guardar cierre</button>
           </div>
         </div>
       </div>
@@ -4118,7 +4118,7 @@
         <div class="hr-mail-footer">
           <div class="hr-mail-status" id="hr-mail-status"></div>
           <button class="bj-btn bj-btn-outline" onclick="horarios.cerrarModalMail()">Cancelar</button>
-          <button class="bj-btn" style="background:var(--m3);color:#0e0f11" id="hr-mail-send-btn" onclick="horarios.enviarEmail()">Enviar</button>
+          <button class="bj-btn" style="background:var(--m3);color:#ffffff" id="hr-mail-send-btn" onclick="horarios.enviarEmail()">Enviar</button>
         </div>
       </div>
     </div>
@@ -4344,7 +4344,7 @@
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center;">
           <button class="bj-btn bj-btn-outline" style="border-color:var(--m7);color:var(--m7)" onclick="liquidaciones.exportCSV()" id="lq-btn-export" disabled>↓ Exportar CSV</button>
-          <button class="bj-btn" style="background:var(--m7);color:#0e0f11" onclick="liquidaciones.nueva()">+ Nueva liquidación</button>
+          <button class="bj-btn" style="background:var(--m7);color:#ffffff" onclick="liquidaciones.nueva()">+ Nueva liquidación</button>
         </div>
       </div>
 
@@ -4563,7 +4563,7 @@
               <button class="lq-share-btn" id="lq-btn-wsp" onclick="liquidaciones.enviarWhatsapp()" style="display:none">💬 WhatsApp</button>
               <div style="flex:1"></div>
               <button class="bj-btn bj-btn-outline" onclick="liquidaciones.descartar()" id="lq-btn-descartar">Descartar</button>
-              <button class="bj-btn" style="background:var(--m7);color:#0e0f11" onclick="liquidaciones.guardar()" id="lq-btn-guardar">Guardar liquidación</button>
+              <button class="bj-btn" style="background:var(--m7);color:#ffffff" onclick="liquidaciones.guardar()" id="lq-btn-guardar">Guardar liquidación</button>
             </div>
 
           </div><!-- /lq-form -->
@@ -4581,13 +4581,13 @@
           <div class="module-desc">Publicá noticias, imágenes y videos para tu equipo.</div>
         </div>
         <div style="display:flex;gap:8px;margin-left:auto;align-items:center;flex-wrap:wrap">
-          <button class="bj-btn" onclick="portal.abrirNuevo()" style="background:var(--m8);color:#0e0f11">+ Nueva publicación</button>
+          <button class="bj-btn" onclick="portal.abrirNuevo()" style="background:var(--m8);color:#ffffff">+ Nueva publicación</button>
           <a id="portal-link-btn" href="#" target="_blank" class="bj-btn bj-btn-outline" style="border-color:var(--m8);color:var(--m8);text-decoration:none;display:none">🔗 Ver portal</a>
         </div>
       </div>
 
       <!-- FORM NUEVA PUBLICACION -->
-      <div id="portal-form-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:16px">
+      <div id="portal-form-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200;align-items:center;justify-content:center;padding:16px">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:28px 24px;display:flex;flex-direction:column;gap:18px">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <div style="font-size:18px;font-weight:700">Nueva publicación</div>
@@ -4630,7 +4630,7 @@
 
           <div style="display:flex;gap:10px;justify-content:flex-end">
             <button class="bj-btn bj-btn-outline" onclick="portal.cerrarForm()">Cancelar</button>
-            <button class="bj-btn" id="portal-save-btn" onclick="portal.guardar()" style="background:var(--m8);color:#0e0f11">Publicar</button>
+            <button class="bj-btn" id="portal-save-btn" onclick="portal.guardar()" style="background:var(--m8);color:#ffffff">Publicar</button>
           </div>
           <div id="portal-form-error" style="font-size:12px;font-family:'DM Mono',monospace;min-height:16px"></div>
         </div>
@@ -4688,7 +4688,7 @@
           <div class="module-desc">Stock de ropa por local y registro de entregas por empleado.</div>
         </div>
         <div class="module-actions">
-          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#0e0f11" onclick="indumentaria.abrirNuevaPrenda()">+ Nueva prenda</button>
+          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#ffffff" onclick="indumentaria.abrirNuevaPrenda()">+ Nueva prenda</button>
         </div>
       </div>
 
@@ -4796,7 +4796,7 @@
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="indumentaria.cerrarPrenda()">Cancelar</button>
-          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#0e0f11" id="ind-prenda-save-btn" onclick="indumentaria.guardarPrenda()">Guardar prenda</button>
+          <button class="bj-btn bj-btn-primary" style="background:var(--m9);color:#ffffff" id="ind-prenda-save-btn" onclick="indumentaria.guardarPrenda()">Guardar prenda</button>
         </div>
       </div>
     </div>
@@ -4847,7 +4847,7 @@
           <div class="module-desc">Creá y administrá las cuentas de acceso al sistema.</div>
         </div>
         <div style="display:flex;gap:8px;margin-left:auto">
-          <button class="bj-btn" style="background:#f0a0ff;color:#0e0f11" onclick="usuarios.abrirNuevo()">+ Nuevo usuario</button>
+          <button class="bj-btn" style="background:#f0a0ff;color:#ffffff" onclick="usuarios.abrirNuevo()">+ Nuevo usuario</button>
         </div>
       </div>
       <div class="module-body">
@@ -4916,7 +4916,7 @@
           </div>
           <div class="bj-modal-footer">
             <button class="bj-btn bj-btn-outline" onclick="usuarios.cerrar()">Cancelar</button>
-            <button class="bj-btn" id="usr-save-btn" onclick="usuarios.guardar()" style="background:#f0a0ff;color:#0e0f11">Crear usuario</button>
+            <button class="bj-btn" id="usr-save-btn" onclick="usuarios.guardar()" style="background:#f0a0ff;color:#ffffff">Crear usuario</button>
           </div>
         </div>
       </div>
@@ -4929,7 +4929,7 @@
     ═══════════════════════════════════════════════════════════ -->
     <div class="module" id="module-manuales">
       <div class="module-header">
-        <div class="module-icon" style="background:color-mix(in srgb,#ff9f1c 15%,var(--surface2));color:#ff9f1c">📋</div>
+        <div class="module-icon" style="background:color-mix(in srgb,var(--m9) 15%,var(--surface2));color:var(--m9)">📋</div>
         <div class="module-title-group">
           <div class="module-eyebrow">Módulo 10</div>
           <div class="module-title">Manuales y Documentos</div>
@@ -4937,10 +4937,10 @@
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
           <button class="bj-btn bj-btn-outline" id="man-predef-btn" onclick="manuales.cargarPredefinidos()"
-            style="border-color:#ff9f1c;color:#ff9f1c;font-size:12px">
+            style="border-color:var(--m9);color:var(--m9);font-size:12px">
             📥 Cargar manuales predefinidos
           </button>
-          <button class="bj-btn" style="background:#ff9f1c;color:#0e0f11" onclick="manuales.abrirNuevo()">+ Nuevo documento</button>
+          <button class="bj-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.abrirNuevo()">+ Nuevo documento</button>
         </div>
       </div>
 
@@ -4965,7 +4965,7 @@
       <div class="bj-modal" style="max-width:580px" onclick="event.stopPropagation()">
         <div class="bj-modal-header">
           <div>
-            <div class="bj-modal-tag" style="color:#ff9f1c" id="man-nuevo-tag">Nuevo documento</div>
+            <div class="bj-modal-tag" style="color:var(--m9)" id="man-nuevo-tag">Nuevo documento</div>
             <div class="bj-modal-title" id="man-nuevo-titulo">Crear documento para firma</div>
           </div>
           <button class="bj-modal-close" onclick="manuales.cerrarNuevo()">✕</button>
@@ -5002,7 +5002,7 @@
         </div>
         <div class="bj-modal-footer">
           <button class="bj-btn bj-btn-outline" onclick="manuales.cerrarNuevo()">Cancelar</button>
-          <button class="bj-btn" id="man-save-btn" style="background:#ff9f1c;color:#0e0f11" onclick="manuales.guardar()">Guardar documento</button>
+          <button class="bj-btn" id="man-save-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.guardar()">Guardar documento</button>
         </div>
       </div>
     </div>
@@ -5964,7 +5964,7 @@ const reclutamiento = (() => {
           <span class="rc-fecha">${fmtFecha(r.fecha)}</span>
           <div style="display:flex;gap:6px">
             ${r.cvLink?`<a href="${esc(r.cvLink)}" target="_blank" class="bj-btn bj-btn-outline" style="font-size:11px;padding:4px 10px;border-color:var(--m1);color:var(--m1)">CV 🔗</a>`:''}
-            ${r.estado!=='Rechazado'?`<button class="bj-btn" onclick="reclutamiento.pasarAIngreso('${r.id}')" style="font-size:11px;padding:4px 10px;background:var(--m2);color:#0e0f11">→ Ingreso</button>`:''}
+            ${r.estado!=='Rechazado'?`<button class="bj-btn" onclick="reclutamiento.pasarAIngreso('${r.id}')" style="font-size:11px;padding:4px 10px;background:var(--m2);color:#ffffff">→ Ingreso</button>`:''}
             <button class="bj-icon-btn" onclick="reclutamiento.edit('${r.id}')" title="Editar">✏️</button>
             <button class="bj-icon-btn" onclick="reclutamiento.askDelete('${r.id}','${esc(r.nombre)}')" style="color:var(--danger)" title="Eliminar">🗑</button>
           </div>
@@ -8945,7 +8945,7 @@ const horarios = (() => {
       alert('Librería PDF no disponible.'); return;
     }
     try {
-      const canvas = await html2canvas(el, { backgroundColor: '#0e0f11', scale: 1.5 });
+      const canvas = await html2canvas(el, { backgroundColor: '#f7f8fa', scale: 1.5 });
       const { jsPDF } = jspdf;
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
@@ -9018,7 +9018,7 @@ const horarios = (() => {
     status.className = 'hr-mail-status'; status.textContent = '';
 
     try {
-      const canvas = await html2canvas(document.getElementById('hr-grid-container'), { backgroundColor: '#0e0f11', scale: 1.5 });
+      const canvas = await html2canvas(document.getElementById('hr-grid-container'), { backgroundColor: '#f7f8fa', scale: 1.5 });
       const imgData = canvas.toDataURL('image/png');
 
       let ok = true;
@@ -9695,9 +9695,9 @@ const indumentaria = (() => {
 
   function _localColor(local) {
     const l = (local||'').toLowerCase();
-    if (l.includes('barra') || l.includes('chalaca')) return '#4afff0'; // m7 cyan
-    if (l.includes('tanta'))  return '#ff9f4a'; // m5 naranja
-    if (l.includes('mar') || l.includes('lamar') || l.includes('la mar')) return '#4ab4ff'; // m3 azul
+    if (l.includes('barra') || l.includes('chalaca')) return '#0891b2'; // m7 cyan
+    if (l.includes('tanta'))  return '#ea580c'; // m5 naranja
+    if (l.includes('mar') || l.includes('lamar') || l.includes('la mar')) return '#2563eb'; // m3 azul
     return 'var(--muted)';
   }
 

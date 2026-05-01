@@ -2599,55 +2599,6 @@
     color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
   }
   .man-empty-state-icon { font-size: 48px; margin-bottom: 14px; }
-
-  /* === PERSONAJE === */
-
-.character svg {
-  animation: idle 3s ease-in-out infinite;
-}
-
-@keyframes idle {
-  0%,100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-.head {
-  transform-origin: center;
-  transition: transform 0.1s linear;
-}
-
-.eye {
-  fill: #7c3aed;
-  transform-origin: center;
-  animation: blink 4s infinite;
-}
-
-@keyframes blink {
-  0%,90%,100% { ry: 5; }
-  95% { ry: 0.5; }
-}
-
-.arm-right {
-  transform-origin: top center;
-}
-
-.wave {
-  animation: wave 0.6s ease-in-out 3;
-}
-
-@keyframes wave {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(-30deg); }
-  100% { transform: rotate(0deg); }
-}
-
-.ropa {
-  transition: opacity 0.3s ease;
-}
-
-.sin-ropa .ropa {
-  opacity: 0;
-}
 </style>
 <body>
 
@@ -2948,34 +2899,7 @@
 
         <!-- Widgets: TODO + Novedades -->
         <div class="home-widgets">
-          <div style="display:flex; justify-content:center; margin-bottom:20px;">
-  <div class="character" id="character">
-    <svg viewBox="0 0 200 300" width="140">
 
-      <g class="head">
-        <circle cx="100" cy="60" r="40" fill="#d1d5db" stroke="#6b7280" stroke-width="3"/>
-        <ellipse class="eye left" cx="85" cy="55" rx="5" ry="5"/>
-        <ellipse class="eye right" cx="115" cy="55" rx="5" ry="5"/>
-        <path d="M80 75 Q100 90 120 75" stroke="#6b7280" stroke-width="3" fill="none"/>
-      </g>
-
-      <g class="body">
-        <rect x="65" y="110" width="70" height="90" rx="12" fill="#9ca3af"/>
-        <rect class="ropa" x="65" y="110" width="70" height="90" rx="12" fill="#059669"/>
-      </g>
-
-      <g class="arm-right">
-        <rect x="140" y="120" width="25" height="70" rx="12" fill="#9ca3af"/>
-      </g>
-
-      <rect x="35" y="120" width="25" height="70" rx="12" fill="#9ca3af"/>
-
-      <rect x="75" y="200" width="20" height="60" rx="8" fill="#9ca3af"/>
-      <rect x="105" y="200" width="20" height="60" rx="8" fill="#9ca3af"/>
-
-    </svg>
-  </div>
-</div>
           <!-- TODO -->
           <div class="home-widget">
             <div class="home-widget-header">
@@ -10704,39 +10628,6 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
   };
 })();
 
-</script>
-  <script>
-document.addEventListener("DOMContentLoaded", () => {
-
-  const character = document.getElementById("character");
-  if (!character) return;
-
-  const head = character.querySelector(".head");
-  const arm = character.querySelector(".arm-right");
-
-  /* seguir mouse */
-  document.addEventListener("mousemove", (e) => {
-    const x = (window.innerWidth / 2 - e.clientX) / 40;
-    const y = (window.innerHeight / 2 - e.clientY) / 40;
-
-    head.style.transform = `rotate(${x}deg) translateY(${y}px)`;
-  });
-
-  /* saludo */
-  character.addEventListener("click", () => {
-    arm.classList.remove("wave");
-    void arm.offsetWidth;
-    arm.classList.add("wave");
-  });
-
-  /* ropa */
-  document.querySelectorAll('input[name="ropa"]').forEach(input => {
-    input.addEventListener("change", (e) => {
-      character.classList.toggle("sin-ropa", e.target.value === "sin");
-    });
-  });
-
-});
 </script>
 </body>
 </html>

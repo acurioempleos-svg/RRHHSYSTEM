@@ -2721,6 +2721,21 @@
 </div>
 
 <!-- ========================================================== -->
+<!--  PANTALLA PÚBLICA: PORTAL DE EMPLEADOS  (?portal=1)       -->
+<!-- ========================================================== -->
+<div id="portal-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);overflow-y:auto;font-family:'Syne',sans-serif">
+  <div style="max-width:720px;margin:0 auto;padding:24px 16px 48px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px;font-weight:800">BC Gestión</div>
+      <div style="font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);margin-left:auto">Portal de Empleados</div>
+    </div>
+    <div id="portal-pub-grid" style="display:flex;flex-direction:column;gap:16px">
+      <div style="text-align:center;padding:48px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px">Cargando publicaciones…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================== -->
 <!--  AUTH SCREEN                                              -->
 <!-- ========================================================== -->
 <div id="auth-screen">
@@ -4675,9 +4690,6 @@
     </div>
 
 
-    </div>
-
-
     <!-- ── MÓDULO 09: INDUMENTARIA ───────────────────────── -->
     <div class="module" id="module-indumentaria">
       <div class="module-header" style="--item-color: var(--m9)">
@@ -4783,11 +4795,12 @@
             </div>
             <input type="hidden" id="ind-p-cat">
             <input type="hidden" id="ind-p-local">
+            <input type="hidden" id="ind-p-stock">
             <input type="hidden" id="ind-p-talles">
             <input type="hidden" id="ind-p-notas">
 
             <!-- Stock por talle — se genera dinámicamente -->
-            <div class="bj-field" style="grid-column:1/-1" id="ind-stock-talles-wrap" style="display:none">
+            <div class="bj-field" style="grid-column:1/-1;display:none" id="ind-stock-talles-wrap">
               <label class="bj-label">Stock por talle</label>
               <div id="ind-stock-talles-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:4px"></div>
             </div>
@@ -4922,8 +4935,6 @@
       </div>
     </div>
 
-  </div><!-- /main -->
-
     <!-- ═══════════════════════════════════════════════════════
          MÓDULO 10: MANUALES / DOCUMENTOS
     ═══════════════════════════════════════════════════════════ -->
@@ -5006,6 +5017,8 @@
         </div>
       </div>
     </div>
+
+  </div><!-- /main -->
 
   </div><!-- /layout-body -->
 </div><!-- /app -->
@@ -5359,6 +5372,10 @@ function navigate(moduleId, navEl) {
   if (moduleId === 'manuales' && typeof manuales !== 'undefined') {
     setTimeout(() => manuales.init(), 50);
   }
+
+  if (moduleId === 'portal' && typeof portal !== 'undefined') {
+    setTimeout(() => portal.init(), 50);
+  }
 }
 
 // ==============================================================
@@ -5396,6 +5413,7 @@ document.addEventListener('click', e => {
 //  MÓDULO ADMIN LOCALES
 // ==============================================================
 const adminLocales = (() => {
+  const $ = id => document.getElementById(id);
   const COL = 'locales';
   let _locales  = [];   // cache en memoria
   let _unsub    = null;
@@ -5544,6 +5562,7 @@ const adminLocales = (() => {
 //  MÓDULO INGRESOS
 // ==============================================================
 const ingresos = (() => {
+  const $ = id => document.getElementById(id);
   const COL = 'ingresos';
   let _registros = [];
   let _unsub     = null;
@@ -5895,6 +5914,7 @@ const ingresos = (() => {
 //  MÓDULO RECLUTAMIENTO
 // ==============================================================
 const reclutamiento = (() => {
+  const $ = id => document.getElementById(id);
   const COL = 'reclutamiento';
   let _registros = [];
   let _unsub     = null;
@@ -6176,7 +6196,7 @@ const formulario = (() => {
     let ok = 0, err = 0;
     for (const r of _pendingRows) {
       try {
-        await db.collection('infoPersonal').add({
+        await db.collection('info-personal').add({
           ...r, _raw: undefined,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           origen: 'Formulario',
@@ -6197,6 +6217,7 @@ const formulario = (() => {
 //  MÓDULO LIQUIDACIONES
 // ==============================================================
 const liquidaciones = (() => {
+  const $ = id => document.getElementById(id);
   const COL = 'liquidaciones';
   let _registros = [];
   let _unsub     = null;
@@ -6508,6 +6529,7 @@ const liquidaciones = (() => {
   }
 
   return { init, filtrar, nueva, _seleccionar, calcular, _markDirty, descartar, guardar, exportCSV,
+           copiarResumen, enviarWhatsapp,
            _buscarBaja, _vincularBaja, abrirDesdeBaja,
            getRegistros: () => _registros };
 })();
@@ -7721,7 +7743,7 @@ const usuarios = (() => {
     const usuarios = usrSnap.docs.map(d => ({ ...d.data(), _tipo: 'usuario' }));
 
     // Cargar empleados de Info Personal
-    const ipSnap   = db ? await db.collection('info_personal').get() : { docs: [] };
+    const ipSnap   = db ? await db.collection('info-personal').get() : { docs: [] };
     const empleados = ipSnap.docs.map(d => ({ ...d.data(), _tipo: 'empleado' }));
 
     // Combinar: usuarios del sistema primero, luego empleados no repetidos
@@ -9768,6 +9790,243 @@ const indumentaria = (() => {
 })();
 
 // ==============================================================
+//  MÓDULO PORTAL — Portal de Empleados
+// ==============================================================
+const portal = (() => {
+  const COL = 'portal';
+  let _registros = [];
+  let _unsubscribe = null;
+  let _tipoActivo = 'noticia';
+  let _editId = null;
+
+  // ── Init ──────────────────────────────────────────────────────
+  function init() {
+    if (!db) return;
+    if (_unsubscribe) _unsubscribe();
+    _unsubscribe = db.collection(COL)
+      .orderBy('ts', 'desc')
+      .onSnapshot(snap => {
+        _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        filtrar();
+        _renderStats();
+        _renderPortalLink();
+      }, err => console.error('Portal error:', err));
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function _youtubeEmbed(url) {
+    if (!url) return '';
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : url;
+  }
+
+  function _renderStats() {
+    const stats = document.getElementById('portal-stats');
+    if (!stats) return;
+    const total = _registros.length;
+    const noticias = _registros.filter(r => r.tipo === 'noticia').length;
+    const imagenes = _registros.filter(r => r.tipo === 'imagen').length;
+    const videos   = _registros.filter(r => r.tipo === 'video').length;
+    const destacadas = _registros.filter(r => r.destacado).length;
+    stats.innerHTML = [
+      { label: 'Total', val: total, color: 'var(--m8)' },
+      { label: 'Noticias', val: noticias, color: 'var(--m3)' },
+      { label: 'Imágenes', val: imagenes, color: 'var(--m2)' },
+      { label: 'Videos', val: videos, color: 'var(--m5)' },
+      { label: 'Destacadas', val: destacadas, color: 'var(--m1)' },
+    ].map(s => `<div style="padding:6px 14px;border-radius:20px;background:color-mix(in srgb,${s.color} 10%,transparent);border:1px solid color-mix(in srgb,${s.color} 25%,transparent);font-size:12px;font-family:'DM Mono',monospace;color:${s.color}">
+      ${s.label}: <strong>${s.val}</strong></div>`).join('');
+  }
+
+  function _renderPortalLink() {
+    const btn = document.getElementById('portal-link-btn');
+    if (!btn) return;
+    if (_registros.length > 0) {
+      btn.style.display = '';
+      btn.href = window.location.origin + window.location.pathname + '?portal=1';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+
+  // ── Render lista ──────────────────────────────────────────────
+  function filtrar() {
+    const q = (document.getElementById('portal-search')?.value || '').toLowerCase();
+    const tipo = document.getElementById('portal-filter-tipo')?.value || '';
+    const dest = document.getElementById('portal-filter-dest')?.value || '';
+
+    let lista = _registros.filter(r => {
+      if (tipo && r.tipo !== tipo) return false;
+      if (dest === '1' && !r.destacado) return false;
+      if (q && !(r.titulo||'').toLowerCase().includes(q) && !(r.texto||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    const grid = document.getElementById('portal-grid');
+    const empty = document.getElementById('portal-empty');
+    if (!grid) return;
+
+    if (lista.length === 0) {
+      grid.innerHTML = '';
+      if (empty) empty.style.display = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    grid.innerHTML = lista.map(r => {
+      let media = '';
+      if (r.tipo === 'imagen' && r.imagenUrl) {
+        media = `<div style="height:180px;overflow:hidden;border-radius:8px 8px 0 0;background:var(--surface2)">
+          <img src="${_esc(r.imagenUrl)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+        </div>`;
+      } else if (r.tipo === 'video' && r.videoUrl) {
+        const embed = _youtubeEmbed(r.videoUrl);
+        media = `<div style="height:180px;overflow:hidden;border-radius:8px 8px 0 0;background:#000">
+          <iframe src="${_esc(embed)}" style="width:100%;height:100%;border:none" allowfullscreen loading="lazy"></iframe>
+        </div>`;
+      }
+
+      const iconMap = { noticia: '📰', imagen: '🖼', video: '▶️' };
+      const colorMap = { noticia: 'var(--m3)', imagen: 'var(--m2)', video: 'var(--m5)' };
+      const tipoColor = colorMap[r.tipo] || 'var(--muted)';
+
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column">
+        ${media}
+        <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:${tipoColor};background:color-mix(in srgb,${tipoColor} 10%,transparent);padding:2px 8px;border-radius:10px;border:1px solid color-mix(in srgb,${tipoColor} 20%,transparent)">
+              ${iconMap[r.tipo]||''} ${r.tipo}
+            </span>
+            ${r.destacado ? `<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--m1);background:color-mix(in srgb,var(--m1) 10%,transparent);padding:2px 8px;border-radius:10px;border:1px solid color-mix(in srgb,var(--m1) 20%,transparent)">⭐ Destacada</span>` : ''}
+          </div>
+          <div style="font-size:15px;font-weight:700;line-height:1.3">${_esc(r.titulo)}</div>
+          ${r.texto ? `<div style="font-size:13px;color:var(--muted);line-height:1.5;flex:1">${_esc(r.texto).replace(/\n/g,'<br>')}</div>` : ''}
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+            <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${r.ts ? new Date(r.ts.toDate?.() || r.ts).toLocaleDateString('es-AR') : '—'}</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="portal._editar('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--muted);font-family:'DM Mono',monospace">✏ Editar</button>
+              <button onclick="portal._eliminar('${r.id}')" style="background:none;border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--danger);font-family:'DM Mono',monospace">🗑</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Form ──────────────────────────────────────────────────────
+  function abrirNuevo() {
+    _editId = null;
+    _limpiarForm();
+    document.getElementById('portal-form-overlay').style.display = 'flex';
+  }
+
+  function cerrarForm() {
+    document.getElementById('portal-form-overlay').style.display = 'none';
+    _limpiarForm();
+  }
+
+  function _limpiarForm() {
+    ['portal-titulo','portal-texto','portal-imagen-url','portal-video-url'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const dest = document.getElementById('portal-destacado');
+    if (dest) dest.checked = false;
+    const err = document.getElementById('portal-form-error');
+    if (err) err.textContent = '';
+    const preview = document.getElementById('portal-img-preview');
+    if (preview) preview.style.display = 'none';
+    setTipo('noticia', document.querySelector('.portal-type-btn[data-type="noticia"]'));
+  }
+
+  function setTipo(tipo, btn) {
+    _tipoActivo = tipo;
+    document.querySelectorAll('.portal-type-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.getElementById('portal-campo-imagen').style.display = tipo === 'imagen' ? 'flex' : 'none';
+    document.getElementById('portal-campo-video').style.display  = tipo === 'video'  ? 'flex' : 'none';
+  }
+
+  function previewImagen(url) {
+    const wrap = document.getElementById('portal-img-preview');
+    const img  = document.getElementById('portal-img-tag');
+    if (!wrap || !img) return;
+    if (url && url.startsWith('http')) {
+      img.src = url;
+      wrap.style.display = '';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+
+  async function guardar() {
+    const titulo = (document.getElementById('portal-titulo')?.value || '').trim();
+    const texto  = (document.getElementById('portal-texto')?.value  || '').trim();
+    const destacado = document.getElementById('portal-destacado')?.checked || false;
+    const err = document.getElementById('portal-form-error');
+
+    if (!titulo) { if (err) err.textContent = 'El título es obligatorio.'; return; }
+    if (err) err.textContent = '';
+
+    const btn = document.getElementById('portal-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    const data = {
+      tipo: _tipoActivo,
+      titulo,
+      texto,
+      destacado,
+      ts: firebase.firestore.FieldValue.serverTimestamp(),
+      autor: window._currentUser?.email || '',
+    };
+
+    if (_tipoActivo === 'imagen') data.imagenUrl = document.getElementById('portal-imagen-url')?.value.trim() || '';
+    if (_tipoActivo === 'video')  data.videoUrl  = document.getElementById('portal-video-url')?.value.trim() || '';
+
+    try {
+      if (_editId) {
+        await db.collection(COL).doc(_editId).update(data);
+      } else {
+        await db.collection(COL).add(data);
+      }
+      cerrarForm();
+    } catch(e) {
+      if (err) err.textContent = 'Error al guardar: ' + e.message;
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Publicar'; }
+    }
+  }
+
+  function _editar(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    _editId = id;
+    document.getElementById('portal-titulo').value = r.titulo || '';
+    document.getElementById('portal-texto').value  = r.texto  || '';
+    if (document.getElementById('portal-destacado')) document.getElementById('portal-destacado').checked = r.destacado || false;
+    if (r.tipo === 'imagen') {
+      document.getElementById('portal-imagen-url').value = r.imagenUrl || '';
+      previewImagen(r.imagenUrl || '');
+    }
+    if (r.tipo === 'video') document.getElementById('portal-video-url').value = r.videoUrl || '';
+    const btn = document.querySelector(`.portal-type-btn[data-type="${r.tipo}"]`);
+    setTipo(r.tipo, btn);
+    document.getElementById('portal-save-btn').textContent = 'Actualizar';
+    document.getElementById('portal-form-overlay').style.display = 'flex';
+  }
+
+  async function _eliminar(id) {
+    if (!confirm('¿Eliminar esta publicación?')) return;
+    try { await db.collection(COL).doc(id).delete(); }
+    catch(e) { alert('Error al eliminar: ' + e.message); }
+  }
+
+  return { init, filtrar, abrirNuevo, cerrarForm, setTipo, previewImagen, guardar, _editar, _eliminar };
+})();
+
+// ==============================================================
 //  MÓDULO ALERTAS — Panel de atención en el Home
 //  Se recalcula cada vez que se abre el Home y cada 5 minutos
 // ==============================================================
@@ -10626,6 +10885,76 @@ Declaro haber recibido, leído y comprendido el manual de ingreso, aceptando las
       btn.textContent = 'Leído y aceptado'; btn.disabled = false;
     }
   };
+})();
+
+// =============================================================
+//  PANTALLA PÚBLICA: PORTAL DE EMPLEADOS  (?portal=1)
+// =============================================================
+(function _initPortalPublico() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('portal')) return;
+
+  const screen = document.getElementById('portal-screen');
+  if (screen) screen.style.display = '';
+
+  // Hide everything else
+  ['auth-screen','app','confirmar-screen','firma-screen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  function _waitFirebase(fn, n) {
+    n = n || 0;
+    if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) fn();
+    else if (n < 40) setTimeout(() => _waitFirebase(fn, n+1), 150);
+    else {
+      const g = document.getElementById('portal-pub-grid');
+      if (g) g.innerHTML = '<div style="text-align:center;padding:48px;color:var(--danger);font-family:\'DM Mono\',monospace;font-size:12px">Error al conectar. Intentá recargar.</div>';
+    }
+  }
+
+  function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function _youtubeEmbed(url) {
+    const m = (url||'').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([A-Za-z0-9_-]{11})/);
+    return m ? `https://www.youtube.com/embed/${m[1]}` : url;
+  }
+
+  _waitFirebase(async () => {
+    try {
+      const snap = await db.collection('portal').orderBy('ts','desc').get();
+      const grid = document.getElementById('portal-pub-grid');
+      if (!grid) return;
+
+      if (snap.empty) {
+        grid.innerHTML = '<div style="text-align:center;padding:48px;color:var(--muted);font-family:\'DM Mono\',monospace;font-size:12px">No hay publicaciones por el momento.</div>';
+        return;
+      }
+
+      grid.innerHTML = snap.docs.map(doc => {
+        const r = doc.data();
+        let media = '';
+        if (r.tipo === 'imagen' && r.imagenUrl) {
+          media = `<div style="border-radius:10px;overflow:hidden;max-height:320px;margin-bottom:12px"><img src="${_esc(r.imagenUrl)}" style="width:100%;object-fit:cover;display:block" onerror="this.parentNode.style.display='none'"></div>`;
+        } else if (r.tipo === 'video' && r.videoUrl) {
+          const embed = _youtubeEmbed(r.videoUrl);
+          media = `<div style="border-radius:10px;overflow:hidden;aspect-ratio:16/9;margin-bottom:12px"><iframe src="${_esc(embed)}" style="width:100%;height:100%;border:none" allowfullscreen loading="lazy"></iframe></div>`;
+        }
+        const iconMap = { noticia:'📰', imagen:'🖼', video:'▶️' };
+        const fecha = r.ts ? new Date(r.ts.toDate?.() || r.ts).toLocaleDateString('es-AR', {day:'2-digit',month:'long',year:'numeric'}) : '';
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px${r.destacado ? ';border-color:color-mix(in srgb,var(--m1) 40%,var(--border))' : ''}">
+          ${r.destacado ? '<div style="font-size:11px;font-family:\'DM Mono\',monospace;color:var(--m1);margin-bottom:8px">⭐ DESTACADA</div>' : ''}
+          ${media}
+          <div style="font-size:16px;font-weight:700;margin-bottom:6px">${_esc(r.titulo)}</div>
+          ${r.texto ? `<div style="font-size:14px;color:var(--muted);line-height:1.6">${_esc(r.texto).replace(/\n/g,'<br>')}</div>` : ''}
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:12px">${iconMap[r.tipo]||''} ${r.tipo} · ${fecha}</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      const grid = document.getElementById('portal-pub-grid');
+      if (grid) grid.innerHTML = `<div style="text-align:center;padding:48px;color:var(--danger);font-family:'DM Mono',monospace;font-size:12px">Error al cargar: ${e.message}</div>`;
+    }
+  });
 })();
 
 </script>

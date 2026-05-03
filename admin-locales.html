@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RRHH · Gestión de Locales</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<div id="layout-body">
+<div id="main">
+<div class="module active" id="module-admin-locales">
+  <div class="module-header" style="--item-color: #6b7280">
+    <div class="module-icon" style="--item-color: #6b7280">⚙</div>
+    <div class="module-title-group">
+      <div class="module-eyebrow">Administración</div>
+      <div class="module-title">Gestión de Locales</div>
+      <div class="module-desc">Agregá o quitá los locales que aparecen en todos los módulos.</div>
+    </div>
+    <div style="margin-left:auto">
+      <button class="bj-btn bj-btn-primary" style="background:#6b7280;color:#ffffff" onclick="adminLocales.openForm()">+ Agregar local</button>
+    </div>
+  </div>
+
+  <div style="padding:24px;max-width:600px">
+    <div id="al-grid" style="display:flex;flex-direction:column;gap:8px">
+      <div class="bj-empty-cell" style="text-align:left;padding:0;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">Cargando locales…</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR / EDITAR -->
+<div class="bj-modal-overlay" id="al-modal-overlay" onclick="adminLocales.closeForm(event)">
+  <div class="bj-modal bj-modal-sm" onclick="event.stopPropagation()">
+    <div class="bj-modal-header">
+      <div>
+        <div class="bj-modal-tag" style="color:#6b7280">Administración</div>
+        <div class="bj-modal-title" id="al-modal-title">Agregar local</div>
+      </div>
+      <button class="bj-modal-close" onclick="adminLocales.closeForm()">✕</button>
+    </div>
+    <div class="bj-modal-body">
+      <input type="hidden" id="al-doc-id">
+      <div class="bj-field">
+        <label class="bj-label">Nombre del local *</label>
+        <input class="bj-input" id="al-nombre" placeholder="Ej: Barra Chalaca BL">
+      </div>
+      <div class="bj-field" style="margin-top:12px">
+        <label class="bj-label">Razón Social</label>
+        <input class="bj-input" id="al-razon" placeholder="Ej: El Chalaco S.A.">
+      </div>
+      <div class="bj-field" style="margin-top:12px">
+        <label class="bj-label">Emails de notificaciones</label>
+        <textarea class="bj-input" id="al-email" rows="3"
+          placeholder="encargado@local.com&#10;supervisor@empresa.com&#10;rrhh@empresa.com"
+          style="resize:vertical;font-family:'DM Mono',monospace;font-size:12px"></textarea>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px">
+          Un email por línea. Todos reciben el mail cuando se registra un ingreso en este local.
+        </div>
+      </div>
+      <div id="al-form-error" class="bj-form-error"></div>
+    </div>
+    <div class="bj-modal-footer">
+      <button class="bj-btn bj-btn-outline" onclick="adminLocales.closeForm()">Cancelar</button>
+      <button class="bj-btn bj-btn-primary" id="al-save-btn" style="background:#6b7280;color:#ffffff" onclick="adminLocales.guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRM DELETE -->
+<div class="bj-modal-overlay" id="al-del-overlay" onclick="adminLocales.cancelDelete(event)">
+  <div class="bj-modal bj-modal-sm" onclick="event.stopPropagation()">
+    <div class="bj-modal-header">
+      <div class="bj-modal-title" style="color:var(--danger)">Eliminar local</div>
+    </div>
+    <div class="bj-modal-body" style="padding-top:0">
+      <p style="color:var(--muted);font-size:14px">¿Eliminás <strong id="al-del-name" style="color:var(--text)">—</strong>? No afecta los registros existentes.</p>
+    </div>
+    <div class="bj-modal-footer">
+      <button class="bj-btn bj-btn-outline" onclick="adminLocales.cancelDelete()">Cancelar</button>
+      <button class="bj-btn bj-btn-danger" onclick="adminLocales.confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<script src="../shared/firebase-config.js"></script>
+<script src="../shared/auth-guard.js"></script>
+<script src="../shared/nav.js"></script>
+<script>
+const adminLocales = (() => {
+  const $ = id => document.getElementById(id);
+  const COL = 'locales';
+  let _locales = [];
+  let _unsub   = null;
+  let _editId  = null;
+
+  const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  function init() {
+    if (!db) { _renderGrid(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('nombre').onSnapshot(snap => {
+      _locales = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _renderGrid();
+    }, err => { console.warn('adminLocales error:', err); _renderGrid(); });
+  }
+
+  function _renderGrid() {
+    const cont = $('al-grid');
+    if (!cont) return;
+    if (!_locales.length) {
+      cont.innerHTML = `<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:8px 0">Sin locales configurados. Usá "+ Agregar local" para empezar.</div>`;
+      return;
+    }
+    cont.innerHTML = _locales.map(l => `
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:color-mix(in srgb,var(--surface) 60%,transparent);border:1px solid var(--border);border-radius:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${esc(l.nombre)}</div>
+          ${l.razon ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px">${esc(l.razon)}</div>` : ''}
+          ${l.emails ? `<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px">📧 ${esc(l.emails.split('\n').filter(Boolean).join(', '))}</div>` : ''}
+        </div>
+        <button onclick="adminLocales.edit('${l.id}')"
+          style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text);cursor:pointer;font-size:12px">Editar</button>
+        <button onclick="adminLocales.askDelete('${l.id}','${esc(l.nombre)}')"
+          style="background:none;border:1px solid color-mix(in srgb,var(--danger) 40%,transparent);border-radius:6px;padding:5px 10px;color:var(--danger);cursor:pointer;font-size:12px">✕</button>
+      </div>`).join('');
+  }
+
+  function openForm() {
+    _editId = null;
+    $('al-modal-title').textContent = 'Agregar local';
+    $('al-doc-id').value = '';
+    $('al-nombre').value = '';
+    $('al-razon').value  = '';
+    $('al-email').value  = '';
+    $('al-form-error').textContent = '';
+    $('al-modal-overlay').classList.add('open');
+    setTimeout(() => $('al-nombre').focus(), 80);
+  }
+
+  function edit(id) {
+    const l = _locales.find(x => x.id === id); if (!l) return;
+    _editId = id;
+    $('al-modal-title').textContent = 'Editar local';
+    $('al-doc-id').value = id;
+    $('al-nombre').value = l.nombre || '';
+    $('al-razon').value  = l.razon  || '';
+    $('al-email').value  = l.emails || '';
+    $('al-form-error').textContent = '';
+    $('al-modal-overlay').classList.add('open');
+    setTimeout(() => $('al-nombre').focus(), 80);
+  }
+
+  function closeForm(e) {
+    if (e && e.target !== $('al-modal-overlay')) return;
+    $('al-modal-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const nombre = $('al-nombre').value.trim();
+    if (!nombre) { $('al-form-error').textContent = 'El nombre es obligatorio.'; return; }
+    if (!db) { alert('Firebase no configurado.'); return; }
+    const btn = $('al-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const data = {
+      nombre,
+      razon:  $('al-razon').value.trim(),
+      emails: $('al-email').value.trim(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      if (_editId) { await db.collection(COL).doc(_editId).update(data); }
+      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection(COL).add(data); }
+      closeForm();
+    } catch(e) { $('al-form-error').textContent = 'Error: ' + e.message; }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  let _deleteId = null;
+  function askDelete(id, nombre) { _deleteId = id; $('al-del-name').textContent = nombre; $('al-del-overlay').classList.add('open'); }
+  function cancelDelete(e) { if (e && e.target !== $('al-del-overlay')) return; $('al-del-overlay').classList.remove('open'); _deleteId = null; }
+  async function confirmDelete() {
+    if (!_deleteId || !db) return;
+    try { await db.collection(COL).doc(_deleteId).delete(); } catch(e) { alert('Error: ' + e.message); }
+    $('al-del-overlay').classList.remove('open'); _deleteId = null;
+  }
+
+  function getLocales() { return _locales; }
+
+  return { init, openForm, edit, closeForm, guardar, askDelete, cancelDelete, confirmDelete, getLocales };
+})();
+
+window._onAuthReady = function(user, rol, localAsignado) {
+  // Solo RRHH puede acceder a admin-locales
+  if (rol !== 'rrhh') {
+    window.location.href = '../dashboard.html';
+    return;
+  }
+  adminLocales.init();
+};
+</script>
+</body>
+</html>

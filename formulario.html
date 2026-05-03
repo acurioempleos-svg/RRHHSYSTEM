@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RRHH · Formulario de Personal</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<div id="layout-body">
+<div id="main">
+<div class="module active" id="module-formulario">
+  <div class="module-header" style="--item-color: var(--m3)">
+    <div class="module-icon" style="--item-color: var(--m3)">📋</div>
+    <div class="module-title-group">
+      <div class="module-eyebrow">Módulo 03</div>
+      <div class="module-title">Formulario de Personal</div>
+      <div class="module-desc">Captura de datos del personal a ingresar.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center">
+      <button class="bj-btn bj-btn-outline" onclick="formulario.importarRespuestas()" style="border-color:var(--m3);color:var(--m3)">↓ Importar respuestas</button>
+    </div>
+  </div>
+
+  <div class="module-body" style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Configuración URL del form -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--m3)">Configuración</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:5px">
+          <label style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">URL del Google Form (iframe embed)</label>
+          <input class="bj-input" id="gform-url"
+            placeholder="https://docs.google.com/forms/d/e/…/viewform?embedded=true"
+            style="border-color:color-mix(in srgb,var(--m3) 30%,var(--border));font-size:12px"
+            oninput="formulario.guardarURL(this.value)">
+        </div>
+        <button class="bj-btn" onclick="formulario.cargarForm()" style="background:var(--m3);color:#ffffff;margin-bottom:1px">Cargar formulario</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
+        En Google Forms → Enviar → icono &lt;&gt; → copiá la URL del src del iframe
+      </div>
+    </div>
+
+    <!-- Área del iframe -->
+    <div id="gform-container" style="flex:1;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:600px;display:flex;align-items:center;justify-content:center;background:var(--surface2)">
+      <div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px">
+        <div style="font-size:32px;margin-bottom:12px;opacity:.3">📋</div>
+        <div>Pegá la URL del formulario arriba y hacé clic en <strong style="color:var(--text)">Cargar formulario</strong></div>
+      </div>
+    </div>
+
+    <!-- Info importar respuestas -->
+    <div style="background:color-mix(in srgb,var(--m3) 6%,transparent);border:1px solid color-mix(in srgb,var(--m3) 20%,transparent);border-radius:var(--radius);padding:14px 18px">
+      <div style="font-size:12px;font-weight:700;color:var(--m3);margin-bottom:6px">¿Cómo conectar las respuestas con Info Personal?</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">
+        1. En tu Google Form activá <strong style="color:var(--text)">Respuestas → Ver en Sheets</strong> para tener una hoja vinculada.<br>
+        2. Exportá esa hoja como <strong style="color:var(--text)">CSV</strong> y usá el botón <strong style="color:var(--m3)">↓ Importar respuestas</strong> de arriba.<br>
+        3. El sistema mapeará automáticamente: Nombre, DNI, CUIL, teléfono, email, domicilio y más.<br>
+        4. Revisá los registros generados en <strong style="color:var(--m4)">👤 Info Personal</strong> antes de guardar.
+      </div>
+      <div style="margin-top:10px">
+        <input type="file" id="gform-csv-input" accept=".csv" style="display:none" onchange="formulario.procesarCSV(this)">
+        <button class="bj-btn" onclick="document.getElementById('gform-csv-input').click()"
+          style="background:color-mix(in srgb,var(--m3) 12%,transparent);color:var(--m3);border:1px solid color-mix(in srgb,var(--m3) 25%,transparent);font-size:12px">
+          📂 Cargar CSV de respuestas
+        </button>
+      </div>
+    </div>
+
+    <!-- Preview de importación -->
+    <div id="gform-preview" style="display:none;flex-direction:column;gap:10px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--m3)">Vista previa de importación</div>
+      <div id="gform-preview-table" style="overflow-x:auto"></div>
+      <div style="display:flex;gap:10px">
+        <button class="bj-btn bj-btn-outline" onclick="formulario.cancelarImport()">Cancelar</button>
+        <button class="bj-btn" id="gform-import-btn" onclick="formulario.confirmarImport()" style="background:var(--m3);color:#ffffff">✓ Importar a Info Personal</button>
+      </div>
+      <div id="gform-import-status" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--muted)"></div>
+    </div>
+
+  </div>
+</div>
+</div>
+</div>
+
+<script src="../shared/firebase-config.js"></script>
+<script src="../shared/auth-guard.js"></script>
+<script src="../shared/nav.js"></script>
+<script>
+const formulario = (() => {
+  const $ = id => document.getElementById(id);
+  let _pendingRows = [];
+
+  const CAMPO_MAP = {
+    'nombre':           ['nombre','name','apellido y nombre','apellido'],
+    'dni':              ['dni','documento','nro. documento'],
+    'cuil':             ['cuil','cuit'],
+    'telefono':         ['teléfono','telefono','celular','cel'],
+    'email':            ['email','correo','mail','e-mail'],
+    'domicilio':        ['domicilio','dirección','direccion','domicilio completo'],
+    'fecha-nacimiento': ['fecha de nacimiento','nacimiento'],
+    'local':            ['local','sucursal','lugar de trabajo'],
+    'puesto-real':      ['puesto','cargo','posición'],
+  };
+
+  function init() {
+    const saved = localStorage.getItem('gform_url');
+    if (saved && $('gform-url')) $('gform-url').value = saved;
+  }
+
+  function guardarURL(val) { localStorage.setItem('gform_url', val); }
+
+  function cargarForm() {
+    const url = ($('gform-url').value || '').trim();
+    if (!url) { alert('Pegá la URL del formulario primero.'); return; }
+    $('gform-container').innerHTML = `<iframe src="${url}" width="100%" height="600" frameborder="0" style="border:none;min-height:600px">Cargando…</iframe>`;
+  }
+
+  function importarRespuestas() { $('gform-csv-input').click(); }
+
+  function procesarCSV(input) {
+    const file = input.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { alert('CSV sin datos.'); return; }
+      const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim().toLowerCase());
+      _pendingRows = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.replace(/^"|"$/g,'').trim());
+        const obj  = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+        const mapped = {};
+        for (const [campo, aliases] of Object.entries(CAMPO_MAP)) {
+          for (const alias of aliases) {
+            const found = Object.keys(obj).find(k => k.includes(alias));
+            if (found) { mapped[campo] = obj[found]; break; }
+          }
+        }
+        mapped._raw = obj;
+        return mapped;
+      }).filter(r => r.nombre);
+      _renderPreview();
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  function _renderPreview() {
+    if (!_pendingRows.length) { alert('No se encontraron filas con nombre.'); return; }
+    const campos = ['nombre','dni','cuil','telefono','email','local','puesto-real'];
+    const labels = ['Nombre','DNI','CUIL','Teléfono','Email','Local','Puesto'];
+    const esc = v => String(v||'').replace(/</g,'&lt;');
+    $('gform-preview-table').innerHTML = `
+      <table class="bj-table" style="font-size:12px">
+        <thead><tr>${labels.map(l=>`<th>${l}</th>`).join('')}</tr></thead>
+        <tbody>${_pendingRows.map(r=>`<tr>${campos.map(c=>`<td>${esc(r[c]||'—')}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>`;
+    $('gform-preview').style.display = 'flex';
+    $('gform-import-status').textContent = `${_pendingRows.length} registro${_pendingRows.length!==1?'s':''} listos para importar.`;
+  }
+
+  function cancelarImport() {
+    _pendingRows = [];
+    $('gform-preview').style.display = 'none';
+    $('gform-import-status').textContent = '';
+  }
+
+  async function confirmarImport() {
+    if (!_pendingRows.length || !db) return;
+    const btn = $('gform-import-btn');
+    btn.disabled = true; btn.textContent = 'Importando…';
+    let ok = 0, err = 0;
+    for (const r of _pendingRows) {
+      try {
+        await db.collection('info-personal').add({
+          ...r, _raw: undefined,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          origen: 'Formulario',
+        });
+        ok++;
+      } catch(e) { err++; console.warn('import error:', e); }
+    }
+    $('gform-import-status').textContent = `✓ ${ok} importados${err?` · ${err} errores`:''}. Revisalos en Info Personal.`;
+    btn.disabled = false; btn.textContent = '✓ Importar a Info Personal';
+    _pendingRows = [];
+    $('gform-preview').style.display = 'none';
+  }
+
+  return { init, guardarURL, cargarForm, importarRespuestas, procesarCSV, cancelarImport, confirmarImport };
+})();
+
+window._onAuthReady = function(user, rol, localAsignado) {
+  formulario.init();
+};
+</script>
+</body>
+</html>

@@ -212,10 +212,13 @@ if (auth) {
   const docId   = params.get('confirmar');
   const firmaId = params.get('firma');
 
-  if (!docId && !firmaId) return;
+  if (!docId && !firmaId) {
+    // No hay pantalla pública → mostrar login normalmente
+    document.getElementById('auth-screen').classList.add('show');
+    return;
+  }
 
-  // Ocultar login
-  document.getElementById('auth-screen').style.display = 'none';
+  // Hay pantalla pública → login ya oculto (no tiene clase show)
 
   if (docId) {
     document.getElementById('confirmar-screen').classList.add('show');

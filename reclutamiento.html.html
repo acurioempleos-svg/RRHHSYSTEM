@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>RRHH · Reclutamiento</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+
+<div id="nav-root"></div>
+
+<div id="layout-body">
+    <div id="main">
+
+        <div class="module active" id="module-reclutamiento">
+            <div class="module-header" style="--item-color: var(--m1)">
+                <div class="module-icon" style="--item-color: var(--m1)">🔍</div>
+                <div class="module-title-group">
+                    <div class="module-eyebrow">Módulo 01</div>
+                    <div class="module-title">Reclutamiento</div>
+                    <div class="module-desc">Bandeja de CVs y candidatos. Pasalos a Ingresos con un click.</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center;">
+                    <button class="bj-btn bj-btn-outline" onclick="reclutamiento.exportCSV()">↓ Exportar CSV</button>
+                    <button class="bj-btn bj-btn-primary" style="background:var(--m1);color:#ffffff" onclick="reclutamiento.openForm()">+ Nuevo candidato</button>
+                </div>
+            </div>
+
+            <div class="bj-filters">
+                <input class="bj-search" type="text" placeholder="Buscar por nombre, puesto, local…" oninput="reclutamiento.filtrar(this.value)" id="rc-search" style="outline:none">
+                <select class="bj-select" onchange="reclutamiento.filtrarEstado(this.value)" id="rc-filter-estado">
+                    <option value="">Todos los estados</option>
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="En revisión">En revisión</option>
+                    <option value="Entrevistado">Entrevistado</option>
+                    <option value="Aprobado">Aprobado</option>
+                    <option value="Rechazado">Rechazado</option>
+                </select>
+                <select class="bj-select" onchange="reclutamiento.filtrarLocal(this.value)" id="rc-filter-local">
+                    <option value="">Todos los locales</option>
+                </select>
+            </div>
+
+            <div class="rc-grid-wrap">
+                <div class="rc-grid" id="rc-grid">
+                    <div class="bj-empty-cell" style="grid-column:1/-1;padding:48px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">Cargando candidatos…</div>
+                </div>
+            </div>
+
+            <div class="bj-footer">
+                <span id="rc-count" class="bj-count-label">—</span>
+            </div>
+        </div>
+
+        <div class="bj-modal-overlay" id="rc-modal-overlay" onclick="reclutamiento.closeForm(event)">
+            <div class="bj-modal" onclick="event.stopPropagation()">
+                <div class="bj-modal-header">
+                    <div>
+                        <div class="bj-modal-tag" id="rc-modal-tag" style="color:var(--m1)">Nuevo candidato</div>
+                        <div class="bj-modal-title" id="rc-modal-title">Agregar CV</div>
+                    </div>
+                    <button class="bj-modal-close" onclick="reclutamiento.closeForm()">✕</button>
+                </div>
+                <div class="bj-modal-body">
+                    <input type="hidden" id="rc-doc-id">
+                    <div class="bj-form-row">
+                        <div class="bj-field bj-field-wide">
+                            <label class="bj-label">Nombre completo *</label>
+                            <input class="bj-input" id="rc-nombre" placeholder="Apellido, Nombre">
+                        </div>
+                        <div class="bj-field">
+                            <label class="bj-label">Fecha de recepción</label>
+                            <input class="bj-input" type="date" id="rc-fecha">
+                        </div>
+                    </div>
+                    <div class="bj-form-row">
+                        <div class="bj-field">
+                            <label class="bj-label">Local al que aplica</label>
+                            <select class="bj-input" id="rc-local">
+                                <option value="">— seleccionar —</option>
+                            </select>
+                        </div>
+                        <div class="bj-field">
+                            <label class="bj-label">Puesto al que aplica</label>
+                            <input class="bj-input" id="rc-puesto" placeholder="Ej: Cocinero, Mozo…">
+                        </div>
+                    </div>
+                    <div class="bj-form-row">
+                        <div class="bj-field">
+                            <label class="bj-label">Teléfono</label>
+                            <input class="bj-input" id="rc-telefono" placeholder="+54 11 1234-5678">
+                        </div>
+                        <div class="bj-field">
+                            <label class="bj-label">Email</label>
+                            <input class="bj-input" type="email" id="rc-email" placeholder="candidato@mail.com">
+                        </div>
+                    </div>
+                    <div class="bj-form-row">
+                        <div class="bj-field">
+                            <label class="bj-label">Estado</label>
+                            <select class="bj-input" id="rc-estado">
+                                <option value="Nuevo">Nuevo</option>
+                                <option value="En revisión">En revisión</option>
+                                <option value="Entrevistado">Entrevistado</option>
+                                <option value="Aprobado">Aprobado</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                        <div class="bj-field bj-field-wide">
+                            <label class="bj-label">Link al CV / Google Drive</label>
+                            <input class="bj-input" id="rc-cv-link" placeholder="https://drive.google.com/…">
+                        </div>
+                    </div>
+                    <div class="bj-form-row">
+                        <div class="bj-field" style="flex:1">
+                            <label class="bj-label">Notas</label>
+                            <textarea class="bj-input" id="rc-notas" rows="3" placeholder="Observaciones sobre el candidato…" style="resize:vertical;min-height:72px"></textarea>
+                        </div>
+                    </div>
+                    <div id="rc-form-error" class="bj-form-error"></div>
+                </div>
+                <div class="bj-modal-footer">
+                    <button class="bj-btn bj-btn-outline" onclick="reclutamiento.closeForm()">Cancelar</button>
+                    <button class="bj-btn bj-btn-primary" id="rc-save-btn" style="background:var(--m1);color:#ffffff" onclick="reclutamiento.guardar()">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bj-modal-overlay" id="rc-del-overlay" onclick="reclutamiento.cancelDelete()">
+            <div class="bj-modal bj-modal-sm" onclick="event.stopPropagation()">
+                <div class="bj-modal-header">
+                    <div class="bj-modal-title" style="color:var(--danger)">Eliminar candidato</div>
+                </div>
+                <div class="bj-modal-body" style="padding-top:0">
+                    <p style="color:var(--muted);font-size:14px">¿Eliminás el CV de <strong id="rc-del-name" style="color:var(--text)">—</strong>?</p>
+                </div>
+                <div class="bj-modal-footer">
+                    <button class="bj-btn bj-btn-outline" onclick="reclutamiento.cancelDelete()">Cancelar</button>
+                    <button class="bj-btn bj-btn-danger" onclick="reclutamiento.confirmDelete()">Eliminar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="../shared/firebase-config.js"></script>
+<script src="../shared/auth-guard.js"></script>
+<script src="../shared/nav.js"></script>
+
+<script>
+const reclutamiento = (() => {
+  const $ = id => document.getElementById(id);
+  const COL = 'reclutamiento';
+  let _registros = [];
+  let _unsub     = null;
+  let _editId    = null;
+  let _queryTxt  = '';
+  let _filterEst = '';
+  let _filterLoc = '';
+
+  const esc = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmtFecha = v => { if(!v) return '—'; const [y,m,d]=v.split('-'); return d?`${d}/${m}/${y}`:v; };
+
+  const ESTADO_COLORS = {
+    'Nuevo': 'var(--m2)', 'En revisión': 'var(--m5)', 'Entrevistado': 'var(--m3)',
+    'Aprobado': '#4ade80', 'Rechazado': 'var(--danger)',
+  };
+
+  async function init() {
+    await _poblarSelectLocal();
+    if (!db) { _renderGrid(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('createdAt','desc').onSnapshot(snap => {
+      _registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _renderGrid();
+    }, err => { console.warn('reclutamiento:', err); _renderGrid(); });
+  }
+
+  async function _poblarSelectLocal() {
+    const sel  = $('rc-local');
+    const filt = $('rc-filter-local');
+    let locs = [];
+    
+    // Obtener locales directo de FB ya que adminLocales.js no está en esta vista
+    if (db) {
+        try {
+            const snap = await db.collection('locales').orderBy('nombre').get();
+            locs = snap.docs.map(d => d.data());
+        } catch (e) {
+            console.warn("No se pudieron cargar los locales para los filtros.", e);
+        }
+    }
+
+    if (sel)  sel.innerHTML  = '<option value="">— seleccionar —</option>' + locs.map(l=>`<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+    if (filt) filt.innerHTML = '<option value="">Todos los locales</option>'  + locs.map(l=>`<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+  }
+
+  function _renderGrid() {
+    const grid  = $('rc-grid');
+    const count = $('rc-count');
+    if (!grid) return;
+
+    let rows = _registros;
+    if (_queryTxt) { const q=_queryTxt.toLowerCase(); rows=rows.filter(r=>(r.nombre||'').toLowerCase().includes(q)||(r.puesto||'').toLowerCase().includes(q)||(r.local||'').toLowerCase().includes(q)); }
+    if (_filterEst) rows = rows.filter(r => r.estado === _filterEst);
+    if (_filterLoc) rows = rows.filter(r => r.local  === _filterLoc);
+
+    if (count) count.textContent = `${rows.length} candidato${rows.length!==1?'s':''}`;
+
+    if (!rows.length) {
+      grid.innerHTML = `<div class="bj-empty-cell" style="grid-column:1/-1;padding:48px;text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${_registros.length?'Sin resultados.':'Sin candidatos registrados.'}</div>`;
+      return;
+    }
+
+    grid.innerHTML = rows.map(r => {
+      const col = ESTADO_COLORS[r.estado] || 'var(--muted)';
+      const ini = (r.nombre||'?').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+      return `<div class="rc-card" style="border-color:color-mix(in srgb,${col} 20%,var(--border))">
+        <div class="rc-card-top">
+          <div class="rc-avatar">${ini}</div>
+          <div style="flex:1;min-width:0">
+            <div class="rc-name">${esc(r.nombre||'—')}</div>
+            <div class="rc-meta">${esc(r.puesto||'—')} · ${esc(r.local||'—')}</div>
+          </div>
+          <span class="bj-badge" style="background:color-mix(in srgb,${col} 15%,transparent);color:${col};border:1px solid color-mix(in srgb,${col} 30%,transparent);white-space:nowrap">${esc(r.estado||'Nuevo')}</span>
+        </div>
+        ${r.notas?`<div class="rc-notas">${esc(r.notas)}</div>`:''}
+        <div class="rc-card-footer">
+          <span class="rc-fecha">${fmtFecha(r.fecha)}</span>
+          <div style="display:flex;gap:6px">
+            ${r.cvLink?`<a href="${esc(r.cvLink)}" target="_blank" class="bj-btn bj-btn-outline" style="font-size:11px;padding:4px 10px;border-color:var(--m1);color:var(--m1)">CV 🔗</a>`:''}
+            ${r.estado!=='Rechazado'?`<button class="bj-btn" onclick="reclutamiento.pasarAIngreso('${r.id}')" style="font-size:11px;padding:4px 10px;background:var(--m2);color:#ffffff">→ Ingreso</button>`:''}
+            <button class="bj-icon-btn" onclick="reclutamiento.edit('${r.id}')" title="Editar">✏️</button>
+            <button class="bj-icon-btn" onclick="reclutamiento.askDelete('${r.id}','${esc(r.nombre)}')" style="color:var(--danger)" title="Eliminar">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function filtrar(v)       { _queryTxt  = v; _renderGrid(); }
+  function filtrarEstado(v) { _filterEst = v; _renderGrid(); }
+  function filtrarLocal(v)  { _filterLoc = v; _renderGrid(); }
+
+  function openForm() {
+    _editId = null;
+    $('rc-modal-tag').textContent   = 'Nuevo candidato';
+    $('rc-modal-title').textContent = 'Agregar CV';
+    $('rc-doc-id').value = '';
+    ['rc-nombre','rc-puesto','rc-telefono','rc-email','rc-cv-link','rc-notas'].forEach(id => { const el=$(id); if(el) el.value=''; });
+    $('rc-fecha').value  = new Date().toISOString().slice(0,10);
+    $('rc-estado').value = 'Nuevo';
+    $('rc-form-error').textContent = '';
+    $('rc-modal-overlay').classList.add('open');
+    setTimeout(() => $('rc-nombre').focus(), 80);
+  }
+
+  function edit(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    _editId = id;
+    $('rc-modal-tag').textContent   = 'Editar candidato';
+    $('rc-modal-title').textContent = r.nombre || 'Editar';
+    $('rc-doc-id').value     = id;
+    $('rc-nombre').value     = r.nombre   || '';
+    $('rc-fecha').value      = r.fecha    || '';
+    $('rc-puesto').value     = r.puesto   || '';
+    $('rc-telefono').value   = r.telefono || '';
+    $('rc-email').value      = r.email    || '';
+    $('rc-cv-link').value    = r.cvLink   || '';
+    $('rc-notas').value      = r.notas    || '';
+    $('rc-estado').value     = r.estado   || 'Nuevo';
+    $('rc-form-error').textContent = '';
+    setTimeout(() => { const sel=$('rc-local'); if(sel) sel.value=r.local||''; }, 50);
+    $('rc-modal-overlay').classList.add('open');
+  }
+
+  function closeForm(e) {
+    if (e && e.target !== $('rc-modal-overlay')) return;
+    $('rc-modal-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const nombre = $('rc-nombre').value.trim();
+    if (!nombre) { $('rc-form-error').textContent = 'El nombre es obligatorio.'; return; }
+    if (!db) { alert('Firebase no configurado.'); return; }
+    const btn = $('rc-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const data = {
+      nombre, fecha: $('rc-fecha').value,
+      local:    $('rc-local').value,
+      puesto:   $('rc-puesto').value.trim(),
+      telefono: $('rc-telefono').value.trim(),
+      email:    $('rc-email').value.trim(),
+      cvLink:   $('rc-cv-link').value.trim(),
+      notas:    $('rc-notas').value.trim(),
+      estado:   $('rc-estado').value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    try {
+      if (_editId) { await db.collection(COL).doc(_editId).update(data); }
+      else { data.createdAt = firebase.firestore.FieldValue.serverTimestamp(); await db.collection(COL).add(data); }
+      closeForm();
+    } catch(e) { $('rc-form-error').textContent = 'Error: ' + e.message; }
+    finally { btn.disabled=false; btn.textContent='Guardar'; }
+  }
+
+  function pasarAIngreso(id) {
+    const r = _registros.find(x => x.id === id);
+    if (!r) return;
+    
+    // Guardar los datos temporalmente para que ingresos.html los lea al cargar
+    sessionStorage.setItem('ingreso_desde_reclutamiento', JSON.stringify({
+        id: r.id, 
+        nombre: r.nombre, 
+        puesto: r.puesto
+    }));
+    
+    if(typeof navigateTo === 'function') {
+        navigateTo('ingresos');
+    } else {
+        window.location.href = 'ingresos.html';
+    }
+  }
+
+  function exportCSV() {
+    const cols = ['nombre','local','puesto','estado','fecha','telefono','email','cvLink','notas'];
+    const head = ['Nombre','Local','Puesto','Estado','Fecha','Teléfono','Email','CV Link','Notas'];
+    const rows = _registros.map(r => cols.map(c=>`"${String(r[c]??'').replace(/"/g,'""')}"`).join(','));
+    const csv  = [head.join(','), ...rows].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `reclutamiento_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  }
+
+  let _delId = null;
+  function askDelete(id, nombre) { _delId=id; $('rc-del-name').textContent=nombre; $('rc-del-overlay').classList.add('open'); }
+  function cancelDelete(e) { if(e&&e.target!==$('rc-del-overlay'))return; $('rc-del-overlay').classList.remove('open'); _delId=null; }
+  async function confirmDelete() {
+    if (!_delId||!db) return;
+    try { await db.collection(COL).doc(_delId).delete(); } catch(e) { alert('Error: '+e.message); }
+    $('rc-del-overlay').classList.remove('open'); _delId=null;
+  }
+
+  return { init, filtrar, filtrarEstado, filtrarLocal, exportCSV,
+           openForm, edit, closeForm, guardar, pasarAIngreso,
+           askDelete, cancelDelete, confirmDelete,
+           getRegistros: () => _registros };
+})();
+
+// ==============================================================
+// AUTH CALLBACK
+// ==============================================================
+window._onAuthReady = function(user, rol, localAsignado) {
+    if (rol !== 'rrhh') {
+        // Redirigir a los que no tienen permiso
+        window.location.href = '../dashboard.html';
+        return;
+    }
+    reclutamiento.init();
+};
+</script>
+</body>
+</html>

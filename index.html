@@ -345,17 +345,20 @@ async function generarPDF(nombre, titulo, fecha) {
   footer.style.display = 'none';
 }
 
-// --- LÓGICA ADMIN ---
+// ─── LÓGICA DE ADMIN ACTUALIZADA ──────────────────────────
 const admin = {
   docs: [],
   init: function() {
+    // Escucha cambios en la base de datos de Firebase
     db.collection('manuales').orderBy('at', 'desc').onSnapshot(snap => {
       this.docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
       this.render();
     });
   },
+
   render: function() {
     const grid = document.getElementById('man-grid');
+    // Genera las tarjetas de cada documento
     grid.innerHTML = this.docs.map(d => `
       <div class="card">
         <div class="card-top">
@@ -368,23 +371,60 @@ const admin = {
           </div>
         </div>
         <div class="card-body">
-          <p style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:12px">ÚLTIMAS FIRMAS (${(d.firmas||[]).length})</p>
-          ${(d.firmas || []).slice(-3).reverse().map(f => `
-            <div class="firma-row">
-              <span>${f.nombre}</span>
-              <span style="font-size:10px; color:var(--text-muted)">${new Date(f.at).toLocaleDateString()}</span>
+          <p style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:12px">FIRMANTES (${(d.firmas||[]).length})</p>
+          ${(d.firmas || []).slice().reverse().map(f => `
+            <div class="firma-row" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <div style="display:flex; flex-direction:column">
+                <span style="font-weight:600; font-size:13px;">${f.nombre}</span>
+                <span style="font-size:10px; color:var(--text-muted)">${new Date(f.at).toLocaleDateString()}</span>
+              </div>
+              <button class="btn-primary" 
+                      style="padding: 4px 8px; font-size: 10px; background: var(--primary)" 
+                      onclick="admin.descargarFirma('${d.id}', '${f.nombre.replace(/'/g,"")}', '${f.at}')">
+                📄 PDF
+              </button>
             </div>
           `).join('') || '<p style="font-size:12px; color:#cbd5e1">Sin firmas registradas</p>'}
         </div>
       </div>
     `).join('');
   },
+
+  // FUNCIÓN PARA GENERAR EL PDF DESDE EL PANEL
+  descargarFirma: async function(docId, nombre, fechaISO) {
+    const d = this.docs.find(x => x.id === docId);
+    if(!d) return;
+
+    const overlay = document.getElementById('loading-overlay');
+    overlay.style.display = 'flex'; // Muestra el cargando
+    
+    try {
+      const fecha = new Date(fechaISO).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' });
+      
+      // Inyectamos los datos en el template invisible para que el generador los tome
+      document.getElementById('f-badge').textContent = (d.local || 'RRHH').toUpperCase();
+      document.getElementById('f-titulo').textContent = d.nombre;
+      document.getElementById('f-contenido').textContent = d.contenido;
+      document.getElementById('f-doc-id').textContent = d.id;
+
+      // Llamamos a la función de PDF (la que arreglamos antes que tiene scroll y páginas)
+      await generarPDF(nombre, d.nombre, fecha);
+    } catch(e) {
+      console.error(e);
+      alert("Error al generar el PDF del colaborador");
+    } finally {
+      overlay.style.display = 'none'; // Oculta el cargando
+    }
+  },
+
   nuevo: () => {
     document.getElementById('m-id').value = '';
     document.getElementById('m-nombre').value = '';
+    document.getElementById('m-local').value = '';
     document.getElementById('m-texto').value = '';
     document.getElementById('modal-nuevo').classList.add('open');
   },
+  
   editar: function(id) {
     const d = this.docs.find(x => x.id === id);
     document.getElementById('m-id').value = d.id;
@@ -393,7 +433,9 @@ const admin = {
     document.getElementById('m-texto').value = d.contenido;
     document.getElementById('modal-nuevo').classList.add('open');
   },
+
   cerrar: () => document.getElementById('modal-nuevo').classList.remove('open'),
+  
   guardar: async function() {
     const id = document.getElementById('m-id').value;
     const data = {
@@ -406,14 +448,8 @@ const admin = {
     else await db.collection('manuales').add({...data, firmas: []});
     this.cerrar();
   },
-  borrar: async (id) => confirm("¿Seguro de eliminar este documento y sus firmas?") && await db.collection('manuales').doc(id).delete(),
-  copiar: (id) => {
-    const url = window.location.origin + window.location.pathname + '?firma=' + id;
-    navigator.clipboard.writeText(url);
-    alert("Enlace de firma copiado. Envíaselo al colaborador.");
-  }
-};
 
+  borrar: async (id) => confirm("¿Seguro de eliminar este documento y sus firmas?") && await db.collection('manuales').doc(id).delete(),
 // Iniciar aplicación
 const urlParams = new URLSearchParams(window.location.search);
 if(urlParams.has('firma')) initFirma();

@@ -3,81 +3,388 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RRHH · Sistema de Gestión</title>
+<title>RRHH · Manuales y Documentos</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-<!-- EmailJS (solo para pantalla pública de confirmación) -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  /* ─── VARIABLES ───────────────────────────────────────────── */
+  :root {
+    --bg:        #f7f8fa;
+    --surface:   #ffffff;
+    --surface2:  #f0f2f5;
+    --border:    #e0e3ea;
+    --text:      #111827;
+    --muted:     #6b7280;
+    --danger:    #dc2626;
+    --radius:    10px;
+    --transition: 180ms ease;
+    --m9: #b45309; /* Color original del módulo Manuales (heredado de indumentaria) */
+    --mA: var(--m9); /* Alias interno del módulo */
+  }
 
-<!-- Estilos compartidos -->
-<link rel="stylesheet" href="shared/styles.css">
+  /* ─── RESET & BASE ────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; }
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    opacity: .015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* ─── CONTENEDOR PRINCIPAL ────────────────────────────────── */
+  #app { height: 100dvh; position: relative; z-index: 1; display: flex; flex-direction: column; }
+  #main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+  /* ─── HEADER MÓDULO ───────────────────────────────────────── */
+  .module { display: flex; flex: 1; flex-direction: column; animation: fadeIn 200ms ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .module-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 16px;
+    flex-wrap: wrap;
+    background: var(--surface);
+  }
+  .module-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .module-title-group { flex: 1; }
+  .module-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .module-title { font-size: 22px; font-weight: 800; line-height: 1.1; }
+  .module-desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* ─── BOTONES Y CONTROLES ─────────────────────────────────── */
+  .bj-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 7px;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all var(--transition); border: none;
+    white-space: nowrap;
+  }
+  .bj-btn:hover { filter: brightness(1.1); opacity: 0.9; }
+  .bj-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  .bj-btn-outline {
+    background: transparent; color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--border) 200%, transparent);
+  }
+  .bj-btn-outline:hover { background: var(--surface2); }
+  
+  .bj-icon-btn {
+    width: 28px; height: 28px; border-radius: 5px;
+    background: none; border: 1px solid transparent;
+    cursor: pointer; font-size: 13px; display: flex; align-items: center;
+    justify-content: center; transition: all var(--transition); color: var(--muted);
+  }
+  .bj-icon-btn:hover { background: var(--surface); border-color: var(--border); color: var(--text); }
+  .bj-icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+
+  .bj-search {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 14px; width: 100%;
+    color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
+    outline: none; transition: border-color var(--transition);
+  }
+  .bj-search:focus { border-color: var(--mA); }
+
+  /* ─── MODALES Y FORMS ─────────────────────────────────────── */
+  .bj-modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 16px; overflow-y: auto;
+  }
+  .bj-modal-overlay.open { display: flex; }
+
+  .bj-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%; margin: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,.12);
+    animation: modalIn 180ms cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes modalIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  .bj-modal-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 22px 24px 16px; border-bottom: 1px solid var(--border);
+  }
+  .bj-modal-tag {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .bj-modal-title { font-size: 18px; font-weight: 800; }
+  .bj-modal-close {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-size: 14px; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    transition: all var(--transition);
+  }
+  .bj-modal-close:hover { color: var(--text); border-color: var(--text); background: var(--surface2); }
+
+  .bj-modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
+  .bj-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 16px 24px; border-top: 1px solid var(--border);
+  }
+
+  .bj-section-sep {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--muted); margin: 18px 0 12px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .bj-form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .bj-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; }
+  .bj-field-wide { min-width: 200px; flex: 2; }
+  .bj-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  }
+  .bj-input {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 12px; width: 100%;
+    color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
+    outline: none; transition: border-color var(--transition);
+  }
+  .bj-input:focus { border-color: var(--mA); }
+  select.bj-input { cursor: pointer; }
+
+  /* ─── MÓDULO 10 — MANUALES & DOCUMENTOS ───────────────────── */
+  .man-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 24px 24px 20px 24px; flex-wrap: wrap;
+  }
+  .man-tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .man-tab {
+    padding: 6px 16px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: none; color: var(--muted);
+    font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Mono', monospace;
+    letter-spacing: .08em; text-transform: uppercase;
+    transition: all 160ms;
+  }
+  .man-tab:hover { border-color: var(--mA); color: var(--mA); }
+  .man-tab.active {
+    background: var(--mA); color: #ffffff; border-color: var(--mA);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--mA) 30%, transparent);
+  }
+
+  .man-grid {
+    display: grid; padding: 0 24px 24px 24px;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px; align-items: start;
+  }
+
+  .man-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+    transition: border-color 200ms, transform 200ms, box-shadow 200ms;
+    display: flex; flex-direction: column;
+  }
+  .man-card:hover {
+    border-color: color-mix(in srgb, var(--mA) 50%, transparent);
+    transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.08);
+  }
+
+  .man-card-head {
+    padding: 18px 18px 14px;
+    display: flex; align-items: flex-start; gap: 12px;
+    background: color-mix(in srgb, var(--mA) 5%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--mA) 15%, var(--border));
+    position: relative;
+  }
+  .man-card-head::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--mA);
+  }
+  .man-card-icon {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+    background: color-mix(in srgb, var(--mA) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mA) 25%, transparent);
+  }
+  .man-card-name { font-size: 14px; font-weight: 800; line-height: 1.3; color: var(--text); }
+  .man-card-meta {
+    font-size: 11px; color: var(--muted);
+    font-family: 'DM Mono', monospace; margin-top: 4px; letter-spacing: .04em;
+  }
+  .man-card-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+
+  .man-card-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+  .man-stat-row { display: flex; gap: 8px; }
+  .man-stat {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .man-stat-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 800; color: var(--mA); line-height: 1; }
+  .man-stat-lbl {
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); margin-top: 1px;
+  }
+  .man-stat-val.pct { color: #059669; font-size: 16px; }
+
+  .man-link-copy {
+    display: flex; align-items: center; gap: 8px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px 8px 12px;
+    transition: border-color 160ms;
+  }
+  .man-link-copy:hover { border-color: color-mix(in srgb, var(--mA) 35%, transparent); }
+  .man-link-url {
+    flex: 1; font-family: 'DM Mono', monospace; font-size: 10px;
+    color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .man-link-copy-btn {
+    background: color-mix(in srgb, var(--mA) 15%, transparent); color: var(--mA);
+    border: 1px solid color-mix(in srgb, var(--mA) 30%, transparent);
+    border-radius: 7px; padding: 5px 12px; font-size: 11px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-weight: 700; flex-shrink: 0; transition: all 160ms;
+  }
+  .man-link-copy-btn:hover { background: color-mix(in srgb, var(--mA) 25%, transparent); transform: scale(1.02); }
+
+  .man-firmas-header {
+    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .man-firmas-list { display: flex; flex-direction: column; gap: 5px; }
+  .man-firma-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px;
+    background: var(--surface); border: 1px solid transparent; font-size: 12px; transition: border-color 160ms;
+  }
+  .man-firma-row:hover { border-color: color-mix(in srgb, var(--mA) 20%, transparent); }
+  .man-firma-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: color-mix(in srgb, var(--mA) 20%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--mA) 35%, transparent);
+    color: var(--mA); font-size: 9px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .man-firma-nombre { flex: 1; font-weight: 600; font-size: 12px; }
+  .man-firma-fecha { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .man-firma-check { font-size: 11px; color: #059669; flex-shrink: 0; }
+  .man-firma-del {
+    background: none; border: none; color: transparent; cursor: pointer;
+    font-size: 11px; padding: 2px 4px; border-radius: 4px; transition: all 160ms; flex-shrink: 0;
+  }
+  .man-firma-row:hover .man-firma-del { color: var(--muted); }
+  .man-firma-del:hover { color: var(--danger) !important; }
+  .man-empty-firmas {
+    text-align: center; padding: 14px 0; color: var(--muted);
+    font-size: 12px; font-style: italic; border: 1px dashed var(--border); border-radius: 9px;
+  }
+  .man-badge-oficial {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    background: color-mix(in srgb, var(--mA) 15%, transparent); color: var(--mA);
+    font-size: 9px; font-weight: 800; font-family: 'DM Mono', monospace; letter-spacing: .1em;
+    border: 1px solid color-mix(in srgb, var(--mA) 35%, transparent); vertical-align: middle;
+  }
+  .man-empty-state {
+    grid-column: 1/-1; text-align: center; padding: 60px 20px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
+  }
+  .man-empty-state-icon { font-size: 48px; margin-bottom: 14px; }
+
+  /* ─── PANTALLA PÚBLICA: FIRMA DE MANUAL ─────────────────── */
+  #firma-screen {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg); align-items: center; justify-content: center;
+    flex-direction: column; padding: 20px; font-family: 'Syne', sans-serif;
+  }
+  #firma-screen.show { display: flex; }
+
+  .firma-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; width: 100%; max-width: 520px; overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  }
+  .firma-header {
+    padding: 28px 28px 20px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--m9) 8%, var(--surface)), var(--surface));
+  }
+  .firma-logo {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+  }
+  .firma-empresa-badge {
+    display: inline-block; font-size: 13px; font-weight: 800;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+    background: color-mix(in srgb, var(--m9) 15%, transparent);
+    color: var(--m9); border: 1px solid color-mix(in srgb, var(--m9) 30%, transparent);
+  }
+  .firma-titulo { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 4px; }
+  .firma-sub { font-size: 13px; color: var(--muted); }
+  .firma-cuerpo { padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+  .firma-contenido {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; font-size: 13px;
+    line-height: 1.7; color: var(--text); max-height: 220px; overflow-y: auto;
+  }
+  .firma-nombre-field { display: flex; flex-direction: column; gap: 6px; }
+  .firma-nombre-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .firma-nombre-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--surface2);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: 15px;
+    transition: border-color 160ms; box-sizing: border-box;
+  }
+  .firma-nombre-input:focus { outline: none; border-color: var(--m9); }
+  .firma-nombre-input::placeholder { color: var(--muted); }
+  .firma-aviso {
+    font-size: 11px; color: var(--muted); line-height: 1.5;
+    padding: 10px 14px; background: var(--surface2);
+    border-radius: 8px; border: 1px solid var(--border);
+  }
+  .firma-btn {
+    width: 100%; padding: 16px; border: none; border-radius: 12px;
+    background: var(--m9); color: #ffffff;
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+    cursor: pointer; letter-spacing: .02em; transition: opacity 200ms, transform 100ms;
+  }
+  .firma-btn:hover { opacity: .9; }
+  .firma-btn:active { transform: scale(.98); }
+  .firma-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .firma-result {
+    display: none; flex-direction: column; align-items: center;
+    gap: 10px; padding: 28px; text-align: center;
+  }
+  .firma-result.show { display: flex; }
+  .firma-result-icon { font-size: 48px; }
+  .firma-result-title { font-size: 20px; font-weight: 800; }
+  .firma-result-sub { font-size: 13px; color: var(--muted); }
+  .firma-footer {
+    text-align: center; padding: 12px; font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: .1em;
+  }
+</style>
 </head>
 <body>
 
-<!-- ============================================================
-     PANTALLA PÚBLICA: CONFIRMAR PRESENTACIÓN (?confirmar=DOCID)
-     ============================================================ -->
-<div id="confirmar-screen">
-  <div class="conf-card">
-    <div class="conf-top">
-      <div class="conf-logo">RRHH · Sistema de Gestión</div>
-      <div class="conf-icon-wrap">👤</div>
-      <div class="conf-eyebrow">Nuevo ingreso</div>
-      <div class="conf-nombre" id="conf-nombre">Cargando…</div>
-      <div class="conf-puesto" id="conf-puesto"></div>
-    </div>
-    <div class="conf-data">
-      <div class="conf-row">
-        <span class="conf-row-icon">📅</span>
-        <span class="conf-row-label">Fecha</span>
-        <span class="conf-row-val" id="conf-fecha">—</span>
-      </div>
-      <div class="conf-row">
-        <span class="conf-row-icon">🕐</span>
-        <span class="conf-row-label">Horario</span>
-        <span class="conf-row-val" id="conf-horario">—</span>
-      </div>
-      <div class="conf-row">
-        <span class="conf-row-icon">📍</span>
-        <span class="conf-row-label">Local</span>
-        <span class="conf-row-val" id="conf-local">—</span>
-      </div>
-    </div>
-    <div class="conf-action" id="conf-action">
-      <button class="conf-btn" id="conf-btn" onclick="_confirmarPresentacion()">
-        ✅ Confirmar presentación
-      </button>
-    </div>
-    <div class="conf-result" id="conf-result-ok">
-      <div class="conf-result-icon">🎉</div>
-      <div class="conf-result-title" style="color:var(--m2)">¡Presentación confirmada!</div>
-      <div class="conf-result-sub" id="conf-result-ok-sub">La asistencia fue registrada correctamente.</div>
-    </div>
-    <div class="conf-result" id="conf-result-ya">
-      <div class="conf-result-icon">✅</div>
-      <div class="conf-result-title" style="color:var(--muted)">Ya estaba confirmada</div>
-      <div class="conf-result-sub">La presentación de este empleado ya fue registrada anteriormente.</div>
-    </div>
-    <div class="conf-result" id="conf-result-err">
-      <div class="conf-result-icon">❌</div>
-      <div class="conf-result-title" style="color:var(--danger)">Error al confirmar</div>
-      <div class="conf-result-sub" id="conf-result-err-sub">Hubo un problema. Intentá de nuevo o contactá a RRHH.</div>
-    </div>
-  </div>
-  <div class="conf-footer">BC Gestión · Sistema interno de RRHH</div>
-</div>
-
-<!-- ============================================================
-     PANTALLA PÚBLICA: FIRMA DE MANUAL (?firma=DOCID)
-     ============================================================ -->
 <div id="firma-screen">
   <div class="firma-card">
     <div class="firma-header">
@@ -104,8 +411,15 @@
     </div>
     <div class="firma-result" id="firma-result-ok">
       <div class="firma-result-icon">🎉</div>
-      <div class="firma-result-title" style="color:var(--m2)">¡Gracias por confirmar!</div>
+      <div class="firma-result-title" style="color:#059669">¡Gracias por confirmar!</div>
       <div class="firma-result-sub" id="firma-result-ok-sub">Tu aceptación fue registrada correctamente.</div>
+      <a id="firma-pdf-btn" href="#" target="_blank" rel="noopener"
+        style="display:none;margin-top:12px;padding:12px 24px;border-radius:10px;background:var(--m9);color:#ffffff;
+               font-family:'Syne',sans-serif;font-size:14px;font-weight:800;text-decoration:none;
+               transition:opacity 0.2s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        📄 Descargar PDF
+      </a>
     </div>
     <div class="firma-result" id="firma-result-ya">
       <div class="firma-result-icon">✅</div>
@@ -121,233 +435,491 @@
   <div class="firma-footer">BC Gestión · Sistema interno de RRHH</div>
 </div>
 
-<!-- ============================================================
-     LOGIN
-     ============================================================ -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo">Sistema de Recursos Humanos · v1.0</div>
-    <h1 class="auth-title">Bienvenido<br>de vuelta.</h1>
-    <p class="auth-subtitle">Ingresá tus credenciales para continuar.</p>
+<div id="app">
+  <div id="main">
+    <div class="module" id="module-manuales">
+      <div class="module-header">
+        <div class="module-icon" style="background:color-mix(in srgb,var(--m9) 15%,var(--surface2));color:var(--m9)">📋</div>
+        <div class="module-title-group">
+          <div class="module-eyebrow">Módulo 10</div>
+          <div class="module-title">Manuales y Documentos</div>
+          <div class="module-desc">Generá documentos para firma digital y seguí quién los firmó.</div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="bj-btn bj-btn-outline" id="man-predef-btn" onclick="manuales.cargarPredefinidos()"
+            style="border-color:var(--m9);color:var(--m9);font-size:12px">
+            📥 Cargar manuales predefinidos
+          </button>
+          <button class="bj-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.abrirNuevo()">+ Nuevo documento</button>
+        </div>
+      </div>
 
-    <div class="auth-field">
-      <label>Email</label>
-      <input type="email" id="auth-email" placeholder="usuario@empresa.com" autocomplete="email">
+      <div class="man-toolbar">
+        <div class="man-tabs">
+          <div class="man-tab active" data-loc="" onclick="manuales.filtrarLocal('',this)">TODOS</div>
+          <div id="man-local-chips"></div>
+        </div>
+        <input class="bj-search" style="max-width:220px" placeholder="Buscar documento…" oninput="manuales.buscar(this.value)">
+        <span id="man-count" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:10px;"></span>
+      </div>
+
+      <div class="man-grid" id="man-grid">
+        <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:13px">Cargando…</div>
+      </div>
     </div>
-    <div class="auth-field">
-      <label>Contraseña</label>
-      <input type="password" id="auth-pass" placeholder="••••••••" autocomplete="current-password">
+
+    <div class="bj-modal-overlay" id="man-nuevo-overlay" onclick="manuales.cerrarNuevo(event)">
+      <div class="bj-modal" style="max-width:580px" onclick="event.stopPropagation()">
+        <div class="bj-modal-header">
+          <div>
+            <div class="bj-modal-tag" style="color:var(--m9)" id="man-nuevo-tag">Nuevo documento</div>
+            <div class="bj-modal-title" id="man-nuevo-titulo">Crear documento para firma</div>
+          </div>
+          <button class="bj-modal-close" onclick="manuales.cerrarNuevo()">✕</button>
+        </div>
+        <div class="bj-modal-body" style="display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto">
+          <input type="hidden" id="man-doc-id">
+          <div class="bj-section-sep">Identificación</div>
+          <div class="bj-form-row">
+            <div class="bj-field bj-field-wide">
+              <label class="bj-label">Nombre del documento *</label>
+              <input class="bj-input" id="man-nombre-inp" placeholder="Ej: Manual de Ingreso">
+            </div>
+            <div class="bj-field">
+              <label class="bj-label">Local / empresa</label>
+              <select class="bj-input" id="man-local-inp">
+                <option value="">— todos —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bj-section-sep">Contenido visible al firmante</div>
+          <div style="font-size:12px;color:var(--muted)">Este texto es lo que verá la persona antes de firmar. Podés incluir las normas, condiciones, políticas, etc.</div>
+          <textarea class="bj-input" id="man-contenido-inp" rows="10"
+            placeholder="Escribí aquí el contenido del documento que el empleado deberá leer y aceptar…"
+            style="resize:vertical;font-family:'Syne',sans-serif;font-size:13px;line-height:1.6"></textarea>
+
+          <div class="bj-section-sep">PDF adjunto (opcional)</div>
+          <div class="bj-field">
+            <label class="bj-label">URL del PDF (Google Drive, Dropbox, etc.)</label>
+            <input class="bj-input" id="man-pdf-inp" type="url" placeholder="https://…">
+          </div>
+
+          <div id="man-nuevo-error" style="color:var(--danger);font-size:12px;min-height:16px"></div>
+        </div>
+        <div class="bj-modal-footer">
+          <button class="bj-btn bj-btn-outline" onclick="manuales.cerrarNuevo()">Cancelar</button>
+          <button class="bj-btn" id="man-save-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.guardar()">Guardar documento</button>
+        </div>
+      </div>
     </div>
-    <div id="auth-error"></div>
-    <button class="btn-primary" id="auth-btn" onclick="doLogin()">Ingresar</button>
+
   </div>
 </div>
 
-<!-- ============================================================
-     SCRIPTS
-     ============================================================ -->
-<script src="shared/firebase-config.js"></script>
 <script>
 // ==============================================================
-//  LOGIN — solo en esta página
+//  FIREBASE CONFIGURATION
 // ==============================================================
-function doLogin() {
-  const email = document.getElementById('auth-email').value.trim();
-  const pass  = document.getElementById('auth-pass').value;
-  const errEl = document.getElementById('auth-error');
-  const btn   = document.getElementById('auth-btn');
-  errEl.textContent = '';
-  btn.textContent   = 'Ingresando…';
-  btn.disabled      = true;
-
-  if (!auth) {
-    errEl.textContent = '⚠ Configurá Firebase primero.';
-    btn.textContent = 'Ingresar'; btn.disabled = false;
-    return;
-  }
-
-  auth.signInWithEmailAndPassword(email, pass)
-    .then(() => {
-      // Auth observer lo redirige
-    })
-    .catch(err => {
-      const map = {
-        'auth/user-not-found':    'Usuario no encontrado.',
-        'auth/wrong-password':    'Contraseña incorrecta.',
-        'auth/invalid-email':     'Email inválido.',
-        'auth/too-many-requests': 'Demasiados intentos. Esperá un momento.',
-      };
-      errEl.textContent  = map[err.code] || 'Error de autenticación.';
-      btn.textContent    = 'Ingresar';
-      btn.disabled       = false;
-    });
-}
-
-// Enter para login
-document.getElementById('auth-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-document.getElementById('auth-email').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('auth-pass').focus();
-});
-
-// Observer de auth — si ya hay sesión, ir al dashboard
-if (auth) {
-  auth.onAuthStateChanged(user => {
-    // Ignorar si hay pantalla pública activa
-    const params = new URLSearchParams(location.search);
-    if (params.get('confirmar') || params.get('firma')) return;
-
-    if (user) {
-      window.location.href = 'dashboard.html';
-    }
-  });
-}
-
-// ==============================================================
-//  PANTALLAS PÚBLICAS (sin login)
-// ==============================================================
-(function _initPublicas() {
-  const params  = new URLSearchParams(location.search);
-  const docId   = params.get('confirmar');
-  const firmaId = params.get('firma');
-
-  if (!docId && !firmaId) {
-    // No hay pantalla pública → mostrar login normalmente
-    document.getElementById('auth-screen').classList.add('show');
-    return;
-  }
-
-  // Hay pantalla pública → login ya oculto (no tiene clase show)
-
-  if (docId) {
-    document.getElementById('confirmar-screen').classList.add('show');
-    _loadConfirmar(docId);
-  }
-
-  if (firmaId) {
-    document.getElementById('firma-screen').classList.add('show');
-    _loadFirma(firmaId);
-  }
-})();
-
-function _waitDb(fn, n = 0) {
-  if (typeof db !== 'undefined' && db) { fn(); }
-  else if (n < 40) { setTimeout(() => _waitDb(fn, n + 1), 150); }
-  else { console.error('Firebase no disponible'); }
-}
-
-// ── Confirmar presentación ──────────────────────────────────
-function _loadConfirmar(docId) {
-  _waitDb(async () => {
-    try {
-      const snap = await db.collection('ingresos').doc(docId).get();
-      if (!snap.exists) {
-        document.getElementById('conf-nombre').textContent = 'Registro no encontrado';
-        document.getElementById('conf-btn').disabled = true;
-        return;
-      }
-      const d   = snap.data();
-      const fmt = v => v ? v.split('-').reverse().join('/') : '—';
-      document.getElementById('conf-nombre').textContent  = d.nombre  || '—';
-      document.getElementById('conf-puesto').textContent  = d.puesto  || '';
-      document.getElementById('conf-fecha').textContent   = fmt(d.fecha);
-      document.getElementById('conf-horario').textContent = d.horario || 'No especificado';
-      document.getElementById('conf-local').textContent   = d.local   || '—';
-
-      if (d.presentacion === true) {
-        document.getElementById('conf-action').style.display = 'none';
-        document.getElementById('conf-result-ya').classList.add('show');
-      }
-    } catch(e) {
-      document.getElementById('conf-nombre').textContent = 'Error al cargar';
-      document.getElementById('conf-btn').disabled = true;
-    }
-  });
-}
-
-window._confirmarPresentacion = async function() {
-  const params = new URLSearchParams(location.search);
-  const docId  = params.get('confirmar');
-  const btn    = document.getElementById('conf-btn');
-  btn.textContent = 'Confirmando…';
-  btn.disabled    = true;
-  try {
-    const devDate = new Date();
-    devDate.setDate(devDate.getDate() + 3);
-    await db.collection('ingresos').doc(docId).update({
-      presentacion:       true,
-      presentacionAt:     new Date().toISOString(),
-      devolucionAt:       devDate.toISOString(),
-      devolucionEnviada:  false,
-    });
-    const nombre = document.getElementById('conf-nombre').textContent;
-    document.getElementById('conf-action').style.display = 'none';
-    document.getElementById('conf-result-ok-sub').textContent =
-      `${nombre} fue marcado como presente.`;
-    document.getElementById('conf-result-ok').classList.add('show');
-  } catch(e) {
-    document.getElementById('conf-result-err-sub').textContent = e.message || 'Error desconocido.';
-    document.getElementById('conf-result-err').classList.add('show');
-    btn.textContent = 'Reintentar';
-    btn.disabled    = false;
-  }
+const firebaseConfig = {
+  apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+  authDomain: "rrhhsystem.firebaseapp.com",
+  projectId: "rrhhsystem",
+  storageBucket: "rrhhsystem.firebasestorage.app",
+  messagingSenderId: "71511125212",
+  appId: "1:71511125212:web:03a0ad11b281e397a29819"
 };
 
-// ── Firma de manual ─────────────────────────────────────────
-function _loadFirma(firmaId) {
-  _waitDb(async () => {
+let db;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} catch(e) {
+  console.warn('Firebase init error:', e.message);
+}
+
+// Mock de Locales para que el dropdown y los filtros funcionen
+const adminLocales = {
+  getLocales: () => [
+    { nombre: 'Barra Chalaca' },
+    { nombre: 'La Mar' },
+    { nombre: 'Tanta' }
+  ]
+};
+
+// =============================================================
+//  MÓDULO: MANUALES / DOCUMENTOS
+// =============================================================
+const manuales = (() => {
+  const COL = 'manuales';
+  let _docs    = [];
+  let _filtLoc = '';
+  let _filtQ   = '';
+  let _unsub   = null;
+  let _locales = [];
+
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const MANUALES_PREDEFINIDOS = [
+    {
+      nombre: 'Manual de Ingreso — Tanta',
+      local:  'Tanta',
+      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — Tanta\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingreso de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
+    },
+    {
+      nombre: 'Manual de Ingreso — La Mar',
+      local:  'La Mar',
+      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — La Mar Cebichería Peruana\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingreso de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
+    },
+    {
+      nombre: 'Manual de Ingreso — Barra Chalaca',
+      local:  'Barra Chalaca',
+      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — Barra Chalaca\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingrancia de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
+    }
+  ];
+
+  async function cargarPredefinidos() {
+    if (!db) { alert('Firebase no disponible'); return; }
+    const btn = $('man-predef-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cargando…'; }
+
     try {
-      const snap = await db.collection('manuales').doc(firmaId).get();
+      const snap = await db.collection(COL).get();
+      const existentes = snap.docs.map(d => d.data().nombre || '');
+      let creados = 0;
+      for (const m of MANUALES_PREDEFINIDOS) {
+        if (existentes.includes(m.nombre)) continue; 
+        await db.collection(COL).add({
+          nombre:    m.nombre,
+          local:     m.local,
+          contenido: m.contenido,
+          firmas:    [],
+          creadoAt:  new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          predefinido: true,
+        });
+        creados++;
+      }
+
+      if (creados === 0) {
+        alert('Los manuales ya estaban cargados.');
+      } else {
+        alert(`✓ Se cargaron ${creados} manual${creados > 1 ? 'es' : ''} correctamente.`);
+      }
+    } catch(e) {
+      alert('Error: ' + e.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '📥 Cargar manuales predefinidos'; }
+    }
+  }
+
+  function init() {
+    _locales = adminLocales.getLocales();
+    _poblarLocalSelect();
+    _poblarChips();
+    if (!db) { _render(); return; }
+    if (_unsub) _unsub();
+    _unsub = db.collection(COL).orderBy('creadoAt','desc')
+      .onSnapshot(snap => {
+        _docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _render();
+      }, () => {
+        _unsub = db.collection(COL).onSnapshot(snap => {
+          _docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          _render();
+        });
+      });
+  }
+
+  function _poblarLocalSelect() {
+    const el = $('man-local-inp'); if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">— todos —</option>' +
+      _locales.map(l => { const n=l.nombre||l; return `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`; }).join('');
+  }
+
+  function _poblarChips() {
+    const cont = $('man-local-chips'); if (!cont) return;
+    cont.innerHTML = _locales.map(l => {
+      const n = l.nombre||l;
+      return `<div class="man-tab${_filtLoc===n?' active':''}" onclick="manuales.filtrarLocal('${esc(n)}',this)">${esc(n)}</div>`;
+    }).join('');
+  }
+
+  function _render() {
+    const grid = $('man-grid'); if (!grid) return;
+    let lista = _docs.filter(d => {
+      if (_filtLoc && d.local && d.local !== _filtLoc) return false;
+      if (_filtQ && !(d.nombre||'').toLowerCase().includes(_filtQ)) return false;
+      return true;
+    });
+    const cnt = $('man-count');
+    if (cnt) cnt.textContent = `${lista.length} doc${lista.length!==1?'s':''}`;
+    if (!lista.length) {
+      grid.innerHTML = `<div class="man-empty-state">
+        <div class="man-empty-state-icon">📋</div>
+        ${_docs.length ? 'Sin resultados para ese filtro.' : 'No hay documentos aún.<br>Creá el primero con "+ Nuevo documento".'}
+      </div>`;
+      return;
+    }
+    grid.innerHTML = lista.map(d => _cardHTML(d)).join('');
+  }
+
+  function _cardHTML(d) {
+    const firmas  = d.firmas || [];
+    const total   = firmas.length;
+    const url     = `${location.href.split('?')[0]}?firma=${d.id}`;
+    const shortUrl = url.length > 55 ? url.slice(0,52)+'…' : url;
+    const firmaNombre = d.nombre || d.id;
+
+    return `
+    <div class="man-card">
+      <div class="man-card-head">
+        <div class="man-card-icon">📋</div>
+        <div style="flex:1;min-width:0">
+          <div class="man-card-name">
+            ${esc(d.nombre)}
+            ${d.predefinido ? '<span class="man-badge-oficial">OFICIAL</span>' : ''}
+          </div>
+          <div class="man-card-meta">
+            ${d.local ? `<span style="color:var(--mA)">${esc(d.local)}</span> · ` : 'Todos los locales · '}
+            ${_fmtFecha(d.creadoAt)}
+          </div>
+        </div>
+        <div class="man-card-actions">
+          <button class="bj-icon-btn" title="Editar" onclick="manuales.editar('${d.id}')">✏</button>
+          <button class="bj-icon-btn del" title="Eliminar" onclick="manuales.eliminar('${d.id}','${esc(d.nombre)}')">✕</button>
+        </div>
+      </div>
+      <div class="man-card-body">
+
+        <div class="man-stat-row">
+          <div class="man-stat">
+            <div class="man-stat-val">${total}</div>
+            <div class="man-stat-lbl">Firmas recibidas</div>
+          </div>
+          <div class="man-stat" style="border-color:color-mix(in srgb,var(--m2) 25%,var(--border))">
+            <div class="man-stat-val pct">${d.contenido ? Math.ceil(d.contenido.length / 5) : 0}</div>
+            <div class="man-stat-lbl">Palabras aprox.</div>
+          </div>
+        </div>
+
+        <div class="man-link-copy">
+          <span class="man-link-url" title="${esc(url)}">${esc(shortUrl)}</span>
+          <button class="man-link-copy-btn" onclick="manuales.copiarLink('${esc(url)}',this)">📋 Copiar link</button>
+        </div>
+
+        ${total > 0 ? `
+          <div class="man-firmas-header">
+            <span>Firmantes recientes</span>
+            ${total > 5 ? `<span style="color:var(--mA)">+${total-5} más</span>` : ''}
+          </div>
+          <div class="man-firmas-list">
+            ${firmas.slice(-5).reverse().map(f => {
+              const initials = (f.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+              return `
+              <div class="man-firma-row">
+                <div class="man-firma-avatar">${initials}</div>
+                <span class="man-firma-nombre">${esc(f.nombre)}</span>
+                <span class="man-firma-fecha">${_fmtFecha(f.at)}</span>
+                <span class="man-firma-check">✓</span>
+                <button class="man-firma-del" onclick="manuales.quitarFirma('${d.id}','${esc(f.nombre).replace(/'/g,"\\'")}','${f.at}')" title="Quitar firma">✕</button>
+              </div>`;
+            }).join('')}
+          </div>` :
+          `<div class="man-empty-firmas">Sin firmas aún — compartí el link con los empleados</div>`
+        }
+      </div>
+    </div>`;
+  }
+
+  function filtrarLocal(loc, chip) {
+    _filtLoc = loc;
+    document.querySelectorAll('.man-tab').forEach(c=>c.classList.remove('active'));
+    if (chip) chip.classList.add('active');
+    _render();
+  }
+  function buscar(v) { _filtQ = v.toLowerCase(); _render(); }
+
+  function copiarLink(url, btn) {
+    navigator.clipboard?.writeText(url).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado!'; btn.style.color = '#059669';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    }).catch(() => prompt('Copiá este link:', url));
+  }
+
+  function abrirNuevo() {
+    $('man-doc-id').value = '';
+    $('man-pdf-inp').value       = '';
+    $('man-nuevo-tag').textContent    = 'Nuevo documento';
+    $('man-nuevo-titulo').textContent = 'Crear documento para firma';
+    $('man-nombre-inp').value    = '';
+    $('man-contenido-inp').value = '';
+    $('man-nuevo-error').textContent = '';
+    _poblarLocalSelect();
+    $('man-local-inp').value = '';
+    $('man-nuevo-overlay').classList.add('open');
+    setTimeout(() => $('man-nombre-inp')?.focus(), 80);
+  }
+
+  function editar(id) {
+    const d = _docs.find(x=>x.id===id); if (!d) return;
+    $('man-doc-id').value = id;
+    $('man-nuevo-tag').textContent    = 'Editar documento';
+    $('man-nuevo-titulo').textContent = 'Editar: ' + (d.nombre||'');
+    $('man-nombre-inp').value    = d.nombre    || '';
+    $('man-contenido-inp').value = d.contenido || '';
+    $('man-pdf-inp').value       = d.pdfUrl || '';
+    $('man-nuevo-error').textContent = '';
+    _poblarLocalSelect();
+    $('man-local-inp').value = d.local || '';
+    $('man-nuevo-overlay').classList.add('open');
+  }
+
+  function cerrarNuevo(e) {
+    if (e && e.target !== $('man-nuevo-overlay')) return;
+    $('man-nuevo-overlay').classList.remove('open');
+  }
+
+  async function guardar() {
+    const nombre    = ($('man-nombre-inp').value||'').trim();
+    const contenido = ($('man-contenido-inp').value||'').trim();
+    if (!nombre)    { $('man-nuevo-error').textContent = 'El nombre es obligatorio.'; return; }
+    if (!contenido) { $('man-nuevo-error').textContent = 'El contenido no puede estar vacío.'; return; }
+    const data = { nombre, contenido, pdfUrl: ($('man-pdf-inp').value||'').trim(), local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
+    const btn = $('man-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      if (!db) throw new Error('Firebase no disponible');
+      const docId = $('man-doc-id').value;
+      if (docId) {
+        await db.collection(COL).doc(docId).update(data);
+      } else {
+        data.creadoAt = data.updatedAt; data.firmas = [];
+        await db.collection(COL).add(data);
+      }
+      $('man-nuevo-overlay').classList.remove('open');
+    } catch(e) {
+      $('man-nuevo-error').textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar documento';
+    }
+  }
+
+  async function eliminar(id, nombre) {
+    if (!confirm(`¿Eliminar "${nombre}" y todas sus firmas?`)) return;
+    try { await db.collection(COL).doc(id).delete(); } catch(e) { alert(e.message); }
+  }
+
+  async function quitarFirma(docId, nombre, at) {
+    if (!confirm(`¿Quitar la firma de "${nombre}"?`)) return;
+    try {
+      const snap = await db.collection(COL).doc(docId).get();
+      if (!snap.exists) return;
+      const firmas = (snap.data().firmas||[]).filter(f=>!(f.nombre===nombre&&f.at===at));
+      await db.collection(COL).doc(docId).update({ firmas });
+    } catch(e) { alert(e.message); }
+  }
+
+  function _fmtFecha(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+    catch { return iso; }
+  }
+
+  return { init, filtrarLocal, buscar, copiarLink, abrirNuevo, editar, cerrarNuevo, guardar, eliminar, quitarFirma, cargarPredefinidos };
+})();
+
+// =============================================================
+//  PANTALLA PÚBLICA: FIRMA DE MANUAL  (?firma=DOCID)
+// =============================================================
+(function _initFirma() {
+  const params = new URLSearchParams(location.search);
+  const docId  = params.get('firma');
+  if (!docId) return;
+
+  const screen = document.getElementById('firma-screen');
+  const app = document.getElementById('app');
+  if (screen) screen.classList.add('show');
+  if (app) app.style.display = 'none';
+
+  function _waitFirebase(fn, n) {
+    n = n || 0;
+    if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) fn();
+    else if (n < 40) setTimeout(() => _waitFirebase(fn, n+1), 150);
+    else { document.getElementById('firma-titulo').textContent = 'Error de conexión'; }
+  }
+
+  _waitFirebase(async () => {
+    try {
+      const snap = await db.collection('manuales').doc(docId).get();
       if (!snap.exists) {
         document.getElementById('firma-titulo').textContent = 'Documento no encontrado';
+        document.getElementById('firma-cuerpo').style.display = 'none';
         return;
       }
       const d = snap.data();
-      document.getElementById('firma-titulo').textContent       = d.titulo   || '—';
-      document.getElementById('firma-sub').textContent          = d.subtitulo || '';
-      document.getElementById('firma-empresa-badge').textContent = d.empresa  || '';
-      document.getElementById('firma-contenido').innerHTML      = d.contenido || '';
-
-      if (d.firmado) {
-        document.getElementById('firma-cuerpo').style.display = 'none';
-        document.getElementById('firma-result-ya').classList.add('show');
-      }
+      window._currentDocPdf = d.pdfUrl || '';
+      document.getElementById('firma-empresa-badge').textContent = d.local || 'BC Gestión';
+      document.getElementById('firma-titulo').textContent  = d.nombre || 'Documento';
+      document.getElementById('firma-sub').textContent     = 'Leé el contenido completo antes de confirmar tu aceptación.';
+      document.getElementById('firma-contenido').innerHTML = (d.contenido||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     } catch(e) {
       document.getElementById('firma-titulo').textContent = 'Error al cargar';
+      console.error(e);
     }
   });
+
+  window._firmaValidar = function() {
+    const v = (document.getElementById('firma-nombre-input').value||'').trim();
+    document.getElementById('firma-btn').disabled = v.length < 3;
+  };
+
+  window._firmarManual = async function() {
+    const nombre = (document.getElementById('firma-nombre-input').value||'').trim();
+    if (nombre.length < 3) return;
+    const btn = document.getElementById('firma-btn');
+    btn.textContent = 'Guardando…'; btn.disabled = true;
+    try {
+      if (!db) throw new Error('Sin conexión');
+      const snap = await db.collection('manuales').doc(docId).get();
+      if (!snap.exists) throw new Error('Documento no encontrado');
+      const firmas = snap.data().firmas || [];
+      const hoy = new Date().toISOString().slice(0,10);
+      const yaFirmo = firmas.some(f => (f.nombre||'').toLowerCase()===nombre.toLowerCase() && (f.at||'').slice(0,10)===hoy);
+      if (yaFirmo) {
+        document.getElementById('firma-cuerpo').style.display = 'none';
+        document.getElementById('firma-result-ya').classList.add('show');
+        return;
+      }
+      firmas.push({ nombre, at: new Date().toISOString() });
+      await db.collection('manuales').doc(docId).update({ firmas });
+      document.getElementById('firma-cuerpo').style.display = 'none';
+      document.getElementById('firma-result-ok-sub').textContent = `${nombre}, tu aceptación quedó registrada correctamente. ¡Gracias!`;
+      
+      if (window._currentDocPdf) {
+        const pdfBtn = document.getElementById('firma-pdf-btn');
+        pdfBtn.href = window._currentDocPdf;
+        pdfBtn.style.display = 'block';
+      }
+      
+      document.getElementById('firma-result-ok').classList.add('show');
+    } catch(e) {
+      document.getElementById('firma-result-err-sub').textContent = e.message || 'Error desconocido.';
+      document.getElementById('firma-result-err').classList.add('show');
+      btn.textContent = 'Leído y aceptado'; btn.disabled = false;
+    }
+  };
+})();
+
+// Inicializar el módulo de la interfaz administrativa si no se está en la página de firma pública
+const params = new URLSearchParams(location.search);
+if (!params.has('firma')) {
+  setTimeout(() => manuales.init(), 100);
 }
 
-window._firmaValidar = function() {
-  const val = document.getElementById('firma-nombre-input').value.trim();
-  document.getElementById('firma-btn').disabled = val.length < 3;
-};
-
-window._firmarManual = async function() {
-  const params  = new URLSearchParams(location.search);
-  const firmaId = params.get('firma');
-  const nombre  = document.getElementById('firma-nombre-input').value.trim();
-  const btn     = document.getElementById('firma-btn');
-  btn.textContent = 'Guardando…';
-  btn.disabled    = true;
-  try {
-    await db.collection('manuales').doc(firmaId).update({
-      firmado:    true,
-      firmadoPor: nombre,
-      firmadoAt:  new Date().toISOString(),
-    });
-    document.getElementById('firma-cuerpo').style.display = 'none';
-    document.getElementById('firma-result-ok-sub').textContent =
-      `Gracias, ${nombre}. Tu firma fue registrada.`;
-    document.getElementById('firma-result-ok').classList.add('show');
-  } catch(e) {
-    document.getElementById('firma-result-err-sub').textContent = e.message || 'Error desconocido.';
-    document.getElementById('firma-result-err').classList.add('show');
-    btn.textContent = 'Reintentar';
-    btn.disabled    = false;
-  }
-};
 </script>
 </body>
 </html>

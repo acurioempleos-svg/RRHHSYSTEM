@@ -1,238 +1,162 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RRHH · Sistema de Gestión</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RRHH · Sistema de Gestión</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.min.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<style>
-body { font-family: Arial; margin: 0; background: #f5f5f5; }
-.container { max-width: 900px; margin: auto; padding: 20px; }
-
-.card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; }
-
-button { padding: 10px; cursor: pointer; }
-
-input, textarea {
-  width: 100%;
-  padding: 10px;
-  margin: 10px 0;
-}
-</style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0f172a; --accent: #f59e0b; --bg: #f8fafc; --border: #e2e8f0; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #334155; }
+        
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        h1 { font-size: 1.5rem; margin-bottom: 20px; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; }
+        
+        .btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:disabled { background: #cbd5e1; }
+        
+        .hidden { display: none; }
+        .item-card { border: 1px solid var(--border); padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
 </head>
 <body>
 
-<div id="app" class="container">
-  <h1>Manuales</h1>
-  <button onclick="adminUI.openModal()">+ Nuevo</button>
-  <div id="list"></div>
-</div>
-
-<div id="firma" style="display:none" class="container">
-  <div class="card" id="pdf">
-    <h2 id="titulo"></h2>
-    <pre id="contenido"></pre>
-
-    <div id="firmaInfo" style="display:none">
-      <hr>
-      <h3 id="nombreFirma"></h3>
-      <p id="fechaFirma"></p>
+    <div id="firma-screen" class="container hidden">
+        <h1 id="f-titulo">Cargando documento...</h1>
+        <div id="f-contenido" style="white-space: pre-wrap; margin-bottom: 20px; line-height: 1.6;"></div>
+        <input type="text" id="input-firma" placeholder="Escribe tu nombre completo" oninput="toggleBtn()">
+        <button id="btn-firmar" class="btn btn-primary" onclick="procesarFirma()" disabled>Confirmar y Descargar PDF</button>
     </div>
-  </div>
 
-  <input id="nombre" placeholder="Tu nombre completo">
-  <button id="firmarBtn" disabled>Firmar</button>
-</div>
+    <div id="admin-screen" class="container hidden">
+        <h1>Gestión de Manuales</h1>
+        <div id="lista-manuales"></div>
+        <hr style="margin: 20px 0;">
+        <h3>Crear nuevo</h3>
+        <input type="text" id="new-titulo" placeholder="Título">
+        <textarea id="new-contenido" rows="5" placeholder="Contenido"></textarea>
+        <button class="btn btn-primary" onclick="crearManual()">Crear Manual</button>
+    </div>
 
-<div id="modal" style="display:none" class="container">
-  <div class="card">
-    <input id="m-titulo" placeholder="Título">
-    <input id="m-local" placeholder="Local">
-    <textarea id="m-texto" placeholder="Contenido"></textarea>
+    <script>
+        // --- 1. CONFIGURACION FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "TU_PROYECTO.firebaseapp.com",
+            projectId: "TU_PROYECTO",
+            storageBucket: "TU_PROYECTO.appspot.com",
+            messagingSenderId: "ID",
+            appId: "ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-    <button onclick="adminUI.save()">Guardar</button>
-    <button onclick="adminUI.closeModal()">Cancelar</button>
-  </div>
-</div>
+        // Variables Globales
+        let currentManual = null;
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "rrhhsystem.firebaseapp.com",
-  projectId: "rrhhsystem"
-};
+        // --- 2. LOGICA INICIAL ---
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('firma');
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+            if (id) {
+                document.getElementById('firma-screen').classList.remove('hidden');
+                const doc = await db.collection('manuales').doc(id).get();
+                if(doc.exists) {
+                    currentManual = { id: doc.id, ...doc.data() };
+                    document.getElementById('f-titulo').textContent = currentManual.nombre;
+                    document.getElementById('f-contenido').textContent = currentManual.contenido;
+                }
+            } else {
+                document.getElementById('admin-screen').classList.remove('hidden');
+                cargarAdmin();
+            }
+        };
 
-let currentDoc = null;
+        // --- 3. LOGICA FIRMA Y PDF ---
+        function toggleBtn() {
+            document.getElementById('btn-firmar').disabled = document.getElementById('input-firma').value.length < 5;
+        }
 
-/* =========================
-   UTIL
-========================= */
-function sanitize(t) {
-  return t.replace(/[<>]/g, "");
-}
+        async function procesarFirma() {
+            const nombre = document.getElementById('input-firma').value;
+            const btn = document.getElementById('btn-firmar');
+            
+            btn.textContent = "Generando...";
+            
+            try {
+                // Guardar en BD
+                const nuevasFirmas = [...(currentManual.firmas || []), { nombre, at: new Date().toISOString() }];
+                await db.collection('manuales').doc(currentManual.id).update({ firmas: nuevasFirmas });
+                
+                // Generar PDF
+                const docDefinition = {
+                    content: [
+                        { text: 'CERTIFICADO DE CONFORMIDAD', style: 'header' },
+                        { text: currentManual.nombre, style: 'subheader' },
+                        { text: `Contenido:\n\n${currentManual.contenido}`, style: 'body' },
+                        { text: `\n\nFirmado digitalmente por: ${nombre}`, style: 'firmante' },
+                        { text: `Fecha: ${new Date().toLocaleString()}`, style: 'fecha' }
+                    ],
+                    styles: {
+                        header: { fontSize: 18, bold: true, alignment: 'center' },
+                        subheader: { fontSize: 14, margin: [0, 10, 0, 10] },
+                        body: { fontSize: 12 },
+                        firmante: { fontSize: 12, bold: true, margin: [0, 20, 0, 0] },
+                        fecha: { fontSize: 10, color: 'gray' }
+                    }
+                };
+                
+                pdfMake.createPdf(docDefinition).download(`Firma_${nombre.replace(/\s+/g, '_')}.pdf`);
+                alert("¡Firma exitosa!");
+            } catch (e) {
+                alert("Error: " + e.message);
+            } finally {
+                btn.textContent = "Confirmar y Descargar PDF";
+            }
+        }
 
-/* =========================
-   INICIO
-========================= */
-async function start() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get("firma");
+        // --- 4. LOGICA ADMIN ---
+        async function cargarAdmin() {
+            const snap = await db.collection('manuales').get();
+            const container = document.getElementById('lista-manuales');
+            container.innerHTML = '';
+            
+            snap.forEach(doc => {
+                const data = doc.data();
+                const div = document.createElement('div');
+                div.className = 'item-card';
+                div.innerHTML = `
+                    <span>${data.nombre}</span>
+                    <button class="btn" onclick="copiarLink('${doc.id}')">Copiar Link</button>
+                `;
+                container.appendChild(div);
+            });
+        }
 
-  if (id) {
-    document.getElementById("app").style.display = "none";
-    document.getElementById("firma").style.display = "block";
+        async function crearManual() {
+            const nombre = document.getElementById('new-titulo').value;
+            const contenido = document.getElementById('new-contenido').value;
+            await db.collection('manuales').add({ nombre, contenido, firmas: [] });
+            location.reload();
+        }
 
-    const snap = await db.collection("manuales").doc(id).get();
-    if (!snap.exists) return alert("No existe");
-
-    currentDoc = { id: snap.id, ...snap.data() };
-
-    document.getElementById("titulo").textContent = currentDoc.nombre;
-    document.getElementById("contenido").textContent = currentDoc.contenido;
-  } else {
-    adminUI.init();
-  }
-}
-
-/* =========================
-   FIRMA
-========================= */
-document.getElementById("nombre").addEventListener("input", e => {
-  document.getElementById("firmarBtn").disabled = e.target.value.trim().length < 5;
-});
-
-document.getElementById("firmarBtn").addEventListener("click", async () => {
-  const nombre = sanitize(document.getElementById("nombre").value.trim());
-  const fecha = new Date().toLocaleString();
-
-  await db.collection("manuales").doc(currentDoc.id).update({
-    firmas: firebase.firestore.FieldValue.arrayUnion({
-      nombre,
-      at: new Date().toISOString()
-    })
-  });
-
-  await generarPDF(nombre, fecha);
-
-  alert("Firmado correctamente");
-});
-
-/* =========================
-   PDF MULTIPAGE
-========================= */
-async function generarPDF(nombre, fecha) {
-  const cont = document.getElementById("pdf");
-  const clone = cont.cloneNode(true);
-
-  clone.querySelector("#firmaInfo").style.display = "block";
-  clone.querySelector("#nombreFirma").textContent = nombre;
-  clone.querySelector("#fechaFirma").textContent = fecha;
-
-  clone.style.position = "absolute";
-  clone.style.top = "-9999px";
-  clone.style.width = "800px";
-
-  document.body.appendChild(clone);
-
-  const canvas = await html2canvas(clone, { scale: 2 });
-  const img = canvas.toDataURL("image/png");
-
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-
-  const w = 210;
-  const h = (canvas.height * w) / canvas.width;
-
-  let heightLeft = h;
-  let position = 0;
-
-  pdf.addImage(img, "PNG", 0, position, w, h);
-  heightLeft -= 297;
-
-  while (heightLeft > 0) {
-    position = heightLeft - h;
-    pdf.addPage();
-    pdf.addImage(img, "PNG", 0, position, w, h);
-    heightLeft -= 297;
-  }
-
-  pdf.save("firma.pdf");
-
-  document.body.removeChild(clone);
-}
-
-/* =========================
-   ADMIN
-========================= */
-const adminUI = {
-  docs: [],
-
-  init() {
-    db.collection("manuales").onSnapshot(snap => {
-      this.docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      this.render();
-    });
-  },
-
-  render() {
-    const list = document.getElementById("list");
-    list.innerHTML = "";
-
-    this.docs.forEach(d => {
-      const div = document.createElement("div");
-      div.className = "card";
-
-      div.innerHTML = `
-        <h3>${d.nombre}</h3>
-        <p>${d.local || ""}</p>
-        <button data-id="${d.id}" class="linkBtn">Copiar link</button>
-      `;
-
-      div.querySelector(".linkBtn").addEventListener("click", () => {
-        const url = location.origin + location.pathname + "?firma=" + d.id;
-        navigator.clipboard.writeText(url);
-        alert("Copiado");
-      });
-
-      list.appendChild(div);
-    });
-  },
-
-  openModal() {
-    document.getElementById("modal").style.display = "block";
-  },
-
-  closeModal() {
-    document.getElementById("modal").style.display = "none";
-  },
-
-  async save() {
-    const nombre = document.getElementById("m-titulo").value;
-    const local = document.getElementById("m-local").value;
-    const contenido = document.getElementById("m-texto").value;
-
-    await db.collection("manuales").add({
-      nombre,
-      local,
-      contenido,
-      firmas: []
-    });
-
-    this.closeModal();
-  }
-};
-
-start();
-</script>
-
+        function copiarLink(id) {
+            const url = window.location.origin + window.location.pathname + '?firma=' + id;
+            navigator.clipboard.writeText(url);
+            alert("Link copiado");
+        }
+    </script>
 </body>
 </html>

@@ -8,11 +8,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-  /* ─── VARIABLES ───────────────────────────────────────────── */
   :root {
     --bg:        #f7f8fa;
     --surface:   #ffffff;
@@ -21,506 +23,238 @@
     --text:      #111827;
     --muted:     #6b7280;
     --danger:    #dc2626;
-    --radius:    10px;
+    --m9:        #b45309; /* Color de Manuales */
+    --radius:    12px;
     --transition: 180ms ease;
-    --m9: #b45309; /* Color original del módulo Manuales (heredado de indumentaria) */
-    --mA: var(--m9); /* Alias interno del módulo */
   }
 
-  /* ─── RESET & BASE ────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { font-size: 16px; }
-  body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh;
+  body { 
+    font-family: 'Syne', sans-serif; 
+    background: var(--bg); 
+    color: var(--text); 
+    min-height: 100dvh; 
     overflow-x: hidden;
   }
-  body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    opacity: .015;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-size: 200px;
-  }
 
-  /* ─── CONTENEDOR PRINCIPAL ────────────────────────────────── */
-  #app { height: 100dvh; position: relative; z-index: 1; display: flex; flex-direction: column; }
-  #main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-
-  /* ─── HEADER MÓDULO ───────────────────────────────────────── */
-  .module { display: flex; flex: 1; flex-direction: column; animation: fadeIn 200ms ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
-  .module-header {
-    padding: 28px 24px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: flex-start; gap: 16px;
-    flex-wrap: wrap;
-    background: var(--surface);
-  }
-  .module-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-  }
-  .module-title-group { flex: 1; }
-  .module-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    letter-spacing: .2em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 4px;
-  }
-  .module-title { font-size: 22px; font-weight: 800; line-height: 1.1; }
-  .module-desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
-
-  /* ─── BOTONES Y CONTROLES ─────────────────────────────────── */
-  .bj-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 9px 16px; border-radius: 7px;
-    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: all var(--transition); border: none;
-    white-space: nowrap;
-  }
-  .bj-btn:hover { filter: brightness(1.1); opacity: 0.9; }
-  .bj-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  
-  .bj-btn-outline {
-    background: transparent; color: var(--text);
-    border: 1px solid color-mix(in srgb, var(--border) 200%, transparent);
-  }
-  .bj-btn-outline:hover { background: var(--surface2); }
-  
-  .bj-icon-btn {
-    width: 28px; height: 28px; border-radius: 5px;
-    background: none; border: 1px solid transparent;
-    cursor: pointer; font-size: 13px; display: flex; align-items: center;
-    justify-content: center; transition: all var(--transition); color: var(--muted);
-  }
-  .bj-icon-btn:hover { background: var(--surface); border-color: var(--border); color: var(--text); }
-  .bj-icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
-
-  .bj-search {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 7px; padding: 9px 14px; width: 100%;
-    color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
-    outline: none; transition: border-color var(--transition);
-  }
-  .bj-search:focus { border-color: var(--mA); }
-
-  /* ─── MODALES Y FORMS ─────────────────────────────────────── */
-  .bj-modal-overlay {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
-    display: none; align-items: flex-start; justify-content: center;
-    padding: 16px; overflow-y: auto;
-  }
-  .bj-modal-overlay.open { display: flex; }
-
-  .bj-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 100%; margin: auto;
-    box-shadow: 0 24px 64px rgba(0,0,0,.12);
-    animation: modalIn 180ms cubic-bezier(.4,0,.2,1);
-  }
-  @keyframes modalIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-
-  .bj-modal-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 22px 24px 16px; border-bottom: 1px solid var(--border);
-  }
-  .bj-modal-tag {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    letter-spacing: .18em; text-transform: uppercase; margin-bottom: 4px;
-  }
-  .bj-modal-title { font-size: 18px; font-weight: 800; }
-  .bj-modal-close {
-    background: none; border: 1px solid var(--border); color: var(--muted);
-    font-size: 14px; cursor: pointer; padding: 4px 8px; border-radius: 6px;
-    transition: all var(--transition);
-  }
-  .bj-modal-close:hover { color: var(--text); border-color: var(--text); background: var(--surface2); }
-
-  .bj-modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
-  .bj-modal-footer {
-    display: flex; justify-content: flex-end; gap: 10px;
-    padding: 16px 24px; border-top: 1px solid var(--border);
-  }
-
-  .bj-section-sep {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    letter-spacing: .18em; text-transform: uppercase;
-    color: var(--muted); margin: 18px 0 12px;
-    padding-bottom: 6px; border-bottom: 1px solid var(--border);
-  }
-  .bj-form-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .bj-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; }
-  .bj-field-wide { min-width: 200px; flex: 2; }
-  .bj-label {
-    font-family: 'DM Mono', monospace; font-size: 10px;
-    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
-  }
-  .bj-input {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 7px; padding: 10px 12px; width: 100%;
-    color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
-    outline: none; transition: border-color var(--transition);
-  }
-  .bj-input:focus { border-color: var(--mA); }
-  select.bj-input { cursor: pointer; }
-
-  /* ─── MÓDULO 10 — MANUALES & DOCUMENTOS ───────────────────── */
-  .man-toolbar {
-    display: flex; align-items: center; gap: 10px;
-    margin: 24px 24px 20px 24px; flex-wrap: wrap;
-  }
-  .man-tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-  .man-tab {
-    padding: 6px 16px; border-radius: 20px;
-    border: 1.5px solid var(--border);
-    background: none; color: var(--muted);
-    font-size: 11px; font-weight: 700;
-    cursor: pointer; font-family: 'DM Mono', monospace;
-    letter-spacing: .08em; text-transform: uppercase;
-    transition: all 160ms;
-  }
-  .man-tab:hover { border-color: var(--mA); color: var(--mA); }
-  .man-tab.active {
-    background: var(--mA); color: #ffffff; border-color: var(--mA);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--mA) 30%, transparent);
-  }
-
-  .man-grid {
-    display: grid; padding: 0 24px 24px 24px;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 16px; align-items: start;
-  }
-
-  .man-card {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 16px; overflow: hidden;
-    transition: border-color 200ms, transform 200ms, box-shadow 200ms;
-    display: flex; flex-direction: column;
-  }
-  .man-card:hover {
-    border-color: color-mix(in srgb, var(--mA) 50%, transparent);
-    transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.08);
-  }
-
-  .man-card-head {
-    padding: 18px 18px 14px;
-    display: flex; align-items: flex-start; gap: 12px;
-    background: color-mix(in srgb, var(--mA) 5%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--mA) 15%, var(--border));
-    position: relative;
-  }
-  .man-card-head::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--mA);
-  }
-  .man-card-icon {
-    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 20px;
-    background: color-mix(in srgb, var(--mA) 15%, transparent);
-    border: 1px solid color-mix(in srgb, var(--mA) 25%, transparent);
-  }
-  .man-card-name { font-size: 14px; font-weight: 800; line-height: 1.3; color: var(--text); }
-  .man-card-meta {
-    font-size: 11px; color: var(--muted);
-    font-family: 'DM Mono', monospace; margin-top: 4px; letter-spacing: .04em;
-  }
-  .man-card-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
-
-  .man-card-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
-
-  .man-stat-row { display: flex; gap: 8px; }
-  .man-stat {
-    flex: 1; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px;
-  }
-  .man-stat-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 800; color: var(--mA); line-height: 1; }
-  .man-stat-lbl {
-    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--muted); margin-top: 1px;
-  }
-  .man-stat-val.pct { color: #059669; font-size: 16px; }
-
-  .man-link-copy {
-    display: flex; align-items: center; gap: 8px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px 8px 12px;
-    transition: border-color 160ms;
-  }
-  .man-link-copy:hover { border-color: color-mix(in srgb, var(--mA) 35%, transparent); }
-  .man-link-url {
-    flex: 1; font-family: 'DM Mono', monospace; font-size: 10px;
-    color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .man-link-copy-btn {
-    background: color-mix(in srgb, var(--mA) 15%, transparent); color: var(--mA);
-    border: 1px solid color-mix(in srgb, var(--mA) 30%, transparent);
-    border-radius: 7px; padding: 5px 12px; font-size: 11px; cursor: pointer;
-    font-family: 'DM Mono', monospace; font-weight: 700; flex-shrink: 0; transition: all 160ms;
-  }
-  .man-link-copy-btn:hover { background: color-mix(in srgb, var(--mA) 25%, transparent); transform: scale(1.02); }
-
-  .man-firmas-header {
-    font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .man-firmas-list { display: flex; flex-direction: column; gap: 5px; }
-  .man-firma-row {
-    display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px;
-    background: var(--surface); border: 1px solid transparent; font-size: 12px; transition: border-color 160ms;
-  }
-  .man-firma-row:hover { border-color: color-mix(in srgb, var(--mA) 20%, transparent); }
-  .man-firma-avatar {
-    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-    background: color-mix(in srgb, var(--mA) 20%, transparent);
-    border: 1.5px solid color-mix(in srgb, var(--mA) 35%, transparent);
-    color: var(--mA); font-size: 9px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center; overflow: hidden;
-  }
-  .man-firma-nombre { flex: 1; font-weight: 600; font-size: 12px; }
-  .man-firma-fecha { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
-  .man-firma-check { font-size: 11px; color: #059669; flex-shrink: 0; }
-  .man-firma-del {
-    background: none; border: none; color: transparent; cursor: pointer;
-    font-size: 11px; padding: 2px 4px; border-radius: 4px; transition: all 160ms; flex-shrink: 0;
-  }
-  .man-firma-row:hover .man-firma-del { color: var(--muted); }
-  .man-firma-del:hover { color: var(--danger) !important; }
-  .man-empty-firmas {
-    text-align: center; padding: 14px 0; color: var(--muted);
-    font-size: 12px; font-style: italic; border: 1px dashed var(--border); border-radius: 9px;
-  }
-  .man-badge-oficial {
-    display: inline-block; padding: 2px 8px; border-radius: 10px;
-    background: color-mix(in srgb, var(--mA) 15%, transparent); color: var(--mA);
-    font-size: 9px; font-weight: 800; font-family: 'DM Mono', monospace; letter-spacing: .1em;
-    border: 1px solid color-mix(in srgb, var(--mA) 35%, transparent); vertical-align: middle;
-  }
-  .man-empty-state {
-    grid-column: 1/-1; text-align: center; padding: 60px 20px;
-    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
-  }
-  .man-empty-state-icon { font-size: 48px; margin-bottom: 14px; }
-
-  /* ─── PANTALLA PÚBLICA: FIRMA DE MANUAL ─────────────────── */
+  /* ─── PANTALLA DE FIRMA (FULL SCREEN) ─── */
   #firma-screen {
     display: none; position: fixed; inset: 0; z-index: 9999;
-    background: var(--bg); align-items: center; justify-content: center;
-    flex-direction: column; padding: 20px; font-family: 'Syne', sans-serif;
+    background: var(--surface); flex-direction: column;
   }
   #firma-screen.show { display: flex; }
 
-  .firma-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 18px; width: 100%; max-width: 520px; overflow: hidden;
-    box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  .firma-container {
+    flex: 1; display: flex; flex-direction: column;
+    max-width: 900px; margin: 0 auto; width: 100%;
+    background: var(--surface); position: relative;
   }
+
   .firma-header {
-    padding: 28px 28px 20px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--m9) 8%, var(--surface)), var(--surface));
-  }
-  .firma-logo {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+    padding: 40px 24px 30px; border-bottom: 1px solid var(--border);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--m9) 8%, white), white);
   }
   .firma-empresa-badge {
-    display: inline-block; font-size: 13px; font-weight: 800;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
-    background: color-mix(in srgb, var(--m9) 15%, transparent);
-    color: var(--m9); border: 1px solid color-mix(in srgb, var(--m9) 30%, transparent);
+    display: inline-block; font-size: 11px; font-weight: 800; font-family: 'DM Mono';
+    padding: 4px 12px; border-radius: 6px; margin-bottom: 12px;
+    background: var(--m9); color: white; text-transform: uppercase; letter-spacing: 0.1em;
   }
-  .firma-titulo { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 4px; }
-  .firma-sub { font-size: 13px; color: var(--muted); }
-  .firma-cuerpo { padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; }
-  .firma-contenido {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 18px; font-size: 13px;
-    line-height: 1.7; color: var(--text); max-height: 220px; overflow-y: auto;
+  .firma-titulo { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--text); }
+
+  .firma-scroll-area {
+    flex: 1; overflow-y: auto; padding: 32px 24px;
+    display: flex; flex-direction: column; gap: 30px;
   }
-  .firma-nombre-field { display: flex; flex-direction: column; gap: 6px; }
-  .firma-nombre-label {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--muted);
+
+  /* Contenido del documento (lo que se exporta a PDF) */
+  #pdf-template { 
+    background: white; padding: 20px; 
+    border: 1px solid transparent; /* Solo visible en exportación si se desea */
   }
-  .firma-nombre-input {
-    width: 100%; padding: 12px 14px; border-radius: 10px;
-    border: 1.5px solid var(--border); background: var(--surface2);
-    color: var(--text); font-family: 'Syne', sans-serif; font-size: 15px;
-    transition: border-color 160ms; box-sizing: border-box;
+  .pdf-body { 
+    font-size: 16px; line-height: 1.8; color: #1f2937; 
+    white-space: pre-wrap; margin-bottom: 40px; 
   }
-  .firma-nombre-input:focus { outline: none; border-color: var(--m9); }
-  .firma-nombre-input::placeholder { color: var(--muted); }
-  .firma-aviso {
-    font-size: 11px; color: var(--muted); line-height: 1.5;
-    padding: 10px 14px; background: var(--surface2);
-    border-radius: 8px; border: 1px solid var(--border);
+  
+  /* Bloque de firma al pie del PDF */
+  .pdf-footer-firma {
+    margin-top: 50px; padding-top: 30px; border-top: 2px solid #e5e7eb;
+    display: none; /* Se activa vía JS durante la captura del PDF */
   }
+
+  .firma-controls {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.05);
+  }
+  .firma-input-group { margin-bottom: 16px; }
+  .firma-label { 
+    font-family: 'DM Mono'; font-size: 11px; text-transform: uppercase; 
+    color: var(--muted); margin-bottom: 8px; display: block; 
+  }
+  .firma-input {
+    width: 100%; padding: 16px; border-radius: 12px; border: 2px solid var(--border);
+    font-size: 18px; font-family: 'Syne'; transition: all .2s;
+  }
+  .firma-input:focus { outline: none; border-color: var(--m9); background: #fffcf9; }
+
   .firma-btn {
-    width: 100%; padding: 16px; border: none; border-radius: 12px;
-    background: var(--m9); color: #ffffff;
-    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
-    cursor: pointer; letter-spacing: .02em; transition: opacity 200ms, transform 100ms;
+    width: 100%; padding: 20px; border: none; border-radius: 14px;
+    background: var(--m9); color: white; font-size: 17px; font-weight: 800;
+    cursor: pointer; transition: all 0.2s;
   }
-  .firma-btn:hover { opacity: .9; }
-  .firma-btn:active { transform: scale(.98); }
-  .firma-btn:disabled { opacity: .4; cursor: not-allowed; }
-  .firma-result {
-    display: none; flex-direction: column; align-items: center;
-    gap: 10px; padding: 28px; text-align: center;
+  .firma-btn:hover { filter: brightness(1.1); }
+  .firma-btn:active { transform: scale(0.98); }
+  .firma-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .firma-success {
+    position: absolute; inset: 0; background: var(--surface); z-index: 20;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 40px; animation: fadeIn 0.4s ease;
   }
-  .firma-result.show { display: flex; }
-  .firma-result-icon { font-size: 48px; }
-  .firma-result-title { font-size: 20px; font-weight: 800; }
-  .firma-result-sub { font-size: 13px; color: var(--muted); }
-  .firma-footer {
-    text-align: center; padding: 12px; font-family: 'DM Mono', monospace;
-    font-size: 10px; color: var(--muted); letter-spacing: .1em;
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ─── DASHBOARD ADMIN ─── */
+  #app { height: 100dvh; display: flex; flex-direction: column; }
+  .admin-header { 
+    padding: 24px; border-bottom: 1px solid var(--border); 
+    display: flex; align-items: center; background: white; 
+    position: sticky; top: 0; z-index: 100;
   }
+  .man-grid { 
+    display: grid; padding: 24px; 
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); 
+    gap: 24px; 
+  }
+  .man-card { 
+    background: white; border: 1px solid var(--border); 
+    border-radius: 16px; overflow: hidden; 
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .man-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
+  .man-card-head { padding: 20px; border-bottom: 1px solid var(--border); background: #fafafa; }
+  .man-card-body { padding: 20px; }
+  
+  .man-firma-row {
+    display: flex; align-items: center; gap: 10px; padding: 12px; 
+    background: #f9fafb; border-radius: 10px; margin-bottom: 8px; font-size: 13px;
+  }
+  .btn-pdf-admin {
+    margin-left: auto; background: white; border: 1px solid var(--border); 
+    padding: 6px 12px; border-radius: 8px; font-size: 11px; 
+    cursor: pointer; font-family: 'DM Mono'; font-weight: 700;
+    transition: all 0.2s;
+  }
+  .btn-pdf-admin:hover { background: var(--m9); color: white; border-color: var(--m9); }
+
+  /* Modales */
+  .bj-modal-overlay { 
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); 
+    display: none; align-items: center; justify-content: center; z-index: 200; 
+    backdrop-filter: blur(4px);
+  }
+  .bj-modal-overlay.open { display: flex; }
+  .bj-modal { 
+    background: white; padding: 32px; border-radius: 20px; 
+    width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto;
+  }
+  .bj-input { 
+    width: 100%; padding: 12px 16px; margin: 10px 0; 
+    border: 1px solid var(--border); border-radius: 10px; 
+    font-family: 'Syne'; font-size: 14px;
+  }
+  .bj-btn { 
+    padding: 12px 24px; border-radius: 10px; border: none; 
+    cursor: pointer; font-weight: 700; font-family: 'Syne'; transition: opacity 0.2s;
+  }
+  .bj-btn:hover { opacity: 0.8; }
 </style>
 </head>
 <body>
 
 <div id="firma-screen">
-  <div class="firma-card">
+  <div class="firma-container">
     <div class="firma-header">
-      <div class="firma-logo">BC Gestión · Documentos internos</div>
-      <div class="firma-empresa-badge" id="firma-empresa-badge">—</div>
-      <div class="firma-titulo" id="firma-titulo">Cargando…</div>
-      <div class="firma-sub" id="firma-sub"></div>
+      <div class="firma-empresa-badge" id="f-badge">...</div>
+      <h1 class="firma-titulo" id="f-titulo">Cargando documento...</h1>
     </div>
-    <div class="firma-cuerpo" id="firma-cuerpo">
-      <div class="firma-contenido" id="firma-contenido"></div>
-      <div class="firma-aviso">
-        📋 Leé el documento completo antes de confirmar. Al hacer clic en el botón estás declarando
-        que lo leíste y estás de acuerdo con su contenido.
+
+    <div class="firma-scroll-area">
+      <div id="pdf-template">
+        <div id="f-contenido" class="pdf-body"></div>
+        
+        <div id="f-firma-footer" class="pdf-footer-firma">
+          <p style="font-weight: bold; margin-bottom: 8px; font-family: 'Syne';">ACEPTACIÓN Y FIRMA DIGITAL</p>
+          <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px;">
+            <p style="font-size: 14px; margin-bottom: 10px;">El presente documento ha sido leído y aceptado en conformidad por:</p>
+            <p id="f-nombre-final" style="font-size: 24px; color: #b45309; font-weight: 800; font-family: 'Syne';"></p>
+            <p id="f-fecha-final" style="font-size: 12px; color: #6b7280; font-family: 'DM Mono'; margin-top: 5px;"></p>
+            <div style="margin-top: 15px; border-top: 1px dashed #ccc; pt: 10px; font-size: 10px; color: #999; font-family: 'DM Mono';">
+              ID DE TRANSACCIÓN: <span id="f-doc-id"></span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="firma-nombre-field">
-        <label class="firma-nombre-label">Tu nombre completo</label>
-        <input class="firma-nombre-input" id="firma-nombre-input" type="text"
-          placeholder="Nombre y apellido" autocomplete="name"
-          oninput="_firmaValidar()">
+    </div>
+
+    <div class="firma-controls" id="f-controls">
+      <div class="firma-input-group">
+        <label class="firma-label">Escribí tu nombre y apellido completo para firmar</label>
+        <input type="text" id="f-input-nombre" class="firma-input" placeholder="Ej: Juan Pérez" oninput="_valFirma()">
       </div>
-      <button class="firma-btn" id="firma-btn" disabled onclick="_firmarManual()">
-        ✅ Leído y aceptado
+      <button id="f-btn-firmar" class="firma-btn" disabled onclick="_ejecutarFirma()">
+        ✅ Confirmar y Descargar mi Copia PDF
       </button>
     </div>
-    <div class="firma-result" id="firma-result-ok">
-      <div class="firma-result-icon">🎉</div>
-      <div class="firma-result-title" style="color:#059669">¡Gracias por confirmar!</div>
-      <div class="firma-result-sub" id="firma-result-ok-sub">Tu aceptación fue registrada correctamente.</div>
-      <a id="firma-pdf-btn" href="#" target="_blank" rel="noopener"
-        style="display:none;margin-top:12px;padding:12px 24px;border-radius:10px;background:var(--m9);color:#ffffff;
-               font-family:'Syne',sans-serif;font-size:14px;font-weight:800;text-decoration:none;
-               transition:opacity 0.2s"
-        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-        📄 Descargar PDF
-      </a>
-    </div>
-    <div class="firma-result" id="firma-result-ya">
-      <div class="firma-result-icon">✅</div>
-      <div class="firma-result-title" style="color:var(--muted)">Ya habías firmado</div>
-      <div class="firma-result-sub">Este documento ya fue confirmado anteriormente.</div>
-    </div>
-    <div class="firma-result" id="firma-result-err">
-      <div class="firma-result-icon">❌</div>
-      <div class="firma-result-title" style="color:var(--danger)">Error al confirmar</div>
-      <div class="firma-result-sub" id="firma-result-err-sub">Hubo un problema. Intentá de nuevo.</div>
+
+    <div id="f-success" class="firma-success">
+      <div style="font-size: 70px; margin-bottom: 24px;">📝</div>
+      <h2 style="font-size: 28px; font-weight: 800; color: #059669;">¡Documento Firmado!</h2>
+      <p style="margin: 20px 0; color: var(--muted); font-size: 16px; line-height: 1.6;">
+        Tu aceptación ha sido registrada. <br> 
+        <b>El archivo PDF se ha descargado automáticamente.</b>
+      </p>
+      <button class="bj-btn" style="background: var(--surface2)" onclick="location.reload()">Cerrar</button>
     </div>
   </div>
-  <div class="firma-footer">BC Gestión · Sistema interno de RRHH</div>
 </div>
 
 <div id="app">
-  <div id="main">
-    <div class="module" id="module-manuales">
-      <div class="module-header">
-        <div class="module-icon" style="background:color-mix(in srgb,var(--m9) 15%,var(--surface2));color:var(--m9)">📋</div>
-        <div class="module-title-group">
-          <div class="module-eyebrow">Módulo 10</div>
-          <div class="module-title">Manuales y Documentos</div>
-          <div class="module-desc">Generá documentos para firma digital y seguí quién los firmó.</div>
-        </div>
-        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="bj-btn bj-btn-outline" id="man-predef-btn" onclick="manuales.cargarPredefinidos()"
-            style="border-color:var(--m9);color:var(--m9);font-size:12px">
-            📥 Cargar manuales predefinidos
-          </button>
-          <button class="bj-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.abrirNuevo()">+ Nuevo documento</button>
-        </div>
-      </div>
+  <div class="admin-header">
+    <div style="flex:1">
+      <h2 style="font-weight:800; font-size: 22px;">Gestión de Documentos</h2>
+      <p style="font-size:13px; color:var(--muted)">Manuales y confirmaciones de lectura</p>
+    </div>
+    <div style="display:flex; gap: 10px;">
+      <button class="bj-btn" style="background:var(--surface2); color: var(--m9)" onclick="admin.cargarPredefinidos()">📥 Cargar Predefinidos</button>
+      <button class="bj-btn" style="background:var(--m9); color:white" onclick="admin.nuevo()">+ Crear Documento</button>
+    </div>
+  </div>
 
-      <div class="man-toolbar">
-        <div class="man-tabs">
-          <div class="man-tab active" data-loc="" onclick="manuales.filtrarLocal('',this)">TODOS</div>
-          <div id="man-local-chips"></div>
-        </div>
-        <input class="bj-search" style="max-width:220px" placeholder="Buscar documento…" oninput="manuales.buscar(this.value)">
-        <span id="man-count" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:10px;"></span>
-      </div>
+  <div class="man-grid" id="man-grid">
+    <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: #ccc;">Cargando sistema...</div>
+  </div>
 
-      <div class="man-grid" id="man-grid">
-        <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:13px">Cargando…</div>
+  <div class="bj-modal-overlay" id="modal-nuevo">
+    <div class="bj-modal">
+      <h3 id="m-title" style="font-size: 22px; font-weight: 800; margin-bottom: 20px;">Nuevo Documento</h3>
+      <input type="hidden" id="m-id">
+      <label class="firma-label">Nombre del Documento</label>
+      <input class="bj-input" id="m-nombre" placeholder="Ej: Reglamento Interno 2024">
+      <label class="firma-label">Local o Empresa</label>
+      <input class="bj-input" id="m-local" placeholder="Ej: La Mar / Barra Chalaca">
+      <label class="firma-label">Contenido Legal / Manual</label>
+      <textarea class="bj-input" id="m-texto" rows="12" style="resize: vertical;" placeholder="Escribí aquí todo el texto que el empleado debe leer..."></textarea>
+      
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px">
+        <button class="bj-btn" style="background:var(--surface2)" onclick="admin.cerrar()">Cancelar</button>
+        <button class="bj-btn" style="background:var(--m9); color:white" onclick="admin.guardar()">Guardar y Publicar</button>
       </div>
     </div>
-
-    <div class="bj-modal-overlay" id="man-nuevo-overlay" onclick="manuales.cerrarNuevo(event)">
-      <div class="bj-modal" style="max-width:580px" onclick="event.stopPropagation()">
-        <div class="bj-modal-header">
-          <div>
-            <div class="bj-modal-tag" style="color:var(--m9)" id="man-nuevo-tag">Nuevo documento</div>
-            <div class="bj-modal-title" id="man-nuevo-titulo">Crear documento para firma</div>
-          </div>
-          <button class="bj-modal-close" onclick="manuales.cerrarNuevo()">✕</button>
-        </div>
-        <div class="bj-modal-body" style="display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto">
-          <input type="hidden" id="man-doc-id">
-          <div class="bj-section-sep">Identificación</div>
-          <div class="bj-form-row">
-            <div class="bj-field bj-field-wide">
-              <label class="bj-label">Nombre del documento *</label>
-              <input class="bj-input" id="man-nombre-inp" placeholder="Ej: Manual de Ingreso">
-            </div>
-            <div class="bj-field">
-              <label class="bj-label">Local / empresa</label>
-              <select class="bj-input" id="man-local-inp">
-                <option value="">— todos —</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="bj-section-sep">Contenido visible al firmante</div>
-          <div style="font-size:12px;color:var(--muted)">Este texto es lo que verá la persona antes de firmar. Podés incluir las normas, condiciones, políticas, etc.</div>
-          <textarea class="bj-input" id="man-contenido-inp" rows="10"
-            placeholder="Escribí aquí el contenido del documento que el empleado deberá leer y aceptar…"
-            style="resize:vertical;font-family:'Syne',sans-serif;font-size:13px;line-height:1.6"></textarea>
-
-          <div class="bj-section-sep">PDF adjunto (opcional)</div>
-          <div class="bj-field">
-            <label class="bj-label">URL del PDF (Google Drive, Dropbox, etc.)</label>
-            <input class="bj-input" id="man-pdf-inp" type="url" placeholder="https://…">
-          </div>
-
-          <div id="man-nuevo-error" style="color:var(--danger);font-size:12px;min-height:16px"></div>
-        </div>
-        <div class="bj-modal-footer">
-          <button class="bj-btn bj-btn-outline" onclick="manuales.cerrarNuevo()">Cancelar</button>
-          <button class="bj-btn" id="man-save-btn" style="background:var(--m9);color:#ffffff" onclick="manuales.guardar()">Guardar documento</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
 
 <script>
-// ==============================================================
-//  FIREBASE CONFIGURATION
-// ==============================================================
+// 1. CONFIGURACIÓN FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
   authDomain: "rrhhsystem.firebaseapp.com",
@@ -529,397 +263,216 @@ const firebaseConfig = {
   messagingSenderId: "71511125212",
   appId: "1:71511125212:web:03a0ad11b281e397a29819"
 };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-let db;
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-} catch(e) {
-  console.warn('Firebase init error:', e.message);
-}
+// 2. LÓGICA DE FIRMA PÚBLICA
+let currentDoc = null;
 
-// Mock de Locales para que el dropdown y los filtros funcionen
-const adminLocales = {
-  getLocales: () => [
-    { nombre: 'Barra Chalaca' },
-    { nombre: 'La Mar' },
-    { nombre: 'Tanta' }
-  ]
-};
+async function initFirma() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const docId = urlParams.get('firma');
+  if(!docId) return;
 
-// =============================================================
-//  MÓDULO: MANUALES / DOCUMENTOS
-// =============================================================
-const manuales = (() => {
-  const COL = 'manuales';
-  let _docs    = [];
-  let _filtLoc = '';
-  let _filtQ   = '';
-  let _unsub   = null;
-  let _locales = [];
+  // Ocultar admin, mostrar firma
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('firma-screen').classList.add('show');
 
-  const $ = id => document.getElementById(id);
-  const esc = v => String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  const MANUALES_PREDEFINIDOS = [
-    {
-      nombre: 'Manual de Ingreso — Tanta',
-      local:  'Tanta',
-      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — Tanta\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingreso de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
-    },
-    {
-      nombre: 'Manual de Ingreso — La Mar',
-      local:  'La Mar',
-      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — La Mar Cebichería Peruana\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingreso de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
-    },
-    {
-      nombre: 'Manual de Ingreso — Barra Chalaca',
-      local:  'Barra Chalaca',
-      contenido: `MANUAL DE INGRESO\nPautas de Bienvenida y Normas Internas — Barra Chalaca\n\n¡Bienvenido/a al equipo!\n\nNos alegra que te sumes. Creemos que la gastronomía se construye todos los días con compromiso, responsabilidad y trabajo en equipo. Nuestro objetivo es que te sientas acompañado/a, valorado/a y cómodo/a en tu jornada laboral, promoviendo un buen clima y el crecimiento profesional.\n\nNUESTRAS PAUTAS DE CONVIVENCIA\n\nEn cada integrante del equipo esperamos una actitud responsable y profesional. Es fundamental el cumplimiento de las siguientes pautas:\n\n• Puntualidad y Asistencia: Cumplir con los horarios establecidos. Se permite una tolerancia de ingrancia de hasta 15 minutos en un máximo de 2 ocasiones mensuales. Es obligatorio avisar con anticipación ante cualquier falta o demora.\n\n• Actitud y Respeto: Mantener una buena predisposición y respeto hacia compañeros, encargados y clientes.\n\n• Higiene y Seguridad: Cumplir estrictamente con las normas de higiene, seguridad y orden del puesto de trabajo.\n\n• Procedimientos: Respetar los procedimientos internos y la organización del local.\n\n• Cuidado de Recursos: Cuidar las herramientas de trabajo y los recursos de la empresa.\n\n• Capacitación: Tener voluntad de aprender y participar de las capacitaciones.\n\n1. PROCESO DE PRUEBA E INDUCCIÓN\nEste período sirve para evaluar la adaptación mutua al puesto y al equipo.\n• Abono de días: Todos los días de prueba realizados son remunerados.\n• Continuidad: En caso de continuar en la empresa, se pagan junto con el sueldo del 5 al 10 del mes siguiente.\n• No continuidad: En caso de no continuar, se pagarán de igual manera.\n• Inasistencias: No presentarse a los días pactados implica la baja del proceso y se pagará lo correspondiente al tiempo trabajado.\n\n2. ADELANTOS Y SUELDOS\nPara una mejor organización administrativa, nos regimos por el siguiente cronograma:\n\nAdelantos de Sueldo:\n• Solicitud: Del 15 al 20 de cada mes.\n• Entrega: Del 21 al 25 de cada mes (sin excepción).\n• Nota: Fuera de estas fechas no se recibirán pedidos ni se realizarán entregas.\n\nPago de Haberes (Sueldos):\n• Modalidad: Los sueldos se abonan a mes vencido.\n• Fecha de cobro: El período de pago es entre los días 5 y 10 de cada mes.\n\nCONSTANCIA DE CONFORMIDAD\nDeclaro haber recibido, leído y comprendido el manual de ingreso, aceptando las condiciones y normas internas aquí detalladas.`
-    }
-  ];
-
-  async function cargarPredefinidos() {
-    if (!db) { alert('Firebase no disponible'); return; }
-    const btn = $('man-predef-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Cargando…'; }
-
-    try {
-      const snap = await db.collection(COL).get();
-      const existentes = snap.docs.map(d => d.data().nombre || '');
-      let creados = 0;
-      for (const m of MANUALES_PREDEFINIDOS) {
-        if (existentes.includes(m.nombre)) continue; 
-        await db.collection(COL).add({
-          nombre:    m.nombre,
-          local:     m.local,
-          contenido: m.contenido,
-          firmas:    [],
-          creadoAt:  new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          predefinido: true,
-        });
-        creados++;
-      }
-
-      if (creados === 0) {
-        alert('Los manuales ya estaban cargados.');
-      } else {
-        alert(`✓ Se cargaron ${creados} manual${creados > 1 ? 'es' : ''} correctamente.`);
-      }
-    } catch(e) {
-      alert('Error: ' + e.message);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '📥 Cargar manuales predefinidos'; }
-    }
-  }
-
-  function init() {
-    _locales = adminLocales.getLocales();
-    _poblarLocalSelect();
-    _poblarChips();
-    if (!db) { _render(); return; }
-    if (_unsub) _unsub();
-    _unsub = db.collection(COL).orderBy('creadoAt','desc')
-      .onSnapshot(snap => {
-        _docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        _render();
-      }, () => {
-        _unsub = db.collection(COL).onSnapshot(snap => {
-          _docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          _render();
-        });
-      });
-  }
-
-  function _poblarLocalSelect() {
-    const el = $('man-local-inp'); if (!el) return;
-    const cur = el.value;
-    el.innerHTML = '<option value="">— todos —</option>' +
-      _locales.map(l => { const n=l.nombre||l; return `<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`; }).join('');
-  }
-
-  function _poblarChips() {
-    const cont = $('man-local-chips'); if (!cont) return;
-    cont.innerHTML = _locales.map(l => {
-      const n = l.nombre||l;
-      return `<div class="man-tab${_filtLoc===n?' active':''}" onclick="manuales.filtrarLocal('${esc(n)}',this)">${esc(n)}</div>`;
-    }).join('');
-  }
-
-  function _render() {
-    const grid = $('man-grid'); if (!grid) return;
-    let lista = _docs.filter(d => {
-      if (_filtLoc && d.local && d.local !== _filtLoc) return false;
-      if (_filtQ && !(d.nombre||'').toLowerCase().includes(_filtQ)) return false;
-      return true;
-    });
-    const cnt = $('man-count');
-    if (cnt) cnt.textContent = `${lista.length} doc${lista.length!==1?'s':''}`;
-    if (!lista.length) {
-      grid.innerHTML = `<div class="man-empty-state">
-        <div class="man-empty-state-icon">📋</div>
-        ${_docs.length ? 'Sin resultados para ese filtro.' : 'No hay documentos aún.<br>Creá el primero con "+ Nuevo documento".'}
-      </div>`;
+  try {
+    const snap = await db.collection('manuales').doc(docId).get();
+    if(!snap.exists) {
+      document.getElementById('f-titulo').textContent = "Documento no encontrado";
       return;
     }
-    grid.innerHTML = lista.map(d => _cardHTML(d)).join('');
+    currentDoc = { id: snap.id, ...snap.data() };
+    
+    document.getElementById('f-badge').textContent = currentDoc.local || 'BC GESTIÓN';
+    document.getElementById('f-titulo').textContent = currentDoc.nombre;
+    document.getElementById('f-contenido').textContent = currentDoc.contenido;
+    document.getElementById('f-doc-id').textContent = snap.id.toUpperCase();
+  } catch(e) {
+    console.error(e);
   }
-
-  function _cardHTML(d) {
-    const firmas  = d.firmas || [];
-    const total   = firmas.length;
-    const url     = `${location.href.split('?')[0]}?firma=${d.id}`;
-    const shortUrl = url.length > 55 ? url.slice(0,52)+'…' : url;
-    const firmaNombre = d.nombre || d.id;
-
-    return `
-    <div class="man-card">
-      <div class="man-card-head">
-        <div class="man-card-icon">📋</div>
-        <div style="flex:1;min-width:0">
-          <div class="man-card-name">
-            ${esc(d.nombre)}
-            ${d.predefinido ? '<span class="man-badge-oficial">OFICIAL</span>' : ''}
-          </div>
-          <div class="man-card-meta">
-            ${d.local ? `<span style="color:var(--mA)">${esc(d.local)}</span> · ` : 'Todos los locales · '}
-            ${_fmtFecha(d.creadoAt)}
-          </div>
-        </div>
-        <div class="man-card-actions">
-          <button class="bj-icon-btn" title="Editar" onclick="manuales.editar('${d.id}')">✏</button>
-          <button class="bj-icon-btn del" title="Eliminar" onclick="manuales.eliminar('${d.id}','${esc(d.nombre)}')">✕</button>
-        </div>
-      </div>
-      <div class="man-card-body">
-
-        <div class="man-stat-row">
-          <div class="man-stat">
-            <div class="man-stat-val">${total}</div>
-            <div class="man-stat-lbl">Firmas recibidas</div>
-          </div>
-          <div class="man-stat" style="border-color:color-mix(in srgb,var(--m2) 25%,var(--border))">
-            <div class="man-stat-val pct">${d.contenido ? Math.ceil(d.contenido.length / 5) : 0}</div>
-            <div class="man-stat-lbl">Palabras aprox.</div>
-          </div>
-        </div>
-
-        <div class="man-link-copy">
-          <span class="man-link-url" title="${esc(url)}">${esc(shortUrl)}</span>
-          <button class="man-link-copy-btn" onclick="manuales.copiarLink('${esc(url)}',this)">📋 Copiar link</button>
-        </div>
-
-        ${total > 0 ? `
-          <div class="man-firmas-header">
-            <span>Firmantes recientes</span>
-            ${total > 5 ? `<span style="color:var(--mA)">+${total-5} más</span>` : ''}
-          </div>
-          <div class="man-firmas-list">
-            ${firmas.slice(-5).reverse().map(f => {
-              const initials = (f.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-              return `
-              <div class="man-firma-row">
-                <div class="man-firma-avatar">${initials}</div>
-                <span class="man-firma-nombre">${esc(f.nombre)}</span>
-                <span class="man-firma-fecha">${_fmtFecha(f.at)}</span>
-                <span class="man-firma-check">✓</span>
-                <button class="man-firma-del" onclick="manuales.quitarFirma('${d.id}','${esc(f.nombre).replace(/'/g,"\\'")}','${f.at}')" title="Quitar firma">✕</button>
-              </div>`;
-            }).join('')}
-          </div>` :
-          `<div class="man-empty-firmas">Sin firmas aún — compartí el link con los empleados</div>`
-        }
-      </div>
-    </div>`;
-  }
-
-  function filtrarLocal(loc, chip) {
-    _filtLoc = loc;
-    document.querySelectorAll('.man-tab').forEach(c=>c.classList.remove('active'));
-    if (chip) chip.classList.add('active');
-    _render();
-  }
-  function buscar(v) { _filtQ = v.toLowerCase(); _render(); }
-
-  function copiarLink(url, btn) {
-    navigator.clipboard?.writeText(url).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = '✓ Copiado!'; btn.style.color = '#059669';
-      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
-    }).catch(() => prompt('Copiá este link:', url));
-  }
-
-  function abrirNuevo() {
-    $('man-doc-id').value = '';
-    $('man-pdf-inp').value       = '';
-    $('man-nuevo-tag').textContent    = 'Nuevo documento';
-    $('man-nuevo-titulo').textContent = 'Crear documento para firma';
-    $('man-nombre-inp').value    = '';
-    $('man-contenido-inp').value = '';
-    $('man-nuevo-error').textContent = '';
-    _poblarLocalSelect();
-    $('man-local-inp').value = '';
-    $('man-nuevo-overlay').classList.add('open');
-    setTimeout(() => $('man-nombre-inp')?.focus(), 80);
-  }
-
-  function editar(id) {
-    const d = _docs.find(x=>x.id===id); if (!d) return;
-    $('man-doc-id').value = id;
-    $('man-nuevo-tag').textContent    = 'Editar documento';
-    $('man-nuevo-titulo').textContent = 'Editar: ' + (d.nombre||'');
-    $('man-nombre-inp').value    = d.nombre    || '';
-    $('man-contenido-inp').value = d.contenido || '';
-    $('man-pdf-inp').value       = d.pdfUrl || '';
-    $('man-nuevo-error').textContent = '';
-    _poblarLocalSelect();
-    $('man-local-inp').value = d.local || '';
-    $('man-nuevo-overlay').classList.add('open');
-  }
-
-  function cerrarNuevo(e) {
-    if (e && e.target !== $('man-nuevo-overlay')) return;
-    $('man-nuevo-overlay').classList.remove('open');
-  }
-
-  async function guardar() {
-    const nombre    = ($('man-nombre-inp').value||'').trim();
-    const contenido = ($('man-contenido-inp').value||'').trim();
-    if (!nombre)    { $('man-nuevo-error').textContent = 'El nombre es obligatorio.'; return; }
-    if (!contenido) { $('man-nuevo-error').textContent = 'El contenido no puede estar vacío.'; return; }
-    const data = { nombre, contenido, pdfUrl: ($('man-pdf-inp').value||'').trim(), local: $('man-local-inp').value||'', updatedAt: new Date().toISOString() };
-    const btn = $('man-save-btn');
-    btn.disabled = true; btn.textContent = 'Guardando…';
-    try {
-      if (!db) throw new Error('Firebase no disponible');
-      const docId = $('man-doc-id').value;
-      if (docId) {
-        await db.collection(COL).doc(docId).update(data);
-      } else {
-        data.creadoAt = data.updatedAt; data.firmas = [];
-        await db.collection(COL).add(data);
-      }
-      $('man-nuevo-overlay').classList.remove('open');
-    } catch(e) {
-      $('man-nuevo-error').textContent = 'Error: ' + e.message;
-    } finally {
-      btn.disabled = false; btn.textContent = 'Guardar documento';
-    }
-  }
-
-  async function eliminar(id, nombre) {
-    if (!confirm(`¿Eliminar "${nombre}" y todas sus firmas?`)) return;
-    try { await db.collection(COL).doc(id).delete(); } catch(e) { alert(e.message); }
-  }
-
-  async function quitarFirma(docId, nombre, at) {
-    if (!confirm(`¿Quitar la firma de "${nombre}"?`)) return;
-    try {
-      const snap = await db.collection(COL).doc(docId).get();
-      if (!snap.exists) return;
-      const firmas = (snap.data().firmas||[]).filter(f=>!(f.nombre===nombre&&f.at===at));
-      await db.collection(COL).doc(docId).update({ firmas });
-    } catch(e) { alert(e.message); }
-  }
-
-  function _fmtFecha(iso) {
-    if (!iso) return '—';
-    try { return new Date(iso).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-    catch { return iso; }
-  }
-
-  return { init, filtrarLocal, buscar, copiarLink, abrirNuevo, editar, cerrarNuevo, guardar, eliminar, quitarFirma, cargarPredefinidos };
-})();
-
-// =============================================================
-//  PANTALLA PÚBLICA: FIRMA DE MANUAL  (?firma=DOCID)
-// =============================================================
-(function _initFirma() {
-  const params = new URLSearchParams(location.search);
-  const docId  = params.get('firma');
-  if (!docId) return;
-
-  const screen = document.getElementById('firma-screen');
-  const app = document.getElementById('app');
-  if (screen) screen.classList.add('show');
-  if (app) app.style.display = 'none';
-
-  function _waitFirebase(fn, n) {
-    n = n || 0;
-    if (typeof firebase !== 'undefined' && typeof db !== 'undefined' && db) fn();
-    else if (n < 40) setTimeout(() => _waitFirebase(fn, n+1), 150);
-    else { document.getElementById('firma-titulo').textContent = 'Error de conexión'; }
-  }
-
-  _waitFirebase(async () => {
-    try {
-      const snap = await db.collection('manuales').doc(docId).get();
-      if (!snap.exists) {
-        document.getElementById('firma-titulo').textContent = 'Documento no encontrado';
-        document.getElementById('firma-cuerpo').style.display = 'none';
-        return;
-      }
-      const d = snap.data();
-      window._currentDocPdf = d.pdfUrl || '';
-      document.getElementById('firma-empresa-badge').textContent = d.local || 'BC Gestión';
-      document.getElementById('firma-titulo').textContent  = d.nombre || 'Documento';
-      document.getElementById('firma-sub').textContent     = 'Leé el contenido completo antes de confirmar tu aceptación.';
-      document.getElementById('firma-contenido').innerHTML = (d.contenido||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    } catch(e) {
-      document.getElementById('firma-titulo').textContent = 'Error al cargar';
-      console.error(e);
-    }
-  });
-
-  window._firmaValidar = function() {
-    const v = (document.getElementById('firma-nombre-input').value||'').trim();
-    document.getElementById('firma-btn').disabled = v.length < 3;
-  };
-
-  window._firmarManual = async function() {
-    const nombre = (document.getElementById('firma-nombre-input').value||'').trim();
-    if (nombre.length < 3) return;
-    const btn = document.getElementById('firma-btn');
-    btn.textContent = 'Guardando…'; btn.disabled = true;
-    try {
-      if (!db) throw new Error('Sin conexión');
-      const snap = await db.collection('manuales').doc(docId).get();
-      if (!snap.exists) throw new Error('Documento no encontrado');
-      const firmas = snap.data().firmas || [];
-      const hoy = new Date().toISOString().slice(0,10);
-      const yaFirmo = firmas.some(f => (f.nombre||'').toLowerCase()===nombre.toLowerCase() && (f.at||'').slice(0,10)===hoy);
-      if (yaFirmo) {
-        document.getElementById('firma-cuerpo').style.display = 'none';
-        document.getElementById('firma-result-ya').classList.add('show');
-        return;
-      }
-      firmas.push({ nombre, at: new Date().toISOString() });
-      await db.collection('manuales').doc(docId).update({ firmas });
-      document.getElementById('firma-cuerpo').style.display = 'none';
-      document.getElementById('firma-result-ok-sub').textContent = `${nombre}, tu aceptación quedó registrada correctamente. ¡Gracias!`;
-      
-      if (window._currentDocPdf) {
-        const pdfBtn = document.getElementById('firma-pdf-btn');
-        pdfBtn.href = window._currentDocPdf;
-        pdfBtn.style.display = 'block';
-      }
-      
-      document.getElementById('firma-result-ok').classList.add('show');
-    } catch(e) {
-      document.getElementById('firma-result-err-sub').textContent = e.message || 'Error desconocido.';
-      document.getElementById('firma-result-err').classList.add('show');
-      btn.textContent = 'Leído y aceptado'; btn.disabled = false;
-    }
-  };
-})();
-
-// Inicializar el módulo de la interfaz administrativa si no se está en la página de firma pública
-const params = new URLSearchParams(location.search);
-if (!params.has('firma')) {
-  setTimeout(() => manuales.init(), 100);
 }
 
+function _valFirma() {
+  const n = document.getElementById('f-input-nombre').value.trim();
+  document.getElementById('f-btn-firmar').disabled = n.length < 6;
+}
+
+async function _ejecutarFirma() {
+  const nombre = document.getElementById('f-input-nombre').value.trim();
+  const fecha = new Date().toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const btn = document.getElementById('f-btn-firmar');
+  
+  btn.disabled = true;
+  btn.textContent = "Generando PDF firmado...";
+
+  try {
+    // A. Actualizar Base de Datos
+    const firmasActuales = currentDoc.firmas || [];
+    firmasActuales.push({ nombre, at: new Date().toISOString() });
+    await db.collection('manuales').doc(currentDoc.id).update({ firmas: firmasActuales });
+
+    // B. Generar y descargar PDF
+    await generarPDF(nombre, currentDoc.nombre, fecha);
+
+    // C. Finalizar
+    document.getElementById('f-success').style.display = 'flex';
+    document.getElementById('f-controls').style.display = 'none';
+  } catch(e) {
+    alert("Hubo un error al procesar la firma: " + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function generarPDF(nombreEmpleado, tituloDoc, fechaFirma) {
+  // Configurar el pie de firma en el template
+  const footer = document.getElementById('f-firma-footer');
+  document.getElementById('f-nombre-final').textContent = nombreEmpleado;
+  document.getElementById('f-fecha-final').textContent = "Fecha y Hora de Firma: " + fechaFirma;
+  footer.style.display = 'block';
+
+  const element = document.getElementById('pdf-template');
+  
+  // Captura de alta calidad
+  const canvas = await html2canvas(element, { 
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    backgroundColor: '#ffffff'
+  });
+  
+  const imgData = canvas.toDataURL('image/png');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  
+  const imgProps = pdf.getImageProperties(imgData);
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+  
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+  pdf.save(`FIRMA_${tituloDoc.replace(/\s/g,'_')}_${nombreEmpleado.replace(/\s/g,'_')}.pdf`);
+  
+  footer.style.display = 'none'; // Ocultar de la vista web
+}
+
+// 3. LÓGICA DE ADMINISTRADOR
+const admin = {
+  docs: [],
+  init: function() {
+    db.collection('manuales').orderBy('at', 'desc').onSnapshot(snap => {
+      this.docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      this.render();
+    });
+  },
+  render: function() {
+    const grid = document.getElementById('man-grid');
+    if(this.docs.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:80px; color:var(--muted)">No hay documentos creados aún.</div>`;
+      return;
+    }
+    grid.innerHTML = this.docs.map(d => `
+      <div class="man-card">
+        <div class="man-card-head">
+          <div style="font-size:10px; color:var(--m9); font-weight:800; font-family:'DM Mono'">${(d.local || 'GENERAL').toUpperCase()}</div>
+          <div style="font-weight:800; font-size:17px; margin: 4px 0">${d.nombre}</div>
+          <div style="margin-top:12px; display:flex; gap:8px">
+            <button class="bj-btn" style="font-size:11px; padding:6px 12px; background:var(--m9); color:white" onclick="admin.copiarLink('${d.id}')">🔗 Link de Firma</button>
+            <button class="bj-btn" style="font-size:11px; padding:6px 12px; background:#f0f2f5" onclick="admin.editar('${d.id}')">✏️</button>
+            <button class="bj-btn" style="font-size:11px; padding:6px 12px; background:#fff1f1; color:red" onclick="admin.borrar('${d.id}')">🗑️</button>
+          </div>
+        </div>
+        <div class="man-card-body">
+          <div style="font-family:'DM Mono'; font-size:11px; margin-bottom:12px; color:var(--muted); display:flex; justify-content:space-between">
+            <span>FIRMANTES</span>
+            <span>TOTAL: ${(d.firmas||[]).length}</span>
+          </div>
+          <div style="max-height: 200px; overflow-y: auto;">
+            ${(d.firmas || []).slice().reverse().map(f => `
+              <div class="man-firma-row">
+                <div style="flex:1">
+                  <div style="font-weight:700">${f.nombre}</div>
+                  <div style="font-size:10px; color:var(--muted)">${new Date(f.at).toLocaleDateString()}</div>
+                </div>
+                <button class="btn-pdf-admin" onclick="admin.descargarCopiaAdmin('${d.id}', '${f.nombre.replace(/'/g,"")}', '${f.at}')">PDF</button>
+              </div>
+            `).join('') || '<div style="font-size:12px; color:#ccc; text-align:center; padding: 10px;">Nadie ha firmado todavía.</div>'}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  },
+  nuevo: () => {
+    document.getElementById('m-id').value = '';
+    document.getElementById('m-nombre').value = '';
+    document.getElementById('m-local').value = '';
+    document.getElementById('m-texto').value = '';
+    document.getElementById('m-title').textContent = "Crear Nuevo Documento";
+    document.getElementById('modal-nuevo').classList.add('open');
+  },
+  editar: function(id) {
+    const d = this.docs.find(x => x.id === id);
+    document.getElementById('m-id').value = d.id;
+    document.getElementById('m-nombre').value = d.nombre;
+    document.getElementById('m-local').value = d.local;
+    document.getElementById('m-texto').value = d.contenido;
+    document.getElementById('m-title').textContent = "Editar Documento";
+    document.getElementById('modal-nuevo').classList.add('open');
+  },
+  cerrar: () => document.getElementById('modal-nuevo').classList.remove('open'),
+  guardar: async function() {
+    const id = document.getElementById('m-id').value;
+    const data = {
+      nombre: document.getElementById('m-nombre').value.trim(),
+      local: document.getElementById('m-local').value.trim(),
+      contenido: document.getElementById('m-texto').value.trim(),
+      at: new Date().toISOString()
+    };
+    if(!data.nombre || !data.contenido) return alert("Nombre y Contenido son obligatorios");
+    
+    if(id) await db.collection('manuales').doc(id).update(data);
+    else await db.collection('manuales').add({...data, firmas: []});
+    
+    this.cerrar();
+  },
+  borrar: async (id) => confirm("¿Seguro que querés eliminar este documento y todas sus firmas?") && await db.collection('manuales').doc(id).delete(),
+  copiarLink: (id) => {
+    const url = window.location.href.split('?')[0] + '?firma=' + id;
+    navigator.clipboard.writeText(url);
+    alert("Link de firma copiado. Enviaselo al empleado.");
+  },
+  descargarCopiaAdmin: async function(docId, nombre, fechaISO) {
+    const d = this.docs.find(x => x.id === docId);
+    const fecha = new Date(fechaISO).toLocaleString('es-AR');
+    
+    // Inyectamos datos en el template invisible para capturar el PDF
+    document.getElementById('f-titulo').textContent = d.nombre;
+    document.getElementById('f-contenido').textContent = d.contenido;
+    document.getElementById('f-doc-id').textContent = d.id.toUpperCase();
+    
+    await generarPDF(nombre, d.nombre, fecha);
+  },
+  cargarPredefinidos: async function() {
+    const pre = [
+      { n: 'Manual de Ingreso — Tanta', l: 'Tanta', c: 'Bienvenido a Tanta...\n\n1. Puntualidad...\n2. Higiene...\n3. Procedimientos...' },
+      { n: 'Manual de Ingreso — La Mar', l: 'La Mar', c: 'Bienvenido a La Mar...\n\nReglas de convivencia y protocolos de servicio.' },
+      { n: 'Manual de Ingreso — Barra Chalaca', l: 'Barra Chalaca', c: 'Bienvenido a Barra Chalaca...\n\nNormas de seguridad alimentaria y atención.' }
+    ];
+    if(!confirm("¿Cargar los 3 manuales predefinidos?")) return;
+    for(const m of pre) {
+      await db.collection('manuales').add({ nombre: m.n, local: m.l, contenido: m.c, at: new Date().toISOString(), firmas: [] });
+    }
+  }
+};
+
+// 4. ARRANQUE
+const urlParams = new URLSearchParams(window.location.search);
+if(urlParams.has('firma')) {
+  initFirma();
+} else {
+  admin.init();
+}
 </script>
 </body>
 </html>

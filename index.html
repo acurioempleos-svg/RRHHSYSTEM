@@ -2,969 +2,542 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RRHH · Sistema de Gestión de Documentos</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BC Gestión · Panel</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-  :root {
-    --primary: #0f172a;
-    --primary-light: #1e293b;
-    --accent: #d97706;
-    --accent-hover: #b45309;
-    --accent-subtle: rgba(217, 119, 6, 0.08);
-    --bg: #f1f5f9;
-    --surface: #ffffff;
-    --border: #e2e8f0;
-    --border-strong: #cbd5e1;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --text-faint: #94a3b8;
-    --radius: 12px;
-    --radius-lg: 16px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
-    --shadow-lg: 0 20px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
-  }
+/* ═══════════════════════════════════════════════════════════════
+   BC GESTIÓN — SHARED DESIGN SYSTEM v1.0
+   Copiado idéntico en cada página. No editar por separado.
+   ═══════════════════════════════════════════════════════════════ */
 
-  @keyframes spin {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
+/* ─── VARIABLES GLOBALES ─────────────────────────────────────── */
+:root {
+  /* Marca */
+  --bc-amber:        #d97706;
+  --bc-amber-hi:     #f59e0b;
+  --bc-amber-dim:    rgba(217,119,6,0.10);
+  --bc-amber-border: rgba(217,119,6,0.22);
+  /* Superficies */
+  --bc-bg:           #f7f8fa;
+  --bc-surface:      #ffffff;
+  --bc-surface2:     #f0f2f5;
+  --bc-border:       #e0e3ea;
+  --bc-border-hi:    #c8cdd8;
+  /* Texto */
+  --bc-text:         #111827;
+  --bc-muted:        #6b7280;
+  --bc-faint:        #9ca3af;
+  /* Semánticos */
+  --bc-success:      #059669;
+  --bc-danger:       #dc2626;
+  --bc-purple:       #7c3aed;
+  /* Tipografía */
+  --bc-font-sans:    'Syne', sans-serif;
+  --bc-font-mono:    'DM Mono', monospace;
+  /* Forma */
+  --bc-radius:       10px;
+  --bc-radius-lg:    14px;
+  --bc-t:            180ms ease;
+  /* Shadows */
+  --bc-shadow-sm:    0 1px 4px rgba(0,0,0,0.06);
+  --bc-shadow:       0 4px 16px rgba(0,0,0,0.08);
+}
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+/* ─── RESET ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--bc-font-sans);
+  background: var(--bc-bg);
+  color: var(--bc-text);
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.6; }
-  }
+/* ─── NOISE TEXTURE ──────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── SHARED TOPBAR ──────────────────────────────────────────── */
+#bc-topbar {
+  background: var(--bc-surface);
+  border-bottom: 1px solid var(--bc-border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: var(--bc-shadow-sm);
+}
+.bc-topbar-back {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--bc-font-mono); font-size: 10px;
+  color: var(--bc-muted); text-decoration: none;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--bc-border);
+  transition: all var(--bc-t);
+  flex-shrink: 0;
+}
+.bc-topbar-back:hover { border-color: var(--bc-amber); color: var(--bc-amber); background: var(--bc-amber-dim); }
+.bc-logo-mark {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--bc-amber) 0%, #92400e 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--bc-font-mono); font-size: 9px; font-weight: 500;
+  color: white; letter-spacing: -0.5px; flex-shrink: 0;
+}
+.bc-topbar-brand {
+  font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  flex-shrink: 0;
+}
+.bc-topbar-brand span { color: var(--bc-amber); }
+.bc-topbar-sep { color: var(--bc-border); font-size: 16px; user-select: none; }
+.bc-topbar-module {
+  font-family: var(--bc-font-mono); font-size: 11px;
+  color: var(--bc-muted); letter-spacing: .1em; text-transform: uppercase;
+}
+.bc-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
-  body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
-    color: var(--text-main);
-    line-height: 1.5;
-    -webkit-tap-highlight-color: transparent;
-    min-height: 100dvh;
-  }
+/* ─── SHARED STATUS BAR ──────────────────────────────────────── */
+#bc-status-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 24px;
+  font-family: var(--bc-font-mono); font-size: 10px;
+  color: var(--bc-faint); letter-spacing: .08em;
+  border-bottom: 1px solid var(--bc-border);
+  background: var(--bc-surface2);
+}
+.bc-status-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bc-faint);
+}
+.bc-status-dot.connected { background: var(--bc-success); }
+.bc-status-dot.error     { background: var(--bc-danger); }
 
-  /* ─── LOADING OVERLAY ────────────────────────────────── */
-  #loading-overlay {
-    position: fixed; inset: 0;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index: 20000;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-  }
+/* ─── HOME OVERRIDES (dark theme) ──────────────────────────────────────────────── */
+:root {
+  --bg:         #0d0f14;
+  --surface:    #13161e;
+  --surface2:   #1a1e28;
+  --border:     rgba(255,255,255,0.07);
+  --border-hi:  rgba(255,255,255,0.14);
+  --text:       #eef0f5;
+  --muted:      #7a8098;
+  --faint:      #3d4257;
+  --amber:      #d97706;
+  --amber-hi:   #f59e0b;
+  --amber-dim:  rgba(217,119,6,0.12);
+  --amber-glow: rgba(217,119,6,0.22);
+  --green:      #059669;
+  --green-dim:  rgba(5,150,105,0.12);
+  --purple:     #7c3aed;
+  --purple-dim: rgba(124,58,237,0.12);
+  --radius:     12px;
+  --t:          200ms ease;
+}
 
-  .loading-spinner {
-    width: 44px; height: 44px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
+/* ─── RESET ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
 
-  .loading-text {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--text-muted);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
+/* ─── NOISE TEXTURE ──────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
 
-  /* ─── PANTALLA DE FIRMA ──────────────────────────────── */
-  #firma-screen {
-    display: none;
-    position: fixed; inset: 0; z-index: 10000;
-    background: var(--bg);
-    flex-direction: column;
-  }
-  #firma-screen.show { display: flex; }
+/* ─── AMBIENT GLOW ───────────────────────────────────────────── */
+.ambient {
+  position: fixed; pointer-events: none; z-index: 0;
+  border-radius: 50%; filter: blur(120px); opacity: 0.18;
+}
+.ambient-1 {
+  width: 600px; height: 600px;
+  background: var(--amber);
+  top: -200px; right: -100px;
+}
+.ambient-2 {
+  width: 400px; height: 400px;
+  background: var(--purple);
+  bottom: -100px; left: -100px;
+}
 
-  .firma-wrapper {
-    display: flex; flex-direction: column;
-    height: 100dvh;
-    max-width: 860px;
-    margin: 0 auto;
-    width: 100%;
-    background: var(--surface);
-    box-shadow: var(--shadow-lg);
-  }
+/* ─── WRAPPER ────────────────────────────────────────────────── */
+#wrapper {
+  position: relative; z-index: 1;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
 
-  .firma-header {
-    padding: 28px 32px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: white;
-    flex-shrink: 0;
-  }
+/* ─── TOPBAR ─────────────────────────────────────────────────── */
+#topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 0 0;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.1s forwards;
+}
+.topbar-logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--amber) 0%, #92400e 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 500; color: white;
+  letter-spacing: -0.5px;
+  box-shadow: 0 0 20px rgba(217,119,6,0.35);
+}
+.logo-text {
+  font-size: 14px; font-weight: 700; letter-spacing: 0.04em;
+}
+.logo-text span { color: var(--amber); }
+.topbar-tag {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase;
+  border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 20px;
+}
 
-  .badge-empresa {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 12px;
-    border-radius: 20px;
-    background: rgba(217, 119, 6, 0.15);
-    border: 1px solid rgba(217, 119, 6, 0.4);
-    color: #fbbf24;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
-    font-family: 'JetBrains Mono', monospace;
-  }
+/* ─── HERO ───────────────────────────────────────────────────── */
+#hero {
+  padding: 72px 0 48px;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.22s forwards;
+}
+.hero-eyebrow {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--amber); letter-spacing: 0.22em; text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 20px; height: 1px;
+  background: var(--amber);
+}
+.hero-title {
+  font-size: clamp(36px, 6vw, 58px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+.hero-title em {
+  font-style: normal;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  opacity: 0.7;
+}
+.hero-sub {
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  color: var(--muted); line-height: 1.7;
+  max-width: 480px;
+}
 
-  .doc-titulo {
-    font-family: 'Syne', sans-serif;
-    font-size: 24px;
-    font-weight: 800;
-    line-height: 1.2;
-  }
+/* ─── DIVIDER ────────────────────────────────────────────────── */
+.section-label {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--faint); letter-spacing: 0.2em; text-transform: uppercase;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.36s forwards;
+}
 
-  .firma-scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px 24px;
-    background: #f1f5f9;
-  }
+/* ─── MODULE CARDS ───────────────────────────────────────────── */
+#modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.42s forwards;
+}
 
-  #pdf-template {
-    background: white;
-    padding: 48px;
-    border-radius: 6px;
-    box-shadow: var(--shadow);
-    min-height: 297mm;
-    position: relative;
-    overflow: hidden;
-  }
+.mod-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--t), transform var(--t), box-shadow var(--t);
+}
+.mod-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), var(--card-glow, rgba(255,255,255,0.04)) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity var(--t);
+  pointer-events: none;
+}
+.mod-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+.mod-card:hover::before { opacity: 1; }
+.mod-card:active { transform: translateY(0); }
 
-  .pdf-content {
-    font-size: 15px;
-    line-height: 1.9;
-    color: #334155;
-    white-space: pre-wrap;
-    font-family: 'Inter', sans-serif;
-  }
+/* card accent bar */
+.mod-card::after {
+  content: '';
+  position: absolute; top: 0; left: 28px; right: 28px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--card-accent, var(--amber)), transparent);
+  opacity: 0;
+  transition: opacity var(--t);
+}
+.mod-card:hover::after { opacity: 1; }
 
-  .pdf-footer {
-    margin-top: 64px;
-    padding-top: 28px;
-    border-top: 2px solid var(--border);
-    display: none;
-  }
+.card-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.card-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  background: var(--card-icon-bg, var(--amber-dim));
+  border: 1px solid var(--card-icon-border, rgba(217,119,6,0.2));
+}
+.card-badge {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--card-accent, var(--amber));
+  background: var(--card-glow-bg, var(--amber-dim));
+  border: 1px solid var(--card-accent-border, rgba(217,119,6,0.25));
+  padding: 3px 9px; border-radius: 20px;
+}
+.card-title {
+  font-size: 20px; font-weight: 800;
+  line-height: 1.1; margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.card-desc {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--muted); line-height: 1.65;
+  margin-bottom: 24px;
+}
+.card-features {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 24px;
+}
+.card-feat {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 3px 9px; border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+.card-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.card-cta-text {
+  font-size: 13px; font-weight: 700;
+  color: var(--card-accent, var(--amber));
+}
+.card-arrow {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--card-glow-bg, var(--amber-dim));
+  border: 1px solid var(--card-accent-border, rgba(217,119,6,0.25));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--card-accent, var(--amber));
+  transition: transform var(--t), background var(--t);
+}
+.mod-card:hover .card-arrow { transform: translateX(3px); background: var(--card-glow, var(--amber-dim)); }
 
-  /* ─── FIRMA CONTROLS ─────────────────────────────────── */
-  .firma-controls {
-    padding: 24px 32px;
-    background: white;
-    border-top: 1px solid var(--border);
-    display: grid;
-    gap: 14px;
-    flex-shrink: 0;
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.04);
-  }
+/* card-specific colors */
+.mod-card.amber {
+  --card-accent: #d97706;
+  --card-accent-border: rgba(217,119,6,0.25);
+  --card-glow: rgba(217,119,6,0.06);
+  --card-glow-bg: rgba(217,119,6,0.10);
+  --card-icon-bg: rgba(217,119,6,0.12);
+  --card-icon-border: rgba(217,119,6,0.2);
+}
+.mod-card.amber:hover { box-shadow: 0 8px 32px rgba(217,119,6,0.12); }
 
-  .input-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.8px;
-    display: block;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
+.mod-card.purple {
+  --card-accent: #7c3aed;
+  --card-accent-border: rgba(124,58,237,0.25);
+  --card-glow: rgba(124,58,237,0.06);
+  --card-glow-bg: rgba(124,58,237,0.10);
+  --card-icon-bg: rgba(124,58,237,0.12);
+  --card-icon-border: rgba(124,58,237,0.2);
+}
+.mod-card.purple:hover { box-shadow: 0 8px 32px rgba(124,58,237,0.12); }
 
-  .input-field {
-    width: 100%;
-    padding: 13px 16px;
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 15px;
-    font-family: 'Inter', sans-serif;
-    color: var(--text-main);
-    background: var(--bg);
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-    -webkit-appearance: none;
-  }
-  .input-field:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
-  }
-  .input-field::placeholder { color: var(--text-faint); }
-  textarea.input-field { resize: vertical; min-height: 160px; }
+.mod-card.green {
+  --card-accent: #059669;
+  --card-accent-border: rgba(5,150,105,0.25);
+  --card-glow: rgba(5,150,105,0.06);
+  --card-glow-bg: rgba(5,150,105,0.10);
+  --card-icon-bg: rgba(5,150,105,0.12);
+  --card-icon-border: rgba(5,150,105,0.2);
+}
+.mod-card.green:hover { box-shadow: 0 8px 32px rgba(5,150,105,0.12); }
 
-  /* ─── BOTONES ────────────────────────────────────────── */
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 14px 20px;
-    border-radius: var(--radius);
-    font-weight: 600;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);
-    letter-spacing: 0.1px;
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-    box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
-  }
-  .btn-primary:active:not(:disabled) { transform: scale(0.97); }
-  .btn-primary:disabled {
-    background: var(--border-strong);
-    color: var(--text-faint);
-    box-shadow: none;
-    cursor: not-allowed;
-  }
+/* ─── COMING SOON CARD ───────────────────────────────────────── */
+.mod-card.disabled {
+  opacity: 0.45; cursor: default;
+  pointer-events: none;
+}
 
-  .btn-secondary {
-    background: #f1f5f9;
-    color: var(--primary);
-    border: 1.5px solid var(--border);
-    padding: 14px 20px;
-    border-radius: var(--radius);
-    font-weight: 600;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-  }
-  .btn-secondary:hover { background: var(--border); border-color: var(--border-strong); }
+/* ─── FOOTER ─────────────────────────────────────────────────── */
+#footer {
+  margin-top: auto;
+  padding: 40px 0 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap; gap: 12px;
+  opacity: 0;
+  animation: fadeUp 0.5s ease 0.6s forwards;
+}
+.footer-copy {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--faint); letter-spacing: 0.08em;
+}
+.footer-version {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--faint);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 20px;
+}
 
-  .btn-danger {
-    background: #fff0f0;
-    color: #dc2626;
-    border: 1.5px solid #fecaca;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 11px;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-  }
-  .btn-danger:hover { background: #fee2e2; border-color: #fca5a5; }
+/* ─── ANIMATIONS ─────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-  .btn-sm {
-    font-size: 11px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    border: none;
-    transition: background 0.2s, transform 0.1s;
-  }
-  .btn-sm:active { transform: scale(0.96); }
-  .btn-sm-accent { background: var(--accent); color: white; }
-  .btn-sm-accent:hover { background: var(--accent-hover); }
-  .btn-sm-ghost { background: #f1f5f9; color: var(--primary); border: 1.5px solid var(--border); }
-  .btn-sm-ghost:hover { background: var(--border); }
-
-  /* ─── ÉXITO ──────────────────────────────────────────── */
-  .firma-success {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 48px 32px;
-    animation: fadeIn 0.4s ease;
-  }
-  .firma-success.show { display: flex; }
-
-  .success-icon {
-    width: 72px; height: 72px;
-    background: #dcfce7;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px;
-    margin-bottom: 20px;
-  }
-
-  /* ─── DASHBOARD ADMIN ────────────────────────────────── */
-  .admin-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: white;
-    padding: 40px 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .admin-header-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
-  .admin-header-sub { opacity: 0.65; font-size: 14px; margin-top: 4px; }
-
-  .grid-container {
-    display: grid;
-    padding: 28px 24px;
-    gap: 20px;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  }
-
-  /* ─── CARD ───────────────────────────────────────────── */
-  .card {
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: var(--shadow-sm);
-    animation: fadeIn 0.3s ease;
-  }
-  .card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow);
-  }
-
-  .card-top {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid var(--border);
-    background: #fafbfc;
-  }
-
-  .card-empresa-badge {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 1px;
-    font-family: 'JetBrains Mono', monospace;
-    margin-bottom: 6px;
-    display: block;
-  }
-
-  .card-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-main);
-    margin-bottom: 14px;
-    line-height: 1.3;
-  }
-
-  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  .card-body { padding: 16px 20px 20px; }
-
-  .firmas-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-muted);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .firmas-count {
-    background: var(--accent-subtle);
-    color: var(--accent);
-    border-radius: 20px;
-    padding: 1px 7px;
-    font-size: 10px;
-    font-weight: 700;
-  }
-
-  /* FIX: era "1px id var(--border)" → correcto: "1px solid var(--border)" */
-  .firma-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--text-main);
-  }
-  .firma-row:last-child { border-bottom: none; }
-
-  .btn-descargar {
-    background: none;
-    border: 1.5px solid var(--border);
-    border-radius: 6px;
-    width: 26px; height: 26px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    flex-shrink: 0;
-    padding: 0;
-  }
-  .btn-descargar:hover {
-    background: var(--accent-subtle);
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .firma-row-date {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .sin-firmas {
-    font-size: 12px;
-    color: var(--text-faint);
-    font-style: italic;
-    padding: 4px 0;
-  }
-
-  /* ─── MODAL ──────────────────────────────────────────── */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(15, 23, 42, 0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 11000;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    padding: 16px;
-  }
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: white;
-    width: 100%;
-    max-width: 580px;
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: var(--shadow-lg);
-    animation: fadeIn 0.25s ease;
-  }
-
-  .modal-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
-    margin-bottom: 24px;
-    color: var(--text-main);
-  }
-
-  .modal-fields { display: grid; gap: 14px; }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 28px;
-  }
-
-  /* ─── EMPTY STATE ────────────────────────────────────── */
-  .empty-state {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 80px 24px;
-    color: var(--text-muted);
-  }
-  .empty-state-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
-  .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-  .empty-state-sub { font-size: 14px; opacity: 0.7; }
-
-  /* ─── MEDIA QUERIES ──────────────────────────────────── */
-  @media (max-width: 640px) {
-    .grid-container { grid-template-columns: 1fr; padding: 16px; }
-    .admin-header { padding: 28px 20px; }
-    .admin-header-title { font-size: 22px; }
-    .doc-titulo { font-size: 20px; }
-    #pdf-template { padding: 28px; }
-    .firma-header { padding: 20px; }
-    .firma-controls { padding: 20px; }
-    .modal { padding: 24px; }
-  }
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  #wrapper { padding: 0 18px; }
+  #hero { padding: 52px 0 36px; }
+  #modules { grid-template-columns: 1fr; }
+  .hero-title { font-size: 34px; }
+}
 </style>
 </head>
 <body>
 
-<!-- LOADING OVERLAY -->
-<div id="loading-overlay">
-  <div class="loading-spinner"></div>
-  <p class="loading-text">Generando PDF de alta calidad...</p>
-</div>
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
 
-<!-- PANTALLA DE FIRMA (empleados) -->
-<div id="firma-screen">
-  <div class="firma-wrapper">
+<div id="wrapper">
 
-    <div class="firma-header">
-      <div class="badge-empresa" id="f-badge">SABORES INCAS</div>
-      <h1 class="doc-titulo" id="f-titulo">Manual de Operaciones</h1>
-    </div>
+<!-- ══ BC TOPBAR ══════════════════════════════════════════════════ -->
+<nav id="bc-topbar">
+  <div class="bc-logo-mark">BC</div>
+  <div class="bc-topbar-brand">BC <span>Gestión</span></div>
+  <div class="bc-topbar-right"></div>
+</nav>
 
-    <div class="firma-scroll-area">
-      <div id="pdf-template">
-        <div id="f-contenido" class="pdf-content"></div>
-
-        <div id="f-firma-footer" class="pdf-footer">
-          <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap;">
-            <div>
-              <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Firmante</p>
-              <p id="f-nombre-final" style="font-size:22px; font-weight:800; color:var(--primary);"></p>
-              <p id="f-fecha-final" style="font-size:13px; color:var(--text-muted); margin-top:4px;"></p>
-            </div>
-            <div style="text-align:right;">
-              <p style="font-size:10px; color:var(--text-faint); font-family:'JetBrains Mono';">ID: <span id="f-doc-id"></span></p>
-              <div style="height:60px; width:140px; border-bottom:2px solid var(--primary); margin-top:12px;"></div>
-              <p style="font-size:10px; margin-top:6px; color:var(--text-muted);">Sello Digital de Validación</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CONTROLES DE FIRMA -->
-    <div class="firma-controls" id="f-controls">
-      <div>
-        <label class="input-label" for="f-input-nombre">Nombre completo del colaborador</label>
-        <input type="text" id="f-input-nombre" class="input-field"
-               placeholder="Ej: Juan Pérez" oninput="_valFirma()" autocomplete="name">
-      </div>
-      <button id="f-btn-firmar" class="btn-primary" disabled onclick="_ejecutarFirma()">
-        Firmar Documento y Descargar PDF
-      </button>
-    </div>
-
-    <!-- ESTADO DE ÉXITO -->
-    <div id="f-success" class="firma-success">
-      <div class="success-icon">✅</div>
-      <h2 style="font-size:22px; font-weight:800; font-family:'Syne';">¡Documento Firmado!</h2>
-      <p style="color:var(--text-muted); margin-top:10px; max-width:300px;">Tu copia PDF se ha generado y descargado correctamente.</p>
-      <button class="btn-primary" style="margin-top:24px; display:flex; align-items:center; gap:8px;" onclick="_reDescargarPDF()">
-        ⬇ Descargar PDF de nuevo
-      </button>
-    </div>
-
-  </div>
-</div>
-
-<!-- DASHBOARD ADMIN -->
-<div id="app">
-  <header class="admin-header">
-    <div>
-      <h2 class="admin-header-title">Panel de Control</h2>
-      <p class="admin-header-sub">Gestión de documentación de RRHH</p>
-    </div>
-    <button class="btn-primary" style="padding:12px 24px; flex-shrink:0;" onclick="admin.nuevo()">
-      + Nuevo Documento
-    </button>
+  <!-- HERO -->
+  <header id="hero">
+    <div class="hero-eyebrow">Sistema de recursos humanos</div>
+    <h1 class="hero-title">Hola,<br><em>¿qué</em> gestionamos hoy?</h1>
+    <p class="hero-sub">Acceso rápido a los módulos del sistema. Seleccioná el que necesitás.</p>
   </header>
 
-  <div class="grid-container" id="man-grid"></div>
+  <!-- SECTION LABEL -->
+  <div class="section-label">— módulos disponibles</div>
 
-  <!-- MODAL NUEVO / EDITAR -->
-  <div class="modal-overlay" id="modal-nuevo">
-    <div class="modal">
-      <h3 class="modal-title" id="m-title">Nuevo Documento</h3>
-      <input type="hidden" id="m-id">
-      <div class="modal-fields">
-        <div>
-          <label class="input-label" for="m-nombre">Título del documento</label>
-          <input class="input-field" id="m-nombre" placeholder="Ej: Contrato de Confidencialidad">
-        </div>
-        <div>
-          <label class="input-label" for="m-local">Empresa / Local</label>
-          <input class="input-field" id="m-local" placeholder="Ej: Sabores Incas">
-        </div>
-        <div>
-          <label class="input-label" for="m-texto">Contenido del documento</label>
-          <textarea class="input-field" id="m-texto" rows="10"
-                    placeholder="Escribe el contenido legal aquí..."></textarea>
-        </div>
+  <!-- MODULES GRID -->
+  <div id="modules">
+
+    <!-- Módulo: Gestión de Documentos -->
+    <a class="mod-card amber" href="docs.html" id="card-docs">
+      <div class="card-top">
+        <div class="card-icon">📄</div>
+        <div class="card-badge">Módulo 01</div>
       </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" onclick="admin.cerrar()">Cancelar</button>
-        <button class="btn-primary" onclick="admin.guardar()">Publicar Documento</button>
+      <div class="card-title">Gestión de<br>Documentos</div>
+      <div class="card-desc">
+        Generación y firma de recibos, acuerdos y comunicaciones para el personal.
       </div>
-    </div>
+      <div class="card-features">
+        <span class="card-feat">Generación PDF</span>
+        <span class="card-feat">Firma digital</span>
+        <span class="card-feat">Plantillas</span>
+      </div>
+      <div class="card-cta">
+        <span class="card-cta-text">Abrir módulo</span>
+        <div class="card-arrow">→</div>
+      </div>
+    </a>
+
+    <!-- Módulo: Indumentaria -->
+    <a class="mod-card purple" href="indumentaria.html" id="card-indum">
+      <div class="card-top">
+        <div class="card-icon">🧥</div>
+        <div class="card-badge">Módulo 09</div>
+      </div>
+      <div class="card-title">Indumentaria</div>
+      <div class="card-desc">
+        Stock de ropa por local y registro de entregas por empleado en toda la red.
+      </div>
+      <div class="card-features">
+        <span class="card-feat">Stock por talle</span>
+        <span class="card-feat">Entregas</span>
+        <span class="card-feat">Multi-local</span>
+        <span class="card-feat">Vencimientos</span>
+      </div>
+      <div class="card-cta">
+        <span class="card-cta-text">Abrir módulo</span>
+        <div class="card-arrow">→</div>
+      </div>
+    </a>
+
   </div>
+
+  <!-- FOOTER -->
+  <footer id="footer">
+    <div class="footer-copy">© BC Gestión · Grupo BC · Buenos Aires</div>
+    <div class="footer-version">v2.0 · 2025</div>
+  </footer>
+
 </div>
 
 <script>
-// ─── FIREBASE CONFIG ──────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
-  authDomain: "rrhhsystem.firebaseapp.com",
-  projectId: "rrhhsystem",
-  storageBucket: "rrhhsystem.firebasestorage.app",
-  messagingSenderId: "71511125212",
-  appId: "1:71511125212:web:03a0ad11b281e397a29819"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-let currentDoc = null;
-let lastFirmaData = null; // guarda los datos para re-descargar el PDF
-
-// ─── LÓGICA DE FIRMA ──────────────────────────────────────
-async function initFirma() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const docId = urlParams.get('firma');
-  if (!docId) return;
-
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('firma-screen').classList.add('show');
-
-  try {
-    const snap = await db.collection('manuales').doc(docId).get();
-    if (!snap.exists) {
-      alert("Documento no válido o no encontrado.");
-      return;
-    }
-
-    currentDoc = { id: snap.id, ...snap.data() };
-    document.getElementById('f-badge').textContent = (currentDoc.local || 'RRHH').toUpperCase();
-    document.getElementById('f-titulo').textContent = currentDoc.nombre;
-    document.getElementById('f-contenido').textContent = currentDoc.contenido;
-    document.getElementById('f-doc-id').textContent = snap.id;
-  } catch (e) {
-    console.error("Error cargando documento:", e);
-    alert("Error al cargar el documento. Por favor intentá de nuevo.");
-  }
-}
-
-// FIX: validación mejorada — requiere al menos nombre y apellido reales (no solo espacios)
-function _valFirma() {
-  const val = document.getElementById('f-input-nombre').value;
-  const partes = val.trim().split(/\s+/).filter(p => p.length > 0);
-  document.getElementById('f-btn-firmar').disabled = partes.length < 2;
-}
-
-async function _ejecutarFirma() {
-  const nombre = document.getElementById('f-input-nombre').value.trim();
-  const fecha = new Date().toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' });
-  const overlay = document.getElementById('loading-overlay');
-
-  overlay.style.display = 'flex';
-
-  try {
-    // 1. Registrar firma en Firebase
-    const nuevasFirmas = Array.isArray(currentDoc.firmas) ? [...currentDoc.firmas] : [];
-    nuevasFirmas.push({ nombre, at: new Date().toISOString() });
-    await db.collection('manuales').doc(currentDoc.id).update({ firmas: nuevasFirmas });
-
-    // 2. Generar y descargar PDF
-    await generarPDF(nombre, currentDoc.nombre, fecha);
-
-    // 3. Guardar datos para permitir re-descarga
-    lastFirmaData = { nombre, titulo: currentDoc.nombre, fecha };
-
-    // 4. Mostrar pantalla de éxito
-    document.getElementById('f-controls').style.display = 'none';
-    const successEl = document.getElementById('f-success');
-    successEl.classList.add('show');
-    successEl.style.display = 'flex';
-  } catch (e) {
-    console.error("Error al firmar:", e);
-    alert("Error al procesar la firma: " + e.message);
-  } finally {
-    overlay.style.display = 'none';
-  }
-}
-
-async function _reDescargarPDF() {
-  if (!lastFirmaData) return;
-  const overlay = document.getElementById('loading-overlay');
-  overlay.style.display = 'flex';
-  try {
-    await generarPDF(lastFirmaData.nombre, lastFirmaData.titulo, lastFirmaData.fecha);
-  } catch (e) {
-    alert("Error al generar el PDF: " + e.message);
-  } finally {
-    overlay.style.display = 'none';
-  }
-}
-
-async function generarPDF(nombre, titulo, fecha) {
-  const footer = document.getElementById('f-firma-footer');
-  document.getElementById('f-nombre-final').textContent = nombre;
-  document.getElementById('f-fecha-final').textContent = "Firmado digitalmente el " + fecha;
-  footer.style.display = 'block';
-
-  const element = document.getElementById('pdf-template');
-
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight
+// ─── MOUSE GLOW EN LAS CARDS ─────────────────────────────────────
+document.querySelectorAll('.mod-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width  * 100).toFixed(1);
+    const y = ((e.clientY - rect.top)  / rect.height * 100).toFixed(1);
+    card.style.setProperty('--mx', x + '%');
+    card.style.setProperty('--my', y + '%');
   });
-
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('p', 'mm', 'a4');
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-  const ratio = canvas.height / canvas.width;
-  const canvasInPdfHeight = pdfWidth * ratio;
-
-  // Paginación multi-página
-  let heightLeft = canvasInPdfHeight;
-  let position = 0;
-
-  pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, canvasInPdfHeight);
-  heightLeft -= pdfHeight;
-
-  while (heightLeft > 0) {
-    position = heightLeft - canvasInPdfHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, canvasInPdfHeight);
-    heightLeft -= pdfHeight;
-  }
-
-  pdf.save(`FIRMA_${nombre.replace(/\s+/g, '_')}.pdf`);
-  footer.style.display = 'none';
-}
-
-// ─── LÓGICA ADMIN ─────────────────────────────────────────
-const admin = {
-  docs: [],
-
-  init() {
-    db.collection('manuales').orderBy('at', 'desc').onSnapshot(snap => {
-      this.docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      this.render();
-    }, err => {
-      console.error("Error escuchando manuales:", err);
-    });
-  },
-
-  render() {
-    const grid = document.getElementById('man-grid');
-
-    if (this.docs.length === 0) {
-      grid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">📄</div>
-          <p class="empty-state-title">No hay documentos aún</p>
-          <p class="empty-state-sub">Creá el primer documento para comenzar.</p>
-        </div>`;
-      return;
-    }
-
-    grid.innerHTML = this.docs.map(d => {
-      const firmas = Array.isArray(d.firmas) ? d.firmas : [];
-      const ultimasFirmas = firmas.slice(-3).reverse();
-
-      const firmasHTML = ultimasFirmas.length > 0
-        ? ultimasFirmas.map(f => `
-            <div class="firma-row">
-              <span>${f.nombre}</span>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span class="firma-row-date">${new Date(f.at).toLocaleDateString('es-AR')}</span>
-                <button class="btn-descargar" title="Descargar PDF de esta firma"
-                  onclick="admin.descargarFirma('${d.id}', '${f.nombre.replace(/'/g, "\\'")}', '${f.at}')">
-                  ⬇
-                </button>
-              </div>
-            </div>`).join('')
-        : '<p class="sin-firmas">Sin firmas registradas</p>';
-
-      return `
-        <div class="card">
-          <div class="card-top">
-            <span class="card-empresa-badge">${(d.local || 'SISTEMA').toUpperCase()}</span>
-            <h4 class="card-title">${d.nombre}</h4>
-            <div class="card-actions">
-              <button class="btn-sm btn-sm-accent" onclick="admin.copiar('${d.id}')">Compartir Link</button>
-              <button class="btn-sm btn-sm-ghost" onclick="admin.editar('${d.id}')">Editar</button>
-              <button class="btn-danger" onclick="admin.borrar('${d.id}')">Borrar</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <p class="firmas-label">
-              Últimas firmas
-              <span class="firmas-count">${firmas.length}</span>
-            </p>
-            ${firmasHTML}
-          </div>
-        </div>`;
-    }).join('');
-  },
-
-  nuevo() {
-    document.getElementById('m-id').value = '';
-    document.getElementById('m-nombre').value = '';
-    document.getElementById('m-local').value = '';
-    document.getElementById('m-texto').value = '';
-    document.getElementById('m-title').textContent = 'Nuevo Documento';
-    document.getElementById('modal-nuevo').classList.add('open');
-  },
-
-  editar(id) {
-    const d = this.docs.find(x => x.id === id);
-    if (!d) return;
-    document.getElementById('m-id').value = d.id;
-    document.getElementById('m-nombre').value = d.nombre;
-    document.getElementById('m-local').value = d.local || '';
-    document.getElementById('m-texto').value = d.contenido;
-    document.getElementById('m-title').textContent = 'Editar Documento';
-    document.getElementById('modal-nuevo').classList.add('open');
-  },
-
-  cerrar() {
-    document.getElementById('modal-nuevo').classList.remove('open');
-  },
-
-  async guardar() {
-    const id = document.getElementById('m-id').value;
-    const nombre = document.getElementById('m-nombre').value.trim();
-    const local = document.getElementById('m-local').value.trim();
-    const contenido = document.getElementById('m-texto').value.trim();
-
-    if (!nombre || !contenido) {
-      alert("El título y el contenido son obligatorios.");
-      return;
-    }
-
-    const data = {
-      nombre,
-      local,
-      contenido,
-      at: new Date().toISOString()
-    };
-
-    try {
-      if (id) {
-        await db.collection('manuales').doc(id).update(data);
-      } else {
-        await db.collection('manuales').add({ ...data, firmas: [] });
-      }
-      this.cerrar();
-    } catch (e) {
-      console.error("Error guardando:", e);
-      alert("Error al guardar el documento: " + e.message);
-    }
-  },
-
-  async descargarFirma(docId, nombre, at) {
-    const doc = this.docs.find(x => x.id === docId);
-    if (!doc) return;
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const W = pdf.internal.pageSize.getWidth();
-    const margin = 20;
-    const maxWidth = W - margin * 2;
-    let y = margin;
-
-    const fecha = new Date(at).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' });
-
-    // ── Encabezado ──
-    pdf.setFillColor(15, 23, 42);
-    pdf.rect(0, 0, W, 36, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text((doc.local || 'RRHH').toUpperCase(), margin, 13);
-    pdf.setFontSize(15);
-    pdf.text(doc.nombre, margin, 26);
-    y = 50;
-
-    // ── Cuerpo del documento ──
-    pdf.setTextColor(51, 65, 85);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    const lineas = pdf.splitTextToSize(doc.contenido || '', maxWidth);
-    lineas.forEach(linea => {
-      if (y > 265) { pdf.addPage(); y = margin; }
-      pdf.text(linea, margin, y);
-      y += 5.5;
-    });
-
-    // ── Separador ──
-    y += 10;
-    if (y > 255) { pdf.addPage(); y = margin; }
-    pdf.setDrawColor(226, 232, 240);
-    pdf.setLineWidth(0.5);
-    pdf.line(margin, y, W - margin, y);
-    y += 10;
-
-    // ── Pie de firma ──
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('FIRMANTE', margin, y);
-    y += 6;
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(15, 23, 42);
-    pdf.text(nombre, margin, y);
-    y += 6;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('Firmado digitalmente el ' + fecha, margin, y);
-
-    // ID a la derecha
-    pdf.setFontSize(8);
-    pdf.setTextColor(203, 213, 225);
-    pdf.text('ID: ' + docId, W - margin, y - 6, { align: 'right' });
-
-    // Línea de firma
-    pdf.setDrawColor(15, 23, 42);
-    pdf.setLineWidth(0.5);
-    pdf.line(W - margin - 50, y + 16, W - margin, y + 16);
-    pdf.setFontSize(8);
-    pdf.setTextColor(100, 116, 139);
-    pdf.text('Sello Digital de Validación', W - margin - 50, y + 21);
-
-    pdf.save(`FIRMA_${nombre.replace(/\s+/g, '_')}_${new Date(at).toLocaleDateString('es-AR').replace(/\//g,'-')}.pdf`);
-  },
-
-  async borrar(id) {
-    if (!confirm("¿Seguro de eliminar este documento y todas sus firmas? Esta acción no se puede deshacer.")) return;
-    try {
-      await db.collection('manuales').doc(id).delete();
-    } catch (e) {
-      alert("Error al borrar: " + e.message);
-    }
-  },
-
-  copiar(id) {
-    const url = window.location.origin + window.location.pathname + '?firma=' + id;
-    navigator.clipboard.writeText(url).then(() => {
-      alert("Enlace de firma copiado al portapapeles. Envíaselo al colaborador.");
-    }).catch(() => {
-      prompt("Copiá este enlace:", url);
-    });
-  }
-};
-
-// ─── INICIALIZAR APP ──────────────────────────────────────
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('firma')) {
-  initFirma();
-} else {
-  admin.init();
-}
+});
 </script>
 </body>
 </html>

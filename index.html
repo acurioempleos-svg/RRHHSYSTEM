@@ -184,7 +184,6 @@ async function inicializarPantallaFirma() {
   const docId = urlParams.get('firma');
   if(!docId) return;
 
-  // Cambiar vistas
   document.getElementById('app').style.display = 'none';
   document.getElementById('firma-screen').classList.add('show');
 
@@ -219,15 +218,12 @@ async function procesarFirmaEmpleado() {
   btn.textContent = "Generando PDF firmado...";
 
   try {
-    // A. Guardar en Base de Datos
     const listaFirmas = currentDocData.firmas || [];
     listaFirmas.push({ nombre: nombre, at: new Date().toISOString() });
     await db.collection('manuales').doc(currentDocData.id).update({ firmas: listaFirmas });
 
-    // B. Generar y Descargar PDF
-    await generarYDescargarPDF(nombre, fechaStr, currentDocData.nombre, currentDocData.contenido);
+    await generarYDescargarPDF(nombre, fechaStr, currentDocData.nombre, currentDocData.contenido, currentDocData.id);
 
-    // C. Mostrar Éxito
     document.getElementById('f-ui').style.display = 'none';
     document.getElementById('f-success').style.display = 'block';
   } catch(e) {
@@ -237,25 +233,38 @@ async function procesarFirmaEmpleado() {
   }
 }
 
-// 3. FUNCIÓN MAESTRA DE PDF (USADA POR ADMIN Y EMPLEADO)
-async function generarYDescargarPDF(nombreEmpleado, fechaFirma, tituloDoc, contenidoDoc) {
-  const footer = document.getElementById('pdf-footer');
-  const wrap = document.getElementById('pdf-wrap');
+// 3. LA MAGIA: FUNCIÓN DE PDF CORREGIDA (CON CLONADO INVISIBLE)
+async function generarYDescargarPDF(nombreEmpleado, fechaFirma, tituloDoc, contenidoDoc, docId) {
+  // En vez de tratar de "sacar foto" al div oculto, creamos un clon exacto
+  const originalWrap = document.getElementById('pdf-wrap');
+  const cloneWrap = originalWrap.cloneNode(true);
   
-  // Seteamos los datos en el template visual para que salgan en la "foto"
-  document.getElementById('pdf-nombre-empleado').textContent = nombreEmpleado;
-  document.getElementById('pdf-fecha-firma').textContent = "Fecha de firma: " + fechaFirma;
-  document.getElementById('f-contenido').textContent = contenidoDoc;
-  document.getElementById('f-titulo').textContent = tituloDoc;
+  // Llenamos el clon con los datos
+  cloneWrap.querySelector('#f-contenido').textContent = contenidoDoc;
+  cloneWrap.querySelector('#pdf-nombre-empleado').textContent = nombreEmpleado;
+  cloneWrap.querySelector('#pdf-fecha-firma').textContent = "Fecha de firma: " + fechaFirma;
+  cloneWrap.querySelector('#pdf-id-doc').textContent = docId.toUpperCase();
+  cloneWrap.querySelector('#pdf-footer').style.display = 'block';
   
-  footer.style.display = 'block'; // Lo hacemos visible un segundo para capturarlo
+  // Lo ponemos temporalmente en el código, pero lo mandamos bien lejos de la pantalla para que no se vea
+  Object.assign(cloneWrap.style, {
+    position: 'absolute',
+    top: '-9999px',
+    left: '0',
+    width: '800px', // Ancho fijo para mantener formato de hoja
+    backgroundColor: '#ffffff',
+    display: 'block', // FORZAMOS A QUE ESTÉ VISIBLE PARA EL SISTEMA
+    padding: '40px'
+  });
+  
+  document.body.appendChild(cloneWrap);
 
   try {
-    const canvas = await html2canvas(wrap, { 
-      scale: 2, // Alta calidad
+    // Le sacamos la foto al CLON
+    const canvas = await html2canvas(cloneWrap, { 
+      scale: 2, 
       useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff'
+      logging: false 
     });
     
     const imgData = canvas.toDataURL('image/png');
@@ -269,9 +278,10 @@ async function generarYDescargarPDF(nombreEmpleado, fechaFirma, tituloDoc, conte
     pdf.save(`FIRMA_${nombreEmpleado.replace(/ /g,'_')}.pdf`);
   } catch (error) {
     console.error("Error generando PDF:", error);
-    alert("No se pudo generar el PDF, pero la firma se guardó.");
+    alert("Hubo un error interno al crear el archivo. Revisa tu conexión a internet.");
   } finally {
-    footer.style.display = 'none'; // Lo ocultamos de nuevo en la web
+    // IMPORTANTE: borramos el clon cuando terminamos para no ensuciar tu página
+    document.body.removeChild(cloneWrap);
   }
 }
 
@@ -363,8 +373,8 @@ const admin = {
     const doc = this.docs.find(x => x.id === docId);
     const fechaFormateada = new Date(fechaISO).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
     
-    // Usamos la misma función maestra para asegurar que el PDF sea idéntico al del empleado
-    await generarYDescargarPDF(nombre, fechaFormateada, doc.nombre, doc.contenido);
+    // Al pasarle los datos aquí, usa el "clon" invisible que arreglamos arriba
+    await generarYDescargarPDF(nombre, fechaFormateada, doc.nombre, doc.contenido, doc.id);
   }
 };
 

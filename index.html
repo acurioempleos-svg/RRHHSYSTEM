@@ -536,6 +536,9 @@
       <div class="success-icon">✅</div>
       <h2 style="font-size:22px; font-weight:800; font-family:'Syne';">¡Documento Firmado!</h2>
       <p style="color:var(--text-muted); margin-top:10px; max-width:300px;">Tu copia PDF se ha generado y descargado correctamente.</p>
+      <button class="btn-primary" style="margin-top:24px; display:flex; align-items:center; gap:8px;" onclick="_reDescargarPDF()">
+        ⬇ Descargar PDF de nuevo
+      </button>
     </div>
 
   </div>
@@ -597,6 +600,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let currentDoc = null;
+let lastFirmaData = null; // guarda los datos para re-descargar el PDF
 
 // ─── LÓGICA DE FIRMA ──────────────────────────────────────
 async function initFirma() {
@@ -648,7 +652,10 @@ async function _ejecutarFirma() {
     // 2. Generar y descargar PDF
     await generarPDF(nombre, currentDoc.nombre, fecha);
 
-    // 3. Mostrar pantalla de éxito
+    // 3. Guardar datos para permitir re-descarga
+    lastFirmaData = { nombre, titulo: currentDoc.nombre, fecha };
+
+    // 4. Mostrar pantalla de éxito
     document.getElementById('f-controls').style.display = 'none';
     const successEl = document.getElementById('f-success');
     successEl.classList.add('show');
@@ -656,6 +663,19 @@ async function _ejecutarFirma() {
   } catch (e) {
     console.error("Error al firmar:", e);
     alert("Error al procesar la firma: " + e.message);
+  } finally {
+    overlay.style.display = 'none';
+  }
+}
+
+async function _reDescargarPDF() {
+  if (!lastFirmaData) return;
+  const overlay = document.getElementById('loading-overlay');
+  overlay.style.display = 'flex';
+  try {
+    await generarPDF(lastFirmaData.nombre, lastFirmaData.titulo, lastFirmaData.fecha);
+  } catch (e) {
+    alert("Error al generar el PDF: " + e.message);
   } finally {
     overlay.style.display = 'none';
   }

@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>RRHH · Sistema de Documentos y Firmas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RRHH · Sistema de Gestión</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -18,82 +18,92 @@
   :root {
     --bg: #f7f8fa; --surface: #ffffff; --border: #e0e3ea;
     --text: #111827; --muted: #6b7280; --m9: #b45309;
-    --radius: 14px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; }
+  
+  /* Arreglo de scroll global */
+  html, body { 
+    height: 100%; 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: 'Syne', sans-serif;
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch;
+  }
 
-  /* ── PANTALLA DE FIRMA (FULL SCREEN) ── */
+  /* ── PANTALLA DE FIRMA ── */
   #firma-screen {
     display: none; position: fixed; inset: 0; z-index: 9999;
     background: var(--surface); flex-direction: column;
+    height: 100dvh; width: 100vw; overflow: hidden;
   }
   #firma-screen.show { display: flex; }
 
   .firma-container {
-    flex: 1; display: flex; flex-direction: column;
-    max-width: 800px; margin: 0 auto; width: 100%;
+    display: flex; flex-direction: column;
+    height: 100%; width: 100%; max-width: 800px; margin: 0 auto;
   }
 
   .firma-header {
-    padding: 40px 24px; border-bottom: 1px solid var(--border);
-    background: linear-gradient(to bottom, #fff9f2, white);
+    padding: 24px; border-bottom: 1px solid var(--border);
+    background: white; flex-shrink: 0;
   }
-  .firma-titulo { font-size: 28px; font-weight: 800; line-height: 1.1; }
+  .firma-titulo { font-size: 22px; font-weight: 800; }
 
-  .firma-scroll-area { flex: 1; overflow-y: auto; padding: 30px 24px; }
+  /* ÁREA DE SCROLL: Aquí corregimos el "no baja" */
+  .firma-scroll-area { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 20px; 
+    background: #fdfdfd;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  }
 
-  /* Contenedor que se exporta a PDF */
-  #pdf-wrap { background: white; padding: 20px; }
-  .pdf-body { font-size: 16px; line-height: 1.7; white-space: pre-wrap; margin-bottom: 40px; color: #333; }
+  #pdf-wrap { background: white; padding: 15px; border-radius: 8px; }
+  .pdf-body { font-size: 16px; line-height: 1.6; white-space: pre-wrap; color: #333; }
   
   .pdf-footer-firma {
-    margin-top: 50px; padding: 25px; border: 2px solid #eee; border-radius: 12px;
-    display: none; /* Solo visible en la captura del PDF */
+    margin-top: 40px; padding: 20px; border: 2px solid #f0f0f0; border-radius: 12px;
+    display: none; background: #fafafa;
   }
 
   .firma-controls {
-    padding: 24px; border-top: 1px solid var(--border);
-    background: white; box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+    padding: 20px; border-top: 1px solid var(--border);
+    background: white; flex-shrink: 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
   }
   .firma-input {
-    width: 100%; padding: 18px; border-radius: 12px; border: 2px solid var(--border);
-    font-size: 18px; font-family: 'Syne'; margin-bottom: 15px; outline: none;
+    width: 100%; padding: 15px; border-radius: 10px; border: 2px solid var(--border);
+    font-size: 16px; margin-bottom: 12px; font-family: 'Syne';
   }
-  .firma-input:focus { border-color: var(--m9); }
   
   .firma-btn {
-    width: 100%; padding: 20px; border: none; border-radius: 12px;
-    background: var(--m9); color: white; font-size: 17px; font-weight: 800;
-    cursor: pointer; transition: 0.2s;
+    width: 100%; padding: 18px; border: none; border-radius: 12px;
+    background: var(--m9); color: white; font-size: 16px; font-weight: 800;
+    cursor: pointer;
   }
-  .firma-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .firma-btn:disabled { opacity: 0.3; }
 
-  /* ── DASHBOARD (ADMIN) ── */
-  #app { padding: 20px; max-width: 1200px; margin: 0 auto; }
-  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px 0; }
+  /* ── DASHBOARD ADMIN ── */
+  #app { padding: 20px; max-width: 1000px; margin: 0 auto; }
+  .admin-header { margin-bottom: 25px; }
+  .man-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .man-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
   
-  .man-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 24px; }
-  .man-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 20px; transition: 0.3s; }
-  .man-card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-  
+  .btn-admin { 
+    background: white; border: 1px solid var(--border); padding: 8px 12px; 
+    border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;
+  }
   .man-firma-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px; background: #f9fafb; border-radius: 10px; margin-top: 8px;
-    font-size: 13px; border: 1px solid #eee;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px; background: #f9fafb; border-radius: 8px; margin-top: 6px; font-size: 13px;
   }
-  .btn-pdf-admin { 
-    background: var(--surface); border: 1px solid var(--border); padding: 6px 12px; 
-    border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; font-family: 'DM Mono';
-  }
-  .btn-pdf-admin:hover { background: var(--m9); color: white; border-color: var(--m9); }
 
   /* Modales */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 100; padding: 15px; }
   .modal-overlay.open { display: flex; }
-  .modal { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 600px; }
-  .modal textarea, .modal input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 10px; font-family: 'Syne'; }
+  .modal { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 550px; }
+  .modal textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 10px; resize: vertical; }
 </style>
 </head>
 <body>
@@ -101,70 +111,58 @@
 <div id="firma-screen">
   <div class="firma-container">
     <div class="firma-header">
-      <div id="f-local" style="font-size: 11px; font-weight: 800; color: var(--m9); margin-bottom: 5px; text-transform: uppercase;"></div>
-      <h1 class="firma-titulo" id="f-titulo">Cargando documento...</h1>
+      <div id="f-local" style="font-size: 10px; font-weight: 800; color: var(--m9); text-transform: uppercase;"></div>
+      <h1 class="firma-titulo" id="f-titulo">Cargando...</h1>
     </div>
 
     <div class="firma-scroll-area">
       <div id="pdf-wrap">
         <div id="f-contenido" class="pdf-body"></div>
-        
         <div id="pdf-footer" class="pdf-footer-firma">
-          <p style="font-size: 12px; color: #666; margin-bottom: 10px; font-family: 'DM Mono';">DOCUMENTO FIRMADO ELECTRÓNICAMENTE</p>
-          <p style="font-weight: 800; font-size: 24px; color: #b45309;" id="pdf-nombre-empleado"></p>
-          <p style="font-size: 13px; margin-top: 5px; color: #444;" id="pdf-fecha-firma"></p>
-          <div style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 10px; font-size: 10px; color: #999; font-family: 'DM Mono';">
-            VERIFICACIÓN ID: <span id="pdf-id-doc"></span>
-          </div>
+          <p style="font-size: 11px; color: #888; font-family: 'DM Mono'; margin-bottom: 8px;">VALIDADO POR RRHH · FIRMA ELECTRÓNICA</p>
+          <p style="font-weight: 800; font-size: 22px; color: #b45309;" id="pdf-nombre-empleado"></p>
+          <p style="font-size: 13px; color: #444;" id="pdf-fecha-firma"></p>
+          <p style="font-size: 9px; color: #ccc; margin-top: 15px; font-family: 'DM Mono';">ID: <span id="pdf-id-doc"></span></p>
         </div>
       </div>
     </div>
 
     <div class="firma-controls" id="f-ui">
-      <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px; text-align: center;">Al ingresar tu nombre, aceptas los términos del manual anterior.</p>
-      <input type="text" id="f-input-nombre" class="firma-input" placeholder="Tu nombre y apellido completo" oninput="validarBotonFirma()">
-      <button id="f-btn-accion" class="firma-btn" disabled onclick="procesarFirmaEmpleado()">Confirmar Firma y Descargar PDF</button>
+      <input type="text" id="f-input-nombre" class="firma-input" placeholder="Nombre y Apellido completo" oninput="validarBtn()">
+      <button id="f-btn-accion" class="firma-btn" disabled onclick="confirmarFirma()">Firmar y Descargar</button>
     </div>
 
-    <div id="f-success" style="display:none; text-align:center; padding: 60px 20px;">
-      <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-      <h2 style="font-size: 30px; font-weight: 800;">¡Firma Registrada!</h2>
-      <p style="margin: 20px 0; color: var(--muted); line-height: 1.6;">El documento ha sido firmado con éxito. Tu copia en PDF se ha descargado automáticamente.</p>
-      <button class="btn-pdf-admin" style="padding: 15px 30px; font-size: 14px;" onclick="window.close()">Cerrar esta ventana</button>
+    <div id="f-success" style="display:none; text-align:center; padding: 40px 20px;">
+      <h2 style="font-size: 24px; font-weight: 800;">✅ ¡Documento Firmado!</h2>
+      <p style="margin: 15px 0; color: var(--muted);">Tu copia en PDF se descargó. Ya puedes cerrar esta pestaña.</p>
     </div>
   </div>
 </div>
 
 <div id="app">
   <div class="admin-header">
-    <div>
-      <h2 style="font-weight: 800; font-size: 28px;">Panel de Manuales</h2>
-      <p style="color: var(--muted); font-size: 14px;">Gestión de documentos y control de firmas</p>
-    </div>
-    <button class="firma-btn" style="width: auto; padding: 12px 25px;" onclick="admin.abrirEditor()">+ Nuevo Manual</button>
+    <h2 style="font-weight: 800; font-size: 26px;">Manuales Sabores Incas</h2>
+    <button class="firma-btn" style="width:auto; margin-top:15px; padding: 12px 20px;" onclick="admin.abrirEditor()">+ Nuevo Manual</button>
   </div>
+  <div class="man-grid" id="man-grid"></div>
+</div>
 
-  <div class="man-grid" id="man-grid">
-    <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #ccc;">Cargando manuales...</div>
-  </div>
-
-  <div class="modal-overlay" id="modal-editor">
-    <div class="modal">
-      <h3 id="modal-title" style="font-weight: 800; margin-bottom: 10px;">Crear Manual</h3>
-      <input type="hidden" id="edit-id">
-      <input type="text" id="edit-nombre" placeholder="Título (ej: Reglamento de Cocina)">
-      <input type="text" id="edit-local" placeholder="Local / Empresa">
-      <textarea id="edit-texto" rows="12" placeholder="Escribe aquí el contenido legal del manual..."></textarea>
-      <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-        <button class="btn-pdf-admin" style="padding: 12px 20px" onclick="admin.cerrarEditor()">Cancelar</button>
-        <button class="firma-btn" style="width: auto; padding: 12px 25px" onclick="admin.guardar()">Guardar Cambios</button>
-      </div>
+<div class="modal-overlay" id="modal-editor">
+  <div class="modal">
+    <h3 id="modal-title" style="font-weight:800;">Editar Documento</h3>
+    <input type="hidden" id="edit-id">
+    <input type="text" id="edit-nombre" class="firma-input" style="margin-top:15px" placeholder="Título">
+    <input type="text" id="edit-local" class="firma-input" placeholder="Sede/Local">
+    <textarea id="edit-texto" rows="10" placeholder="Contenido legal..."></textarea>
+    <div style="display:flex; gap:10px; margin-top:10px">
+      <button class="btn-admin" style="flex:1" onclick="admin.cerrarEditor()">Cancelar</button>
+      <button class="firma-btn" style="flex:2; padding:12px" onclick="admin.guardar()">Guardar</button>
     </div>
   </div>
 </div>
 
 <script>
-// 1. CONFIGURACIÓN FIREBASE
+// CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
   authDomain: "rrhhsystem.firebaseapp.com",
@@ -176,119 +174,102 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let currentDocData = null;
+let docActual = null;
 
-// 2. LÓGICA DE FIRMA PARA EL EMPLEADO
-async function inicializarPantallaFirma() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const docId = urlParams.get('firma');
-  if(!docId) return;
-
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('firma-screen').classList.add('show');
-
-  try {
-    const snap = await db.collection('manuales').doc(docId).get();
-    if(!snap.exists) {
-      document.getElementById('f-titulo').textContent = "Documento no encontrado";
-      return;
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const idFirma = params.get('firma');
+  
+  if(idFirma) {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('firma-screen').classList.add('show');
+    const snap = await db.collection('manuales').doc(idFirma).get();
+    if(snap.exists) {
+      docActual = {id: snap.id, ...snap.data()};
+      document.getElementById('f-titulo').textContent = docActual.nombre;
+      document.getElementById('f-local').textContent = docActual.local || 'SABORES INCAS';
+      document.getElementById('f-contenido').textContent = docActual.contenido;
+      document.getElementById('pdf-id-doc').textContent = snap.id.toUpperCase();
     }
-    currentDocData = { id: snap.id, ...snap.data() };
-    
-    document.getElementById('f-titulo').textContent = currentDocData.nombre;
-    document.getElementById('f-local').textContent = currentDocData.local || 'BC GESTIÓN';
-    document.getElementById('f-contenido').textContent = currentDocData.contenido;
-    document.getElementById('pdf-id-doc').textContent = snap.id.toUpperCase();
-  } catch(e) {
-    console.error("Error al cargar firma:", e);
+  } else {
+    admin.cargar();
   }
 }
 
-function validarBotonFirma() {
-  const input = document.getElementById('f-input-nombre').value.trim();
-  document.getElementById('f-btn-accion').disabled = input.length < 6;
+function validarBtn() {
+  const val = document.getElementById('f-input-nombre').value.trim();
+  document.getElementById('f-btn-accion').disabled = val.length < 5;
 }
 
-async function procesarFirmaEmpleado() {
+async function confirmarFirma() {
   const nombre = document.getElementById('f-input-nombre').value.trim();
-  const fechaStr = new Date().toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const fecha = new Date().toLocaleString('es-AR');
   const btn = document.getElementById('f-btn-accion');
   
   btn.disabled = true;
-  btn.textContent = "Generando PDF firmado...";
+  btn.textContent = "Procesando...";
 
   try {
-    const listaFirmas = currentDocData.firmas || [];
-    listaFirmas.push({ nombre: nombre, at: new Date().toISOString() });
-    await db.collection('manuales').doc(currentDocData.id).update({ firmas: listaFirmas });
+    const firmas = docActual.firmas || [];
+    firmas.push({ nombre, at: new Date().toISOString() });
+    await db.collection('manuales').doc(docActual.id).update({ firmas });
 
-    await generarYDescargarPDF(nombre, fechaStr, currentDocData.nombre, currentDocData.contenido, currentDocData.id);
+    await generarPDF(nombre, fecha, docActual.nombre, docActual.contenido, docActual.id);
 
     document.getElementById('f-ui').style.display = 'none';
     document.getElementById('f-success').style.display = 'block';
   } catch(e) {
-    alert("Hubo un problema al firmar: " + e.message);
+    alert("Error: " + e.message);
     btn.disabled = false;
-    btn.textContent = "Confirmar Firma y Descargar PDF";
   }
 }
 
-// 3. LA MAGIA: FUNCIÓN DE PDF CORREGIDA (CON CLONADO INVISIBLE)
-async function generarYDescargarPDF(nombreEmpleado, fechaFirma, tituloDoc, contenidoDoc, docId) {
-  // En vez de tratar de "sacar foto" al div oculto, creamos un clon exacto
-  const originalWrap = document.getElementById('pdf-wrap');
-  const cloneWrap = originalWrap.cloneNode(true);
+// CORRECCIÓN DEL PDF (EVITA EL ERROR DE "CANVAS EXCEEDS SIZE")
+async function generarPDF(nombre, fecha, titulo, texto, id) {
+  const wrap = document.getElementById('pdf-wrap');
+  const clon = wrap.cloneNode(true);
   
-  // Llenamos el clon con los datos
-  cloneWrap.querySelector('#f-contenido').textContent = contenidoDoc;
-  cloneWrap.querySelector('#pdf-nombre-empleado').textContent = nombreEmpleado;
-  cloneWrap.querySelector('#pdf-fecha-firma').textContent = "Fecha de firma: " + fechaFirma;
-  cloneWrap.querySelector('#pdf-id-doc').textContent = docId.toUpperCase();
-  cloneWrap.querySelector('#pdf-footer').style.display = 'block';
-  
-  // Lo ponemos temporalmente en el código, pero lo mandamos bien lejos de la pantalla para que no se vea
-  Object.assign(cloneWrap.style, {
-    position: 'absolute',
-    top: '-9999px',
-    left: '0',
-    width: '800px', // Ancho fijo para mantener formato de hoja
-    backgroundColor: '#ffffff',
-    display: 'block', // FORZAMOS A QUE ESTÉ VISIBLE PARA EL SISTEMA
-    padding: '40px'
+  clon.querySelector('#f-contenido').textContent = texto;
+  clon.querySelector('#pdf-nombre-empleado').textContent = nombre;
+  clon.querySelector('#pdf-fecha-firma').textContent = "Firmado el: " + fecha;
+  clon.querySelector('#pdf-id-doc').textContent = id.toUpperCase();
+  clon.querySelector('#pdf-footer').style.display = 'block';
+
+  // Estilos para el clon invisible
+  Object.assign(clon.style, {
+    position: 'absolute', top: '-9999px', left: '0',
+    width: '750px', display: 'block', padding: '30px', background: 'white'
   });
-  
-  document.body.appendChild(cloneWrap);
+  document.body.appendChild(clon);
 
   try {
-    // Le sacamos la foto al CLON
-    const canvas = await html2canvas(cloneWrap, { 
-      scale: 2, 
-      useCORS: true,
-      logging: false 
-    });
-    
+    // Calculamos el alto para ajustar la calidad y no romper el canvas
+    const alto = clon.offsetHeight;
+    let calidad = 2; // Calidad alta por defecto
+    if(alto > 4000) calidad = 1.5; // Si es muy largo, bajamos un poco para que no falle
+    if(alto > 7000) calidad = 1;   // Si es extremo, calidad normal
+
+    const canvas = await html2canvas(clon, { scale: calidad, useCORS: true });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const w = pdf.internal.pageSize.getWidth();
+    const h = (canvas.height * w) / canvas.width;
     
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`FIRMA_${nombreEmpleado.replace(/ /g,'_')}.pdf`);
-  } catch (error) {
-    console.error("Error generando PDF:", error);
-    alert("Hubo un error interno al crear el archivo. Revisa tu conexión a internet.");
+    pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+    pdf.save(`Firma_${nombre.replace(/ /g,'_')}.pdf`);
+  } catch(e) {
+    console.error(e);
+    alert("El manual es muy extenso. Se guardó la firma, pero el PDF falló.");
   } finally {
-    // IMPORTANTE: borramos el clon cuando terminamos para no ensuciar tu página
-    document.body.removeChild(cloneWrap);
+    document.body.removeChild(clon);
   }
 }
 
-// 4. LÓGICA DEL ADMINISTRADOR
 const admin = {
   docs: [],
-  init: function() {
+  cargar: function() {
     db.collection('manuales').orderBy('at', 'desc').onSnapshot(snap => {
       this.docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
       this.render();
@@ -296,95 +277,68 @@ const admin = {
   },
   render: function() {
     const grid = document.getElementById('man-grid');
-    if(this.docs.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #ccc;">No hay manuales creados.</div>`;
-      return;
-    }
     grid.innerHTML = this.docs.map(d => `
       <div class="man-card">
-        <div style="font-size:10px; color:var(--m9); font-weight:800; font-family:'DM Mono'">${(d.local||'GENERAL').toUpperCase()}</div>
-        <h3 style="margin: 5px 0 15px; font-weight: 800;">${d.nombre}</h3>
-        
-        <div style="display:flex; gap:8px; margin-bottom:20px">
-          <button class="btn-pdf-admin" onclick="admin.copiarEnlace('${d.id}')">🔗 Link</button>
-          <button class="btn-pdf-admin" onclick="admin.abrirEditor('${d.id}')">✏️</button>
-          <button class="btn-pdf-admin" style="color:#dc2626" onclick="admin.eliminar('${d.id}')">🗑️</button>
+        <div style="font-size:10px; font-weight:800; color:var(--m9)">${(d.local||'GENERAL').toUpperCase()}</div>
+        <h3 style="margin:5px 0 15px">${d.nombre}</h3>
+        <div style="display:flex; gap:5px; margin-bottom:15px">
+          <button class="btn-admin" onclick="admin.link('${d.id}')">🔗 Link</button>
+          <button class="btn-admin" onclick="admin.abrirEditor('${d.id}')">✏️</button>
+          <button class="btn-admin" style="color:red" onclick="admin.borrar('${d.id}')">🗑️</button>
         </div>
-
-        <div style="border-top: 1px solid #f0f0f0; padding-top:15px">
-          <p style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:10px">FIRMANTES (${(d.firmas||[]).length})</p>
-          <div style="max-height: 150px; overflow-y: auto;">
-            ${(d.firmas || []).slice().reverse().map(f => `
+        <div style="border-top:1px solid #eee; padding-top:10px">
+          <span style="font-size:11px; font-weight:700">FIRMANTES (${(d.firmas||[]).length})</span>
+          <div style="max-height:100px; overflow-y:auto; margin-top:5px">
+            ${(d.firmas||[]).map(f => `
               <div class="man-firma-row">
-                <span style="font-weight: 600;">${f.nombre}</span>
-                <button class="btn-pdf-admin" onclick="admin.descargarCopiaAdmin('${d.id}', '${f.nombre}', '${f.at}')">📄 PDF</button>
+                <span>${f.nombre}</span>
+                <button class="btn-admin" style="padding:2px 6px; font-size:10px" onclick="generarPDF('${f.nombre}','${new Date(f.at).toLocaleString()}','${d.nombre}','${d.contenido.replace(/'/g,"")}', '${d.id}')">PDF</button>
               </div>
-            `).join('') || '<p style="font-size:11px; color:#ccc; font-style:italic">Nadie firmó todavía</p>'}
+            `).join('')}
           </div>
         </div>
       </div>
     `).join('');
   },
+  link: function(id) {
+    const url = window.location.origin + window.location.pathname + '?firma=' + id;
+    navigator.clipboard.writeText(url);
+    alert("Link copiado para enviar por WhatsApp.");
+  },
   abrirEditor: function(id = null) {
-    const modal = document.getElementById('modal-editor');
     if(id) {
       const d = this.docs.find(x => x.id === id);
       document.getElementById('edit-id').value = d.id;
       document.getElementById('edit-nombre').value = d.nombre;
       document.getElementById('edit-local').value = d.local || '';
       document.getElementById('edit-texto').value = d.contenido;
-      document.getElementById('modal-title').textContent = "Editar Manual";
     } else {
       document.getElementById('edit-id').value = '';
       document.getElementById('edit-nombre').value = '';
       document.getElementById('edit-local').value = '';
       document.getElementById('edit-texto').value = '';
-      document.getElementById('modal-title').textContent = "Nuevo Manual";
     }
-    modal.classList.add('open');
+    document.getElementById('modal-editor').classList.add('open');
   },
   cerrarEditor: () => document.getElementById('modal-editor').classList.remove('open'),
   guardar: async function() {
     const id = document.getElementById('edit-id').value;
     const data = {
-      nombre: document.getElementById('edit-nombre').value.trim(),
-      local: document.getElementById('edit-local').value.trim(),
-      contenido: document.getElementById('edit-texto').value.trim(),
+      nombre: document.getElementById('edit-nombre').value,
+      local: document.getElementById('edit-local').value,
+      contenido: document.getElementById('edit-texto').value,
       at: new Date().toISOString()
     };
-    if(!data.nombre || !data.contenido) return alert("Completa título y contenido");
-    
     if(id) await db.collection('manuales').doc(id).update(data);
     else await db.collection('manuales').add({...data, firmas: []});
-    
     this.cerrarEditor();
   },
-  copiarEnlace: function(id) {
-    const url = window.location.origin + window.location.pathname + '?firma=' + id;
-    navigator.clipboard.writeText(url);
-    alert("Enlace de firma copiado al portapapeles.");
-  },
-  eliminar: async function(id) {
-    if(confirm("¿Estás seguro de eliminar este manual y todas sus firmas?")) {
-      await db.collection('manuales').doc(id).delete();
-    }
-  },
-  descargarCopiaAdmin: async function(docId, nombre, fechaISO) {
-    const doc = this.docs.find(x => x.id === docId);
-    const fechaFormateada = new Date(fechaISO).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    
-    // Al pasarle los datos aquí, usa el "clon" invisible que arreglamos arriba
-    await generarYDescargarPDF(nombre, fechaFormateada, doc.nombre, doc.contenido, doc.id);
+  borrar: async function(id) {
+    if(confirm("¿Eliminar este manual?")) await db.collection('manuales').doc(id).delete();
   }
 };
 
-// 5. ARRANQUE DEL SISTEMA
-const urlParams = new URLSearchParams(window.location.search);
-if(urlParams.has('firma')) {
-  inicializarPantallaFirma();
-} else {
-  admin.init();
-}
+init();
 </script>
 </body>
 </html>

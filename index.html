@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RRHH · Sistema de Gestión</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -11,385 +11,228 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-
 <style>
-  :root {
-    --primary: #0f172a;
-    --accent: #f59e0b;
-    --bg: #f1f5f9;
-    --surface: #ffffff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-    --text-light: #64748b;
-    --radius: 16px;
-  }
+body { font-family: Arial; margin: 0; background: #f5f5f5; }
+.container { max-width: 900px; margin: auto; padding: 20px; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  
-  body, html { 
-    height: 100%; 
-    background: var(--bg); 
-    color: var(--text); 
-    font-family: 'Inter', sans-serif;
-    line-height: 1.5;
-  }
+.card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; }
 
-  /* ── SECCIÓN DE FIRMA (OPTIMIZADA PARA SCROLL) ── */
-  #firma-screen {
-    display: none; 
-    position: fixed; 
-    inset: 0; 
-    z-index: 9999;
-    background: var(--bg);
-    flex-direction: column;
-  }
-  #firma-screen.show { display: flex; }
+button { padding: 10px; cursor: pointer; }
 
-  .firma-nav {
-    background: var(--surface);
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-
-  .firma-scroll-container {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .document-paper {
-    background: var(--surface);
-    max-width: 800px;
-    margin: 0 auto 20px;
-    padding: 40px;
-    border-radius: var(--radius);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    border: 1px solid var(--border);
-  }
-
-  #f-contenido {
-    font-size: 16px;
-    color: #334155;
-    white-space: pre-wrap;
-    margin-bottom: 30px;
-  }
-
-  /* Footer del PDF (Oculto en pantalla, visible en captura) */
-  .pdf-footer-secret {
-    display: none;
-    margin-top: 50px;
-    padding-top: 30px;
-    border-top: 2px solid var(--accent);
-  }
-
-  /* CONTROLES FLOTANTES */
-  .firma-actions {
-    background: var(--surface);
-    padding: 20px 24px calc(20px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .input-modern {
-    width: 100%;
-    padding: 16px;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-    font-size: 16px;
-    font-family: 'Inter';
-    outline: none;
-    transition: 0.2s;
-  }
-  .input-modern:focus { border-color: var(--accent); }
-
-  .btn-main {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 18px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 16px;
-    font-family: 'Syne';
-    cursor: pointer;
-    transition: 0.3s;
-  }
-  .btn-main:disabled { background: #cbd5e1; cursor: not-allowed; }
-
-  /* ── ADMIN DASHBOARD ── */
-  #admin-app { padding: 30px 20px; max-width: 1200px; margin: 0 auto; }
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-  
-  .card {
-    background: var(--surface);
-    padding: 24px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    transition: 0.3s;
-  }
-  .card:hover { transform: translateY(-4px); box-shadow: 0 12px 25px rgba(0,0,0,0.1); }
-
-  .badge {
-    background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 800;
-    padding: 4px 8px; border-radius: 6px; text-transform: uppercase;
-  }
-
-  /* MODAL */
-  .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85);
-    display: none; align-items: center; justify-content: center; z-index: 10000;
-    backdrop-filter: blur(5px); padding: 20px;
-  }
-  .modal-backdrop.open { display: flex; }
-  .modal { background: white; width: 100%; max-width: 600px; border-radius: 24px; padding: 32px; }
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+}
 </style>
 </head>
 <body>
 
-<div id="firma-screen">
-  <div class="firma-nav">
-    <div>
-      <span id="f-badge" class="badge">SABORES INCAS</span>
-      <h2 id="f-titulo" style="font-family:'Syne'; font-size: 18px; margin-top:4px">Cargando...</h2>
-    </div>
-  </div>
-
-  <div class="firma-scroll-container">
-    <div class="document-paper" id="pdf-area">
-      <div id="f-contenido"></div>
-      
-      <div id="pdf-cert" class="pdf-footer-secret">
-        <p style="font-size:12px; color:var(--text-light); text-transform:uppercase; letter-spacing:1px">Certificado de Firma</p>
-        <h3 id="pdf-nombre-out" style="font-size:28px; color:var(--primary); margin:10px 0"></h3>
-        <p id="pdf-fecha-out" style="font-size:14px; color:var(--text)"></p>
-        <div style="margin-top:20px; font-size:9px; color:#cbd5e1; font-family:monospace" id="pdf-id-out"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="firma-actions" id="f-ui">
-    <input type="text" id="input-nombre" class="input-modern" placeholder="Tu nombre y apellido completo" oninput="checkInput()">
-    <button id="btn-firmar" class="btn-main" disabled onclick="procesarFirma()">Firmar y Descargar PDF</button>
-  </div>
-
-  <div id="f-finalizado" style="display:none; text-align:center; padding: 80px 20px; background:white; height:100%">
-    <div style="font-size:60px">✅</div>
-    <h2 style="font-family:'Syne'; font-size:28px; margin:20px 0">¡Documento Firmado!</h2>
-    <p style="color:var(--text-light)">El archivo PDF se ha descargado correctamente.</p>
-  </div>
+<div id="app" class="container">
+  <h1>Manuales</h1>
+  <button onclick="adminUI.openModal()">+ Nuevo</button>
+  <div id="list"></div>
 </div>
 
-<div id="admin-app">
-  <div class="header">
-    <div>
-      <h1 style="font-family:'Syne'; font-size:32px">Manuales</h1>
-      <p style="color:var(--text-light)">Gestión de RRHH</p>
+<div id="firma" style="display:none" class="container">
+  <div class="card" id="pdf">
+    <h2 id="titulo"></h2>
+    <pre id="contenido"></pre>
+
+    <div id="firmaInfo" style="display:none">
+      <hr>
+      <h3 id="nombreFirma"></h3>
+      <p id="fechaFirma"></p>
     </div>
-    <button class="btn-main" style="padding:12px 24px" onclick="ui.abrirModal()">+ Crear Nuevo</button>
   </div>
-  <div class="grid" id="grid-manuales"></div>
+
+  <input id="nombre" placeholder="Tu nombre completo">
+  <button id="firmarBtn" disabled>Firmar</button>
 </div>
 
-<div class="modal-backdrop" id="modal-editor">
-  <div class="modal">
-    <h2 style="font-family:'Syne'; margin-bottom:20px">Editor de Manual</h2>
-    <input type="hidden" id="edit-id">
-    <input type="text" id="edit-nombre" class="input-modern" style="margin-bottom:12px" placeholder="Título (ej: Manual de Cocina)">
-    <input type="text" id="edit-local" class="input-modern" style="margin-bottom:12px" placeholder="Local o Sede">
-    <textarea id="edit-texto" class="input-modern" style="height:250px; resize:none" placeholder="Escribe aquí el contenido legal..."></textarea>
-    <div style="display:flex; gap:12px; margin-top:20px">
-      <button class="btn-main" style="background:#f1f5f9; color:var(--text); flex:1" onclick="ui.cerrarModal()">Cancelar</button>
-      <button class="btn-main" style="flex:2" onclick="ui.guardar()">Guardar Documento</button>
-    </div>
+<div id="modal" style="display:none" class="container">
+  <div class="card">
+    <input id="m-titulo" placeholder="Título">
+    <input id="m-local" placeholder="Local">
+    <textarea id="m-texto" placeholder="Contenido"></textarea>
+
+    <button onclick="adminUI.save()">Guardar</button>
+    <button onclick="adminUI.closeModal()">Cancelar</button>
   </div>
 </div>
 
 <script>
-// --- CONFIGURACIÓN ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+  apiKey: "AIzaSy...",
   authDomain: "rrhhsystem.firebaseapp.com",
-  projectId: "rrhhsystem",
-  storageBucket: "rrhhsystem.firebasestorage.app",
-  messagingSenderId: "71511125212",
-  appId: "1:71511125212:web:03a0ad11b281e397a29819"
+  projectId: "rrhhsystem"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let docData = null;
+let currentDoc = null;
 
-async function boot() {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get('firma');
-  
-  if(id) {
-    document.getElementById('admin-app').style.display = 'none';
-    document.getElementById('firma-screen').classList.add('show');
-    const snap = await db.collection('manuales').doc(id).get();
-    if(snap.exists) {
-      docData = {id: snap.id, ...snap.data()};
-      document.getElementById('f-titulo').textContent = docData.nombre;
-      document.getElementById('f-contenido').textContent = docData.contenido;
-      document.getElementById('f-badge').textContent = docData.local || 'GENERAL';
-    }
+/* =========================
+   UTIL
+========================= */
+function sanitize(t) {
+  return t.replace(/[<>]/g, "");
+}
+
+/* =========================
+   INICIO
+========================= */
+async function start() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("firma");
+
+  if (id) {
+    document.getElementById("app").style.display = "none";
+    document.getElementById("firma").style.display = "block";
+
+    const snap = await db.collection("manuales").doc(id).get();
+    if (!snap.exists) return alert("No existe");
+
+    currentDoc = { id: snap.id, ...snap.data() };
+
+    document.getElementById("titulo").textContent = currentDoc.nombre;
+    document.getElementById("contenido").textContent = currentDoc.contenido;
   } else {
-    ui.init();
+    adminUI.init();
   }
 }
 
-function checkInput() {
-  const val = document.getElementById('input-nombre').value.trim();
-  document.getElementById('btn-firmar').disabled = val.length < 5;
-}
+/* =========================
+   FIRMA
+========================= */
+document.getElementById("nombre").addEventListener("input", e => {
+  document.getElementById("firmarBtn").disabled = e.target.value.trim().length < 5;
+});
 
-async function procesarFirma() {
-  const nombre = document.getElementById('input-nombre').value.trim();
-  const btn = document.getElementById('btn-firmar');
-  const fecha = new Date().toLocaleString('es-AR');
-  
-  btn.disabled = true;
-  btn.textContent = "Generando PDF...";
+document.getElementById("firmarBtn").addEventListener("click", async () => {
+  const nombre = sanitize(document.getElementById("nombre").value.trim());
+  const fecha = new Date().toLocaleString();
 
-  try {
-    // 1. Guardar en Firebase
-    const firmas = docData.firmas || [];
-    firmas.push({ nombre, at: new Date().toISOString() });
-    await db.collection('manuales').doc(docData.id).update({ firmas });
-
-    // 2. Generar PDF
-    await generarPDF(nombre, fecha);
-
-    document.getElementById('f-ui').style.display = 'none';
-    document.getElementById('f-finalizado').style.display = 'block';
-  } catch (e) {
-    alert("Error: " + e.message);
-    btn.disabled = false;
-  }
-}
-
-async function generarPDF(nombre, fecha) {
-  const area = document.getElementById('pdf-area');
-  const clon = area.cloneNode(true);
-  
-  // Configurar el clon para la "foto"
-  clon.querySelector('#pdf-nombre-out').textContent = nombre;
-  clon.querySelector('#pdf-fecha-out').textContent = "Firmado el " + fecha;
-  clon.querySelector('#pdf-id-out').textContent = "AUTH-ID: " + docData.id.toUpperCase();
-  clon.querySelector('#pdf-cert').style.display = 'block';
-
-  Object.assign(clon.style, {
-    position: 'absolute', top: '-10000px', left: '0',
-    width: '800px', background: 'white', display: 'block', padding: '40px'
+  await db.collection("manuales").doc(currentDoc.id).update({
+    firmas: firebase.firestore.FieldValue.arrayUnion({
+      nombre,
+      at: new Date().toISOString()
+    })
   });
-  document.body.appendChild(clon);
 
-  try {
-    // AJUSTE DINÁMICO DE CALIDAD: Evita que el PDF no descargue en móviles
-    const alto = clon.offsetHeight;
-    let escala = 2; 
-    if(alto > 3000) escala = 1.5;
-    if(alto > 6000) escala = 1; // Si es muy largo, bajamos escala para no saturar memoria
+  await generarPDF(nombre, fecha);
 
-    const canvas = await html2canvas(clon, { 
-      scale: escala, 
-      useCORS: true,
-      logging: false,
-      windowWidth: 800
-    });
-    
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    
-    const w = pdf.internal.pageSize.getWidth();
-    const h = (canvas.height * w) / canvas.width;
-    
-    pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
-    pdf.save(`Firma_${nombre.replace(/\s+/g, '_')}.pdf`);
-  } finally {
-    document.body.removeChild(clon);
+  alert("Firmado correctamente");
+});
+
+/* =========================
+   PDF MULTIPAGE
+========================= */
+async function generarPDF(nombre, fecha) {
+  const cont = document.getElementById("pdf");
+  const clone = cont.cloneNode(true);
+
+  clone.querySelector("#firmaInfo").style.display = "block";
+  clone.querySelector("#nombreFirma").textContent = nombre;
+  clone.querySelector("#fechaFirma").textContent = fecha;
+
+  clone.style.position = "absolute";
+  clone.style.top = "-9999px";
+  clone.style.width = "800px";
+
+  document.body.appendChild(clone);
+
+  const canvas = await html2canvas(clone, { scale: 2 });
+  const img = canvas.toDataURL("image/png");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  const w = 210;
+  const h = (canvas.height * w) / canvas.width;
+
+  let heightLeft = h;
+  let position = 0;
+
+  pdf.addImage(img, "PNG", 0, position, w, h);
+  heightLeft -= 297;
+
+  while (heightLeft > 0) {
+    position = heightLeft - h;
+    pdf.addPage();
+    pdf.addImage(img, "PNG", 0, position, w, h);
+    heightLeft -= 297;
   }
+
+  pdf.save("firma.pdf");
+
+  document.body.removeChild(clone);
 }
 
-const ui = {
+/* =========================
+   ADMIN
+========================= */
+const adminUI = {
   docs: [],
+
   init() {
-    db.collection('manuales').orderBy('at', 'desc').onSnapshot(snap => {
-      this.docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    db.collection("manuales").onSnapshot(snap => {
+      this.docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       this.render();
     });
   },
+
   render() {
-    const container = document.getElementById('grid-manuales');
-    container.innerHTML = this.docs.map(d => `
-      <div class="card">
-        <span class="badge">${d.local || 'General'}</span>
-        <h3 style="margin:8px 0 15px; font-family:'Syne'">${d.nombre}</h3>
-        <div style="display:flex; gap:8px; margin-bottom:15px">
-          <button class="btn-main" style="padding:8px 12px; font-size:12px" onclick="ui.copiarLink('${d.id}')">🔗 Link</button>
-          <button class="btn-main" style="padding:8px 12px; font-size:12px; background:#f1f5f9; color:#000" onclick="ui.abrirModal('${d.id}')">✏️</button>
-          <button class="btn-main" style="padding:8px 12px; font-size:12px; background:#fee2e2; color:#b91c1c" onclick="ui.borrar('${d.id}')">🗑️</button>
-        </div>
-        <div style="font-size:12px; color:var(--text-light)">
-          <strong>FIRMANTES (${(d.firmas||[]).length}):</strong>
-          <div style="margin-top:5px; max-height:80px; overflow-y:auto">
-            ${(d.firmas||[]).map(f => `<div style="padding:2px 0">${f.nombre}</div>`).join('')}
-          </div>
-        </div>
-      </div>
-    `).join('');
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    this.docs.forEach(d => {
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+        <h3>${d.nombre}</h3>
+        <p>${d.local || ""}</p>
+        <button data-id="${d.id}" class="linkBtn">Copiar link</button>
+      `;
+
+      div.querySelector(".linkBtn").addEventListener("click", () => {
+        const url = location.origin + location.pathname + "?firma=" + d.id;
+        navigator.clipboard.writeText(url);
+        alert("Copiado");
+      });
+
+      list.appendChild(div);
+    });
   },
-  abrirModal(id = null) {
-    if(id) {
-      const d = this.docs.find(x => x.id === id);
-      document.getElementById('edit-id').value = d.id;
-      document.getElementById('edit-nombre').value = d.nombre;
-      document.getElementById('edit-local').value = d.local || '';
-      document.getElementById('edit-texto').value = d.contenido;
-    } else {
-      document.getElementById('edit-id').value = '';
-      document.getElementById('edit-nombre').value = '';
-      document.getElementById('edit-local').value = '';
-      document.getElementById('edit-texto').value = '';
-    }
-    document.getElementById('modal-editor').classList.add('open');
+
+  openModal() {
+    document.getElementById("modal").style.display = "block";
   },
-  cerrarModal: () => document.getElementById('modal-editor').classList.remove('open'),
-  async guardar() {
-    const id = document.getElementById('edit-id').value;
-    const data = {
-      nombre: document.getElementById('edit-nombre').value,
-      local: document.getElementById('edit-local').value,
-      contenido: document.getElementById('edit-texto').value,
-      at: new Date().toISOString()
-    };
-    if(id) await db.collection('manuales').doc(id).update(data);
-    else await db.collection('manuales').add({...data, firmas: []});
-    this.cerrarModal();
+
+  closeModal() {
+    document.getElementById("modal").style.display = "none";
   },
-  copiarLink(id) {
-    const url = window.location.origin + window.location.pathname + '?firma=' + id;
-    navigator.clipboard.writeText(url);
-    alert("Enlace de firma copiado.");
-  },
-  async borrar(id) {
-    if(confirm("¿Eliminar este manual?")) await db.collection('manuales').doc(id).delete();
+
+  async save() {
+    const nombre = document.getElementById("m-titulo").value;
+    const local = document.getElementById("m-local").value;
+    const contenido = document.getElementById("m-texto").value;
+
+    await db.collection("manuales").add({
+      nombre,
+      local,
+      contenido,
+      firmas: []
+    });
+
+    this.closeModal();
   }
 };
 
-boot();
+start();
 </script>
+
 </body>
 </html>

@@ -113,6 +113,23 @@ body::before {
 }
 .bc-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
+/* ─── ALIASES LOCALES ───────────────────────────────────────── */
+/* Mapeo de variables viejas del módulo hacia el shared system   */
+:root {
+  --bg:        var(--bc-bg);
+  --surface:   var(--bc-surface);
+  --surface2:  var(--bc-surface2);
+  --border:    var(--bc-border);
+  --text:      var(--bc-text);
+  --muted:     var(--bc-muted);
+  --danger:    var(--bc-danger);
+  --accent2:   var(--bc-success);
+  --m4:        var(--bc-purple);
+  --m9:        #b45309;
+  --accent:    #2563eb;
+  --transition: var(--bc-t);
+}
+
 /* ─── SHARED STATUS BAR ──────────────────────────────────────── */
 #bc-status-bar {
   display: flex; align-items: center; gap: 8px;
@@ -621,6 +638,8 @@ body::before {
     </div>
     <div class="bj-modal-body">
       <input type="hidden" id="ind-asignar-prenda-id">
+
+      <!-- Talle + Fecha -->
       <div class="bj-form-row">
         <div class="bj-field">
           <label class="bj-label">Talle entregado</label>
@@ -633,17 +652,28 @@ body::before {
           <input class="bj-input" id="ind-asignar-fecha" type="date">
         </div>
       </div>
-      <div class="bj-label" style="margin-bottom:6px">Empleado</div>
-      <input class="bj-input" id="ind-asignar-search"
-        placeholder="Buscar por nombre, DNI, CUIL…"
-        oninput="IND.buscarEmp(this.value)"
-        style="border-color:color-mix(in srgb,var(--m9) 40%,var(--border))">
-      <div class="ind-emp-list" id="ind-emp-list">
-        <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">
-          Escribí para buscar empleados
-        </div>
+
+      <!-- Datos manuales del empleado -->
+      <div class="bj-field" style="margin-bottom:12px">
+        <label class="bj-label">Nombre completo *</label>
+        <input class="bj-input" id="ind-asignar-nombre"
+          placeholder="Ej: Juan Pérez"
+          autocomplete="off"
+          oninput="IND._validarAsignar()">
       </div>
-      <div id="ind-asignar-error" style="color:var(--danger);font-size:12px;margin-top:8px"></div>
+      <div class="bj-field" style="margin-bottom:4px">
+        <label class="bj-label">DNI</label>
+        <input class="bj-input" id="ind-asignar-dni"
+          placeholder="Ej: 38123456"
+          type="text" inputmode="numeric" maxlength="10"
+          autocomplete="off">
+      </div>
+
+      <div id="ind-asignar-error" style="color:var(--danger);font-size:12px;margin-top:10px"></div>
+    </div>
+    <div class="bj-modal-footer">
+      <button class="bj-btn bj-btn-outline" onclick="IND.cerrarAsignar()">Cancelar</button>
+      <button class="bj-btn bj-btn-primary" id="ind-asignar-btn" onclick="IND.confirmarEntrega()" disabled>Confirmar entrega</button>
     </div>
   </div>
 </div>
@@ -706,8 +736,6 @@ const IND = (() => {
 
   // ── INIT ──────────────────────────────────────────────────────
   function init() {
-    _cargarEmpleados();
-
     if (_unsub) { _aplicarFiltros(); return; }
 
     seedPrendas().catch(e => console.warn('seed:', e)).finally(() => {
@@ -723,14 +751,7 @@ const IND = (() => {
     });
   }
 
-  function _cargarEmpleados() {
-    if (_unsubEmpleados) return;
-    // Intenta escuchar 'info-personal' (la colección real del sistema)
-    _unsubEmpleados = db.collection('info-personal')
-      .onSnapshot(snap => {
-        _empleados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }, () => { _empleados = []; });
-  }
+  // _cargarEmpleados eliminado — ahora el empleado se ingresa manualmente
 
   // ── LOCAL TABS ─────────────────────────────────────────────────
   function _poblarLocalTabs() {
@@ -1080,8 +1101,10 @@ const IND = (() => {
     document.getElementById('ind-asignar-title').textContent = p.nombre;
     document.getElementById('ind-asignar-prenda-id').value   = prendaId;
     document.getElementById('ind-asignar-fecha').value  = new Date().toISOString().slice(0,10);
-    document.getElementById('ind-asignar-search').value = '';
+    document.getElementById('ind-asignar-nombre').value = '';
+    document.getElementById('ind-asignar-dni').value    = '';
     document.getElementById('ind-asignar-error').textContent = '';
+    document.getElementById('ind-asignar-btn').disabled = true;
 
     const talleSel = document.getElementById('ind-asignar-talle');
     const tallesStr = p.talles || '';
@@ -1093,10 +1116,8 @@ const IND = (() => {
       talleSel.innerHTML = '<option value="">— Elegir talle —</option>' +
         lista.map(t => `<option value="${_esc(t)}">${_esc(t)}</option>`).join('');
     }
-    document.getElementById('ind-emp-list').innerHTML =
-      '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
     document.getElementById('ind-asignar-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('ind-asignar-search').focus(), 120);
+    setTimeout(() => document.getElementById('ind-asignar-nombre').focus(), 120);
   }
 
   function cerrarAsignar(e) {
@@ -1105,80 +1126,42 @@ const IND = (() => {
     _asignarPrendaId = null;
   }
 
-  function buscarEmp(q) {
-    const list = document.getElementById('ind-emp-list');
-    if (!q || q.length < 2) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
-      return;
-    }
-    const matches = _empleados.filter(r =>
-      (r.nombre||'').toLowerCase().includes(q.toLowerCase()) ||
-      (r.cuil||'').includes(q) || (r.dni||'').includes(q)
-    ).slice(0, 10);
-
-    if (!matches.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Sin resultados</div>';
-      return;
-    }
-    list.innerHTML = matches.map(r => {
-      const initials   = (r.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const avatarInner = r.foto
-        ? `<img src="${_esc(r.foto)}" onerror="this.parentNode.textContent='${initials}'">`
-        : initials;
-      return `
-        <div class="ind-emp-opt" onclick="IND.seleccionarEmp('${r.id}','${_esc(r.nombre)}')">
-          <div class="ind-emp-opt-avatar">${avatarInner}</div>
-          <div style="flex:1;min-width:0">
-            <div class="ind-emp-opt-name">${_esc(r.nombre)}</div>
-            <div class="ind-emp-opt-meta">${_esc(r.local||'')} · ${_esc(r['puesto-real']||'')}</div>
-          </div>
-        </div>`;
-    }).join('');
+  function _validarAsignar() {
+    const nombre = document.getElementById('ind-asignar-nombre').value.trim();
+    const partes = nombre.split(/\s+/).filter(Boolean);
+    document.getElementById('ind-asignar-btn').disabled = partes.length < 2;
   }
 
-  async function seleccionarEmp(empId, empNombre) {
+  async function confirmarEntrega() {
     if (!_asignarPrendaId) return;
-    const errEl = document.getElementById('ind-asignar-error');
-    const talle = document.getElementById('ind-asignar-talle').value.trim();
-    const fecha = document.getElementById('ind-asignar-fecha').value;
+    const errEl   = document.getElementById('ind-asignar-error');
+    const nombre  = document.getElementById('ind-asignar-nombre').value.trim();
+    const dni     = document.getElementById('ind-asignar-dni').value.trim();
+    const talle   = document.getElementById('ind-asignar-talle').value.trim();
+    const fecha   = document.getElementById('ind-asignar-fecha').value;
     errEl.textContent = '';
 
-    const prenda = _prendas.find(x => x.id === _asignarPrendaId);
-    if (prenda && (prenda.entregas||[]).some(e => e.empId === empId)) {
-      errEl.textContent = `${empNombre} ya tiene esta prenda asignada.`;
-      return;
-    }
+    if (!nombre) { errEl.textContent = 'Ingresá el nombre completo.'; return; }
+
+    const btn = document.getElementById('ind-asignar-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+
+    // Usamos dni como empId si existe, sino generamos uno por nombre
+    const empId = dni ? `dni_${dni}` : `manual_${nombre.toLowerCase().replace(/\s+/g,'_')}`;
     const entregaId = `e_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
-    const nueva = { id: entregaId, empId, empNombre, talle, fecha, asignadoAt: new Date().toISOString() };
+    const nueva = { id: entregaId, empId, empNombre: nombre, empDni: dni, talle, fecha, asignadoAt: new Date().toISOString() };
 
     try {
-      // Guardar en prendas
       await db.collection(COL_PRENDAS).doc(_asignarPrendaId).update({
         entregas: firebase.firestore.FieldValue.arrayUnion(nueva)
       });
-      // Guardar en indumentaria (perfil del empleado — sincronía con muñeco)
-      const cat = prenda?.cat || 'otro';
-      const prendaRef2 = db.collection(COL_INDUM).doc(empId);
-      const snap = await prendaRef2.get();
-      const current = snap.exists ? snap.data() : {};
-      const partActual = current[cat] || {};
-      const descNueva = partActual.desc
-        ? partActual.desc + '; ' + (prenda?.nombre||'')
-        : (prenda?.nombre||'');
-      await prendaRef2.set({
-        [cat]: {
-          desc:  descNueva,
-          talle: talle || partActual.talle || '',
-          fecha: fecha || partActual.fecha || '',
-          updatedAt: new Date().toISOString(),
-        }
-      }, { merge: true });
-
       document.getElementById('ind-asignar-overlay').classList.remove('open');
       _asignarPrendaId = null;
     } catch(err) {
       errEl.textContent = 'Error: ' + err.message;
       console.error(err);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Confirmar entrega';
     }
   }
 
@@ -1232,7 +1215,7 @@ const IND = (() => {
     init, setLocal, filtrar, filtrarCat,
     abrirNuevaPrenda, editarPrenda, cerrarPrenda, guardarPrenda, eliminarPrenda,
     onPrendaSelect,
-    abrirAsignar, cerrarAsignar, buscarEmp, seleccionarEmp, quitarEntrega,
+    abrirAsignar, cerrarAsignar, _validarAsignar, confirmarEntrega, quitarEntrega,
   };
 })();
 

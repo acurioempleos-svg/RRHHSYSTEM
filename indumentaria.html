@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Indumentaria · BC Gestión</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   BC GESTIÓN — SHARED DESIGN SYSTEM v1.0
+   Copiado idéntico en cada página. No editar por separado.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── VARIABLES GLOBALES ─────────────────────────────────────── */
+:root {
+  /* Marca */
+  --bc-amber:        #d97706;
+  --bc-amber-hi:     #f59e0b;
+  --bc-amber-dim:    rgba(217,119,6,0.10);
+  --bc-amber-border: rgba(217,119,6,0.22);
+  /* Superficies */
+  --bc-bg:           #f7f8fa;
+  --bc-surface:      #ffffff;
+  --bc-surface2:     #f0f2f5;
+  --bc-border:       #e0e3ea;
+  --bc-border-hi:    #c8cdd8;
+  /* Texto */
+  --bc-text:         #111827;
+  --bc-muted:        #6b7280;
+  --bc-faint:        #9ca3af;
+  /* Semánticos */
+  --bc-success:      #059669;
+  --bc-danger:       #dc2626;
+  --bc-purple:       #7c3aed;
+  /* Tipografía */
+  --bc-font-sans:    'Syne', sans-serif;
+  --bc-font-mono:    'DM Mono', monospace;
+  /* Forma */
+  --bc-radius:       10px;
+  --bc-radius-lg:    14px;
+  --bc-t:            180ms ease;
+  /* Shadows */
+  --bc-shadow-sm:    0 1px 4px rgba(0,0,0,0.06);
+  --bc-shadow:       0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* ─── RESET ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family: var(--bc-font-sans);
+  background: var(--bc-bg);
+  color: var(--bc-text);
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+}
+
+/* ─── NOISE TEXTURE ──────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  opacity: .018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+
+/* ─── SHARED TOPBAR ──────────────────────────────────────────── */
+#bc-topbar {
+  background: var(--bc-surface);
+  border-bottom: 1px solid var(--bc-border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: var(--bc-shadow-sm);
+}
+.bc-topbar-back {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--bc-font-mono); font-size: 10px;
+  color: var(--bc-muted); text-decoration: none;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--bc-border);
+  transition: all var(--bc-t);
+  flex-shrink: 0;
+}
+.bc-topbar-back:hover { border-color: var(--bc-amber); color: var(--bc-amber); background: var(--bc-amber-dim); }
+.bc-logo-mark {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--bc-amber) 0%, #92400e 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--bc-font-mono); font-size: 9px; font-weight: 500;
+  color: white; letter-spacing: -0.5px; flex-shrink: 0;
+}
+.bc-topbar-brand {
+  font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  flex-shrink: 0;
+}
+.bc-topbar-brand span { color: var(--bc-amber); }
+.bc-topbar-sep { color: var(--bc-border); font-size: 16px; user-select: none; }
+.bc-topbar-module {
+  font-family: var(--bc-font-mono); font-size: 11px;
+  color: var(--bc-muted); letter-spacing: .1em; text-transform: uppercase;
+}
+.bc-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* ─── SHARED STATUS BAR ──────────────────────────────────────── */
+#bc-status-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 24px;
+  font-family: var(--bc-font-mono); font-size: 10px;
+  color: var(--bc-faint); letter-spacing: .08em;
+  border-bottom: 1px solid var(--bc-border);
+  background: var(--bc-surface2);
+}
+.bc-status-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bc-faint);
+}
+.bc-status-dot.connected { background: var(--bc-success); }
+.bc-status-dot.error     { background: var(--bc-danger); }
+
+/* ─── TOPBAR ─────────────────────────────────────────────────── */
+#app { display: flex; min-height: 100dvh; flex-direction: column; position: relative; z-index: 1; }
+
+#topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 60px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-brand { font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.topbar-brand span { color: var(--m9); }
+.topbar-sep { color: var(--border); font-size: 18px; user-select: none; }
+.topbar-module {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+}
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+
+/* ─── CONTENT ────────────────────────────────────────────────── */
+#content {
+  flex: 1; padding: 28px 24px;
+  max-width: 1200px; width: 100%; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+/* ─── MODULE HEADER ──────────────────────────────────────────── */
+.mod-header {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding-bottom: 24px; flex-wrap: wrap;
+}
+.mod-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m9) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--m9) 25%, transparent);
+}
+.mod-title-group { flex: 1; }
+.mod-eyebrow {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: var(--m9); margin-bottom: 4px;
+}
+.mod-title { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.mod-desc { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.mod-actions { display: flex; gap: 10px; align-items: center; }
+
+/* ─── BOTONES ────────────────────────────────────────────────── */
+.bj-btn {
+  padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 700;
+  font-family: 'Syne', sans-serif; cursor: pointer; border: none;
+  transition: opacity var(--transition), transform var(--transition);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.bj-btn:hover { opacity: .88; transform: translateY(-1px); }
+.bj-btn:active { transform: translateY(0); }
+.bj-btn-primary { background: var(--m9); color: #ffffff; }
+.bj-btn-outline {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border);
+}
+.bj-btn-outline:hover { border-color: var(--m9); color: var(--m9); background: color-mix(in srgb, var(--m9) 8%, transparent); }
+.bj-btn-danger { background: var(--danger); color: #fff; }
+
+/* ─── STATS ──────────────────────────────────────────────────── */
+.ind-stats {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.ind-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 20px; flex: 1; min-width: 110px;
+}
+.ind-stat-val {
+  font-size: 26px; font-weight: 800; color: var(--m9); line-height: 1;
+  margin-bottom: 4px;
+}
+.ind-stat-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+}
+
+/* ─── LOCAL TABS ─────────────────────────────────────────────── */
+.ind-local-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.ind-local-tab {
+  padding: 7px 16px; border-radius: 20px; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  border: 1.5px solid var(--border); background: none; color: var(--muted);
+  transition: all var(--transition);
+}
+.ind-local-tab:hover { border-color: var(--m9); color: var(--m9); }
+.ind-local-tab.active {
+  background: color-mix(in srgb, var(--m9) 18%, transparent);
+  border-color: var(--m9); color: var(--m9);
+}
+
+/* ─── TOOLBAR ────────────────────────────────────────────────── */
+.ind-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.bj-search {
+  flex: 1; min-width: 180px; max-width: 320px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 14px;
+  color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
+  outline: none; transition: border-color var(--transition);
+}
+.bj-search:focus { border-color: var(--m9); }
+.bj-select {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 12px;
+  color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace;
+  outline: none; cursor: pointer; transition: border-color var(--transition);
+}
+.bj-select:focus { border-color: var(--m9); }
+.ind-count-label {
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+  margin-left: auto;
+}
+
+/* ─── GRID DE PRENDAS ────────────────────────────────────────── */
+.ind-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.ind-prenda-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  transition: border-color var(--transition), transform var(--transition);
+}
+.ind-prenda-card:hover { border-color: var(--m9); transform: translateY(-1px); }
+
+.ind-prenda-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--m9) 5%, transparent);
+}
+.ind-prenda-icon {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m9) 20%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.ind-prenda-name { font-size: 14px; font-weight: 700; flex: 1; }
+.ind-prenda-meta {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: .06em;
+}
+.ind-prenda-actions { display: flex; gap: 4px; }
+.ind-prenda-actions button {
+  width: 28px; height: 28px; border: none; background: none;
+  cursor: pointer; color: var(--muted); border-radius: 6px; font-size: 13px;
+  transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.ind-prenda-actions button:hover { background: var(--surface2); color: var(--text); }
+.ind-prenda-actions button.del:hover { color: var(--danger); }
+
+/* Stock por talles */
+.ind-stock-bar { padding: 10px 16px; }
+
+/* Lista de entregas */
+.ind-entregas-list { padding: 0 16px 14px; }
+.ind-entrega-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  font-size: 12px;
+}
+.ind-entrega-row:last-child { border-bottom: none; }
+.ind-entrega-avatar {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m4) 20%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--m4) 40%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800; color: var(--m4);
+  overflow: hidden;
+}
+.ind-entrega-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ind-entrega-nombre { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.ind-entrega-talle {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--m9); background: color-mix(in srgb, var(--m9) 15%, transparent);
+  padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
+}
+.ind-entrega-fecha { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; flex-shrink: 0; }
+.ind-countdown {
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+}
+.ind-countdown.ok    { background: color-mix(in srgb,var(--accent2) 15%,transparent); color: var(--accent2); }
+.ind-countdown.warn  { background: color-mix(in srgb,var(--m9) 18%,transparent);      color: var(--m9); }
+.ind-countdown.vence { background: color-mix(in srgb,var(--danger) 15%,transparent);  color: var(--danger); }
+.ind-entrega-del {
+  width: 20px; height: 20px; border: none; background: none;
+  cursor: pointer; color: var(--muted); border-radius: 4px; font-size: 11px;
+  transition: color var(--transition); flex-shrink: 0;
+}
+.ind-entrega-del:hover { color: var(--danger); }
+
+.ind-asignar-btn {
+  width: 100%; padding: 7px; margin-top: 6px;
+  background: none; border: 1px dashed var(--border); border-radius: 7px;
+  color: var(--muted); cursor: pointer; font-size: 12px;
+  font-family: 'Syne', sans-serif;
+  transition: all var(--transition);
+}
+.ind-asignar-btn:hover { border-color: var(--m9); color: var(--m9); }
+
+/* Empty state */
+.ind-empty {
+  grid-column: 1/-1; text-align: center; padding: 60px 20px;
+  color: var(--muted); font-size: 14px;
+}
+.ind-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+
+/* ─── MODAL ──────────────────────────────────────────────────── */
+.bj-modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(4px);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 16px; overflow-y: auto;
+}
+.bj-modal-overlay.open { display: flex; }
+.bj-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%; max-width: 520px;
+  margin: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.14);
+  animation: modalIn 180ms cubic-bezier(.4,0,.2,1);
+}
+.bj-modal-asignar { max-width: 480px; }
+@keyframes modalIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+.bj-modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 22px 24px 16px; border-bottom: 1px solid var(--border);
+}
+.bj-modal-tag {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--m9);
+  margin-bottom: 4px;
+}
+.bj-modal-title { font-size: 18px; font-weight: 800; }
+.bj-modal-close {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  font-size: 14px; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.bj-modal-close:hover { color: var(--text); border-color: var(--text); background: var(--surface2); }
+
+.bj-modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 0; }
+.bj-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px; border-top: 1px solid var(--border);
+}
+
+/* ─── FORM ───────────────────────────────────────────────────── */
+.bj-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; }
+.bj-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+}
+.bj-input {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 12px;
+  color: var(--text); font-size: 14px; font-family: 'Syne', sans-serif;
+  outline: none; transition: border-color var(--transition); width: 100%;
+}
+.bj-input:focus { border-color: var(--m9); }
+.bj-form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* ─── ASIGNAR: lista de empleados ────────────────────────────── */
+.ind-emp-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.ind-emp-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  transition: background var(--transition);
+  border: 1px solid transparent;
+}
+.ind-emp-opt:hover { background: color-mix(in srgb, var(--m9) 10%, transparent); border-color: var(--m9); }
+.ind-emp-opt-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m4) 20%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: var(--m4); overflow: hidden;
+}
+.ind-emp-opt-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ind-emp-opt-name { font-size: 13px; font-weight: 600; flex: 1; }
+.ind-emp-opt-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* status bar → ver #bc-status-bar en shared CSS */
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  #content { padding: 18px 14px; }
+  .ind-grid { grid-template-columns: 1fr; }
+  .ind-stats { gap: 8px; }
+  .ind-stat { min-width: 90px; padding: 10px 12px; }
+  .ind-stat-val { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ APP ═══════════════════════════════════════════════════════ -->
+<div id="app">
+
+<!-- ══ BC TOPBAR ══════════════════════════════════════════════════ -->
+<nav id="bc-topbar">
+  <a class="bc-topbar-back" href="index.html">← Panel</a>
+  <div class="bc-logo-mark">BC</div>
+  <div class="bc-topbar-brand">BC <span>Gestión</span></div>
+  <div class="bc-topbar-sep">/</div>
+  <div class="bc-topbar-module">Indumentaria</div>
+  <div class="bc-topbar-right"></div>
+</nav>
+
+<!-- ══ BC STATUS BAR ═════════════════════════════════════════════ -->
+<div id="bc-status-bar">
+  <div class="bc-status-dot" id="bc-fb-dot"></div>
+  <span id="bc-fb-status">Conectando…</span>
+</div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- Header del módulo -->
+    <div class="mod-header">
+      <div class="mod-icon">🧥</div>
+      <div class="mod-title-group">
+        <div class="mod-eyebrow">Módulo 09</div>
+        <div class="mod-title">Indumentaria</div>
+        <div class="mod-desc">Stock de ropa por local y registro de entregas por empleado.</div>
+      </div>
+      <div class="mod-actions">
+        <button class="bj-btn bj-btn-primary" onclick="IND.abrirNuevaPrenda()">+ Nueva prenda</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="ind-stats" id="ind-stats">
+      <div class="ind-stat">
+        <div class="ind-stat-val" id="ind-stat-prendas">—</div>
+        <div class="ind-stat-label">Prendas registradas</div>
+      </div>
+      <div class="ind-stat">
+        <div class="ind-stat-val" id="ind-stat-stock">—</div>
+        <div class="ind-stat-label">Unidades en stock</div>
+      </div>
+      <div class="ind-stat">
+        <div class="ind-stat-val" id="ind-stat-entregadas">—</div>
+        <div class="ind-stat-label">Entregas realizadas</div>
+      </div>
+      <div class="ind-stat">
+        <div class="ind-stat-val" id="ind-stat-empleados">—</div>
+        <div class="ind-stat-label">Empleados con ropa</div>
+      </div>
+      <div class="ind-stat" style="border-color:color-mix(in srgb,var(--danger) 40%,var(--border))">
+        <div class="ind-stat-val" id="ind-stat-vencen" style="color:var(--danger)">—</div>
+        <div class="ind-stat-label">Vencen en 30 días</div>
+      </div>
+    </div>
+
+    <!-- Filtro por local -->
+    <div class="ind-local-tabs" id="ind-local-tabs"></div>
+
+    <!-- Toolbar -->
+    <div class="ind-toolbar">
+      <input class="bj-search" type="text" id="ind-search" placeholder="Buscar prenda…"
+        oninput="IND.filtrar(this.value)">
+      <select class="bj-select" id="ind-filter-cat" onchange="IND.filtrarCat(this.value)">
+        <option value="">Todas las categorías</option>
+        <option value="cabeza">Gorro / Cap</option>
+        <option value="torso">Remera / Camisa</option>
+        <option value="delantal">Delantal</option>
+        <option value="pantalon">Pantalón / Short</option>
+        <option value="calzado">Calzado</option>
+        <option value="otro">Otro</option>
+      </select>
+      <span class="ind-count-label" id="ind-count">—</span>
+    </div>
+
+    <!-- Grid -->
+    <div class="ind-grid" id="ind-grid">
+      <div class="ind-empty">
+        <div class="ind-empty-icon">🧥</div>
+        Iniciando sesión…
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- ══ MODAL: Nueva / Editar prenda ══════════════════════════════ -->
+<div class="bj-modal-overlay" id="ind-prenda-overlay" onclick="IND.cerrarPrenda(event)">
+  <div class="bj-modal" onclick="event.stopPropagation()">
+    <div class="bj-modal-header">
+      <div>
+        <div class="bj-modal-tag" id="ind-prenda-tag">Nueva prenda</div>
+        <div class="bj-modal-title" id="ind-prenda-title">Agregar prenda al stock</div>
+      </div>
+      <button class="bj-modal-close" onclick="IND.cerrarPrenda()">✕</button>
+    </div>
+    <div class="bj-modal-body">
+      <input type="hidden" id="ind-prenda-doc-id">
+
+      <!-- Select de prenda predefinida -->
+      <div class="bj-field" style="margin-bottom:14px">
+        <label class="bj-label">Prenda *</label>
+        <select class="bj-input" id="ind-p-nombre" onchange="IND.onPrendaSelect(this.value)">
+          <option value="">— Elegir prenda —</option>
+          <optgroup label="🟦 Barra Chalaca">
+            <option value="Remera blanca|torso|Barra Chalaca|XS,S,M,L,XL,XXL|Remera manga corta blanca institucional">Remera blanca</option>
+            <option value="Delantal|delantal|Barra Chalaca|Único|Delantal de trabajo Barra Chalaca">Delantal</option>
+            <option value="Pantalón azul|pantalon|Barra Chalaca|36,38,40,42,44,46|Pantalón de cocina azul">Pantalón azul</option>
+            <option value="Botines de trabajo|calzado|Barra Chalaca|35,36,37,38,39,40,41,42,43,44,45,46|Botines de seguridad">Botines de trabajo</option>
+            <option value="Gorra|cabeza|Barra Chalaca|Único|Gorra institucional Barra Chalaca">Gorra</option>
+            <option value="Botas bachero|calzado|Barra Chalaca|35,36,37,38,39,40,41,42,43,44,45,46|Botas de goma para bachero">Botas bachero</option>
+          </optgroup>
+          <optgroup label="🟠 Tanta">
+            <option value="Camisa salón|torso|Tanta|XS,S,M,L,XL,XXL|Camisa de salón Tanta">Camisa salón</option>
+            <option value="Delantal salón|delantal|Tanta|Único|Delantal de salón Tanta">Delantal salón</option>
+            <option value="Delantal bartender|delantal|Tanta|Único|Delantal de bartender Tanta">Delantal bartender</option>
+            <option value="Camisa cocina|torso|Tanta|XS,S,M,L,XL,XXL|Camisa de cocina Tanta">Camisa cocina</option>
+            <option value="Delantal cocina|delantal|Tanta|Único|Delantal de cocina Tanta">Delantal cocina</option>
+          </optgroup>
+          <optgroup label="🔵 La Mar">
+            <option value="Camisa salón|torso|La Mar|XS,S,M,L,XL,XXL|Camisa de salón La Mar">Camisa salón</option>
+            <option value="Delantal salón|delantal|La Mar|Único|Delantal de salón La Mar">Delantal salón</option>
+            <option value="Delantal bartender|delantal|La Mar|Único|Delantal de bartender La Mar">Delantal bartender</option>
+            <option value="Remera cocina|torso|La Mar|XS,S,M,L,XL,XXL|Remera de cocina La Mar">Remera cocina</option>
+            <option value="Delantal cocina|delantal|La Mar|Único|Delantal de cocina La Mar">Delantal cocina</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Preview info -->
+      <div id="ind-prenda-preview" style="display:none;
+        background:color-mix(in srgb,var(--m9) 8%,transparent);
+        border:1px solid color-mix(in srgb,var(--m9) 30%,transparent);
+        border-radius:8px;padding:10px 14px;font-size:12px;
+        gap:20px;flex-wrap:wrap;margin-bottom:14px">
+      </div>
+
+      <!-- Inputs ocultos -->
+      <input type="hidden" id="ind-p-cat">
+      <input type="hidden" id="ind-p-local">
+      <input type="hidden" id="ind-p-talles">
+      <input type="hidden" id="ind-p-notas">
+
+      <!-- Stock por talle -->
+      <div class="bj-field" id="ind-stock-talles-wrap" style="display:none">
+        <label class="bj-label">Stock por talle</label>
+        <div id="ind-stock-talles-grid"
+          style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-top:6px">
+        </div>
+      </div>
+
+      <div id="ind-prenda-error" style="color:var(--danger);font-size:12px;margin-top:10px"></div>
+    </div>
+    <div class="bj-modal-footer">
+      <button class="bj-btn bj-btn-outline" onclick="IND.cerrarPrenda()">Cancelar</button>
+      <button class="bj-btn bj-btn-primary" id="ind-prenda-save-btn" onclick="IND.guardarPrenda()">Guardar prenda</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Asignar entrega ════════════════════════════════════ -->
+<div class="bj-modal-overlay" id="ind-asignar-overlay" onclick="IND.cerrarAsignar(event)">
+  <div class="bj-modal bj-modal-asignar" onclick="event.stopPropagation()">
+    <div class="bj-modal-header">
+      <div>
+        <div class="bj-modal-tag">Entregar prenda</div>
+        <div class="bj-modal-title" id="ind-asignar-title">Asignar a empleado</div>
+      </div>
+      <button class="bj-modal-close" onclick="IND.cerrarAsignar()">✕</button>
+    </div>
+    <div class="bj-modal-body">
+      <input type="hidden" id="ind-asignar-prenda-id">
+      <div class="bj-form-row">
+        <div class="bj-field">
+          <label class="bj-label">Talle entregado</label>
+          <select class="bj-input" id="ind-asignar-talle">
+            <option value="">— Elegir talle —</option>
+          </select>
+        </div>
+        <div class="bj-field">
+          <label class="bj-label">Fecha de entrega</label>
+          <input class="bj-input" id="ind-asignar-fecha" type="date">
+        </div>
+      </div>
+      <div class="bj-label" style="margin-bottom:6px">Empleado</div>
+      <input class="bj-input" id="ind-asignar-search"
+        placeholder="Buscar por nombre, DNI, CUIL…"
+        oninput="IND.buscarEmp(this.value)"
+        style="border-color:color-mix(in srgb,var(--m9) 40%,var(--border))">
+      <div class="ind-emp-list" id="ind-emp-list">
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">
+          Escribí para buscar empleados
+        </div>
+      </div>
+      <div id="ind-asignar-error" style="color:var(--danger);font-size:12px;margin-top:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCRIPTS ════════════════════════════════════════════════════ -->
+<script>
+// ─── FIREBASE ────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+  authDomain:        "rrhhsystem.firebaseapp.com",
+  projectId:         "rrhhsystem",
+  storageBucket:     "rrhhsystem.firebasestorage.app",
+  messagingSenderId: "71511125212",
+  appId:             "1:71511125212:web:03a0ad11b281e397a29819"
+};
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.firestore();
+
+// ─── INIT DIRECTO ────────────────────────────────────────────────
+// Firebase status
+db.collection('_ping').limit(1).get()
+  .then(() => {
+    document.getElementById('bc-fb-dot').className = 'bc-status-dot connected';
+    document.getElementById('bc-fb-status').textContent = 'Firebase conectado · rrhhsystem';
+  })
+  .catch(() => {
+    document.getElementById('bc-fb-dot').className = 'bc-status-dot error';
+    document.getElementById('bc-fb-status').textContent = 'Error de conexión';
+  });
+
+// ─── MÓDULO INDUMENTARIA ──────────────────────────────────────────
+const IND = (() => {
+  const COL_PRENDAS = 'prendas';
+  const COL_INDUM   = 'indumentaria';
+
+  const CAT_LABEL = {
+    cabeza:   '🎩 Gorro / Cap',
+    torso:    '👕 Remera / Camisa',
+    delantal: '🥼 Delantal',
+    pantalon: '👖 Pantalón / Short',
+    calzado:  '👟 Calzado',
+    otro:     '📦 Otro',
+  };
+  const CAT_ICON = {
+    cabeza:'🎩', torso:'👕', delantal:'🥼',
+    pantalon:'👖', calzado:'👟', otro:'📦',
+  };
+
+  // Estado
+  let _prendas       = [];
+  let _filtradas     = [];
+  let _localActivo   = '';
+  let _queryTxt      = '';
+  let _queryCat      = '';
+  let _unsub         = null;
+  let _asignarPrendaId = null;
+  // Caché de empleados de infoPersonal (colección 'info-personal')
+  let _empleados     = [];
+  let _unsubEmpleados = null;
+
+  // ── INIT ──────────────────────────────────────────────────────
+  function init() {
+    _cargarEmpleados();
+
+    if (_unsub) { _aplicarFiltros(); return; }
+
+    seedPrendas().catch(e => console.warn('seed:', e)).finally(() => {
+      _unsub = db.collection(COL_PRENDAS).orderBy('createdAt', 'desc')
+        .onSnapshot(snap => {
+          _prendas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          _poblarLocalTabs();
+          _aplicarFiltros();
+        }, err => {
+          console.error(err);
+          _renderVacio('Error de conexión con Firebase');
+        });
+    });
+  }
+
+  function _cargarEmpleados() {
+    if (_unsubEmpleados) return;
+    // Intenta escuchar 'info-personal' (la colección real del sistema)
+    _unsubEmpleados = db.collection('info-personal')
+      .onSnapshot(snap => {
+        _empleados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }, () => { _empleados = []; });
+  }
+
+  // ── LOCAL TABS ─────────────────────────────────────────────────
+  function _poblarLocalTabs() {
+    const locales = [...new Set(_prendas.map(p => p.local).filter(Boolean))].sort();
+    const cont = document.getElementById('ind-local-tabs');
+    if (!cont) return;
+    cont.innerHTML = [
+      `<button class="ind-local-tab ${!_localActivo ? 'active' : ''}" onclick="IND.setLocal('')">Todos</button>`,
+      ...locales.map(l => {
+        const col = _localColor(l);
+        const actStyle = _localActivo === l
+          ? `background:color-mix(in srgb,${col} 18%,transparent);border-color:${col};color:${col}` : '';
+        return `<button class="ind-local-tab ${_localActivo === l ? 'active' : ''}"
+          style="${actStyle}"
+          onmouseover="if(!this.classList.contains('active')){this.style.borderColor='${col}';this.style.color='${col}'}"
+          onmouseout="if(!this.classList.contains('active')){this.style.borderColor='';this.style.color=''}"
+          onclick="IND.setLocal('${_esc(l)}')">${_esc(l)}</button>`;
+      })
+    ].join('');
+  }
+
+  function setLocal(l) {
+    _localActivo = l;
+    _poblarLocalTabs();
+    _aplicarFiltros();
+  }
+
+  // ── FILTROS ─────────────────────────────────────────────────────
+  function filtrar(v)    { _queryTxt = v.toLowerCase(); _aplicarFiltros(); }
+  function filtrarCat(v) { _queryCat = v;               _aplicarFiltros(); }
+
+  function _aplicarFiltros() {
+    _filtradas = _prendas.filter(p => {
+      if (_localActivo && p.local !== _localActivo) return false;
+      if (_queryCat    && p.cat   !== _queryCat)    return false;
+      if (_queryTxt && !(p.nombre||'').toLowerCase().includes(_queryTxt) &&
+                       !(p.notas||'').toLowerCase().includes(_queryTxt)) return false;
+      return true;
+    });
+    _render();
+  }
+
+  // ── RENDER ──────────────────────────────────────────────────────
+  function _render() {
+    const grid  = document.getElementById('ind-grid');
+    const count = document.getElementById('ind-count');
+    if (!grid) return;
+
+    // Stats
+    const totalStock    = _prendas.reduce((s,p) => s + (Number(p.stock)||0), 0);
+    const totalEntregas = _prendas.reduce((s,p) => s + ((p.entregas||[]).length), 0);
+    const empConRopa    = new Set(_prendas.flatMap(p => (p.entregas||[]).map(e=>e.empId)).filter(Boolean)).size;
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const en30 = new Date(hoy); en30.setDate(en30.getDate() + 30);
+    const vencen30 = _prendas.reduce((s,p) => s + (p.entregas||[]).filter(e => {
+      if (!e.fecha) return false;
+      const v = new Date(e.fecha); v.setMonth(v.getMonth() + 6);
+      return v >= hoy && v <= en30;
+    }).length, 0);
+
+    _setStat('ind-stat-prendas',    _prendas.length);
+    _setStat('ind-stat-stock',      totalStock);
+    _setStat('ind-stat-entregadas', totalEntregas);
+    _setStat('ind-stat-empleados',  empConRopa);
+    _setStat('ind-stat-vencen',     vencen30);
+    count.textContent = `${_filtradas.length} prenda${_filtradas.length !== 1 ? 's' : ''}`;
+
+    if (!_filtradas.length) {
+      grid.innerHTML = `<div class="ind-empty">
+        <div class="ind-empty-icon">🧥</div>
+        ${_prendas.length ? 'Sin resultados para ese filtro.' : 'No hay prendas registradas. ¡Agregá la primera!'}
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = _filtradas.map(p => _renderCard(p)).join('');
+  }
+
+  function _renderCard(p) {
+    const entregas   = p.entregas || [];
+    const entregasHTML = entregas.slice(-4).reverse().map(e => {
+      const emp    = _empleados.find(r => r.id === e.empId);
+      const nombre = emp ? (emp.nombre||'?') : (e.empNombre||'Empleado eliminado');
+      const inits  = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avatarInner = emp?.foto
+        ? `<img src="${_esc(emp.foto)}" onerror="this.parentNode.textContent='${inits}'">`
+        : inits;
+      const fechaFmt = e.fecha ? e.fecha.split('-').reverse().join('/') : '—';
+      return `
+        <div class="ind-entrega-row">
+          <div class="ind-entrega-avatar">${avatarInner}</div>
+          <div class="ind-entrega-nombre">${_esc(nombre)}</div>
+          ${e.talle ? `<span class="ind-entrega-talle">${_esc(e.talle)}</span>` : ''}
+          <span class="ind-entrega-fecha">${fechaFmt}</span>
+          ${_countdown(e.fecha)}
+          <button class="ind-entrega-del" title="Quitar entrega"
+            onclick="IND.quitarEntrega('${p.id}','${e.id}')">✕</button>
+        </div>`;
+    }).join('');
+
+    const masHTML = entregas.length > 4
+      ? `<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px 0">
+          +${entregas.length - 4} más entregas
+         </div>` : '';
+
+    return `
+      <div class="ind-prenda-card">
+        <div class="ind-prenda-header">
+          <div class="ind-prenda-icon">${CAT_ICON[p.cat]||'📦'}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ind-prenda-name">${_esc(p.nombre)}</div>
+            <div class="ind-prenda-meta">
+              <span style="color:${_localColor(p.local)};font-weight:700">${_esc(p.local||'Sin local')}</span>
+              <span style="color:var(--muted)"> · ${CAT_LABEL[p.cat]||p.cat}</span>
+            </div>
+            ${p.talles ? `<div class="ind-prenda-meta" style="color:var(--m9)">Talles: ${_esc(p.talles)}</div>` : ''}
+          </div>
+          <div class="ind-prenda-actions">
+            <button title="Editar" onclick="IND.editarPrenda('${p.id}')">✏</button>
+            <button class="del" title="Eliminar" onclick="IND.eliminarPrenda('${p.id}','${_esc(p.nombre)}')">✕</button>
+          </div>
+        </div>
+        <div class="ind-stock-bar">${_renderStockTalles(p)}</div>
+        <div class="ind-entregas-list">
+          ${entregasHTML || `<div style="color:var(--muted);font-size:12px;text-align:center;padding:8px 0">Sin entregas registradas</div>`}
+          ${masHTML}
+          <button class="ind-asignar-btn" onclick="IND.abrirAsignar('${p.id}')">
+            + Registrar entrega a empleado
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function _renderStockTalles(p) {
+    const stockTalles = p.stockTalles || {};
+    const entregas    = p.entregas || [];
+    const esUnico = (p.talles||'').toLowerCase().includes('único') || (p.talles||'').toLowerCase().includes('unico');
+    const lista   = esUnico ? ['Único'] : (p.talles||'').split(',').map(t=>t.trim()).filter(Boolean);
+    if (!lista.length) return '<span style="color:var(--muted);font-size:12px">Sin stock cargado</span>';
+
+    const chips = lista.map(t => {
+      const total     = Number(stockTalles[t]) || 0;
+      const entregado = entregas.filter(e => e.talle === t).length;
+      const libre     = Math.max(0, total - entregado);
+      const col = libre === 0 && total === 0 ? 'var(--muted)'
+                : libre === 0 ? 'var(--danger)'
+                : libre <= 2  ? 'var(--m9)'
+                : 'var(--accent2)';
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+        padding:3px 7px;border-radius:6px;
+        background:color-mix(in srgb,${col} 12%,transparent);
+        border:1px solid color-mix(in srgb,${col} 35%,transparent)">
+        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${_esc(t)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text)">${libre}<span style="color:var(--muted)">/${total}</span></span>
+      </span>`;
+    }).join('');
+    return `<div style="display:flex;flex-wrap:wrap;gap:5px;width:100%">${chips}</div>`;
+  }
+
+  function _countdown(fechaStr) {
+    if (!fechaStr) return '';
+    const vence = new Date(fechaStr);
+    vence.setMonth(vence.getMonth() + 6);
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const diffDias = Math.ceil((vence - hoy) / 86400000);
+    if (diffDias < 0)  return `<span class="ind-countdown vence">Venció hace ${Math.abs(diffDias)}d</span>`;
+    if (diffDias === 0) return `<span class="ind-countdown vence">Vence hoy</span>`;
+    if (diffDias <= 30) return `<span class="ind-countdown warn">Vence en ${diffDias}d</span>`;
+    const meses = Math.floor(diffDias / 30);
+    const dias  = diffDias % 30;
+    const label = meses > 0 ? `${meses}m${dias > 0 ? ` ${dias}d` : ''}` : `${diffDias}d`;
+    return `<span class="ind-countdown ok">${label} restantes</span>`;
+  }
+
+  // ── HELPERS ──────────────────────────────────────────────────────
+  function _setStat(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function _esc(v) { return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _renderVacio(msg) {
+    const g = document.getElementById('ind-grid');
+    if (g) g.innerHTML = `<div class="ind-empty"><div class="ind-empty-icon">🧥</div>${msg}</div>`;
+  }
+  function _localColor(local) {
+    const l = (local||'').toLowerCase();
+    if (l.includes('barra') || l.includes('chalaca')) return '#0891b2';
+    if (l.includes('tanta'))                           return '#ea580c';
+    if (l.includes('mar'))                             return '#2563eb';
+    return 'var(--muted)';
+  }
+
+  // ── MODAL PRENDA ─────────────────────────────────────────────────
+  function _parsePrendaVal(val) {
+    if (!val) return null;
+    const [nombre, cat, local, talles, notas] = val.split('|');
+    return { nombre, cat, local, talles, notas };
+  }
+
+  function onPrendaSelect(val) {
+    const p       = _parsePrendaVal(val);
+    const preview = document.getElementById('ind-prenda-preview');
+    const wrap    = document.getElementById('ind-stock-talles-wrap');
+    const grid    = document.getElementById('ind-stock-talles-grid');
+    if (!p) {
+      preview.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+    document.getElementById('ind-p-cat').value    = p.cat;
+    document.getElementById('ind-p-local').value  = p.local;
+    document.getElementById('ind-p-talles').value = p.talles;
+    document.getElementById('ind-p-notas').value  = p.notas;
+
+    const localCol = _localColor(p.local);
+    preview.style.display = 'flex';
+    preview.innerHTML = `
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;align-self:center">Local</span>
+      <span style="font-weight:700;color:${localCol}">${_esc(p.local)}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;align-self:center">Categoría</span>
+      <span style="font-weight:600">${CAT_LABEL[p.cat]||p.cat}</span>`;
+
+    if (wrap && grid) {
+      wrap.style.display = '';
+      const docId       = document.getElementById('ind-prenda-doc-id').value;
+      const prendaActual = docId ? _prendas.find(x => x.id === docId) : null;
+      const stockActual  = prendaActual?.stockTalles || {};
+      const esUnico = p.talles.toLowerCase().includes('único') || p.talles.toLowerCase().includes('unico');
+      const lista = esUnico ? ['Único'] : p.talles.split(',').map(t => t.trim()).filter(Boolean);
+      grid.innerHTML = lista.map(t => `
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center;
+          background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 6px">
+          <label style="font-family:'DM Mono',monospace;font-size:10px;color:var(--m9);font-weight:700">${_esc(t)}</label>
+          <input type="number" min="0" value="${stockActual[t]||0}"
+            data-talle="${_esc(t)}"
+            style="width:52px;text-align:center;background:transparent;border:none;
+              color:var(--text);font-size:16px;font-weight:800;outline:none;font-family:'Syne',sans-serif"
+            class="ind-stock-talle-inp">
+        </div>`).join('');
+    }
+  }
+
+  function abrirNuevaPrenda() {
+    document.getElementById('ind-prenda-doc-id').value = '';
+    document.getElementById('ind-prenda-tag').textContent   = 'Nueva prenda';
+    document.getElementById('ind-prenda-title').textContent = 'Agregar prenda al stock';
+    document.getElementById('ind-p-nombre').value = '';
+    document.getElementById('ind-p-cat').value    = '';
+    document.getElementById('ind-p-local').value  = '';
+    document.getElementById('ind-p-talles').value = '';
+    document.getElementById('ind-p-notas').value  = '';
+    document.getElementById('ind-prenda-error').textContent = '';
+    const preview = document.getElementById('ind-prenda-preview');
+    if (preview) preview.style.display = 'none';
+    const wrap = document.getElementById('ind-stock-talles-wrap');
+    if (wrap) wrap.style.display = 'none';
+    document.getElementById('ind-prenda-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ind-p-nombre').focus(), 120);
+  }
+
+  function editarPrenda(docId) {
+    const p = _prendas.find(x => x.id === docId);
+    if (!p) return;
+    document.getElementById('ind-prenda-doc-id').value = docId;
+    document.getElementById('ind-prenda-tag').textContent   = 'Editar prenda';
+    document.getElementById('ind-prenda-title').textContent = 'Modificar prenda';
+    document.getElementById('ind-prenda-error').textContent = '';
+
+    const sel = document.getElementById('ind-p-nombre');
+    let matched = '';
+    for (const opt of sel.options) {
+      const parsed = _parsePrendaVal(opt.value);
+      if (parsed && parsed.nombre === p.nombre && parsed.local === p.local) {
+        matched = opt.value; break;
+      }
+    }
+    sel.value = matched;
+    document.getElementById('ind-p-cat').value    = p.cat||'';
+    document.getElementById('ind-p-local').value  = p.local||'';
+    document.getElementById('ind-p-talles').value = p.talles||'';
+    document.getElementById('ind-p-notas').value  = p.notas||'';
+    if (matched) onPrendaSelect(matched);
+
+    document.getElementById('ind-prenda-overlay').classList.add('open');
+  }
+
+  function cerrarPrenda(e) {
+    if (e && e.target !== document.getElementById('ind-prenda-overlay')) return;
+    document.getElementById('ind-prenda-overlay').classList.remove('open');
+  }
+
+  async function guardarPrenda() {
+    const errEl = document.getElementById('ind-prenda-error');
+    const btn   = document.getElementById('ind-prenda-save-btn');
+    errEl.textContent = '';
+
+    const selVal = document.getElementById('ind-p-nombre').value;
+    const parsed = _parsePrendaVal(selVal);
+    if (!parsed) { errEl.textContent = 'Seleccioná una prenda.'; return; }
+
+    const stockTalles = {};
+    document.querySelectorAll('.ind-stock-talle-inp').forEach(inp => {
+      if (inp.dataset.talle) stockTalles[inp.dataset.talle] = Number(inp.value) || 0;
+    });
+    const stockTotal = Object.values(stockTalles).reduce((a,b) => a+b, 0);
+
+    const data = {
+      nombre: parsed.nombre,
+      cat:    document.getElementById('ind-p-cat').value   || parsed.cat,
+      local:  document.getElementById('ind-p-local').value || parsed.local,
+      stock:  stockTotal,
+      stockTalles,
+      talles: parsed.talles,
+      notas:  parsed.notas,
+      updatedAt: new Date().toISOString(),
+    };
+
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const docId = document.getElementById('ind-prenda-doc-id').value;
+      if (docId) {
+        await db.collection(COL_PRENDAS).doc(docId).update(data);
+      } else {
+        data.createdAt = data.updatedAt;
+        data.entregas  = [];
+        await db.collection(COL_PRENDAS).add(data);
+      }
+      document.getElementById('ind-prenda-overlay').classList.remove('open');
+    } catch(err) {
+      errEl.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar prenda';
+    }
+  }
+
+  async function eliminarPrenda(docId, nombre) {
+    if (!confirm(`¿Eliminar "${nombre}"? Se perderán también las entregas registradas.`)) return;
+    try { await db.collection(COL_PRENDAS).doc(docId).delete(); }
+    catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── ASIGNAR ENTREGA ──────────────────────────────────────────────
+  function abrirAsignar(prendaId) {
+    const p = _prendas.find(x => x.id === prendaId);
+    if (!p) return;
+    _asignarPrendaId = prendaId;
+    document.getElementById('ind-asignar-title').textContent = p.nombre;
+    document.getElementById('ind-asignar-prenda-id').value   = prendaId;
+    document.getElementById('ind-asignar-fecha').value  = new Date().toISOString().slice(0,10);
+    document.getElementById('ind-asignar-search').value = '';
+    document.getElementById('ind-asignar-error').textContent = '';
+
+    const talleSel = document.getElementById('ind-asignar-talle');
+    const tallesStr = p.talles || '';
+    const esUnico = tallesStr.toLowerCase() === 'único' || tallesStr.toLowerCase() === 'unico';
+    if (esUnico) {
+      talleSel.innerHTML = '<option value="Único">Único</option>';
+    } else {
+      const lista = tallesStr.split(',').map(t => t.trim()).filter(Boolean);
+      talleSel.innerHTML = '<option value="">— Elegir talle —</option>' +
+        lista.map(t => `<option value="${_esc(t)}">${_esc(t)}</option>`).join('');
+    }
+    document.getElementById('ind-emp-list').innerHTML =
+      '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
+    document.getElementById('ind-asignar-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('ind-asignar-search').focus(), 120);
+  }
+
+  function cerrarAsignar(e) {
+    if (e && e.target !== document.getElementById('ind-asignar-overlay')) return;
+    document.getElementById('ind-asignar-overlay').classList.remove('open');
+    _asignarPrendaId = null;
+  }
+
+  function buscarEmp(q) {
+    const list = document.getElementById('ind-emp-list');
+    if (!q || q.length < 2) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Escribí para buscar empleados</div>';
+      return;
+    }
+    const matches = _empleados.filter(r =>
+      (r.nombre||'').toLowerCase().includes(q.toLowerCase()) ||
+      (r.cuil||'').includes(q) || (r.dni||'').includes(q)
+    ).slice(0, 10);
+
+    if (!matches.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Sin resultados</div>';
+      return;
+    }
+    list.innerHTML = matches.map(r => {
+      const initials   = (r.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const avatarInner = r.foto
+        ? `<img src="${_esc(r.foto)}" onerror="this.parentNode.textContent='${initials}'">`
+        : initials;
+      return `
+        <div class="ind-emp-opt" onclick="IND.seleccionarEmp('${r.id}','${_esc(r.nombre)}')">
+          <div class="ind-emp-opt-avatar">${avatarInner}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ind-emp-opt-name">${_esc(r.nombre)}</div>
+            <div class="ind-emp-opt-meta">${_esc(r.local||'')} · ${_esc(r['puesto-real']||'')}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function seleccionarEmp(empId, empNombre) {
+    if (!_asignarPrendaId) return;
+    const errEl = document.getElementById('ind-asignar-error');
+    const talle = document.getElementById('ind-asignar-talle').value.trim();
+    const fecha = document.getElementById('ind-asignar-fecha').value;
+    errEl.textContent = '';
+
+    const prenda = _prendas.find(x => x.id === _asignarPrendaId);
+    if (prenda && (prenda.entregas||[]).some(e => e.empId === empId)) {
+      errEl.textContent = `${empNombre} ya tiene esta prenda asignada.`;
+      return;
+    }
+    const entregaId = `e_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+    const nueva = { id: entregaId, empId, empNombre, talle, fecha, asignadoAt: new Date().toISOString() };
+
+    try {
+      // Guardar en prendas
+      await db.collection(COL_PRENDAS).doc(_asignarPrendaId).update({
+        entregas: firebase.firestore.FieldValue.arrayUnion(nueva)
+      });
+      // Guardar en indumentaria (perfil del empleado — sincronía con muñeco)
+      const cat = prenda?.cat || 'otro';
+      const prendaRef2 = db.collection(COL_INDUM).doc(empId);
+      const snap = await prendaRef2.get();
+      const current = snap.exists ? snap.data() : {};
+      const partActual = current[cat] || {};
+      const descNueva = partActual.desc
+        ? partActual.desc + '; ' + (prenda?.nombre||'')
+        : (prenda?.nombre||'');
+      await prendaRef2.set({
+        [cat]: {
+          desc:  descNueva,
+          talle: talle || partActual.talle || '',
+          fecha: fecha || partActual.fecha || '',
+          updatedAt: new Date().toISOString(),
+        }
+      }, { merge: true });
+
+      document.getElementById('ind-asignar-overlay').classList.remove('open');
+      _asignarPrendaId = null;
+    } catch(err) {
+      errEl.textContent = 'Error: ' + err.message;
+      console.error(err);
+    }
+  }
+
+  async function quitarEntrega(prendaId, entregaId) {
+    if (!confirm('¿Quitar esta entrega del registro?')) return;
+    const prenda  = _prendas.find(x => x.id === prendaId);
+    if (!prenda) return;
+    const entrega = (prenda.entregas||[]).find(e => e.id === entregaId);
+    if (!entrega) return;
+    try {
+      await db.collection(COL_PRENDAS).doc(prendaId).update({
+        entregas: firebase.firestore.FieldValue.arrayRemove(entrega)
+      });
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── SEED ────────────────────────────────────────────────────────
+  const SEED = [
+    { nombre:'Remera blanca',      cat:'torso',    local:'Barra Chalaca', talles:'XS,S,M,L,XL,XXL',  notas:'Remera manga corta blanca institucional' },
+    { nombre:'Delantal',           cat:'delantal', local:'Barra Chalaca', talles:'Único',              notas:'Delantal de trabajo Barra Chalaca' },
+    { nombre:'Pantalón azul',      cat:'pantalon', local:'Barra Chalaca', talles:'36,38,40,42,44,46',  notas:'Pantalón de cocina azul' },
+    { nombre:'Botines de trabajo', cat:'calzado',  local:'Barra Chalaca', talles:'35,36,37,38,39,40,41,42,43,44,45,46', notas:'Botines de seguridad' },
+    { nombre:'Gorra',              cat:'cabeza',   local:'Barra Chalaca', talles:'Único',              notas:'Gorra institucional Barra Chalaca' },
+    { nombre:'Botas bachero',      cat:'calzado',  local:'Barra Chalaca', talles:'35,36,37,38,39,40,41,42,43,44,45,46', notas:'Botas de goma para bachero' },
+    { nombre:'Camisa salón',       cat:'torso',    local:'Tanta',         talles:'XS,S,M,L,XL,XXL',  notas:'Camisa de salón Tanta' },
+    { nombre:'Delantal salón',     cat:'delantal', local:'Tanta',         talles:'Único',              notas:'Delantal de salón Tanta' },
+    { nombre:'Delantal bartender', cat:'delantal', local:'Tanta',         talles:'Único',              notas:'Delantal de bartender Tanta' },
+    { nombre:'Camisa cocina',      cat:'torso',    local:'Tanta',         talles:'XS,S,M,L,XL,XXL',  notas:'Camisa de cocina Tanta' },
+    { nombre:'Delantal cocina',    cat:'delantal', local:'Tanta',         talles:'Único',              notas:'Delantal de cocina Tanta' },
+    { nombre:'Camisa salón',       cat:'torso',    local:'La Mar',        talles:'XS,S,M,L,XL,XXL',  notas:'Camisa de salón La Mar' },
+    { nombre:'Delantal salón',     cat:'delantal', local:'La Mar',        talles:'Único',              notas:'Delantal de salón La Mar' },
+    { nombre:'Delantal bartender', cat:'delantal', local:'La Mar',        talles:'Único',              notas:'Delantal de bartender La Mar' },
+    { nombre:'Remera cocina',      cat:'torso',    local:'La Mar',        talles:'XS,S,M,L,XL,XXL',  notas:'Remera de cocina La Mar' },
+    { nombre:'Delantal cocina',    cat:'delantal', local:'La Mar',        talles:'Único',              notas:'Delantal de cocina La Mar' },
+  ];
+
+  async function seedPrendas() {
+    const snap = await db.collection(COL_PRENDAS).limit(1).get();
+    if (!snap.empty) return;
+    const now = new Date().toISOString();
+    const batch = db.batch();
+    SEED.forEach(p => {
+      const ref = db.collection(COL_PRENDAS).doc();
+      batch.set(ref, { ...p, stock: 0, stockTalles: {}, entregas: [], createdAt: now, updatedAt: now });
+    });
+    await batch.commit();
+    console.log('✓ Seed de prendas cargado:', SEED.length);
+  }
+
+  return {
+    init, setLocal, filtrar, filtrarCat,
+    abrirNuevaPrenda, editarPrenda, cerrarPrenda, guardarPrenda, eliminarPrenda,
+    onPrendaSelect,
+    abrirAsignar, cerrarAsignar, buscarEmp, seleccionarEmp, quitarEntrega,
+  };
+})();
+
+IND.init();
+</script>
+</body>
+</html>

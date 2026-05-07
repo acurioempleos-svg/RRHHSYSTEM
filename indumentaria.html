@@ -892,19 +892,33 @@ const IND = (() => {
     const lista   = esUnico ? ['Único'] : (p.talles||'').split(',').map(t=>t.trim()).filter(Boolean);
     if (!lista.length) return '<span style="color:var(--muted);font-size:12px">Sin stock cargado</span>';
 
+    // Si ningún talle tiene stock cargado, mostrar aviso con link para cargar
+    const hayStock = lista.some(t => Number(stockTalles[t]) > 0);
+    if (!hayStock) {
+      return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0">
+        <span style="font-size:13px">📦</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">
+          Sin stock · <span style="color:var(--m9);cursor:pointer;text-decoration:underline" onclick="IND.editarPrenda('${p.id}')">Cargar stock</span>
+        </span>
+      </div>`;
+    }
+
     const chips = lista.map(t => {
       const total     = Number(stockTalles[t]) || 0;
       const entregado = entregas.filter(e => e.talle === t).length;
       const libre     = Math.max(0, total - entregado);
-      const col = libre === 0 && total === 0 ? 'var(--muted)'
-                : libre === 0 ? 'var(--danger)'
-                : libre <= 2  ? 'var(--m9)'
+      const excede    = entregado > total && total > 0;
+      const col = excede              ? 'var(--danger)'
+                : libre === 0 && total === 0 ? 'var(--muted)'
+                : libre === 0        ? 'var(--danger)'
+                : libre <= 2         ? 'var(--m9)'
                 : 'var(--accent2)';
-      return `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
-        padding:3px 7px;border-radius:6px;
+      const tooltip = excede ? `title="⚠ ${entregado} entregados, solo ${total} en stock"` : '';
+      return `<span ${tooltip} style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;
+        padding:3px 7px;border-radius:6px;cursor:default;
         background:color-mix(in srgb,${col} 12%,transparent);
         border:1px solid color-mix(in srgb,${col} 35%,transparent)">
-        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${_esc(t)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:${col}">${_esc(t)}${excede ? ' ⚠' : ''}</span>
         <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text)">${libre}<span style="color:var(--muted)">/${total}</span></span>
       </span>`;
     }).join('');

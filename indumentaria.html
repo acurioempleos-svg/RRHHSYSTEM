@@ -146,25 +146,8 @@ body::before {
 .bc-status-dot.connected { background: var(--bc-success); }
 .bc-status-dot.error     { background: var(--bc-danger); }
 
-/* ─── TOPBAR ─────────────────────────────────────────────────── */
+/* ─── APP WRAPPER ────────────────────────────────────────────── */
 #app { display: flex; min-height: 100dvh; flex-direction: column; position: relative; z-index: 1; }
-
-#topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 60px;
-  display: flex; align-items: center; gap: 14px;
-  position: sticky; top: 0; z-index: 50;
-}
-.topbar-brand { font-size: 13px; font-weight: 700; letter-spacing: .06em; }
-.topbar-brand span { color: var(--m9); }
-.topbar-sep { color: var(--border); font-size: 18px; user-select: none; }
-.topbar-module {
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
-}
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 
 
 /* ─── CONTENT ────────────────────────────────────────────────── */
@@ -459,6 +442,19 @@ body::before {
   .ind-stat { min-width: 90px; padding: 10px 12px; }
   .ind-stat-val { font-size: 20px; }
 }
+
+/* ─── TOAST ──────────────────────────────────────────────────── */
+#bc-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
+  background: var(--bc-text); color: #fff;
+  padding: 10px 20px; border-radius: 8px;
+  font-family: var(--bc-font-mono); font-size: 12px; letter-spacing: .05em;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  opacity: 0; pointer-events: none;
+  transition: opacity 250ms ease, transform 250ms ease;
+  z-index: 999; white-space: nowrap;
+}
+#bc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -551,6 +547,7 @@ body::before {
 
   </div><!-- /content -->
 </div><!-- /app -->
+<div id="bc-toast"></div>
 
 <!-- ══ MODAL: Nueva / Editar prenda ══════════════════════════════ -->
 <div class="bj-modal-overlay" id="ind-prenda-overlay" onclick="IND.cerrarPrenda(event)">
@@ -653,20 +650,25 @@ body::before {
         </div>
       </div>
 
-      <!-- Datos manuales del empleado -->
+      <!-- DNI primero → dispara autocomplete -->
       <div class="bj-field" style="margin-bottom:12px">
+        <label class="bj-label">DNI <span style="color:var(--muted);font-weight:400;letter-spacing:0">(autocompletá el nombre)</span></label>
+        <input class="bj-input" id="ind-asignar-dni"
+          placeholder="Ej: 38123456"
+          type="text" inputmode="numeric" maxlength="8"
+          autocomplete="off"
+          oninput="IND._onDniInput()">
+      </div>
+
+      <!-- Nombre: se autocompleta o se ingresa manual -->
+      <div class="bj-field" style="margin-bottom:4px">
         <label class="bj-label">Nombre completo *</label>
         <input class="bj-input" id="ind-asignar-nombre"
           placeholder="Ej: Juan Pérez"
           autocomplete="off"
           oninput="IND._validarAsignar()">
-      </div>
-      <div class="bj-field" style="margin-bottom:4px">
-        <label class="bj-label">DNI</label>
-        <input class="bj-input" id="ind-asignar-dni"
-          placeholder="Ej: 38123456"
-          type="text" inputmode="numeric" maxlength="10"
-          autocomplete="off">
+        <div id="ind-asignar-hint"
+          style="font-family:'DM Mono',monospace;font-size:11px;margin-top:5px;min-height:16px;transition:all 180ms ease"></div>
       </div>
 
       <div id="ind-asignar-error" style="color:var(--danger);font-size:12px;margin-top:10px"></div>
@@ -706,8 +708,9 @@ db.collection('_ping').limit(1).get()
 
 // ─── MÓDULO INDUMENTARIA ──────────────────────────────────────────
 const IND = (() => {
-  const COL_PRENDAS = 'prendas';
-  const COL_INDUM   = 'indumentaria';
+  const COL_PRENDAS  = 'prendas';
+  const COL_PERSONAS = 'ind-personas';
+  const MESES_VENCIMIENTO = 6; // Meses hasta que vence una entrega
 
   const CAT_LABEL = {
     cabeza:   '🎩 Gorro / Cap',
@@ -730,14 +733,14 @@ const IND = (() => {
   let _queryCat      = '';
   let _unsub         = null;
   let _asignarPrendaId = null;
-  // Caché de empleados de infoPersonal (colección 'info-personal')
-  let _empleados     = [];
-  let _unsubEmpleados = null;
+  // Caché local de empleados ingresados manualmente (por DNI)
+  let _empleadosCache = {}; // { dni: { nombre, dni } }
 
   // ── INIT ──────────────────────────────────────────────────────
   function init() {
     if (_unsub) { _aplicarFiltros(); return; }
 
+    _cargarPersonas(); // caché persistente de personas manuales
     seedPrendas().catch(e => console.warn('seed:', e)).finally(() => {
       _unsub = db.collection(COL_PRENDAS).orderBy('createdAt', 'desc')
         .onSnapshot(snap => {
@@ -808,7 +811,7 @@ const IND = (() => {
     const en30 = new Date(hoy); en30.setDate(en30.getDate() + 30);
     const vencen30 = _prendas.reduce((s,p) => s + (p.entregas||[]).filter(e => {
       if (!e.fecha) return false;
-      const v = new Date(e.fecha); v.setMonth(v.getMonth() + 6);
+      const v = new Date(e.fecha); v.setMonth(v.getMonth() + MESES_VENCIMIENTO);
       return v >= hoy && v <= en30;
     }).length, 0);
 
@@ -833,12 +836,9 @@ const IND = (() => {
   function _renderCard(p) {
     const entregas   = p.entregas || [];
     const entregasHTML = entregas.slice(-4).reverse().map(e => {
-      const emp    = _empleados.find(r => r.id === e.empId);
-      const nombre = emp ? (emp.nombre||'?') : (e.empNombre||'Empleado eliminado');
+      const nombre = e.empNombre || 'Empleado eliminado';
       const inits  = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const avatarInner = emp?.foto
-        ? `<img src="${_esc(emp.foto)}" onerror="this.parentNode.textContent='${inits}'">`
-        : inits;
+      const avatarInner = inits;
       const fechaFmt = e.fecha ? e.fecha.split('-').reverse().join('/') : '—';
       return `
         <div class="ind-entrega-row">
@@ -914,7 +914,7 @@ const IND = (() => {
   function _countdown(fechaStr) {
     if (!fechaStr) return '';
     const vence = new Date(fechaStr);
-    vence.setMonth(vence.getMonth() + 6);
+    vence.setMonth(vence.getMonth() + MESES_VENCIMIENTO);
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const diffDias = Math.ceil((vence - hoy) / 86400000);
     if (diffDias < 0)  return `<span class="ind-countdown vence">Venció hace ${Math.abs(diffDias)}d</span>`;
@@ -927,11 +927,19 @@ const IND = (() => {
   }
 
   // ── HELPERS ──────────────────────────────────────────────────────
+  function _toast(msg, ms = 2800) {
+    const el = document.getElementById('bc-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toast._t);
+    _toast._t = setTimeout(() => el.classList.remove('show'), ms);
+  }
   function _setStat(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
   }
-  function _esc(v) { return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _esc(v) { return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
   function _renderVacio(msg) {
     const g = document.getElementById('ind-grid');
     if (g) g.innerHTML = `<div class="ind-empty"><div class="ind-empty-icon">🧥</div>${msg}</div>`;
@@ -1033,7 +1041,32 @@ const IND = (() => {
     document.getElementById('ind-p-local').value  = p.local||'';
     document.getElementById('ind-p-talles').value = p.talles||'';
     document.getElementById('ind-p-notas').value  = p.notas||'';
-    if (matched) onPrendaSelect(matched);
+    if (matched) {
+      onPrendaSelect(matched);
+    } else {
+      // Prenda no está en el select predefinido: renderizar el grid de stock directamente
+      const wrap = document.getElementById('ind-stock-talles-wrap');
+      const grid = document.getElementById('ind-stock-talles-grid');
+      const preview = document.getElementById('ind-prenda-preview');
+      if (preview) preview.style.display = 'none';
+      if (wrap && grid) {
+        wrap.style.display = '';
+        const stockActual = p.stockTalles || {};
+        const tallesStr = p.talles || '';
+        const esUnico = tallesStr.toLowerCase().includes('único') || tallesStr.toLowerCase().includes('unico');
+        const lista = esUnico ? ['Único'] : tallesStr.split(',').map(t => t.trim()).filter(Boolean);
+        grid.innerHTML = lista.map(t => `
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:center;
+            background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 6px">
+            <label style="font-family:'DM Mono',monospace;font-size:10px;color:var(--m9);font-weight:700">${_esc(t)}</label>
+            <input type="number" min="0" value="${stockActual[t]||0}"
+              data-talle="${_esc(t)}"
+              style="width:52px;text-align:center;background:transparent;border:none;
+                color:var(--text);font-size:16px;font-weight:800;outline:none;font-family:'Syne',sans-serif"
+              class="ind-stock-talle-inp">
+          </div>`).join('');
+      }
+    }
 
     document.getElementById('ind-prenda-overlay').classList.add('open');
   }
@@ -1080,6 +1113,7 @@ const IND = (() => {
         await db.collection(COL_PRENDAS).add(data);
       }
       document.getElementById('ind-prenda-overlay').classList.remove('open');
+      _toast('✓ Prenda guardada correctamente');
     } catch(err) {
       errEl.textContent = 'Error: ' + err.message;
     } finally {
@@ -1093,6 +1127,27 @@ const IND = (() => {
     catch(e) { alert('Error: ' + e.message); }
   }
 
+
+  // ── CACHÉ PERSISTENTE DE PERSONAS (ind-personas) ─────────────────
+  function _cargarPersonas() {
+    db.collection(COL_PERSONAS).get().then(snap => {
+      snap.docs.forEach(d => {
+        const { dni, nombre } = d.data();
+        if (dni && nombre) _empleadosCache[dni] = { nombre, dni };
+      });
+    }).catch(() => {}); // silencioso — el caché local sigue funcionando
+  }
+
+  async function _guardarPersona(dni, nombre) {
+    if (!dni || !nombre) return;
+    // Si ya existe con ese DNI no sobreescribir (mantener el primero registrado)
+    if (_empleadosCache[dni]) return;
+    _empleadosCache[dni] = { nombre, dni };
+    try {
+      await db.collection(COL_PERSONAS).doc(`dni_${dni}`).set({ dni, nombre, creadoAt: new Date().toISOString() }, { merge: true });
+    } catch(e) { console.warn('No se pudo persistir persona:', e.message); }
+  }
+
   // ── ASIGNAR ENTREGA ──────────────────────────────────────────────
   function abrirAsignar(prendaId) {
     const p = _prendas.find(x => x.id === prendaId);
@@ -1103,8 +1158,16 @@ const IND = (() => {
     document.getElementById('ind-asignar-fecha').value  = new Date().toISOString().slice(0,10);
     document.getElementById('ind-asignar-nombre').value = '';
     document.getElementById('ind-asignar-dni').value    = '';
+    document.getElementById('ind-asignar-hint').textContent = '';
     document.getElementById('ind-asignar-error').textContent = '';
     document.getElementById('ind-asignar-btn').disabled = true;
+
+    // Fusionar caché Firestore con entregas locales (las entregas ganan si hay conflicto)
+    _prendas.forEach(pr => (pr.entregas||[]).forEach(e => {
+      if (e.empDni && e.empNombre && !_empleadosCache[e.empDni]) {
+        _empleadosCache[e.empDni] = { nombre: e.empNombre, dni: e.empDni };
+      }
+    }));
 
     const talleSel = document.getElementById('ind-asignar-talle');
     const tallesStr = p.talles || '';
@@ -1117,13 +1180,30 @@ const IND = (() => {
         lista.map(t => `<option value="${_esc(t)}">${_esc(t)}</option>`).join('');
     }
     document.getElementById('ind-asignar-overlay').classList.add('open');
-    setTimeout(() => document.getElementById('ind-asignar-nombre').focus(), 120);
+    setTimeout(() => document.getElementById('ind-asignar-dni').focus(), 120);
   }
 
   function cerrarAsignar(e) {
     if (e && e.target !== document.getElementById('ind-asignar-overlay')) return;
     document.getElementById('ind-asignar-overlay').classList.remove('open');
     _asignarPrendaId = null;
+  }
+
+  function _onDniInput() {
+    const dni    = document.getElementById('ind-asignar-dni').value.trim();
+    const hint   = document.getElementById('ind-asignar-hint');
+    const cached = _empleadosCache[dni];
+    if (cached && dni.length >= 7) {
+      document.getElementById('ind-asignar-nombre').value = cached.nombre;
+      // Contar prendas actuales del empleado
+      const totalPrendas = _prendas.reduce((s, pr) =>
+        s + (pr.entregas||[]).filter(e => e.empDni === dni).length, 0);
+      hint.textContent = `✓ ${cached.nombre} · ${totalPrendas} prenda${totalPrendas !== 1 ? 's' : ''} registrada${totalPrendas !== 1 ? 's' : ''}`;
+      hint.style.color = 'var(--accent2)';
+    } else {
+      hint.textContent = '';
+    }
+    _validarAsignar();
   }
 
   function _validarAsignar() {
@@ -1146,8 +1226,8 @@ const IND = (() => {
     const btn = document.getElementById('ind-asignar-btn');
     btn.disabled = true; btn.textContent = 'Guardando…';
 
-    // Usamos dni como empId si existe, sino generamos uno por nombre
-    const empId = dni ? `dni_${dni}` : `manual_${nombre.toLowerCase().replace(/\s+/g,'_')}`;
+    // empId estable: prioriza DNI; sino timestamp para unicidad
+    const empId = dni ? `dni_${dni}` : `manual_${Date.now()}`;
     const entregaId = `e_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
     const nueva = { id: entregaId, empId, empNombre: nombre, empDni: dni, talle, fecha, asignadoAt: new Date().toISOString() };
 
@@ -1155,8 +1235,11 @@ const IND = (() => {
       await db.collection(COL_PRENDAS).doc(_asignarPrendaId).update({
         entregas: firebase.firestore.FieldValue.arrayUnion(nueva)
       });
+      // Persistir persona para autocompletado futuro
+      if (dni) await _guardarPersona(dni, nombre);
       document.getElementById('ind-asignar-overlay').classList.remove('open');
       _asignarPrendaId = null;
+      _toast('✓ Entrega registrada correctamente');
     } catch(err) {
       errEl.textContent = 'Error: ' + err.message;
       console.error(err);
@@ -1215,7 +1298,7 @@ const IND = (() => {
     init, setLocal, filtrar, filtrarCat,
     abrirNuevaPrenda, editarPrenda, cerrarPrenda, guardarPrenda, eliminarPrenda,
     onPrendaSelect,
-    abrirAsignar, cerrarAsignar, _validarAsignar, confirmarEntrega, quitarEntrega,
+    abrirAsignar, cerrarAsignar, _onDniInput, _validarAsignar, confirmarEntrega, quitarEntrega,
   };
 })();
 

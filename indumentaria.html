@@ -1349,8 +1349,10 @@ const IND = (() => {
         const total     = Number(stockTalles[talle]) || 0;
         const entregado = (prenda.entregas||[]).filter(e => e.talle === talle).length;
         const libre     = total - entregado;
-        if (total > 0 && libre <= 0) {
-          errEl.textContent = `Sin stock disponible para talle ${talle} (${entregado}/${total} entregados).`;
+        if (libre <= 0) {
+          errEl.textContent = total === 0
+            ? `Sin stock cargado para talle ${talle}. Cargá el stock primero.`
+            : `Sin stock disponible para talle ${talle} (${entregado}/${total} entregados).`;
           document.getElementById('ind-asignar-btn').disabled = true;
           return;
         } else {
@@ -1379,8 +1381,10 @@ const IND = (() => {
         const stockTalles = prenda.stockTalles || {};
         const total     = Number(stockTalles[talle]) || 0;
         const entregado = (prenda.entregas||[]).filter(e => e.talle === talle).length;
-        if (total > 0 && entregado >= total) {
-          errEl.textContent = `Sin stock disponible para talle ${talle}. Stock agotado (${entregado}/${total}).`;
+        if (entregado >= total) {
+          errEl.textContent = total === 0
+            ? `Sin stock cargado para talle ${talle}. Cargá el stock primero.`
+            : `Sin stock disponible para talle ${talle}. Stock agotado (${entregado}/${total}).`;
           return;
         }
       }

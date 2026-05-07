@@ -455,6 +455,96 @@ body::before {
   z-index: 999; white-space: nowrap;
 }
 #bc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─── BUSCADOR POR DNI ───────────────────────────────────────── */
+#ind-dni-section {
+  max-width: 1200px; width: 100%; margin: 0 auto;
+  padding: 0 24px 40px;
+}
+.ind-dni-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--bc-radius-lg); overflow: hidden;
+}
+.ind-dni-card-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--m9) 5%, transparent);
+}
+.ind-dni-card-icon {
+  width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m9) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--m9) 30%, transparent);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.ind-dni-card-title { font-size: 15px; font-weight: 800; }
+.ind-dni-card-desc  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.ind-dni-search-row {
+  display: flex; gap: 10px; align-items: center;
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.ind-dni-input {
+  flex: 1; min-width: 180px; max-width: 280px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 14px;
+  color: var(--text); font-size: 15px; font-family: var(--bc-font-mono);
+  outline: none; letter-spacing: .06em;
+  transition: border-color var(--bc-t);
+}
+.ind-dni-input:focus { border-color: var(--m9); }
+.ind-dni-result { padding: 20px 24px; }
+.ind-dni-empty  { color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+
+.ind-dni-emp-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.ind-dni-avatar {
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m4) 20%, transparent);
+  border: 2px solid color-mix(in srgb, var(--m4) 40%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: var(--m4);
+}
+.ind-dni-emp-name  { font-size: 17px; font-weight: 800; }
+.ind-dni-emp-meta  { font-family: var(--bc-font-mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ind-dni-badge {
+  margin-left: auto; flex-shrink: 0;
+  background: color-mix(in srgb, var(--m9) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--m9) 35%, transparent);
+  color: var(--m9); font-family: var(--bc-font-mono);
+  font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 20px;
+}
+
+.ind-dni-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ind-dni-table th {
+  font-family: var(--bc-font-mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 6px 12px; text-align: left;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.ind-dni-table td {
+  padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  vertical-align: middle;
+}
+.ind-dni-table tr:last-child td { border-bottom: none; }
+.ind-dni-table tr:hover td { background: color-mix(in srgb, var(--m9) 4%, transparent); }
+.ind-dni-talle-pill {
+  font-family: var(--bc-font-mono); font-size: 10px; font-weight: 700;
+  color: var(--m9); background: color-mix(in srgb, var(--m9) 15%, transparent);
+  padding: 2px 8px; border-radius: 10px; display: inline-block;
+}
+.ind-dni-local-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 5px; flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  #ind-dni-section { padding: 0 14px 32px; }
+  .ind-dni-search-row { padding: 14px; }
+  .ind-dni-result { padding: 14px; }
+  .ind-dni-table th:nth-child(4),
+  .ind-dni-table td:nth-child(4) { display: none; }
+}
 </style>
 </head>
 <body>
@@ -546,6 +636,28 @@ body::before {
     </div>
 
   </div><!-- /content -->
+
+  <!-- ══ BUSCADOR POR DNI ═══════════════════════════════════════════ -->
+  <div id="ind-dni-section">
+    <div class="ind-dni-card">
+      <div class="ind-dni-card-header">
+        <div class="ind-dni-card-icon">🔍</div>
+        <div>
+          <div class="ind-dni-card-title">Consulta por empleado</div>
+          <div class="ind-dni-card-desc">Ingresá el DNI para ver toda la ropa entregada</div>
+        </div>
+      </div>
+      <div class="ind-dni-search-row">
+        <input class="ind-dni-input" id="ind-dni-q" type="text"
+          inputmode="numeric" maxlength="8" placeholder="Ej: 38123456"
+          autocomplete="off" oninput="IND.buscarPorDni(this.value)">
+        <span id="ind-dni-summary" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)"></span>
+      </div>
+      <div class="ind-dni-result" id="ind-dni-result">
+        <div class="ind-dni-empty">Ingresá un DNI para ver las entregas del empleado.</div>
+      </div>
+    </div>
+  </div>
 </div><!-- /app -->
 <div id="bc-toast"></div>
 
@@ -640,7 +752,7 @@ body::before {
       <div class="bj-form-row">
         <div class="bj-field">
           <label class="bj-label">Talle entregado</label>
-          <select class="bj-input" id="ind-asignar-talle">
+          <select class="bj-input" id="ind-asignar-talle" onchange="IND._validarAsignar()">
             <option value="">— Elegir talle —</option>
           </select>
         </div>
@@ -1223,7 +1335,30 @@ const IND = (() => {
   function _validarAsignar() {
     const nombre = document.getElementById('ind-asignar-nombre').value.trim();
     const partes = nombre.split(/\s+/).filter(Boolean);
-    document.getElementById('ind-asignar-btn').disabled = partes.length < 2;
+    if (partes.length < 2) {
+      document.getElementById('ind-asignar-btn').disabled = true;
+      return;
+    }
+    // Validar stock disponible para el talle seleccionado
+    const talle = document.getElementById('ind-asignar-talle').value.trim();
+    const errEl = document.getElementById('ind-asignar-error');
+    if (talle && _asignarPrendaId) {
+      const prenda = _prendas.find(x => x.id === _asignarPrendaId);
+      if (prenda) {
+        const stockTalles = prenda.stockTalles || {};
+        const total     = Number(stockTalles[talle]) || 0;
+        const entregado = (prenda.entregas||[]).filter(e => e.talle === talle).length;
+        const libre     = total - entregado;
+        if (total > 0 && libre <= 0) {
+          errEl.textContent = `Sin stock disponible para talle ${talle} (${entregado}/${total} entregados).`;
+          document.getElementById('ind-asignar-btn').disabled = true;
+          return;
+        } else {
+          errEl.textContent = '';
+        }
+      }
+    }
+    document.getElementById('ind-asignar-btn').disabled = false;
   }
 
   async function confirmarEntrega() {
@@ -1236,6 +1371,20 @@ const IND = (() => {
     errEl.textContent = '';
 
     if (!nombre) { errEl.textContent = 'Ingresá el nombre completo.'; return; }
+
+    // Doble chequeo de stock antes de guardar (por si cambió entre pantallas)
+    if (talle) {
+      const prenda = _prendas.find(x => x.id === _asignarPrendaId);
+      if (prenda) {
+        const stockTalles = prenda.stockTalles || {};
+        const total     = Number(stockTalles[talle]) || 0;
+        const entregado = (prenda.entregas||[]).filter(e => e.talle === talle).length;
+        if (total > 0 && entregado >= total) {
+          errEl.textContent = `Sin stock disponible para talle ${talle}. Stock agotado (${entregado}/${total}).`;
+          return;
+        }
+      }
+    }
 
     const btn = document.getElementById('ind-asignar-btn');
     btn.disabled = true; btn.textContent = 'Guardando…';
@@ -1308,11 +1457,94 @@ const IND = (() => {
     console.log('✓ Seed de prendas cargado:', SEED.length);
   }
 
+  // ── BUSCAR POR DNI ───────────────────────────────────────────────
+  function buscarPorDni(val) {
+    const dni     = (val||'').trim();
+    const result  = document.getElementById('ind-dni-result');
+    const summary = document.getElementById('ind-dni-summary');
+    if (!result) return;
+
+    if (dni.length < 7) {
+      summary.textContent = '';
+      result.innerHTML = `<div class="ind-dni-empty">Ingresá un DNI para ver las entregas del empleado.</div>`;
+      return;
+    }
+
+    // Recolectar todas las entregas para ese DNI en todas las prendas
+    const entregas = [];
+    _prendas.forEach(p => {
+      (p.entregas||[]).forEach(e => {
+        if ((e.empDni||'') === dni) {
+          entregas.push({ ...e, prendaNombre: p.nombre, prendaCat: p.cat, local: p.local });
+        }
+      });
+    });
+
+    if (!entregas.length) {
+      summary.textContent = '';
+      result.innerHTML = `<div class="ind-dni-empty">No hay entregas registradas para el DNI <strong>${_esc(dni)}</strong>.</div>`;
+      return;
+    }
+
+    // Ordenar por fecha desc
+    entregas.sort((a, b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+    const nombre = entregas[0].empNombre || 'Empleado';
+    const inits  = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    summary.textContent = `${entregas.length} prenda${entregas.length !== 1 ? 's' : ''} entregada${entregas.length !== 1 ? 's' : ''}`;
+
+    const filas = entregas.map(e => {
+      const fechaFmt = e.fecha ? e.fecha.split('-').reverse().join('/') : '—';
+      const localCol = _localColor(e.local);
+      const catIcon  = CAT_ICON[e.prendaCat] || '📦';
+      return `<tr>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:7px">
+            <span style="font-size:16px">${catIcon}</span>
+            <span style="font-weight:600">${_esc(e.prendaNombre)}</span>
+          </span>
+        </td>
+        <td>${e.talle ? `<span class="ind-dni-talle-pill">${_esc(e.talle)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+        <td>
+          <span style="display:inline-flex;align-items:center">
+            <span class="ind-dni-local-dot" style="background:${localCol}"></span>
+            <span style="color:${localCol};font-weight:600">${_esc(e.local||'—')}</span>
+          </span>
+        </td>
+        <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${fechaFmt}</td>
+        <td>${_countdown(e.fecha)}</td>
+      </tr>`;
+    }).join('');
+
+    result.innerHTML = `
+      <div class="ind-dni-emp-header">
+        <div class="ind-dni-avatar">${inits}</div>
+        <div>
+          <div class="ind-dni-emp-name">${_esc(nombre)}</div>
+          <div class="ind-dni-emp-meta">DNI ${_esc(dni)}</div>
+        </div>
+        <div class="ind-dni-badge">${entregas.length} prenda${entregas.length !== 1 ? 's' : ''}</div>
+      </div>
+      <table class="ind-dni-table">
+        <thead>
+          <tr>
+            <th>Prenda</th>
+            <th>Talle</th>
+            <th>Local</th>
+            <th>Fecha</th>
+            <th>Vencimiento</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>`;
+  }
+
   return {
     init, setLocal, filtrar, filtrarCat,
     abrirNuevaPrenda, editarPrenda, cerrarPrenda, guardarPrenda, eliminarPrenda,
     onPrendaSelect,
     abrirAsignar, cerrarAsignar, _onDniInput, _validarAsignar, confirmarEntrega, quitarEntrega,
+    buscarPorDni,
   };
 })();
 

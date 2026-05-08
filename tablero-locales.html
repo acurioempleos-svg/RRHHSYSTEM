@@ -343,145 +343,174 @@ body::after {
 }
 .cc-status .dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 
-/* ══ DOC CARD STACK ════════════════════════════════════════════ */
+/* ══ DOC DECK (mazo real) ══════════════════════════════════════ */
 
-/* Contenedor general del stack de docs */
-.doc-stack-wrap {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+/* Filtros del deck */
+.deck-filters {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-top: 12px; margin-bottom: 8px;
+}
+.deck-filter-btn {
+  padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: none; color: var(--muted);
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: .08em; cursor: pointer;
+  transition: all var(--t);
+  display: flex; align-items: center; gap: 4px;
+}
+.deck-filter-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.deck-filter-btn.active { background: var(--amber-dim); border-color: var(--amber-brd); color: var(--amber-hi); }
+.deck-filter-btn .dfb-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0;
 }
 
-/* Carta colapsada (solo el header visible) */
-.doc-stack-item {
+/* Contenedor del mazo */
+.deck-wrap {
   position: relative;
-  border-radius: 8px;
+  margin-top: 6px;
+  /* altura del mazo colapsado: altura de 1 carta + sombras de las de atrás */
+  height: 54px;
+  transition: height 340ms cubic-bezier(0.4,0,0.2,1);
+}
+.deck-wrap.deck-open {
+  /* en estado abierto el height lo setea JS dinámicamente */
+  height: auto;
+}
+
+/* Una carta del mazo */
+.deck-card {
+  position: absolute;
+  left: 0; right: 0;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface2);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
-  margin-bottom: -1px; /* solapamiento tipo mazo */
-  z-index: 1;
+  /* apilamiento: todas en top:0, desplazadas con transform */
+  top: 0;
+  transform-origin: center bottom;
+  transition:
+    transform 340ms cubic-bezier(0.34,1.15,0.64,1),
+    opacity   280ms ease,
+    box-shadow 200ms ease,
+    border-color 180ms ease;
+  will-change: transform;
 }
-/* Cada carta tiene un z-index distinto para el apilamiento visual */
-.doc-stack-item:nth-child(1)  { z-index: 8; }
-.doc-stack-item:nth-child(2)  { z-index: 7; margin-top: -6px; }
-.doc-stack-item:nth-child(3)  { z-index: 6; margin-top: -6px; }
-.doc-stack-item:nth-child(4)  { z-index: 5; margin-top: -6px; }
-.doc-stack-item:nth-child(5)  { z-index: 4; margin-top: -6px; }
-.doc-stack-item:nth-child(6)  { z-index: 3; margin-top: -6px; }
-.doc-stack-item:nth-child(7)  { z-index: 2; margin-top: -6px; }
-.doc-stack-item:nth-child(8)  { z-index: 1; margin-top: -6px; }
+/* Sombra de profundidad */
+.deck-card:nth-child(1) { box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.deck-card:nth-child(2) { box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.deck-card:nth-child(3) { box-shadow: none; }
 
-/* Cuando algún item está expandido, el stack se "abre" */
-.doc-stack-wrap.any-open .doc-stack-item { margin-top: 4px !important; }
-.doc-stack-wrap.any-open .doc-stack-item:first-child { margin-top: 0 !important; }
+.deck-card.loaded  { border-color: rgba(13,150,114,0.3); }
+.deck-card.hidden  { opacity:0; pointer-events:none; transform: scale(.94) translateY(4px) !important; }
 
-.doc-stack-item:hover {
-  border-color: var(--border-hi);
-  box-shadow: 0 4px 14px rgba(0,0,0,.25);
-  transform: translateY(-1px);
-  z-index: 20 !important;
-}
-.doc-stack-item.loaded {
-  border-color: rgba(13,150,114,0.35);
-}
-.doc-stack-item.expanded {
-  border-color: var(--amber-brd);
-  box-shadow: 0 6px 20px rgba(0,0,0,.3);
-  z-index: 30 !important;
-  transform: none;
-  cursor: default;
-}
-
-/* Header de la carta (siempre visible) */
-.ds-header {
+/* Header siempre visible */
+.dc-header {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   user-select: none;
 }
-.ds-emoji {
-  font-size: 14px; line-height: 1; flex-shrink: 0;
+.dc-color-strip {
+  width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0;
 }
-.ds-name {
-  font-family: 'DM Mono', monospace; font-size: 9px;
-  color: var(--muted); letter-spacing: .08em;
-  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.dc-emoji { font-size: 15px; line-height: 1; flex-shrink: 0; }
+.dc-info  { flex: 1; min-width: 0; }
+.dc-name  {
+  font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500;
+  color: var(--text); letter-spacing: .06em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ds-name.loaded-name { color: var(--success); }
-.ds-badge {
-  flex-shrink: 0;
-  width: 14px; height: 14px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 7px;
+.dc-group {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  color: var(--faint); letter-spacing: .08em; margin-top: 1px;
 }
-.ds-badge.ok   { background: var(--success);           color: #fff; }
-.ds-badge.miss { background: var(--border);             color: var(--muted); }
-.ds-chevron {
-  flex-shrink: 0; color: var(--faint); font-size: 9px;
-  transition: transform 200ms ease;
-  font-family: 'DM Mono', monospace;
+.dc-status {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
 }
-.doc-stack-item.expanded .ds-chevron { transform: rotate(180deg); }
+.dc-badge {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  padding: 2px 7px; border-radius: 10px;
+  letter-spacing: .06em;
+}
+.dc-badge.ok   { background: var(--success-dim); color: var(--success); }
+.dc-badge.miss { background: var(--surface3); color: var(--faint); }
 
-/* Cuerpo expandible */
-.ds-body {
-  max-height: 0; overflow: hidden;
-  transition: max-height 280ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 220ms ease,
-              padding 220ms ease;
-  opacity: 0; padding: 0 10px;
-  border-top: 0px solid var(--border);
-  transition: max-height 280ms cubic-bezier(0.4,0,0.2,1),
-              opacity 200ms ease,
-              padding 200ms ease,
-              border-top-width 200ms ease;
+/* Count de cartas en el mazo colapsado */
+.deck-count-badge {
+  position: absolute; bottom: 8px; right: 10px;
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  color: var(--muted); letter-spacing: .1em;
+  pointer-events: none;
+  transition: opacity 200ms ease;
 }
-.doc-stack-item.expanded .ds-body {
-  max-height: 240px;
-  opacity: 1;
-  padding: 10px 10px 12px;
+.deck-wrap.deck-open .deck-count-badge { opacity: 0; }
+
+/* Tap hint en el frente del mazo */
+.deck-tap-hint {
+  position: absolute; inset: 0; z-index: 50;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 180ms ease;
+  pointer-events: none;
+}
+.deck-wrap:not(.deck-open):hover .deck-tap-hint { opacity: 1; }
+.deck-tap-hint span {
+  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--amber-hi);
+  background: var(--surface); border: 1px solid var(--amber-brd);
+  padding: 4px 10px; border-radius: 8px; letter-spacing: .1em;
+}
+
+/* Cuerpo expandible de cada carta */
+.dc-body {
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 300ms cubic-bezier(0.4,0,0.2,1), opacity 240ms ease, padding 220ms ease;
+  padding: 0 12px;
+  border-top: 0px solid var(--border);
+}
+.deck-card.dc-expanded .dc-body {
+  max-height: 200px; opacity: 1;
+  padding: 10px 12px 12px;
   border-top: 1px solid var(--border);
 }
+.dc-body-inner { display: flex; flex-direction: column; gap: 8px; }
 
-/* Contenido del body */
-.ds-body-inner {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.ds-thumb {
+.dc-thumb {
   width: 100%; border-radius: 6px; overflow: hidden;
-  background: var(--surface3);
+  background: var(--surface3); min-height: 70px;
   display: flex; align-items: center; justify-content: center;
-  min-height: 80px;
 }
-.ds-thumb img {
-  width: 100%; max-height: 120px; object-fit: cover; display: block;
-  border-radius: 6px;
+.dc-thumb img { width:100%; max-height:100px; object-fit:cover; display:block; }
+.dc-thumb-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px;
+  font-family: 'DM Mono', monospace; font-size: 8px; color: var(--faint); text-align: center;
 }
-.ds-thumb-empty {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 4px; padding: 16px;
-  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--faint);
-  letter-spacing: .1em; text-align: center;
-}
-.ds-thumb-empty span { font-size: 22px; opacity: .4; }
-.ds-actions {
-  display: flex; gap: 5px;
-}
-.ds-act-btn {
+.dc-thumb-empty span { font-size: 20px; opacity: .35; }
+
+.dc-actions { display: flex; gap: 5px; }
+.dc-act-btn {
   flex: 1; padding: 6px 4px;
   border-radius: 6px; border: 1px solid var(--border);
   background: var(--surface2); color: var(--muted);
   font-family: 'DM Mono', monospace; font-size: 8px;
   letter-spacing: .06em; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
   transition: all var(--t);
 }
-.ds-act-btn:hover { border-color: var(--amber-brd); color: var(--amber-hi); background: var(--amber-dim); }
-.ds-act-btn.view:hover { border-color: rgba(60,120,220,.35); color: #6ea8ff; background: rgba(60,120,220,.1); }
-.ds-act-btn.del:hover  { border-color: rgba(201,53,53,.35); color: var(--danger); background: var(--danger-dim); }
+.dc-act-btn:hover        { border-color: var(--amber-brd); color: var(--amber-hi); background: var(--amber-dim); }
+.dc-act-btn.view:hover   { border-color: rgba(59,125,216,.35); color: #6ea8ff;     background: var(--info-dim); }
+.dc-act-btn.danger:hover { border-color: rgba(201,53,53,.35);  color: var(--danger); background: var(--danger-dim); }
+
+/* Botón cerrar deck (visible cuando está abierto) */
+.deck-close-btn {
+  display: none; width: 100%; margin-top: 8px;
+  padding: 7px; border-radius: 8px;
+  border: 1px solid var(--border); background: none;
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  color: var(--faint); cursor: pointer; letter-spacing: .1em;
+  transition: all var(--t);
+}
+.deck-close-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.deck-wrap.deck-open + .deck-close-btn { display: block; }
 
 /* Progress bar */
 .cc-progress {
@@ -1138,45 +1167,99 @@ function renderLocal(local, q = '') {
       else if (diff < 30) { statusClass = 'stack-warn'; statusLabel = `${Math.ceil(diff)}d`; }
     }
 
-    // Docs — nuevo sistema de card-stack
+    // ── FILTROS DEL DECK ──────────────────────────────────────────
+    const FILTERS = [
+      { key: 'all',           label: 'Todas',        color: 'var(--amber-hi)' },
+      { key: 'identidad',     label: 'Identidad',    color: '#6ea8ff' },
+      { key: 'salud',         label: 'Salud',        color: 'var(--success)' },
+      { key: 'vacaciones',    label: 'Vacaciones',   color: '#34d399' },
+      { key: 'apercibimiento',label: 'Apercib.',     color: 'var(--warning)' },
+      { key: 'suspension',    label: 'Suspensión',   color: 'var(--danger)' },
+      { key: 'nota_buena',    label: 'Distinción',   color: 'var(--purple)' },
+    ];
+    const filterBtnsHTML = FILTERS.map(f => `
+      <button class="deck-filter-btn ${f.key==='all'?'active':''}"
+        data-filter="${f.key}" data-colabid="${c.id}"
+        style="${f.key==='all'?`background:var(--amber-dim);border-color:var(--amber-brd);color:var(--amber-hi)`:''}"
+        onclick="deckFilter('${c.id}','${f.key}',this)">
+        <span class="dfb-dot" style="background:${f.color}"></span>${f.label}
+      </button>`).join('');
+
+    // ── CARTAS DEL MAZO ──────────────────────────────────────────
+    const DOC_FILTER_MAP = {
+      all: null,
+      identidad:      ['dni_frente','dni_dorso','cuil'],
+      salud:          ['salud'],
+      vacaciones:     ['vacaciones'],
+      apercibimiento: ['apercibimiento'],
+      suspension:     ['suspension'],
+      nota_buena:     ['nota_buena'],
+    };
+    const DOC_COLORS = {
+      dni_frente: '#6ea8ff', dni_dorso: '#6ea8ff', cuil: '#6ea8ff',
+      salud: 'var(--success)', vacaciones: '#34d399',
+      apercibimiento: 'var(--warning)', suspension: 'var(--danger)', nota_buena: 'var(--purple)',
+    };
     const allDocItems = DOC_GROUPS.flatMap(g => g.docs.map(d => ({...d, group: g.label})));
+    const totalDeck   = allDocItems.length;
+    const cargados    = allDocItems.filter(d => c[d.key]).length;
+
+    const deckCardsHTML = allDocItems.map((d, idx) => {
+      const loaded  = !!c[d.key];
+      const imgUrl  = loaded ? c[d.key] : '';
+      const isPdf   = imgUrl && (imgUrl.includes('.pdf') || imgUrl.includes('application%2Fpdf'));
+      const color   = DOC_COLORS[d.key] || 'var(--amber-hi)';
+
+      const thumbHTML = loaded
+        ? (isPdf
+          ? `<div class="dc-thumb"><div class="dc-thumb-empty"><span>📄</span>PDF</div></div>`
+          : `<div class="dc-thumb"><img src="${imgUrl}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'dc-thumb-empty\\'><span>📎</span>Sin vista previa</div>'"></div>`)
+        : `<div class="dc-thumb"><div class="dc-thumb-empty"><span>${d.emoji}</span>Sin cargar</div></div>`;
+
+      return `
+        <div class="deck-card ${loaded?'loaded':''}"
+          id="dc-${c.id}-${d.key}"
+          data-key="${d.key}"
+          data-group="${d.group}"
+          data-colabid="${c.id}"
+          data-idx="${idx}"
+          style="z-index:${totalDeck - idx}"
+          onclick="deckCardClick(event,'${c.id}','${d.key}')">
+          <div class="dc-header">
+            <div class="dc-color-strip" style="background:${color}"></div>
+            <div class="dc-emoji">${d.emoji}</div>
+            <div class="dc-info">
+              <div class="dc-name">${esc(d.name)}</div>
+              <div class="dc-group">${esc(d.group)}</div>
+            </div>
+            <div class="dc-status">
+              <span class="dc-badge ${loaded?'ok':'miss'}">${loaded?'✓ Cargado':'Pendiente'}</span>
+            </div>
+          </div>
+          <div class="dc-body">
+            <div class="dc-body-inner">
+              ${thumbHTML}
+              <div class="dc-actions">
+                ${loaded
+                  ? `<button class="dc-act-btn view" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},true)">👁 Ver</button>
+                     <button class="dc-act-btn"      onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">↑ Reemplazar</button>
+                     <button class="dc-act-btn danger" onclick="event.stopPropagation();quitarDoc('${c.id}','${d.key}','${esc(d.name)}')">✕</button>`
+                  : `<button class="dc-act-btn" style="flex:1" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">+ Cargar</button>`
+                }
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
     const docGroupsHTML = `
-      <div class="doc-stack-wrap" id="stack-${c.id}">
-        ${allDocItems.map((d, idx) => {
-          const loaded   = !!c[d.key];
-          const imgUrl   = loaded ? c[d.key] : '';
-          const isPdf    = imgUrl && (imgUrl.includes('.pdf') || imgUrl.includes('application%2Fpdf'));
-          const thumbHTML = loaded
-            ? (isPdf
-                ? `<div class="ds-thumb"><div class="ds-thumb-empty"><span>📄</span>Archivo PDF</div></div>`
-                : `<div class="ds-thumb"><img src="${imgUrl}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'ds-thumb-empty\\'><span>📎</span>Sin vista previa</div>'"></div>`)
-            : `<div class="ds-thumb"><div class="ds-thumb-empty"><span>${d.emoji}</span>Sin cargar</div></div>`;
-          return `
-            <div class="doc-stack-item ${loaded ? 'loaded' : ''}" id="si-${c.id}-${d.key}"
-              onclick="toggleDocCard('${c.id}','${d.key}',event)">
-              <div class="ds-header">
-                <div class="ds-emoji">${d.emoji}</div>
-                <div class="ds-name ${loaded ? 'loaded-name' : ''}">${esc(d.name)}</div>
-                <span style="font-family:'DM Mono',monospace;font-size:7px;color:var(--faint);letter-spacing:.1em;flex-shrink:0;margin-right:4px">${esc(d.group)}</span>
-                <div class="ds-badge ${loaded ? 'ok' : 'miss'}">${loaded ? '✓' : '·'}</div>
-                <div class="ds-chevron">▾</div>
-              </div>
-              <div class="ds-body">
-                <div class="ds-body-inner">
-                  ${thumbHTML}
-                  <div class="ds-actions">
-                    ${loaded
-                      ? `<button class="ds-act-btn view" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},true)">👁 Ver</button>
-                         <button class="ds-act-btn" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">↑ Reemplazar</button>
-                         <button class="ds-act-btn del" onclick="event.stopPropagation();quitarDoc('${c.id}','${d.key}','${esc(d.name)}')">✕</button>`
-                      : `<button class="ds-act-btn" style="flex:1" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">+ Cargar documento</button>`
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>`;
-        }).join('')}
-      </div>`;
+      <div class="deck-filters">${filterBtnsHTML}</div>
+      <div class="deck-wrap" id="deck-${c.id}" onclick="deckToggle('${c.id}',event)">
+        ${deckCardsHTML}
+        <div class="deck-count-badge">${cargados}/${totalDeck} docs · tap para expandir</div>
+        <div class="deck-tap-hint"><span>▸ VER DOCUMENTOS</span></div>
+      </div>
+      <button class="deck-close-btn" onclick="deckClose('${c.id}')">▴ cerrar mazo</button>`;
 
     // Progreso
     const total = ALL_DOCS.length;
@@ -1225,6 +1308,9 @@ function renderLocal(local, q = '') {
         </div>
       </div>`;
   }).join('') || `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);padding:24px;text-align:center;">Sin resultados</div>`;
+
+  /* Inicializar mazos */
+  requestAnimationFrame(() => initAllDecks());
 }
 
 /* ══ DOC MANAGEMENT ═════════════════════════════════════════════ */
@@ -1343,30 +1429,159 @@ async function eliminarColab(id, nombre) {
   toast(`${nombre} eliminado`);
 }
 
-/* ══ DOC STACK TOGGLE ═══════════════════════════════════════════ */
-function toggleDocCard(colabId, docKey, event) {
-  // Si el click fue en un botón hijo, no hacer nada
-  if (event && event.target.closest('.ds-act-btn')) return;
+/* ══ DOC DECK LOGIC ════════════════════════════════════════════ */
 
-  const itemEl = document.getElementById(`si-${colabId}-${docKey}`);
-  const stackEl = document.getElementById(`stack-${colabId}`);
-  if (!itemEl || !stackEl) return;
+const CARD_H       = 38;   // px — altura de cada carta colapsada
+const CARD_GAP     = 8;    // px — separación al expandir
+const STACK_PEEK   = 5;    // px — cuánto sobresale cada carta detrás
 
-  const wasOpen = itemEl.classList.contains('expanded');
+/* Posiciona todas las cartas visibles del deck */
+function deckLayout(colabId) {
+  const deck = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+  const cards  = [...deck.querySelectorAll('.deck-card:not(.hidden)')];
+  const isOpen = deck.classList.contains('deck-open');
+  const n      = cards.length;
 
-  // Cerrar todas las cartas de ESTE stack
-  stackEl.querySelectorAll('.doc-stack-item.expanded').forEach(el => {
-    el.classList.remove('expanded');
+  if (!isOpen) {
+    /* COLAPSADO: todas apiladas, las de atrás sobresalen un poco */
+    cards.forEach((card, i) => {
+      const ri      = n - 1 - i;          // 0 = frontal, n-1 = fondo
+      const peekOff = ri * STACK_PEEK;    // desplazamiento hacia abajo
+      const scale   = 1 - ri * 0.025;    // cada capa un poco más chica
+      card.style.transform = `translateY(${peekOff}px) scale(${scale})`;
+      card.style.zIndex    = n - ri;
+      card.style.boxShadow = ri === 0 ? '0 4px 16px rgba(0,0,0,.5)' : 'none';
+    });
+    /* Altura del contenedor = header frontal + picos de las de atrás */
+    deck.style.height = (CARD_H + (n - 1) * STACK_PEEK) + 'px';
+  } else {
+    /* ABIERTO: cartas en fila vertical, separadas */
+    cards.forEach((card, i) => {
+      const top = i * (CARD_H + CARD_GAP);
+      card.style.transform = `translateY(${top}px)`;
+      card.style.zIndex    = n - i;
+      card.style.boxShadow = '0 2px 8px rgba(0,0,0,.35)';
+    });
+    /* Altura dinámica según las cartas expandidas */
+    recalcDeckHeight(colabId);
+  }
+}
+
+function recalcDeckHeight(colabId) {
+  const deck  = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+  const cards = [...deck.querySelectorAll('.deck-card:not(.hidden)')];
+  const n     = cards.length;
+  if (!n) { deck.style.height = '0px'; return; }
+
+  let total = 0;
+  cards.forEach((card, i) => {
+    total += CARD_H + CARD_GAP;
+    if (card.classList.contains('dc-expanded')) total += card.querySelector('.dc-body').scrollHeight;
   });
+  deck.style.height = (total - CARD_GAP) + 'px';
+}
+
+/* Abrir / cerrar todo el mazo */
+function deckToggle(colabId, event) {
+  if (event && event.target.closest('.deck-card')) return; // delegar a deckCardClick
+  const deck = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+  if (deck.classList.contains('deck-open')) {
+    deckClose(colabId);
+  } else {
+    deck.classList.add('deck-open');
+    deckLayout(colabId);
+  }
+}
+
+function deckClose(colabId) {
+  const deck = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+  /* Colapsar cuerpos abiertos */
+  deck.querySelectorAll('.dc-expanded').forEach(c => c.classList.remove('dc-expanded'));
+  deck.classList.remove('deck-open');
+  deckLayout(colabId);
+}
+
+/* Click en una carta específica */
+function deckCardClick(event, colabId, docKey) {
+  if (event.target.closest('.dc-act-btn')) return;
+  const deck = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+
+  /* Si el mazo está cerrado, solo abrirlo */
+  if (!deck.classList.contains('deck-open')) {
+    deck.classList.add('deck-open');
+    deckLayout(colabId);
+    return;
+  }
+
+  /* Toggle el cuerpo de esta carta */
+  const card     = document.getElementById(`dc-${colabId}-${docKey}`);
+  if (!card) return;
+  const wasOpen  = card.classList.contains('dc-expanded');
+
+  /* Cerrar todos */
+  deck.querySelectorAll('.dc-expanded').forEach(c => c.classList.remove('dc-expanded'));
 
   if (!wasOpen) {
-    // Abrir la clickeada con micro-delay para que la animación se vea
-    requestAnimationFrame(() => {
-      itemEl.classList.add('expanded');
-    });
-    stackEl.classList.add('any-open');
+    card.classList.add('dc-expanded');
+    card.style.borderColor = 'var(--amber-brd)';
   } else {
-    stackEl.classList.remove('any-open');
+    card.style.borderColor = '';
+  }
+
+  /* Re-posicionar para reflejar el nuevo tamaño */
+  requestAnimationFrame(() => {
+    deckLayout(colabId);
+  });
+}
+
+/* Filtro del deck */
+function deckFilter(colabId, filterKey, btn) {
+  /* Actualizar botones activos */
+  btn.closest('.deck-filters').querySelectorAll('.deck-filter-btn').forEach(b => {
+    b.classList.remove('active');
+    b.removeAttribute('style');
+  });
+  btn.classList.add('active');
+  const filterColors = {
+    all:'var(--amber-hi)', identidad:'#6ea8ff', salud:'var(--success)',
+    vacaciones:'#34d399', apercibimiento:'var(--warning)',
+    suspension:'var(--danger)', nota_buena:'var(--purple)',
+  };
+  const col = filterColors[filterKey] || 'var(--amber-hi)';
+  btn.style.cssText = `background:color-mix(in srgb,${col} 15%,transparent);border-color:color-mix(in srgb,${col} 40%,transparent);color:${col}`;
+
+  const DOC_FILTER_MAP = {
+    all: null,
+    identidad:      ['dni_frente','dni_dorso','cuil'],
+    salud:          ['salud'],
+    vacaciones:     ['vacaciones'],
+    apercibimiento: ['apercibimiento'],
+    suspension:     ['suspension'],
+    nota_buena:     ['nota_buena'],
+  };
+  const allowed = DOC_FILTER_MAP[filterKey];
+
+  const deck  = document.getElementById(`deck-${colabId}`);
+  if (!deck) return;
+
+  /* Mostrar/ocultar cartas */
+  deck.querySelectorAll('.deck-card').forEach(card => {
+    const key = card.dataset.key;
+    const show = !allowed || allowed.includes(key);
+    if (show) { card.classList.remove('hidden'); }
+    else       { card.classList.add('hidden'); card.classList.remove('dc-expanded'); card.style.borderColor = ''; }
+  });
+
+  /* Si el deck está abierto, re-posicionar */
+  if (deck.classList.contains('deck-open')) {
+    requestAnimationFrame(() => deckLayout(colabId));
+  } else {
+    deckLayout(colabId);
   }
 }
 
@@ -1377,9 +1592,15 @@ async function quitarDoc(colabId, docKey, label) {
   try {
     await db.collection('colaboradores').doc(colabId).update(upd);
     toast('Documento eliminado');
-  } catch(e) {
-    toast('Error: ' + e.code);
-  }
+  } catch(e) { toast('Error: ' + e.code); }
+}
+
+/* Inicializar mazos después de cada render */
+function initAllDecks() {
+  document.querySelectorAll('.deck-wrap').forEach(deck => {
+    const colabId = deck.id.replace('deck-','');
+    deckLayout(colabId);
+  });
 }
 
 /* ══ PDF ════════════════════════════════════════════════════════ */

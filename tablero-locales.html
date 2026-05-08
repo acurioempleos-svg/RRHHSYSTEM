@@ -343,46 +343,145 @@ body::after {
 }
 .cc-status .dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 
-/* Doc section */
-.cc-section {
-  font-family: 'DM Mono', monospace; font-size: 8px;
-  color: var(--faint); letter-spacing: .18em; text-transform: uppercase;
-  margin: 12px 0 6px;
-  display: flex; align-items: center; gap: 6px;
-}
-.cc-section::after { content:''; flex: 1; height: 1px; background: var(--border); }
+/* ══ DOC CARD STACK ════════════════════════════════════════════ */
 
-.cc-docs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
+/* Contenedor general del stack de docs */
+.doc-stack-wrap {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-.cc-doc {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 8px 4px;
-  border-radius: 8px; border: 1px solid var(--border);
-  background: var(--surface2);
-  font-family: 'DM Mono', monospace; font-size: 8px;
-  color: var(--muted); letter-spacing: .04em;
-  cursor: pointer; text-align: center;
-  transition: all var(--t);
+
+/* Carta colapsada (solo el header visible) */
+.doc-stack-item {
   position: relative;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  margin-bottom: -1px; /* solapamiento tipo mazo */
+  z-index: 1;
 }
-.cc-doc:hover { border-color: var(--border-hi); color: var(--text); background: var(--surface3); }
-.cc-doc.loaded {
+/* Cada carta tiene un z-index distinto para el apilamiento visual */
+.doc-stack-item:nth-child(1)  { z-index: 8; }
+.doc-stack-item:nth-child(2)  { z-index: 7; margin-top: -6px; }
+.doc-stack-item:nth-child(3)  { z-index: 6; margin-top: -6px; }
+.doc-stack-item:nth-child(4)  { z-index: 5; margin-top: -6px; }
+.doc-stack-item:nth-child(5)  { z-index: 4; margin-top: -6px; }
+.doc-stack-item:nth-child(6)  { z-index: 3; margin-top: -6px; }
+.doc-stack-item:nth-child(7)  { z-index: 2; margin-top: -6px; }
+.doc-stack-item:nth-child(8)  { z-index: 1; margin-top: -6px; }
+
+/* Cuando algún item está expandido, el stack se "abre" */
+.doc-stack-wrap.any-open .doc-stack-item { margin-top: 4px !important; }
+.doc-stack-wrap.any-open .doc-stack-item:first-child { margin-top: 0 !important; }
+
+.doc-stack-item:hover {
+  border-color: var(--border-hi);
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  transform: translateY(-1px);
+  z-index: 20 !important;
+}
+.doc-stack-item.loaded {
   border-color: rgba(13,150,114,0.35);
-  background: var(--success-dim);
-  color: var(--success);
 }
-.cc-doc.loaded:hover { background: rgba(13,150,114,0.2); }
-.cc-doc .doc-emoji { font-size: 15px; line-height: 1; }
-.cc-doc .doc-check {
-  position: absolute; top: 4px; right: 4px;
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--success);
+.doc-stack-item.expanded {
+  border-color: var(--amber-brd);
+  box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  z-index: 30 !important;
+  transform: none;
+  cursor: default;
+}
+
+/* Header de la carta (siempre visible) */
+.ds-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  user-select: none;
+}
+.ds-emoji {
+  font-size: 14px; line-height: 1; flex-shrink: 0;
+}
+.ds-name {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--muted); letter-spacing: .08em;
+  flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ds-name.loaded-name { color: var(--success); }
+.ds-badge {
+  flex-shrink: 0;
+  width: 14px; height: 14px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
+  font-size: 7px;
 }
-.cc-doc .doc-check svg { width: 7px; height: 7px; }
+.ds-badge.ok   { background: var(--success);           color: #fff; }
+.ds-badge.miss { background: var(--border);             color: var(--muted); }
+.ds-chevron {
+  flex-shrink: 0; color: var(--faint); font-size: 9px;
+  transition: transform 200ms ease;
+  font-family: 'DM Mono', monospace;
+}
+.doc-stack-item.expanded .ds-chevron { transform: rotate(180deg); }
+
+/* Cuerpo expandible */
+.ds-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 280ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 220ms ease,
+              padding 220ms ease;
+  opacity: 0; padding: 0 10px;
+  border-top: 0px solid var(--border);
+  transition: max-height 280ms cubic-bezier(0.4,0,0.2,1),
+              opacity 200ms ease,
+              padding 200ms ease,
+              border-top-width 200ms ease;
+}
+.doc-stack-item.expanded .ds-body {
+  max-height: 240px;
+  opacity: 1;
+  padding: 10px 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Contenido del body */
+.ds-body-inner {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ds-thumb {
+  width: 100%; border-radius: 6px; overflow: hidden;
+  background: var(--surface3);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 80px;
+}
+.ds-thumb img {
+  width: 100%; max-height: 120px; object-fit: cover; display: block;
+  border-radius: 6px;
+}
+.ds-thumb-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; padding: 16px;
+  font-family: 'DM Mono', monospace; font-size: 9px; color: var(--faint);
+  letter-spacing: .1em; text-align: center;
+}
+.ds-thumb-empty span { font-size: 22px; opacity: .4; }
+.ds-actions {
+  display: flex; gap: 5px;
+}
+.ds-act-btn {
+  flex: 1; padding: 6px 4px;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted);
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: .06em; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  transition: all var(--t);
+}
+.ds-act-btn:hover { border-color: var(--amber-brd); color: var(--amber-hi); background: var(--amber-dim); }
+.ds-act-btn.view:hover { border-color: rgba(60,120,220,.35); color: #6ea8ff; background: rgba(60,120,220,.1); }
+.ds-act-btn.del:hover  { border-color: rgba(201,53,53,.35); color: var(--danger); background: var(--danger-dim); }
 
 /* Progress bar */
 .cc-progress {
@@ -1039,24 +1138,45 @@ function renderLocal(local, q = '') {
       else if (diff < 30) { statusClass = 'stack-warn'; statusLabel = `${Math.ceil(diff)}d`; }
     }
 
-    // Docs por grupo
-    const docGroupsHTML = DOC_GROUPS.map(g => `
-      <div class="cc-section">${g.label}</div>
-      <div class="cc-docs">
-        ${g.docs.map(d => {
-          const loaded = !!c[d.key];
+    // Docs — nuevo sistema de card-stack
+    const allDocItems = DOC_GROUPS.flatMap(g => g.docs.map(d => ({...d, group: g.label})));
+    const docGroupsHTML = `
+      <div class="doc-stack-wrap" id="stack-${c.id}">
+        ${allDocItems.map((d, idx) => {
+          const loaded   = !!c[d.key];
+          const imgUrl   = loaded ? c[d.key] : '';
+          const isPdf    = imgUrl && (imgUrl.includes('.pdf') || imgUrl.includes('application%2Fpdf'));
+          const thumbHTML = loaded
+            ? (isPdf
+                ? `<div class="ds-thumb"><div class="ds-thumb-empty"><span>📄</span>Archivo PDF</div></div>`
+                : `<div class="ds-thumb"><img src="${imgUrl}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'ds-thumb-empty\\'><span>📎</span>Sin vista previa</div>'"></div>`)
+            : `<div class="ds-thumb"><div class="ds-thumb-empty"><span>${d.emoji}</span>Sin cargar</div></div>`;
           return `
-            <div class="cc-doc ${loaded ? 'loaded' : ''}"
-              onclick="handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},${loaded})">
-              ${loaded ? `<div class="doc-check">
-                <svg viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
-                  <path d="M1 4l2 2 4-4"/>
-                </svg></div>` : ''}
-              <div class="doc-emoji">${d.emoji}</div>
-              <div>${esc(d.name)}</div>
+            <div class="doc-stack-item ${loaded ? 'loaded' : ''}" id="si-${c.id}-${d.key}"
+              onclick="toggleDocCard('${c.id}','${d.key}',event)">
+              <div class="ds-header">
+                <div class="ds-emoji">${d.emoji}</div>
+                <div class="ds-name ${loaded ? 'loaded-name' : ''}">${esc(d.name)}</div>
+                <span style="font-family:'DM Mono',monospace;font-size:7px;color:var(--faint);letter-spacing:.1em;flex-shrink:0;margin-right:4px">${esc(d.group)}</span>
+                <div class="ds-badge ${loaded ? 'ok' : 'miss'}">${loaded ? '✓' : '·'}</div>
+                <div class="ds-chevron">▾</div>
+              </div>
+              <div class="ds-body">
+                <div class="ds-body-inner">
+                  ${thumbHTML}
+                  <div class="ds-actions">
+                    ${loaded
+                      ? `<button class="ds-act-btn view" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},true)">👁 Ver</button>
+                         <button class="ds-act-btn" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">↑ Reemplazar</button>
+                         <button class="ds-act-btn del" onclick="event.stopPropagation();quitarDoc('${c.id}','${d.key}','${esc(d.name)}')">✕</button>`
+                      : `<button class="ds-act-btn" style="flex:1" onclick="event.stopPropagation();handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},false)">+ Cargar documento</button>`
+                    }
+                  </div>
+                </div>
+              </div>
             </div>`;
         }).join('')}
-      </div>`).join('');
+      </div>`;
 
     // Progreso
     const total = ALL_DOCS.length;
@@ -1221,6 +1341,45 @@ async function eliminarColab(id, nombre) {
   if (!confirm(`¿Eliminar a ${nombre}?`)) return;
   await db.collection('colaboradores').doc(id).delete();
   toast(`${nombre} eliminado`);
+}
+
+/* ══ DOC STACK TOGGLE ═══════════════════════════════════════════ */
+function toggleDocCard(colabId, docKey, event) {
+  // Si el click fue en un botón hijo, no hacer nada
+  if (event && event.target.closest('.ds-act-btn')) return;
+
+  const itemEl = document.getElementById(`si-${colabId}-${docKey}`);
+  const stackEl = document.getElementById(`stack-${colabId}`);
+  if (!itemEl || !stackEl) return;
+
+  const wasOpen = itemEl.classList.contains('expanded');
+
+  // Cerrar todas las cartas de ESTE stack
+  stackEl.querySelectorAll('.doc-stack-item.expanded').forEach(el => {
+    el.classList.remove('expanded');
+  });
+
+  if (!wasOpen) {
+    // Abrir la clickeada con micro-delay para que la animación se vea
+    requestAnimationFrame(() => {
+      itemEl.classList.add('expanded');
+    });
+    stackEl.classList.add('any-open');
+  } else {
+    stackEl.classList.remove('any-open');
+  }
+}
+
+async function quitarDoc(colabId, docKey, label) {
+  if (!confirm(`¿Quitar "${label}" del legajo?`)) return;
+  const upd = { [docKey]: firebase.firestore.FieldValue.delete() };
+  if (docKey === 'salud') upd.vencimiento_salud = firebase.firestore.FieldValue.delete();
+  try {
+    await db.collection('colaboradores').doc(colabId).update(upd);
+    toast('Documento eliminado');
+  } catch(e) {
+    toast('Error: ' + e.code);
+  }
 }
 
 /* ══ PDF ════════════════════════════════════════════════════════ */

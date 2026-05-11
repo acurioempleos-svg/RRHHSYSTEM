@@ -737,8 +737,28 @@ body {
   background:var(--s2); border-radius:var(--r); overflow:hidden;
   aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;
   cursor:zoom-in; margin-bottom:8px;
+  position:relative;
 }
 .car-img-wrap img { width:100%; height:100%; object-fit:contain; }
+
+/* Slide transition container */
+.car-slide-track {
+  position:relative; overflow:hidden;
+  border-radius:var(--r);
+  aspect-ratio:4/3; margin-bottom:8px;
+  background:var(--s2); cursor:zoom-in;
+}
+.car-slide-inner {
+  display:flex; width:100%; height:100%;
+  transition:transform 280ms cubic-bezier(.4,0,.2,1);
+  will-change:transform;
+}
+.car-slide-item {
+  flex:0 0 100%; width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--s2);
+}
+.car-slide-item img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
 .car-estado-badge {
   position:absolute; top:10px; left:10px;
   font-family:'DM Mono',monospace; font-size:9px; font-weight:600;
@@ -1249,6 +1269,57 @@ body {
   </div>
 </div>
 
+<!-- Foto preview before confirm -->
+<div id="foto-confirm-modal" class="overlay" onclick="if(event.target===this)descartarFotoPrevia()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <div class="sheet-title">Confirmar foto</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">Revisá antes de guardar</div>
+      </div>
+      <div class="sheet-x" onclick="descartarFotoPrevia()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div class="prev-img-wrap" style="margin-bottom:14px">
+        <img id="foto-preview-img" style="width:100%;height:100%;object-fit:contain">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="descartarFotoPrevia()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          Descartar
+        </button>
+        <button class="btn btn-amber" style="flex:1" id="foto-confirm-btn" onclick="confirmarFotoPrevia()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Editar colaborador -->
+<div id="edit-colab-modal" class="overlay" onclick="if(event.target===this)closeSheet('edit-colab-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Editar datos</div>
+      <div class="sheet-x" onclick="closeSheet('edit-colab-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <input type="hidden" id="edit-colab-id">
+      <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="edit-nombre" placeholder="Ej: Juan Pérez" onkeydown="if(event.key==='Enter')document.getElementById('edit-dni').focus()"></div>
+      <div class="f-field"><label class="f-label">DNI</label><input class="f-input" id="edit-dni" type="text" inputmode="numeric" placeholder="Ej: 38123456" onkeydown="if(event.key==='Enter')document.getElementById('edit-puesto').focus()"></div>
+      <div class="f-field"><label class="f-label">Local</label>
+        <select class="f-input" id="edit-local"></select>
+      </div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="edit-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarEdicionColab()"></div>
+      <button class="btn btn-amber" id="edit-colab-btn" onclick="guardarEdicionColab()">Guardar cambios</button>
+      <button class="btn btn-ghost" onclick="closeSheet('edit-colab-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Nuevo colab -->
 <div id="nuevo-modal" class="overlay" onclick="closeSheet('nuevo-modal')">
   <div class="sheet" onclick="event.stopPropagation()">
@@ -1459,6 +1530,8 @@ let _prevUrls       = [];
 let _prevMeta       = []; // [{cargado_en, estado}] parallel to _prevUrls
 let _prevIdx        = 0;
 let _globalDocKey   = null; // for vista global por tipo
+let _pendingDataUrl = null; // foto pendiente de confirmación
+let _pendingSource  = 'direct'; // 'direct' = desde doc, 'ocr' = flujo OCR
 
 /* ══ DOC GROUPS ═════════════════════════════════════════════════ */
 const DOC_GROUPS = [
@@ -1755,6 +1828,10 @@ function renderLocal(local, q='') {
       <div class="pb-docs" id="pbdocs-${c.id}">
         ${docGroupsHTML}
         <div class="pb-actions">
+          <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar datos
+          </button>
           <button class="pba-btn amber" onclick="exportarPDF('${c.id}');event.stopPropagation()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Legajo PDF
@@ -1824,31 +1901,45 @@ function renderCarousel() {
   const carousel = document.getElementById('prev-carousel');
   const nav      = document.getElementById('prev-nav');
   if (!_prevUrls.length) { carousel.innerHTML=''; nav.innerHTML=''; return; }
-  const url  = _prevUrls[_prevIdx];
-  const meta = _prevMeta[_prevIdx] || {};
-  const isPdf = url.includes('.pdf') || url.includes('application%2Fpdf');
-  const estado = meta.estado || 'ok';
+
+  const meta    = _prevMeta[_prevIdx] || {};
+  const estado  = meta.estado || 'ok';
+  const hasMulti = _prevUrls.length > 1;
+
   const estadoBadge = estado !== 'ok'
-    ? `<div class="car-estado-badge car-estado-${estado}">${estado==='revision'?'⚠ Requiere revisión':'✕ Rechazado'}</div>`
+    ? `<div class="car-estado-badge car-estado-${estado}" style="position:absolute;top:10px;left:10px;z-index:3;font-family:'DM Mono',monospace;font-size:9px;font-weight:600;padding:3px 8px;border-radius:6px;pointer-events:none;${estado==='revision'?'background:rgba(201,122,26,.85);color:#fff':'background:rgba(196,50,50,.85);color:#fff'}">${estado==='revision'?'⚠ Requiere revisión':'✕ Rechazado'}</div>`
     : '';
+
+  const arrowL = hasMulti ? `<button onclick="prevGoto(${(_prevIdx-1+_prevUrls.length)%_prevUrls.length})" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>` : '';
+  const arrowR = hasMulti ? `<button onclick="prevGoto(${(_prevIdx+1)%_prevUrls.length})" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">›</button>` : '';
+
+  // Build slide track with all images for smooth CSS transitions
+  const slides = _prevUrls.map((url, i) => {
+    const isPdf = url.includes('.pdf') || url.includes('application%2Fpdf');
+    return `<div class="car-slide-item">
+      ${isPdf
+        ? `<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">📄 PDF</div>`
+        : `<img src="${url}" loading="lazy">`
+      }
+    </div>`;
+  }).join('');
+
   const fechaCarga = meta.cargado_en
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}</span></div>`
     : '';
-  const fotoNum = _prevUrls.length > 1
+  const fotoNum = hasMulti
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevIdx+1} de ${_prevUrls.length}</span></div>`
     : '';
-  const hasMulti = _prevUrls.length > 1;
-  const arrowL = hasMulti ? `<button onclick="prevGoto(${(_prevIdx-1+_prevUrls.length)%_prevUrls.length})" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>` : '';
-  const arrowR = hasMulti ? `<button onclick="prevGoto(${(_prevIdx+1)%_prevUrls.length})" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer">›</button>` : '';
+
+  const currentUrl = _prevUrls[_prevIdx];
 
   carousel.innerHTML = `
     <div style="position:relative">
       ${arrowL}${arrowR}
-      <div class="car-img-wrap" id="car-swipe-zone" onclick="verFotoFull('${url}')">
-        ${isPdf
-          ? `<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">📄 PDF</div>`
-          : `<img src="${url}" style="width:100%;height:100%;object-fit:contain">`
-        }
+      <div class="car-slide-track" id="car-swipe-zone" onclick="verFotoFull('${currentUrl}')">
+        <div class="car-slide-inner" id="car-slide-inner" style="transform:translateX(-${_prevIdx*100}%)">
+          ${slides}
+        </div>
       </div>
       ${estadoBadge}
     </div>
@@ -1856,7 +1947,7 @@ function renderCarousel() {
       ${fechaCarga}${fotoNum}
     </div>
     <div class="car-actions">
-      <button class="car-btn" onclick="descargarFoto('${url}','${activeTask?.label||'doc'}',${_prevIdx+1})" title="Descargar">
+      <button class="car-btn" onclick="descargarFoto('${currentUrl}','${activeTask?.label||'doc'}',${_prevIdx+1})" title="Descargar">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Descargar
       </button>
@@ -1874,7 +1965,7 @@ function renderCarousel() {
       </button>` : ''}
     </div>`;
 
-  // Touch swipe
+  // Touch swipe support
   if (hasMulti) {
     const zone = document.getElementById('car-swipe-zone');
     let _tx = null;
@@ -1883,13 +1974,14 @@ function renderCarousel() {
       if (_tx === null) return;
       const dx = e.changedTouches[0].clientX - _tx;
       _tx = null;
-      if (Math.abs(dx) < 40) return; // muy corto, ignorar (tap normal → verFotoFull)
-      e.preventDefault(); // evitar que dispare el onclick
-      if (dx < 0) prevGoto((_prevIdx+1) % _prevUrls.length);       // swipe izquierda → siguiente
-      else         prevGoto((_prevIdx-1+_prevUrls.length) % _prevUrls.length); // swipe derecha → anterior
+      if (Math.abs(dx) < 40) return;
+      e.preventDefault();
+      if (dx < 0) prevGoto((_prevIdx+1) % _prevUrls.length);
+      else         prevGoto((_prevIdx-1+_prevUrls.length) % _prevUrls.length);
     });
   }
 
+  // Dots nav
   if (hasMulti) {
     nav.innerHTML = _prevUrls.map((_, i) => {
       const m = _prevMeta[i] || {};
@@ -1902,7 +1994,24 @@ function renderCarousel() {
     nav.innerHTML = '';
   }
 }
-function prevGoto(i) { _prevIdx=i; renderCarousel(); }
+function prevGoto(i) {
+  _prevIdx = i;
+  // Animate the track
+  const track = document.getElementById('car-slide-inner');
+  if (track) track.style.transform = `translateX(-${i*100}%)`;
+  // Update dots and meta without full re-render
+  const nav = document.getElementById('prev-nav');
+  if (nav && nav.children.length) {
+    Array.from(nav.children).forEach((dot, di) => {
+      const m = _prevMeta[di] || {};
+      const active = di === i;
+      dot.style.width = active ? '24px' : '8px';
+      dot.style.background = m.estado==='rechazado' ? 'var(--danger)' : m.estado==='revision' ? 'var(--amber-hi)' : active ? 'var(--amber-hi)' : 'var(--b2)';
+    });
+  }
+  // Full re-render to update meta, estado badge, button states
+  renderCarousel();
+}
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
@@ -2006,7 +2115,16 @@ function procesarArchivoOCR(e) {
   reader.onload = ev => {
     document.getElementById('file-input-ocr').value = '';
     const img = new Image();
-    img.onload = () => procesarYSubirOCR(img, img.width, img.height);
+    img.onload = () => {
+      const canvas = document.getElementById('canvas');
+      const ratio  = Math.min(1, 480/Math.max(img.width, img.height));
+      canvas.width  = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg',.45);
+      _pendingDataUrl = dataUrl;
+      _pendingSource  = 'ocr';
+      mostrarFotoPrevia(dataUrl);
+    };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
@@ -2022,11 +2140,13 @@ function lanzarCamaraOCR() {
 }
 async function procesarYSubirOCR(src, srcW, srcH) {
   const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1, 480/Math.max(srcW, srcH)); // reducido para Firestore 1MB limit
+  const ratio  = Math.min(1, 480/Math.max(srcW, srcH));
   canvas.width  = Math.round(srcW*ratio); canvas.height = Math.round(srcH*ratio);
   canvas.getContext('2d').drawImage(src,0,0,canvas.width,canvas.height);
-  ocrDataUrl = canvas.toDataURL('image/jpeg',.45);
-  setTimeout(abrirSelectorColab, 260);
+  const dataUrl = canvas.toDataURL('image/jpeg',.45);
+  _pendingDataUrl = dataUrl;
+  _pendingSource  = 'ocr';
+  mostrarFotoPrevia(dataUrl);
 }
 function abrirSelectorColab() {
   ocrSelectedId = null;
@@ -2179,9 +2299,21 @@ function stopCamera() {
 }
 function capturePhoto() {
   const v = document.getElementById('video');
-  if (window._captureMode==='ocr') { window._captureMode=null; procesarYSubirOCR(v,v.videoWidth,v.videoHeight); }
-  else { procesarYSubir(v,v.videoWidth,v.videoHeight); }
+  const canvas = document.getElementById('canvas');
+  const ratio  = Math.min(1, 480/Math.max(v.videoWidth, v.videoHeight));
+  canvas.width = Math.round(v.videoWidth*ratio); canvas.height = Math.round(v.videoHeight*ratio);
+  canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL('image/jpeg', .45);
   stopCamera();
+  if (window._captureMode === 'ocr') {
+    window._captureMode = null;
+    _pendingDataUrl = dataUrl;
+    _pendingSource  = 'ocr';
+  } else {
+    _pendingDataUrl = dataUrl;
+    _pendingSource  = 'direct';
+  }
+  mostrarFotoPrevia(dataUrl);
 }
 function procesarArchivo(e) {
   const file = e.target.files[0];
@@ -2189,20 +2321,44 @@ function procesarArchivo(e) {
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
-    img.onload = () => procesarYSubir(img,img.width,img.height);
+    img.onload = () => {
+      const canvas = document.getElementById('canvas');
+      const ratio  = Math.min(1, 480/Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', .45);
+      _pendingDataUrl = dataUrl;
+      _pendingSource  = 'direct';
+      mostrarFotoPrevia(dataUrl);
+    };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-  document.getElementById('file-input').value='';
+  document.getElementById('file-input').value = '';
   closeSheet('choice-modal');
 }
-async function procesarYSubir(src, srcW, srcH) {
+function mostrarFotoPrevia(dataUrl) {
+  document.getElementById('foto-preview-img').src = dataUrl;
+  openSheet('foto-confirm-modal');
+}
+function descartarFotoPrevia() {
+  _pendingDataUrl = null;
+  closeSheet('foto-confirm-modal');
+}
+async function confirmarFotoPrevia() {
+  if (!_pendingDataUrl) return;
+  const dataUrl = _pendingDataUrl;
+  _pendingDataUrl = null;
+  closeSheet('foto-confirm-modal');
+  if (_pendingSource === 'ocr') {
+    ocrDataUrl = dataUrl;
+    setTimeout(abrirSelectorColab, 260);
+  } else {
+    await subirFotoConfirmada(dataUrl);
+  }
+}
+async function subirFotoConfirmada(dataUrl) {
   document.getElementById('loading').style.display='flex';
-  const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1, 480/Math.max(srcW, srcH)); // reducido para Firestore 1MB limit
-  canvas.width=Math.round(srcW*ratio); canvas.height=Math.round(srcH*ratio);
-  canvas.getContext('2d').drawImage(src,0,0,canvas.width,canvas.height);
-  const dataUrl  = canvas.toDataURL('image/jpeg',.45);
   const colab    = colabs.find(x=>x.id===activeTask?.id);
   const current  = colab ? colab[activeTask.type] : null;
   const arr      = current ? (Array.isArray(current)?[...current]:[current]) : [];
@@ -2253,8 +2409,10 @@ function actualizarSelectsLocales() {
     locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
   const selN  = document.getElementById('n-local');
   const selNO = document.getElementById('nco-local');
+  const selE  = document.getElementById('edit-local');
   if (selN)  selN.innerHTML  = opts;
   if (selNO) selNO.innerHTML = opts;
+  if (selE)  selE.innerHTML  = opts;
 }
 // Mantener el datalist legacy (por si algo lo usa internamente)
 function actualizarDatalist() { actualizarSelectsLocales(); }
@@ -2343,6 +2501,47 @@ async function eliminarColab(id, nombre) {
     await db.collection('colaboradores').doc(id).delete();
     toast(`${nombre} eliminado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
+}
+
+/* ══ EDICIÓN DE COLABORADOR ════════════════════════════════════════ */
+function abrirEdicionColab(id) {
+  const c = colabs.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('edit-colab-id').value = id;
+  document.getElementById('edit-nombre').value   = c.nombre || '';
+  document.getElementById('edit-dni').value      = c.dni_nro || '';
+  document.getElementById('edit-puesto').value   = c.puesto || '';
+  actualizarSelectsLocales();
+  // Wait for select to render, then set value
+  setTimeout(() => {
+    const sel = document.getElementById('edit-local');
+    if (sel) sel.value = c.local || '';
+  }, 50);
+  openSheet('edit-colab-modal');
+  setTimeout(() => document.getElementById('edit-nombre').focus(), 350);
+}
+async function guardarEdicionColab() {
+  const id     = document.getElementById('edit-colab-id').value;
+  const nombre = document.getElementById('edit-nombre').value.trim();
+  const dni    = document.getElementById('edit-dni').value.trim();
+  const local  = document.getElementById('edit-local').value.trim();
+  const puesto = document.getElementById('edit-puesto').value.trim();
+  if (!nombre) { document.getElementById('edit-nombre').focus(); return; }
+  if (!local)  { toast('Seleccioná un local'); return; }
+  const btn = document.getElementById('edit-colab-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await db.collection('colaboradores').doc(id).update({ nombre, dni_nro:dni, local, puesto });
+    // Si el local cambió y estamos viendo ese local, actualizar currentLocal
+    const c = colabs.find(x => x.id === id);
+    if (c && c.local !== local && currentLocal === c.local) {
+      // Persona se movió a otro local — volver al tablero
+      cerrarLocal();
+    }
+    closeSheet('edit-colab-modal');
+    toast(`✓ ${nombre} actualizado`);
+  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
 }
 
 /* ══ ALERTAS ════════════════════════════════════════════════════ */
@@ -2632,10 +2831,70 @@ function closeSheet(id) { const el=document.getElementById(id); el.classList.rem
 
 /* ══ UTILS ══════════════════════════════════════════════════════ */
 function verFotoFull(url) {
-  const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out';
-  ov.innerHTML=`<img src="${url}" style="max-width:94vw;max-height:92vh;border-radius:10px;object-fit:contain">`;
-  ov.onclick=()=>ov.remove(); document.body.appendChild(ov);
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none';
+  const img = document.createElement('img');
+  img.src = url;
+  img.style.cssText = 'max-width:94vw;max-height:92vh;border-radius:10px;object-fit:contain;transform-origin:center;cursor:zoom-out;transition:transform .1s ease';
+  ov.appendChild(img);
+
+  // Tap to close (only if not zoomed)
+  let scale = 1, lastScale = 1;
+  let translateX = 0, translateY = 0;
+  let lastTX = 0, lastTY = 0;
+
+  function applyTransform() {
+    img.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+  }
+
+  // Pinch-to-zoom
+  let initDist = null;
+  let initScale = 1;
+  ov.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      initDist = Math.hypot(dx, dy);
+      initScale = scale;
+    }
+  }, { passive:true });
+  ov.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      scale = Math.min(5, Math.max(1, initScale * dist / initDist));
+      applyTransform();
+    }
+  }, { passive:false });
+  ov.addEventListener('touchend', e => {
+    if (e.touches.length < 2) initDist = null;
+    if (scale <= 1.05) { scale = 1; translateX = 0; translateY = 0; applyTransform(); }
+  }, { passive:true });
+
+  // Double-tap to reset
+  let lastTap = 0;
+  ov.addEventListener('click', e => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      if (scale > 1) { scale = 1; translateX = 0; translateY = 0; } else { scale = 2.5; }
+      applyTransform();
+    } else if (scale <= 1) {
+      ov.remove();
+    }
+    lastTap = now;
+  });
+
+  // Mouse wheel zoom (desktop)
+  ov.addEventListener('wheel', e => {
+    e.preventDefault();
+    scale = Math.min(5, Math.max(1, scale - e.deltaY * 0.005));
+    if (scale <= 1) { scale = 1; translateX = 0; translateY = 0; }
+    applyTransform();
+  }, { passive:false });
+
+  document.body.appendChild(ov);
 }
 let _tt;
 function toast(msg) {
@@ -2649,4 +2908,4 @@ function esc(s) {
 </script>
 </body>
 </html>
-      
+                                               

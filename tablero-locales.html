@@ -1110,6 +1110,10 @@ body {
     <span class="fab-lbl">Nuevo colaborador</span>
     <button class="fab-ico fab-ico-user" onclick="fabAbrirNuevo()">👤</button>
   </div>
+  <div class="fab-opt">
+    <span class="fab-lbl">Nuevo local</span>
+    <button class="fab-ico" style="background:var(--i-dim);border:1px solid rgba(59,125,216,.28)" onclick="fabAbrirNuevoLocal()">🏠</button>
+  </div>
   <button id="fab" onclick="fabToggle()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   </button>
@@ -1256,7 +1260,9 @@ body {
     <div class="sheet-body">
       <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="n-nombre" placeholder="Ej: Juan Pérez" onkeydown="if(event.key==='Enter')document.getElementById('n-dni').focus()"></div>
       <div class="f-field"><label class="f-label">DNI</label><input class="f-input" id="n-dni" type="text" inputmode="numeric" placeholder="Ej: 38123456" onkeydown="if(event.key==='Enter')document.getElementById('n-local').focus()"></div>
-      <div class="f-field"><label class="f-label">Local</label><input class="f-input" id="n-local" list="locales-list" placeholder="Ej: Lamar" onkeydown="if(event.key==='Enter')document.getElementById('n-puesto').focus()"><datalist id="locales-list"></datalist></div>
+      <div class="f-field"><label class="f-label">Local</label>
+        <select class="f-input" id="n-local" onkeydown="if(event.key==='Enter')document.getElementById('n-puesto').focus()"></select>
+      </div>
       <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="n-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarNuevo()"></div>
       <button class="btn btn-amber" onclick="guardarNuevo()">Crear colaborador</button>
     </div>
@@ -1274,7 +1280,10 @@ body {
     <div class="sheet-body">
       <div style="margin-bottom:10px"><input class="f-input" id="ocr-search" placeholder="Buscar…" oninput="filtrarSelectorColab(this.value)" style="width:100%"></div>
       <div class="colab-sel-list" id="ocr-candidates-list"></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" style="margin-top:10px;border:1px dashed var(--b2);color:var(--muted)" onclick="abrirNuevoColabDesdeOCR()">
+        + No está en la lista — agregar colaborador
+      </button>
+      <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('ocr-modal')">Cancelar</button>
         <button class="btn btn-amber" style="flex:1" id="ocr-confirm-btn" onclick="ocrConfirmar()" disabled>Confirmar</button>
       </div>
@@ -1360,6 +1369,45 @@ body {
   </div>
 </div>
 
+<!-- Nuevo local -->
+<div id="nuevo-local-modal" class="overlay" onclick="closeSheet('nuevo-local-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Nuevo local</div>
+      <div class="sheet-x" onclick="closeSheet('nuevo-local-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div class="f-field" style="margin-bottom:14px">
+        <label class="f-label">Nombre del local</label>
+        <input class="f-input" id="nl-nombre" placeholder="Ej: Lamar, Tanta, Barra Chalaca…" onkeydown="if(event.key==='Enter')guardarNuevoLocal()">
+      </div>
+      <button class="btn btn-amber" id="nl-btn" onclick="guardarNuevoLocal()">Crear local</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nuevo colaborador rápido (desde selector OCR) -->
+<div id="nuevo-colab-ocr-modal" class="overlay" onclick="if(event.target===this)closeSheet('nuevo-colab-ocr-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Agregar colaborador</div>
+      <div class="sheet-x" onclick="closeSheet('nuevo-colab-ocr-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="nco-nombre" placeholder="Ej: Juan Pérez" onkeydown="if(event.key==='Enter')document.getElementById('nco-dni').focus()"></div>
+      <div class="f-field"><label class="f-label">DNI</label><input class="f-input" id="nco-dni" type="text" inputmode="numeric" placeholder="Ej: 38123456" onkeydown="if(event.key==='Enter')document.getElementById('nco-puesto').focus()"></div>
+      <div class="f-field"><label class="f-label">Local</label>
+        <select class="f-input" id="nco-local"></select>
+      </div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="nco-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarNuevoColabOCR()"></div>
+      <button class="btn btn-amber" id="nco-btn" onclick="guardarNuevoColabOCR()">Crear y seleccionar</button>
+      <button class="btn btn-ghost" onclick="closeSheet('nuevo-colab-ocr-modal');openSheet('ocr-modal')">Volver al listado</button>
+    </div>
+  </div>
+</div>
+
 <canvas id="canvas" style="display:none"></canvas>
 
 <!-- Camera -->
@@ -1392,6 +1440,7 @@ const db = firebase.firestore();
 
 /* ══ ESTADO ═════════════════════════════════════════════════════ */
 let colabs       = [];
+let locales      = []; // lista de locales desde Firestore
 let activeTask   = null;
 let currentLocal = null;
 let stream       = null;
@@ -1417,6 +1466,7 @@ const DOC_GROUPS = [
     { key:'dni_frente', emoji:'🪪', name:'DNI Frente',  askFecha:false },
     { key:'dni_dorso',  emoji:'🪪', name:'DNI Dorso',   askFecha:false },
     { key:'cuil',       emoji:'📋', name:'CUIL',         askFecha:false },
+    { key:'legajo',     emoji:'📁', name:'Legajo',       askFecha:false },
   ]},
   { label:'Salud y Novedades', color:'#0d9672', docs:[
     { key:'salud',          emoji:'🏥', name:'Salud',         askFecha:true,        askRangoFechas:false },
@@ -1432,7 +1482,7 @@ const ALL_DOCS = DOC_GROUPS.flatMap(g => g.docs);
 
 const DOC_FILTER_DEFS = [
   { key:'all',       label:'Todos',     color:'var(--amber-hi)' },
-  { key:'identidad', label:'Identidad', color:'#3b7dd8', keys:['dni_frente','dni_dorso','cuil'] },
+  { key:'identidad', label:'Identidad', color:'#3b7dd8', keys:['dni_frente','dni_dorso','cuil','legajo'] },
   { key:'salud',     label:'Salud',     color:'#0d9672', keys:['salud'] },
   { key:'novedades', label:'Novedades', color:'var(--amber-hi)', keys:['vacaciones','apercibimiento'] },
   { key:'disciplina',label:'Disciplina',color:'#c43232', keys:['suspension','nota_buena'] },
@@ -1464,6 +1514,17 @@ const MOCK_COLABS = [
 ];
 
 /* ══ INIT ════════════════════════════════════════════════════════ */
+// Listener de locales
+db.collection('locales').orderBy('nombre','asc').onSnapshot(snap => {
+  locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  // Si no hay locales en Firestore, usar los inferidos de los mocks
+  if (!locales.length) {
+    const nombres = [...new Set(MOCK_COLABS.map(c=>c.local).filter(Boolean))].sort();
+    locales = nombres.map(n => ({ id:n, nombre:n }));
+  }
+  actualizarSelectsLocales();
+});
+
 db.collection('colaboradores').orderBy('at','desc').onSnapshot(snap => {
   const real = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   colabs = real.length ? real : MOCK_COLABS;
@@ -2196,13 +2257,47 @@ async function procesarYSubir(src, srcW, srcH) {
   finally { document.getElementById('loading').style.display='none'; }
 }
 
-/* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
-function actualizarDatalist() {
-  const locs = [...new Set(colabs.map(c=>c.local||'').filter(Boolean))];
-  document.getElementById('locales-list').innerHTML = locs.map(l=>`<option value="${esc(l)}">`).join('');
+/* ══ LOCALES ════════════════════════════════════════════════════ */
+function actualizarSelectsLocales() {
+  // Construir opciones a partir de la lista canónica
+  const opts = `<option value="">— Elegir local —</option>` +
+    locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+  const selN  = document.getElementById('n-local');
+  const selNO = document.getElementById('nco-local');
+  if (selN)  selN.innerHTML  = opts;
+  if (selNO) selNO.innerHTML = opts;
 }
+// Mantener el datalist legacy (por si algo lo usa internamente)
+function actualizarDatalist() { actualizarSelectsLocales(); }
+
+function fabAbrirNuevoLocal() {
+  document.getElementById('fab-group').classList.remove('open');
+  document.getElementById('nl-nombre').value='';
+  openSheet('nuevo-local-modal');
+  setTimeout(()=>document.getElementById('nl-nombre').focus(),300);
+}
+async function guardarNuevoLocal() {
+  const nombre = document.getElementById('nl-nombre').value.trim();
+  if (!nombre) { document.getElementById('nl-nombre').focus(); return; }
+  // Verificar duplicado
+  if (locales.some(l => l.nombre.toLowerCase()===nombre.toLowerCase())) {
+    toast('⚠ Ya existe un local con ese nombre'); return;
+  }
+  const btn = document.getElementById('nl-btn');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try {
+    await db.collection('locales').add({ nombre, at: Date.now() });
+    closeSheet('nuevo-local-modal');
+    toast(`✓ Local "${nombre}" creado`);
+  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  finally { btn.disabled=false; btn.textContent='Crear local'; }
+}
+
+/* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
 function abrirNuevo() {
-  ['n-nombre','n-dni','n-local','n-puesto'].forEach(id=>document.getElementById(id).value='');
+  ['n-nombre','n-dni','n-puesto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('n-local').value='';
+  actualizarSelectsLocales();
   openSheet('nuevo-modal');
   setTimeout(()=>document.getElementById('n-nombre').focus(),300);
 }
@@ -2212,12 +2307,48 @@ async function guardarNuevo() {
   const local=document.getElementById('n-local').value.trim();
   const puesto=document.getElementById('n-puesto').value.trim();
   if (!nombre) { document.getElementById('n-nombre').focus(); return; }
+  if (!local)  { toast('Seleccioná un local'); return; }
+  const btn = document.querySelector('#nuevo-modal .btn-amber');
+  if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
-    await db.collection('colaboradores').add({ nombre, dni_nro:dni, local, puesto, at:new Date().toISOString() });
+    await db.collection('colaboradores').add({ nombre, dni_nro:dni, local, puesto, at: Date.now() });
     closeSheet('nuevo-modal');
     toast(`✓ ${nombre} agregado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
+  finally { if (btn) { btn.disabled=false; btn.textContent='Crear colaborador'; } }
 }
+
+// Abrir form de nuevo colab desde el selector OCR
+function abrirNuevoColabDesdeOCR() {
+  closeSheet('ocr-modal');
+  ['nco-nombre','nco-dni','nco-puesto'].forEach(id=>document.getElementById(id).value='');
+  actualizarSelectsLocales();
+  setTimeout(()=>openSheet('nuevo-colab-ocr-modal'),220);
+  setTimeout(()=>document.getElementById('nco-nombre').focus(),500);
+}
+async function guardarNuevoColabOCR() {
+  const nombre=document.getElementById('nco-nombre').value.trim();
+  const dni=document.getElementById('nco-dni').value.trim();
+  const local=document.getElementById('nco-local').value.trim();
+  const puesto=document.getElementById('nco-puesto').value.trim();
+  if (!nombre) { document.getElementById('nco-nombre').focus(); return; }
+  if (!local)  { toast('Seleccioná un local'); return; }
+  const btn = document.getElementById('nco-btn');
+  btn.disabled=true; btn.textContent='Guardando…';
+  try {
+    const ref = await db.collection('colaboradores').add({ nombre, dni_nro:dni, local, puesto, at: Date.now() });
+    closeSheet('nuevo-colab-ocr-modal');
+    toast(`✓ ${nombre} agregado`);
+    // Volver al selector OCR con el nuevo colab ya seleccionado
+    await new Promise(r=>setTimeout(r,260));
+    ocrSelectedId = ref.id;
+    abrirSelectorColab(); // reabre con la nueva lista (el snapshot ya actualizó colabs)
+    // Si el nuevo colab ya está en colabs, seleccionarlo automáticamente
+    setTimeout(()=>{ ocrSelectCand(ref.id); }, 400);
+  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  finally { btn.disabled=false; btn.textContent='Crear y seleccionar'; }
+}
+
 async function eliminarColab(id, nombre) {
   try {
     await db.collection('colaboradores').doc(id).delete();

@@ -1837,10 +1837,14 @@ function renderCarousel() {
   const fotoNum = _prevUrls.length > 1
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevIdx+1} de ${_prevUrls.length}</span></div>`
     : '';
+  const hasMulti = _prevUrls.length > 1;
+  const arrowL = hasMulti ? `<button onclick="prevGoto(${(_prevIdx-1+_prevUrls.length)%_prevUrls.length})" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>` : '';
+  const arrowR = hasMulti ? `<button onclick="prevGoto(${(_prevIdx+1)%_prevUrls.length})" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer">›</button>` : '';
 
   carousel.innerHTML = `
     <div style="position:relative">
-      <div class="car-img-wrap" onclick="verFotoFull('${url}')">
+      ${arrowL}${arrowR}
+      <div class="car-img-wrap" id="car-swipe-zone" onclick="verFotoFull('${url}')">
         ${isPdf
           ? `<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">📄 PDF</div>`
           : `<img src="${url}" style="width:100%;height:100%;object-fit:contain">`
@@ -1864,13 +1868,29 @@ function renderCarousel() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
         ${estado==='ok'?'Marcar revisión':estado==='revision'?'Rechazar':'OK'}
       </button>
-      ${_prevUrls.length > 1 ? `<button class="car-btn car-btn-err" onclick="borrarEstaFoto()" title="Eliminar esta foto">
+      ${hasMulti ? `<button class="car-btn car-btn-err" onclick="borrarEstaFoto()" title="Eliminar esta foto">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
         Eliminar foto
       </button>` : ''}
     </div>`;
 
-  if (_prevUrls.length > 1) {
+  // Touch swipe
+  if (hasMulti) {
+    const zone = document.getElementById('car-swipe-zone');
+    let _tx = null;
+    zone.addEventListener('touchstart', e => { _tx = e.touches[0].clientX; }, { passive:true });
+    zone.addEventListener('touchend', e => {
+      if (_tx === null) return;
+      const dx = e.changedTouches[0].clientX - _tx;
+      _tx = null;
+      if (Math.abs(dx) < 40) return; // muy corto, ignorar (tap normal → verFotoFull)
+      e.preventDefault(); // evitar que dispare el onclick
+      if (dx < 0) prevGoto((_prevIdx+1) % _prevUrls.length);       // swipe izquierda → siguiente
+      else         prevGoto((_prevIdx-1+_prevUrls.length) % _prevUrls.length); // swipe derecha → anterior
+    });
+  }
+
+  if (hasMulti) {
     nav.innerHTML = _prevUrls.map((_, i) => {
       const m = _prevMeta[i] || {};
       const dot = m.estado==='rechazado' ? 'var(--danger)' : m.estado==='revision' ? 'var(--amber-hi)' : i===_prevIdx ? 'var(--amber-hi)' : 'var(--b2)';
@@ -2002,10 +2022,10 @@ function lanzarCamaraOCR() {
 }
 async function procesarYSubirOCR(src, srcW, srcH) {
   const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1, 800/srcW);
+  const ratio  = Math.min(1, 480/Math.max(srcW, srcH)); // reducido para Firestore 1MB limit
   canvas.width  = Math.round(srcW*ratio); canvas.height = Math.round(srcH*ratio);
   canvas.getContext('2d').drawImage(src,0,0,canvas.width,canvas.height);
-  ocrDataUrl = canvas.toDataURL('image/jpeg',.65);
+  ocrDataUrl = canvas.toDataURL('image/jpeg',.45);
   setTimeout(abrirSelectorColab, 260);
 }
 function abrirSelectorColab() {
@@ -2179,10 +2199,10 @@ function procesarArchivo(e) {
 async function procesarYSubir(src, srcW, srcH) {
   document.getElementById('loading').style.display='flex';
   const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1,800/srcW);
+  const ratio  = Math.min(1, 480/Math.max(srcW, srcH)); // reducido para Firestore 1MB limit
   canvas.width=Math.round(srcW*ratio); canvas.height=Math.round(srcH*ratio);
   canvas.getContext('2d').drawImage(src,0,0,canvas.width,canvas.height);
-  const dataUrl  = canvas.toDataURL('image/jpeg',.65);
+  const dataUrl  = canvas.toDataURL('image/jpeg',.45);
   const colab    = colabs.find(x=>x.id===activeTask?.id);
   const current  = colab ? colab[activeTask.type] : null;
   const arr      = current ? (Array.isArray(current)?[...current]:[current]) : [];
@@ -2629,3 +2649,4 @@ function esc(s) {
 </script>
 </body>
 </html>
+      

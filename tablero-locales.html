@@ -1488,46 +1488,15 @@ const DOC_FILTER_DEFS = [
   { key:'disciplina',label:'Disciplina',color:'#c43232', keys:['suspension','nota_buena'] },
 ];
 
-/* ══ MOCK ════════════════════════════════════════════════════════ */
-const P = 'https://picsum.photos/seed/';
-const MOCK_COLABS = [
-  { id:'m1', nombre:'Valentín Sosa',      puesto:'Cocinero',  local:'Lamar',         at:1, vencimiento_salud:'2025-06-01',
-    dni_frente:[P+'dni1a/400/300',P+'dni1b/400/300'], dni_dorso:P+'dni1d/400/300', cuil:P+'cuil1/400/300', salud:P+'sal1/400/300' },
-  { id:'m2', nombre:'Agustina Fernández', puesto:'Mesera',    local:'Lamar',         at:2, vencimiento_salud:'2024-01-01',
-    nota_buena:P+'nota2/400/300',
-    apercibimiento:[P+'ape2a/400/300',P+'ape2b/400/300'] },
-  { id:'m3', nombre:'Carlos Medina',      puesto:'Bartender', local:'Lamar',         at:3, dni_frente:P+'dni3/400/300' },
-  { id:'m4', nombre:'María José Ruiz',    puesto:'Hostess',   local:'Tanta',         at:4, vencimiento_salud:'2025-09-15',
-    dni_frente:[P+'dni4a/400/300',P+'dni4b/400/300'], cuil:P+'cuil4/400/300', salud:P+'sal4/400/300',
-    vacaciones:P+'vac4/400/300', vacaciones_fecha_inicio:'2025-01-10', vacaciones_fecha_fin:'2025-01-24', vacaciones_dias:15 },
-  { id:'m5', nombre:'Rubén Gozzo',        puesto:'Cocinero',  local:'Tanta',         at:5,
-    suspension:P+'susp5/400/300', suspension_fecha_inicio:'2026-05-09', suspension_fecha_fin:'2026-05-11', suspension_dias:3,
-    apercibimiento:P+'ape5/400/300' },
-  { id:'m6', nombre:'Giselle Torres',     puesto:'Caja',      local:'Barra Chalaca', at:6,
-    dni_frente:P+'dni6/400/300', dni_dorso:P+'dniD6/400/300', cuil:P+'cuil6/400/300',
-    salud:[P+'sal6a/400/300',P+'sal6b/400/300'], vacaciones:P+'vac6/400/300',
-    vacaciones_fecha_inicio:'2026-05-07', vacaciones_fecha_fin:'2026-05-21', vacaciones_dias:15,
-    apercibimiento:[P+'ape6a/400/300',P+'ape6b/400/300',P+'ape6c/400/300'],
-    suspension:P+'susp6/400/300', suspension_fecha_inicio:'2026-04-20', suspension_fecha_fin:'2026-04-22', suspension_dias:3,
-    nota_buena:P+'nota6/400/300' },
-  { id:'m7', nombre:'Lucas Pereyra',      puesto:'Mozo',      local:'Barra Chalaca', at:7 },
-];
-
 /* ══ INIT ════════════════════════════════════════════════════════ */
 // Listener de locales
 db.collection('locales').orderBy('nombre','asc').onSnapshot(snap => {
   locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  // Si no hay locales en Firestore, usar los inferidos de los mocks
-  if (!locales.length) {
-    const nombres = [...new Set(MOCK_COLABS.map(c=>c.local).filter(Boolean))].sort();
-    locales = nombres.map(n => ({ id:n, nombre:n }));
-  }
   actualizarSelectsLocales();
 });
 
 db.collection('colaboradores').orderBy('at','desc').onSnapshot(snap => {
-  const real = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  colabs = real.length ? real : MOCK_COLABS;
+  colabs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarDatalist();
   renderStats();
   renderBoard();

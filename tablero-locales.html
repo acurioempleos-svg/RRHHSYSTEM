@@ -1262,7 +1262,7 @@ body {
     <div class="sheet-body">
       <div id="prev-carousel" style="margin-bottom:8px"></div>
       <div id="prev-nav" style="display:flex;gap:5px;justify-content:center;margin-bottom:14px"></div>
-      <button class="btn btn-amber" style="margin-bottom:7px" onclick="abrirReemplazo()">Agregar más fotos</button>
+      <button class="btn btn-amber" id="btn-agregar-fotos" style="margin-bottom:7px" onclick="abrirReemplazo()">Agregar más fotos</button>
       <button class="btn btn-danger" style="margin-bottom:7px" onclick="abrirConfirmDelete()">Eliminar todo el documento</button>
       <button class="btn btn-ghost" onclick="closeSheet('preview-modal')">Cerrar</button>
     </div>
@@ -1993,6 +1993,20 @@ function renderCarousel() {
   } else {
     nav.innerHTML = '';
   }
+  // Update "Agregar más fotos" button with counter and limit state
+  const btnAgregar = document.getElementById('btn-agregar-fotos');
+  if (btnAgregar) {
+    const count = _prevUrls.length;
+    if (count >= 10) {
+      btnAgregar.textContent = `Límite alcanzado (10/10)`;
+      btnAgregar.disabled = true;
+      btnAgregar.style.opacity = '0.45';
+    } else {
+      btnAgregar.textContent = `Agregar más fotos (${count}/10)`;
+      btnAgregar.disabled = false;
+      btnAgregar.style.opacity = '';
+    }
+  }
 }
 function prevGoto(i) {
   _prevIdx = i;
@@ -2067,6 +2081,10 @@ async function ciclarEstadoDoc() {
 }
 
 function abrirReemplazo() {
+  if (_prevUrls.length >= 10) {
+    toast('Límite de 10 fotos por documento alcanzado');
+    return;
+  }
   closeSheet('preview-modal');
   document.getElementById('choice-title').textContent = `Agregar / reemplazar: ${activeTask?.label||''}`;
   setTimeout(() => openSheet('choice-modal'), 210);
@@ -2117,10 +2135,10 @@ function procesarArchivoOCR(e) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.getElementById('canvas');
-      const ratio  = Math.min(1, 480/Math.max(img.width, img.height));
+      const ratio  = Math.min(1, 1600/Math.max(img.width, img.height));
       canvas.width  = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
       canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg',.45);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
       _pendingDataUrl = dataUrl;
       _pendingSource  = 'ocr';
       mostrarFotoPrevia(dataUrl);
@@ -2140,10 +2158,10 @@ function lanzarCamaraOCR() {
 }
 async function procesarYSubirOCR(src, srcW, srcH) {
   const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1, 480/Math.max(srcW, srcH));
+  const ratio  = Math.min(1, 1600/Math.max(srcW, srcH));
   canvas.width  = Math.round(srcW*ratio); canvas.height = Math.round(srcH*ratio);
   canvas.getContext('2d').drawImage(src,0,0,canvas.width,canvas.height);
-  const dataUrl = canvas.toDataURL('image/jpeg',.45);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
   _pendingDataUrl = dataUrl;
   _pendingSource  = 'ocr';
   mostrarFotoPrevia(dataUrl);
@@ -2257,6 +2275,11 @@ async function ocrConfirmar() {
   const metaRaw  = colab ? colab[docKey+'_meta'] : null;
   const metaArr  = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
   while (metaArr.length < arr.length) metaArr.push({});
+  if (arr.length >= 10) {
+    document.getElementById('loading').style.display='none';
+    toast('Límite de 10 fotos por documento alcanzado');
+    return;
+  }
   arr.push(ocrDataUrl);
   metaArr.push({ cargado_en: new Date().toISOString(), estado:'ok' });
   const update  = { [docKey]:arr, [docKey+'_meta']:metaArr };
@@ -2300,10 +2323,10 @@ function stopCamera() {
 function capturePhoto() {
   const v = document.getElementById('video');
   const canvas = document.getElementById('canvas');
-  const ratio  = Math.min(1, 480/Math.max(v.videoWidth, v.videoHeight));
+  const ratio  = Math.min(1, 1600/Math.max(v.videoWidth, v.videoHeight));
   canvas.width = Math.round(v.videoWidth*ratio); canvas.height = Math.round(v.videoHeight*ratio);
   canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height);
-  const dataUrl = canvas.toDataURL('image/jpeg', .45);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
   stopCamera();
   if (window._captureMode === 'ocr') {
     window._captureMode = null;
@@ -2323,10 +2346,10 @@ function procesarArchivo(e) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.getElementById('canvas');
-      const ratio  = Math.min(1, 480/Math.max(img.width, img.height));
+      const ratio  = Math.min(1, 1600/Math.max(img.width, img.height));
       canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', .45);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
       _pendingDataUrl = dataUrl;
       _pendingSource  = 'direct';
       mostrarFotoPrevia(dataUrl);
@@ -2373,6 +2396,11 @@ async function subirFotoConfirmada(dataUrl) {
     metaArr[replaceIdx] = newEntry;
     delete activeTask._reemplazarIdx;
   } else {
+    if (arr.length >= 10) {
+      document.getElementById('loading').style.display='none';
+      toast('Límite de 10 fotos por documento alcanzado');
+      return;
+    }
     arr.push(dataUrl);
     metaArr.push(newEntry);
   }
@@ -2908,4 +2936,4 @@ function esc(s) {
 </script>
 </body>
 </html>
-                                               
+          

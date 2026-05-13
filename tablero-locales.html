@@ -1509,6 +1509,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+/* ── Sube un dataUrl a ImgBB y devuelve la URL pública ── */
+const IMGBB_KEY = '123d273a2cb8ffb8cd9861eff0c33f9b';
+async function subirDataUrlAImgBB(dataUrl) {
+  // Extraer solo el base64 sin el prefijo "data:...;base64,"
+  const base64 = dataUrl.split(',')[1];
+  const form   = new FormData();
+  form.append('key',    IMGBB_KEY);
+  form.append('image',  base64);
+  const res  = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body:form });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message || 'ImgBB upload failed');
+  return json.data.url; // URL directa a la imagen
+}
+
 /* ══ ESTADO ═════════════════════════════════════════════════════ */
 let colabs       = [];
 let locales      = []; // lista de locales desde Firestore
@@ -2399,43 +2413,54 @@ async function subirFotoConfirmada(dataUrl) {
   const newEntry = { cargado_en: new Date().toISOString(), estado:'ok' };
 
   const replaceIdx = activeTask._reemplazarIdx;
-  if (replaceIdx !== undefined && replaceIdx !== null && replaceIdx >= 0) {
-    arr[replaceIdx]  = dataUrl;
-    metaArr[replaceIdx] = newEntry;
-    delete activeTask._reemplazarIdx;
-  } else {
-    if (arr.length >= 10) {
-      document.getElementById('loading').style.display='none';
-      toast('Límite de 10 fotos por documento alcanzado');
-      return;
-    }
-    arr.push(dataUrl);
-    metaArr.push(newEntry);
-  }
 
-  const update = { [activeTask.type]:arr, [activeTask.type+'_meta']:metaArr };
-  const docDef = ALL_DOCS.find(d=>d.key===activeTask.type);
-  if (docDef?.askRangoFechas) {
-    document.getElementById('loading').style.display='none';
-    const rango = await pedirRangoFechas(docDef.name);
-    document.getElementById('loading').style.display='flex';
-    if (rango) {
-      update[activeTask.type+'_fecha_inicio'] = rango.inicio;
-      update[activeTask.type+'_fecha_fin']    = rango.fin;
-      update[activeTask.type+'_dias']         = rango.dias;
-      if (activeTask.type==='salud') update['vencimiento_salud'] = rango.fin;
-    }
-  } else if (docDef?.askFecha) {
-    document.getElementById('loading').style.display='none';
-    const f = await pedirFecha();
-    document.getElementById('loading').style.display='flex';
-    if (f) { update[activeTask.type+'_fecha']=f; if(activeTask.type==='salud') update['vencimiento_salud']=f; }
-  }
   try {
+    // Si el dataUrl es base64 (no una URL externa), subir a ImgBB
+    let urlToSave = dataUrl;
+    if (dataUrl.startsWith('data:')) {
+      urlToSave = await subirDataUrlAImgBB(dataUrl);
+    }
+
+    if (replaceIdx !== undefined && replaceIdx !== null && replaceIdx >= 0) {
+      arr[replaceIdx]      = urlToSave;
+      metaArr[replaceIdx]  = newEntry;
+      delete activeTask._reemplazarIdx;
+    } else {
+      if (arr.length >= 10) {
+        toast('Límite de 10 fotos por documento alcanzado');
+        return;
+      }
+      arr.push(urlToSave);
+      metaArr.push(newEntry);
+    }
+
+    const update = { [activeTask.type]:arr, [activeTask.type+'_meta']:metaArr };
+    const docDef = ALL_DOCS.find(d=>d.key===activeTask.type);
+    if (docDef?.askRangoFechas) {
+      document.getElementById('loading').style.display='none';
+      const rango = await pedirRangoFechas(docDef.name);
+      document.getElementById('loading').style.display='flex';
+      if (rango) {
+        update[activeTask.type+'_fecha_inicio'] = rango.inicio;
+        update[activeTask.type+'_fecha_fin']    = rango.fin;
+        update[activeTask.type+'_dias']         = rango.dias;
+        if (activeTask.type==='salud') update['vencimiento_salud'] = rango.fin;
+      }
+    } else if (docDef?.askFecha) {
+      document.getElementById('loading').style.display='none';
+      const f = await pedirFecha();
+      document.getElementById('loading').style.display='flex';
+      if (f) { update[activeTask.type+'_fecha']=f; if(activeTask.type==='salud') update['vencimiento_salud']=f; }
+    }
+
     await db.collection('colaboradores').doc(activeTask.id).update(update);
     toast(`✓ Guardado (${arr.length} foto${arr.length>1?'s':''})`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
-  finally { document.getElementById('loading').style.display='none'; }
+  } catch(e) {
+    console.error(e);
+    toast('Error: '+(e.code||e.message));
+  } finally {
+    document.getElementById('loading').style.display='none';
+  }
 }
 
 /* ══ LOCALES ════════════════════════════════════════════════════ */

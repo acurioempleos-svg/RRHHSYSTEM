@@ -1539,7 +1539,14 @@ const DOC_GROUPS = [
     { key:'dni_frente', emoji:'🪪', name:'DNI Frente',  askFecha:false },
     { key:'dni_dorso',  emoji:'🪪', name:'DNI Dorso',   askFecha:false },
     { key:'cuil',       emoji:'📋', name:'CUIL',         askFecha:false },
-    { key:'legajo',     emoji:'📁', name:'Legajo',       askFecha:false },
+  ]},
+  { label:'Legajo', color:'#7c3aed', docs:[
+    { key:'datos_personales',    emoji:'👤', name:'Datos personales',      askFecha:false },
+    { key:'dj_vivienda',         emoji:'🏠', name:'DJ Vivienda',           askFecha:false },
+    { key:'sanciones',           emoji:'⚖️', name:'Sanciones',             askFecha:false },
+    { key:'tipo_faltas',         emoji:'📝', name:'Tipo Faltas',           askFecha:false },
+    { key:'politica_interna',    emoji:'📌', name:'Política Interna',      askFecha:false },
+    { key:'declaracion_familiares', emoji:'👨‍👩‍👧', name:'Declaración de familiares', askFecha:false },
   ]},
   { label:'Salud y Novedades', color:'#0d9672', docs:[
     { key:'salud',          emoji:'🏥', name:'Salud',         askFecha:true,        askRangoFechas:false },
@@ -1555,7 +1562,8 @@ const ALL_DOCS = DOC_GROUPS.flatMap(g => g.docs);
 
 const DOC_FILTER_DEFS = [
   { key:'all',       label:'Todos',     color:'var(--amber-hi)' },
-  { key:'identidad', label:'Identidad', color:'#3b7dd8', keys:['dni_frente','dni_dorso','cuil','legajo'] },
+  { key:'identidad', label:'Identidad', color:'#3b7dd8', keys:['dni_frente','dni_dorso','cuil'] },
+  { key:'legajo',    label:'Legajo',    color:'#7c3aed', keys:['datos_personales','dj_vivienda','sanciones','tipo_faltas','politica_interna','declaracion_familiares'] },
   { key:'salud',     label:'Salud',     color:'#0d9672', keys:['salud'] },
   { key:'novedades', label:'Novedades', color:'var(--amber-hi)', keys:['vacaciones','apercibimiento'] },
   { key:'disciplina',label:'Disciplina',color:'#c43232', keys:['suspension','nota_buena'] },
@@ -2936,4 +2944,3 @@ function esc(s) {
 </script>
 </body>
 </html>
-          

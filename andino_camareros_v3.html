@@ -104,6 +104,18 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            15%       { transform: translateX(-8px); }
+            30%       { transform: translateX(8px); }
+            45%       { transform: translateX(-6px); }
+            60%       { transform: translateX(6px); }
+            75%       { transform: translateX(-3px); }
+            90%       { transform: translateX(3px); }
+        }
+
+        .shake { animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
         .loading-overlay {
             position: absolute;
             inset: 0;
@@ -1388,13 +1400,16 @@
 
     <div class="app-header">
         <h1>ANDINO <span style="color: var(--accent); -webkit-text-fill-color: initial;">CAMAREROS</span></h1>
-        <span class="header-badge">v2.2</span>
+        <span class="header-badge">v4.0</span>
     </div>
     <div class="xp-strip"><div class="xp-strip-fill" id="xp-bar" style="width:0%"></div></div>
 
     <!-- ── LOGIN ── -->
     <div id="view-login" class="view active">
         <div style="margin-bottom: 22px; padding-top: 4px;">
+            <label>Tu Nombre</label>
+            <input type="text" id="user-nombre" class="input" placeholder="Ej: Valentina" maxlength="30" autocomplete="given-name">
+
             <label>Tu DNI / Legajo</label>
             <input type="number" id="user-dni" class="input" placeholder="Ej: 38123456" maxlength="10">
 
@@ -1412,6 +1427,13 @@
                     <div>
                         <span class="mode-title">Cliente vs Camarero</span>
                         <span class="mode-desc">Simulador de servicio y reseñas.</span>
+                    </div>
+                </div>
+                <div class="mode-card" onclick="app.setMode('ingredientes', this)">
+                    <div class="mode-icon"><i data-lucide="utensils"></i></div>
+                    <div>
+                        <span class="mode-title">Conocé la Carta</span>
+                        <span class="mode-desc">Ingredientes y preparaciones de Barra Chalaca.</span>
                     </div>
                 </div>
             </div>
@@ -1507,6 +1529,54 @@
         <div class="leaderboard-list" id="leaderboard-list">
             <div style="text-align:center; color:var(--text-muted); font-size:12px; padding:16px;">Sin jugadores aún</div>
         </div>
+    </div>
+
+    <!-- ── INGREDIENTES ── -->
+    <div id="view-ingredientes" class="view">
+        <div class="medals-row" id="ingr-medals">
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal"><i data-lucide="leaf"></i></div>
+        </div>
+
+        <div class="streak-bar">
+            <span class="streak-label">RACHA</span>
+            <div class="streak-dots" id="ingr-streak-dots"></div>
+            <span class="streak-value" id="ingr-streak-val">×1</span>
+        </div>
+
+        <div class="q-meta">
+            <span id="ingr-count">PREGUNTA 1/7</span>
+            <span class="timer-num" id="ingr-timer">15s</span>
+        </div>
+        <div class="timer-bar"><div id="ingr-fill" class="timer-fill" style="background: linear-gradient(90deg, #22c55e, #86efac);"></div></div>
+
+        <!-- Plato header -->
+        <div id="ingr-dish-header" style="
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin: 14px 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        ">
+            <div id="ingr-dish-emoji" style="font-size: 28px; flex-shrink: 0;">🍽️</div>
+            <div>
+                <div id="ingr-dish-name" style="font-family: var(--font-display); font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;"></div>
+                <div id="ingr-dish-category" style="font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px;"></div>
+            </div>
+        </div>
+
+        <div class="q-text" id="ingr-text" style="font-size: 16px;"></div>
+        <div id="ingr-options"></div>
+
+        <div style="display: flex; gap: 5px; margin-top: 16px; justify-content: center;" id="ingr-progress-pips"></div>
     </div>
 
     <!-- ── TRIVIA ── -->
@@ -1625,119 +1695,122 @@ lucide.createIcons();
 // Updated DATA with new sim scenarios and random selection
 const DATA = {
     trivia: [
-        { 
-            q: "¿Por qué lado se retiran los platos usados?", 
-            o: ["Por la derecha", "Por la izquierda", "Por donde sea más cómodo"], 
-            c: 0,
-            explanation: "Siempre se retira por la derecha del comensal para mantener el orden del servicio."
-        },
-        { 
-            q: "Si un cliente es Celíaco, ¿cuál es el protocolo correcto?", 
-            o: ["Traerle pan integral", "Avisar a cocina para evitar contaminación cruzada", "Decirle que no hay opciones"], 
-            c: 1,
-            explanation: "La contaminación cruzada puede ser peligrosa. Siempre comunicar a cocina."
-        },
-        { 
-            q: "¿Cuál es el tiempo ideal para llevar la bebida tras el pedido?", 
-            o: ["10 minutos", "20 minutos", "Menos de 5 minutos"], 
-            c: 2,
-            explanation: "Las bebidas deben servirse rápidamente, idealmente en menos de 5 minutos."
-        },
-        { 
-            q: "¿Qué debe hacer si se rompe una copa en el salón?", 
-            o: ["Limpiar con la mano", "Señalizar, juntar con pala y pasar trapo húmedo", "Esperar al fin del turno"], 
-            c: 1,
-            explanation: "La seguridad es primero. Señalizar y limpiar adecuadamente es el protocolo correcto."
-        },
-        { 
-            q: "¿Cuál es el orden de prioridad para servir en la mesa?", 
-            o: ["Niños, Mujeres, Hombres", "El que pidió primero", "Hombres, Mujeres, Niños"], 
-            c: 0,
-            explanation: "El protocolo tradicional indica servir primero a niños, luego mujeres y finalmente hombres."
-        },
-        { 
-            q: "¿Qué hacer si un cliente derrama vino tinto en el mantel?", 
-            o: ["Ignorarlo", "Cubrir con sal y cambiar el mantel discretamente", "Decirle al cliente que tenga cuidado"], 
-            c: 1,
-            explanation: "La sal ayuda a absorber la mancha. Cambiar el mantel con discreción mantiene la elegancia."
-        },
-        { 
-            q: "¿Cuándo se debe presentar la cuenta?", 
-            o: ["Cuando el cliente la pide", "Automáticamente al terminar el plato principal", "Al final del servicio, sin que el cliente tenga que pedirla"], 
-            c: 0,
-            explanation: "Nunca se debe apresurar al cliente. Esperar a que la solicite es lo correcto."
-        }
+        { q: "¿Por qué lado se retiran los platos usados?", o: ["Por la derecha", "Por la izquierda", "Por donde sea más cómodo"], c: 0, explanation: "Siempre se retira por la derecha del comensal para mantener el orden del servicio." },
+        { q: "Si un cliente es Celíaco, ¿cuál es el protocolo correcto?", o: ["Traerle pan integral", "Avisar a cocina para evitar contaminación cruzada", "Decirle que no hay opciones"], c: 1, explanation: "La contaminación cruzada puede ser peligrosa. Siempre comunicar a cocina." },
+        { q: "¿Cuál es el tiempo ideal para llevar la bebida tras el pedido?", o: ["10 minutos", "20 minutos", "Menos de 5 minutos"], c: 2, explanation: "Las bebidas deben servirse rápidamente, idealmente en menos de 5 minutos." },
+        { q: "¿Qué debe hacer si se rompe una copa en el salón?", o: ["Limpiar con la mano", "Señalizar, juntar con pala y pasar trapo húmedo", "Esperar al fin del turno"], c: 1, explanation: "La seguridad es primero. Señalizar y limpiar adecuadamente es el protocolo correcto." },
+        { q: "¿Cuál es el orden de prioridad para servir en la mesa?", o: ["Niños, Mujeres, Hombres", "El que pidió primero", "Hombres, Mujeres, Niños"], c: 0, explanation: "El protocolo tradicional indica servir primero a niños, luego mujeres y finalmente hombres." },
+        { q: "¿Qué hacer si un cliente derrama vino tinto en el mantel?", o: ["Ignorarlo", "Cubrir con sal y cambiar el mantel discretamente", "Decirle al cliente que tenga cuidado"], c: 1, explanation: "La sal ayuda a absorber la mancha. Cambiar el mantel con discreción mantiene la elegancia." },
+        { q: "¿Cuándo se debe presentar la cuenta?", o: ["Cuando el cliente la pide", "Automáticamente al terminar el plato principal", "Al final del servicio sin que lo pida"], c: 0, explanation: "Nunca se debe apresurar al cliente. Esperar a que la solicite es lo correcto." },
+        { q: "¿Cómo se recomienda comer los tiraditos y cebiches?", o: ["Con tenedor y cuchillo", "Con cuchara para combinar todos los sabores", "Con palillos"], c: 1, explanation: "Se recomienda siempre comer con cuchara para combinar todos los sabores y texturas del plato." },
+        { q: "¿Cuánto tarda en salir una pesca entera?", o: ["10 a 15 minutos", "30 a 35 minutos", "20 a 25 minutos"], c: 1, explanation: "Las pescas enteras siempre tardan entre 30 y 35 minutos. ¡Informar al cliente antes de tomar el pedido!" },
+        { q: "¿Con qué acompañan siempre las sopas de la carta?", o: ["Solo limón", "Pan y manteca", "Dips de picante, canchita y limón"], c: 2, explanation: "Todas las sopas deben salir con dips de picante, canchita y limón, según la carta." },
+        { q: "¿Qué es lo primero que hay que preguntar antes de marchar un pedido?", o: ["Si quieren postre", "Si tienen alergias, intolerancias o preferencia con el picante", "Si quieren agua con o sin gas"], c: 1, explanation: "Consultar SIEMPRE por picantes, alergias y/o intolerancias antes de marchar cualquier pedido." },
+        { q: "¿Por qué lado se sirven los platos al comensal?", o: ["Por la izquierda", "Por la derecha", "Indistinto"], c: 0, explanation: "Los platos se sirven por la izquierda y se retiran por la derecha del comensal." },
+        { q: "¿Qué debo hacer si un cliente pide algo que no está en la carta?", o: ["Inventar un plato", "Informarle que no está disponible y sugerir alternativas similares", "Ignorar el pedido"], c: 1, explanation: "Siempre informar con amabilidad y ofrecer alternativas. Conocer la carta es clave." },
+        { q: "Un cliente pide la cuenta. ¿Cuánto tiempo máximo debería tardarse?", o: ["Menos de 3 minutos", "Cuando uno pueda", "Después de atender otras mesas"], c: 0, explanation: "La cuenta debe llegar en menos de 3 minutos. El cliente que pide la cuenta, quiere irse." }
     ],
-    // Banco completo de escenarios del simulador
     simBank: [
-        {
-            client: "Hola, buenas noches. Tenemos reserva para dos pero nos gustaría una mesa cerca de la ventana.",
-            options: [
-                { t: "Las de la ventana están todas tomadas, siéntense acá.", s: 1, r: "Están todas ocupadas. Tienen que ir a la que les asigne el sistema." },
-                { t: "¡Buenas noches! Bienvenidos. Déjenme chequear si puedo reubicarlos cerca de la ventana.", s: 5, r: "¡Bienvenidos a Andino! Déjenme validar el mapa de mesas para complacerlos." },
-                { t: "Hola. Si no hay nadie sentado pueden ir.", s: 3, r: "Hola. Si están libres pásen nomás." }
-            ]
-        },
-        {
-            client: "Disculpa, el vino que me trajiste no está a la temperatura correcta, está muy caliente.",
-            options: [
-                { t: "Es que afuera hace calor, el vino está bien.", s: 1, r: "El vino sale de cava, a lo mejor le parece por el calor que hace hoy." },
-                { t: "Mil disculpas. Traigo una frapera con hielo ahora mismo.", s: 5, r: "Tiene razón, le pido disculpas. Ya mismo le traigo una frapera y le cambio la copa por una fría." },
-                { t: "Bueno, le traigo un hielo si quiere.", s: 2, r: "Si quiere le traigo un par de hielos para la copa." }
-            ]
-        },
-        {
-            client: "¿Me podrías recomendar algún plato? Es mi primera vez aquí.",
-            options: [
-                { t: "Todo está rico, elija lo que quiera.", s: 2, r: "La verdad que todo está bueno, mire el menú." },
-                { t: "Por supuesto. Nuestra especialidad es el risotto de hongos, y el salmón está excelente hoy.", s: 5, r: "¡Claro que sí! Nuestra especialidad es el risotto de hongos, preparado con setas frescas. También el salmón grillado está espectacular hoy." },
-                { t: "No sé, no soy chef.", s: 1, r: "Yo solo soy camarero, no pruebo los platos." }
-            ]
-        },
-        {
-            client: "Hola, buenas noches. Ya decidimos: queremos pedir una Jalea Chalaca y un Cebiche Mixto para compartir.",
-            options: [
-                { t: "¡Excelentes opciones! Antes de marchar el pedido, ¿tienen alguna alergia, intolerancia o preferencia con el picante?", s: 5, r: "Qué buen detalle. Sí, por favor, que el cebiche no sea muy picante." },
-                { t: "¡Perfecto! Enseguida les traigo las bebidas y marchamos la comida.", s: 3, r: "Gracias." },
-                { t: "¿Solo eso? Miren que los platos son estilo bodegón, capaz se quedan con hambre.", s: 1, r: "Solo eso por ahora. Gracias." }
-            ]
-        },
-        {
-            client: "¡Qué buena pinta tiene este Tiradito Nikkei! Ya mismo lo empezamos a comer.",
-            options: [
-                { t: "¡Que lo disfruten! Les recomiendo comerlo con cuchara para combinar todos los sabores y la leche de tigre.", s: 5, r: "¡Ah, no lo sabíamos! Muchas gracias por la recomendación, lo probamos así." },
-                { t: "¡Que lo disfruten! Si necesitan más servilletas o cubiertos me avisan.", s: 3, r: "Gracias, todo perfecto." },
-                { t: "Cuidado que la salsa mancha mucho la ropa.", s: 1, r: "Eh... ok, gracias por el aviso." }
-            ]
-        },
-        {
-            client: "Estamos apurados, tenemos cine en 40 minutos. Queremos pedir la Pesca Entera frita para comer rápido.",
-            options: [
-                { t: "Les aviso que las pescas enteras tardan entre 30 y 35 minutos. Si están apurados, les sugiero unos cebiches o chicharrones.", s: 5, r: "¡Uf, menos mal que avisaste! Traenos el Chicharrón de Calamar entonces." },
-                { t: "Voy a pedir a la cocina que se apuren todo lo posible con la pesca, pero va a estar justo.", s: 3, r: "Bueno, confiamos en vos." },
-                { t: "¡Perfecto, ya mismo se los pido!", s: 1, r: "¡Genial, gracias!" }
-            ]
-        },
-        {
-            client: "Hace mucho frío afuera. Para entrar en calor te voy a pedir el Chupe Levanta Muertos.",
-            options: [
-                { t: "Excelente elección. Recuerde que sale acompañado con sus dips de picante, canchita y limón para que lo prepare a su gusto.", s: 5, r: "¡Me encanta la canchita! Muchas gracias." },
-                { t: "Sale un Chupe. ¿Desean algo de tomar mientras esperan?", s: 3, r: "Una botella de agua, gracias." },
-                { t: "Ojo que el Chupe es bastante pesado porque tiene huevo poché y queso, ¿seguro quiere eso?", s: 1, r: "Sí... quiero eso." }
-            ]
-        },
-        {
-            client: "Soy vegano estricto y vi que tienen un Chaufa Veggie. ¿Me confirmás que no tiene ningún producto de origen animal?",
-            options: [
-                { t: "Puede salir con huevo, pero al ser usted vegano, le indico a cocina que lo marchen sin huevo. ¡Quédese tranquilo!", s: 5, r: "¡Qué buen dato! Sí, por favor, sin huevo. Mil gracias." },
-                { t: "Sí, es veggie, así que son puros vegetales salteados al wok. Se lo pido.", s: 3, r: "Perfecto, gracias." },
-                { t: "No estoy seguro cómo lo saltean. Mejor pídase el Tiradito Veggie que ese sí es seguro.", s: 1, r: "Pero yo quería el arroz... Bueno, dame el tiradito." }
-            ]
-        }
+        { client: "Hola, buenas noches. Tenemos reserva para dos pero nos gustaría una mesa cerca de la ventana.", options: [
+            { t: "Las de la ventana están todas tomadas, siéntense acá.", s: 1, r: "Están todas ocupadas." },
+            { t: "¡Buenas noches! Bienvenidos. Déjenme chequear si puedo reubicarlos cerca de la ventana.", s: 5, r: "¡Bienvenidos! Qué buena atención, gracias." },
+            { t: "Hola. Si no hay nadie sentado pueden ir.", s: 3, r: "Gracias." }
+        ]},
+        { client: "Disculpa, el vino que me trajiste no está a la temperatura correcta, está muy caliente.", options: [
+            { t: "Es que afuera hace calor, el vino está bien.", s: 1, r: "No es excusa..." },
+            { t: "Mil disculpas. Traigo una frapera con hielo ahora mismo.", s: 5, r: "Perfecto, gracias por la rapidez." },
+            { t: "Bueno, le traigo un hielo si quiere.", s: 2, r: "No es lo ideal, pero bueno..." }
+        ]},
+        { client: "¿Me podrías recomendar algún plato? Es mi primera vez aquí.", options: [
+            { t: "Todo está rico, elija lo que quiera.", s: 2, r: "No me ayudás mucho..." },
+            { t: "¡Por supuesto! Nuestra especialidad es la Jalea Chalaca y los cebiches. ¿Tiene preferencia por el picante?", s: 5, r: "¡Qué bien que conocés la carta! Llevamos la jalea." },
+            { t: "No sé, no soy chef.", s: 1, r: "Que mala atención..." }
+        ]},
+        { client: "Hola, ya decidimos: queremos pedir una Jalea Chalaca y un Cebiche Mixto para compartir.", options: [
+            { t: "¡Excelentes opciones! Antes de marchar el pedido, ¿tienen alguna alergia, intolerancia o preferencia con el picante?", s: 5, r: "Qué buen detalle. Sí, que el cebiche no sea muy picante." },
+            { t: "¡Perfecto! Enseguida marchamos la comida.", s: 3, r: "Gracias." },
+            { t: "¿Solo eso? Los platos son grandes, capaz se quedan cortos.", s: 1, r: "Solo eso por ahora, gracias." }
+        ]},
+        { client: "¡Qué buena pinta tiene este Tiradito Nikkei! Ya lo empezamos a comer.", options: [
+            { t: "¡Que lo disfruten! Les recomiendo comerlo con cuchara para combinar todos los sabores y la leche de tigre.", s: 5, r: "¡No lo sabíamos! Gracias por el tip." },
+            { t: "¡Que lo disfruten! Si necesitan algo más, me avisan.", s: 3, r: "Gracias, todo bien." },
+            { t: "Cuidado que la salsa mancha mucho la ropa.", s: 1, r: "Eh... ok, gracias..." }
+        ]},
+        { client: "Estamos apurados, tenemos cine en 40 minutos. Queremos pedir la Pesca Entera frita para comer rápido.", options: [
+            { t: "Les aviso que las pescas enteras tardan entre 30 y 35 minutos. Si están apurados, les sugiero unos chicharrones o cebiches.", s: 5, r: "¡Uf, menos mal que avisaste! Traenos el Chicharrón de Calamar." },
+            { t: "Voy a pedir a cocina que se apuren, pero va a estar justo.", s: 3, r: "Bueno, confiamos en vos." },
+            { t: "¡Perfecto, ya mismo se los pido!", s: 1, r: "¡Genial, gracias! (llegan tarde al cine)" }
+        ]},
+        { client: "Soy vegano. ¿El Chaufa Veggie puede salir sin huevo?", options: [
+            { t: "Puede salir con huevo, pero al ser vegano le indico a cocina que lo marchen sin huevo. ¡Quédese tranquilo!", s: 5, r: "¡Qué buen dato! Sí, por favor, sin huevo." },
+            { t: "Sí, es veggie así que son puros vegetales. Se lo pido.", s: 3, r: "Perfecto, gracias." },
+            { t: "No estoy seguro. Mejor pídase el Tiradito Veggie.", s: 1, r: "Pero yo quería el arroz..." }
+        ]},
+        { client: "Mesero, ¡hace 15 minutos que pedimos las bebidas y todavía no llegaron!", options: [
+            { t: "Estamos muy ocupados, ya van.", s: 1, r: "¿Es una excusa? Malo." },
+            { t: "Mil disculpas, fue un error nuestro. Las traigo ahora mismo personalmente.", s: 5, r: "Gracias por resolverlo tan rápido." },
+            { t: "Voy a ver qué pasó en la barra.", s: 3, r: "Okey, espero." }
+        ]},
+        { client: "¿Qué es la Leche de Tigre? No entiendo qué tiene.", options: [
+            { t: "Es el líquido del cebiche, está rico.", s: 2, r: "Bueno, algo de info..." },
+            { t: "La Leche de Tigre es la base de nuestros cebiches: fondo de pescado, apio, sal, limón, cilantro, jengibre y ajinomoto. Es el corazón del plato.", s: 5, r: "¡Qué bien explicado! Ahora entiendo. Lo pido." },
+            { t: "Pregunte en la cocina, yo no sé exactamente.", s: 1, r: "No saber la carta es un problema grave." }
+        ]},
+        { client: "¿Las Empanadas Chalacas son picantes?", options: [
+            { t: "Un poco.", s: 2, r: "Poca info..." },
+            { t: "Llevan una salsa de ají amarillo que tiene un picor suave y frutal, no es agresivo. Pero si preferís sin picante te aviso a cocina.", s: 5, r: "Perfecto, lo pido igual entonces." },
+            { t: "No sé, a mí no me gustan las empanadas.", s: 1, r: "¡Qué respuesta!" }
+        ]},
+        { client: "Este Ceviche Del Puerto se ve diferente al Chalaco, ¿en qué se diferencian?", options: [
+            { t: "Uno tiene mariscos y el otro no.", s: 2, r: "Más o menos..." },
+            { t: "El Chalaco tiene leche de tigre blanca y el Del Puerto lleva leche de tigre roja con chicharrón de calamar y tortitas de choclo encima.", s: 5, r: "¡Qué explicación! Me llevo el Del Puerto." },
+            { t: "Son parecidos, los dos están buenos.", s: 1, r: "No me ayudaste nada." }
+        ]}
     ],
-    // Propiedad dinámica que se llena con selección aleatoria
+    ingredientesBank: [
+        // TIRADITOS
+        { dish: "Tiradito Criollo", emoji: "🐟", category: "TIRADITO", q: "¿Qué leche de tigre lleva el Tiradito Criollo?", o: ["A base de ají amarillo", "Emulsión de vieiras", "Leche de almendras vegana"], c: 0, explanation: "El Criollo lleva leche de tigre cremosa a base de ají amarillo, choclo peruano, rodajas de ají limo y cilantro." },
+        { dish: "Tiradito Chucuito", emoji: "🐟", category: "TIRADITO", q: "¿Sobre qué va montado el Tiradito Chucuito?", o: ["Leche de tigre roja", "Emulsión de vieiras", "Leche de almendras"], c: 1, explanation: "El Chucuito lleva láminas de pesca sobre una emulsión de vieiras, con chips de ajo, palta, alcaparras y chocho peruano." },
+        { dish: "Tiradito Nikkei", emoji: "🍣", category: "TIRADITO", q: "¿Qué tipo de pesca lleva el Tiradito Nikkei?", o: ["Pesca del día", "Trucha", "Langostinos"], c: 1, explanation: "El Nikkei lleva láminas de TRUCHA sobre leche de tigre de maracuyá, con masa wantan frita y mayonesa caracol." },
+        { dish: "Tiradito Nikkei", emoji: "🍣", category: "TIRADITO", q: "¿Qué masa frita acompaña al Tiradito Nikkei?", o: ["Masa de empanada", "Masa wantan frita", "Tortitas de choclo"], c: 1, explanation: "El Nikkei se sirve con masa wantan frita, mayonesa caracol, nabo, sésamo tostado y ají limo." },
+        { dish: "Tiradito Veggie", emoji: "🥗", category: "TIRADITO", q: "¿Qué tiene de especial la leche de tigre del Tiradito Veggie?", o: ["Es de queso parmesano", "Es de almendras y vegana", "Es de coco"], c: 1, explanation: "El Tiradito Veggie usa leche de almendras (VEGANA) con remolacha, alcaparra crocante y aceite de oliva." },
+        // CEBICHES
+        { dish: "Cebiche Del Puerto", emoji: "🦑", category: "CEBICHE", q: "¿Qué tipo de leche de tigre lleva el Cebiche Del Puerto?", o: ["Blanca", "Roja", "Cremosa de vieiras"], c: 1, explanation: "El Del Puerto lleva leche de tigre ROJA con tortitas de choclo, chicharrón de calamar encima." },
+        { dish: "Cebiche Mixto", emoji: "🦐", category: "CEBICHE", q: "¿Qué mariscos lleva el Cebiche Mixto?", o: ["Solo calamar", "Pesca, langostinos blanqueados y tubo de calamar", "Vieiras y mejillones"], c: 1, explanation: "El Mixto tiene pesca del día, langostinos blanqueados y tubo de calamar en leche de tigre roja." },
+        { dish: "Cebiche Chalaquito", emoji: "🌊", category: "CEBICHE", q: "¿Qué dos elementos fríos y calientes se combinan en el Chalaquito?", o: ["Calamar frito y langostinos crudos", "Calamar en cuadradito, langostinos y calamar frito en tiras", "Solo mariscos crudos"], c: 1, explanation: "El Chalaquito combina calamar en cuadradito y langostinos (crudos) con calamar frito en tiras, todo junto." },
+        { dish: "Cebiche Huanchaco", emoji: "🐚", category: "CEBICHE", q: "¿Qué reemplaza a la cancha en el Cebiche Huanchaco?", o: ["Tortitas de choclo y chifles", "Pan de campo", "Papas doradas"], c: 0, explanation: "El Huanchaco lleva chifles (chips de plátano) y tortitas de choclo además de la clásica cancha." },
+        // CAUSAS
+        { dish: "Causa Ochentera", emoji: "🥑", category: "CAUSA", q: "¿Con qué proteína se rellena la Causa Ochentera?", o: ["Atún con mayonesa", "Langostinos blanqueados con salsa golf", "Pollo desmenuzado"], c: 1, explanation: "La Ochentera lleva langostinos blanqueados bañados en salsa golf de la casa." },
+        { dish: "Causa Nikkei", emoji: "🍱", category: "CAUSA", q: "¿Qué lleva el tartar de trucha de la Causa Nikkei?", o: ["Maracuyá y ají amarillo", "Mae ploy, togarashi, sriracha y aceite de sésamo", "Queso y choclo"], c: 1, explanation: "El tartar de trucha es trucha cruda con mae ploy, togarashi, verdeo, aceite de oliva, sriracha y jugo de limón." },
+        { dish: "Causa Acevichada", emoji: "🌶️", category: "CAUSA", q: "¿Qué lleva encima la Causa Acevichada?", o: ["Un ceviche cremoso de pesca con leche de tigre de vieiras", "Tartar de trucha nikkei", "Langostinos a la golf"], c: 0, explanation: "La Acevichada lleva un ceviche cremoso de pesca del día con leche de tigre cremosa de vieiras y rocoto." },
+        // PIQUEOS
+        { dish: "Wantacos", emoji: "🌮", category: "PIQUEO", q: "¿Cómo se forma la masa del Wantaco?", o: ["Masa de empanada horneada", "Masa de wantan frita en forma de taco", "Masa de choclo frita"], c: 1, explanation: "Los Wantacos son masa de wantan frita en forma de taco, rellenos de tartar de trucha y encurtido de verduras." },
+        { dish: "Tortitas de Choclo", emoji: "🌽", category: "PIQUEO", q: "¿Con qué ceviche se montan las Tortitas de Choclo?", o: ["Leche de tigre roja con cancha", "Ceviche cremoso con emulsión de vieiras, calamar y langostinos", "Solo palta y limón"], c: 1, explanation: "Las tortitas se montan con un ceviche cremoso de emulsión de vieiras, calamar, pesca y langostinos." },
+        { dish: "Langostinos Melcocha", emoji: "🍤", category: "PIQUEO", q: "¿Cómo se recomienda comer los Langostinos Melcocha?", o: ["Con cubiertos normales", "Como un taco usando la lechuga como base", "En dos bocados"], c: 1, explanation: "Se recomienda comerlos como un taco usando las hojas de lechuga como base con los dips de encurtido y mayosiracha." },
+        { dish: "Wantanes", emoji: "🥟", category: "PIQUEO", q: "¿Con qué salsa se sirven los Wantanes rellenos de mariscos?", o: ["Salsa golf", "Salsa de tamarindo con trocitos de ananá", "Mayosiracha"], c: 1, explanation: "Los Wantanes llevan salsa de tamarindo con ananá y semillas de sésamo." },
+        // CHICHARRONES
+        { dish: "Jalea Chalaca", emoji: "🍟", category: "CHICHARRÓN", q: "¿Qué tres frituras contiene la Jalea Chalaca?", o: ["Pescado, pollo y langostinos", "Calamar en harina, langostinos en tempura y pescado frito premix", "Solo calamar y pescado"], c: 1, explanation: "La Jalea lleva chicharrón de calamar en harina, langostinos en tempura y pescado frito con premix. Todo junto." },
+        // ARROCES Y CHAUFAS
+        { dish: "Arroz Bachiche", emoji: "🍚", category: "ARROZ", q: "¿Cuál es la base del Arroz Bachiche?", o: ["Arroz chaufa al wok", "Risotto al sartén con ají amarillo y fondo de berberechos", "Arroz con leche de tigre"], c: 1, explanation: "El Bachiche es un risotto al sartén con base de ají amarillo, manteca, choclo, queso y fondo de berberechos." },
+        { dish: "Arroz Cariñoso", emoji: "🦪", category: "ARROZ", q: "¿Qué salsa especial lleva el picante de mariscos del Arroz Cariñoso?", o: ["Salsa golf", "Salsa de chupe (fondo de langostinos, huacatay y crema)", "Leche de tigre roja"], c: 1, explanation: "El Cariñoso lleva picante de mariscos en salsa de chupe: fondo de langostinos, huacatay, crema y manteca." },
+        { dish: "Chaufa Nikkei", emoji: "🥢", category: "CHAUFA", q: "¿Qué bañado especial lleva el Chaufa Nikkei por encima?", o: ["Salsa golf", "Langostinos y boniato a la tempura bañados en salsa caracol", "Criolla clásica"], c: 1, explanation: "El Chaufa Nikkei lleva langostinos y boniato a la tempura bañados en salsa caracol por encima del arroz." },
+        // SANGUCHES
+        { dish: "Sanguche de Langostinos", emoji: "🥪", category: "SANGUCHE", q: "¿Cómo se preparan los langostinos del sanguche de Langostinos?", o: ["Grillados con limón", "En tempura bañados en salsa golf", "Fritos en panko"], c: 1, explanation: "Los langostinos van en tempura, bañados en salsa golf de la casa, con tortilla de huevo y lechuga." },
+        // PLATOS
+        { dish: "Tacu Tacu Chalaco", emoji: "🍳", category: "PLATO", q: "¿Qué salsa lleva la milanesa de pescado del Tacu Tacu Chalaco?", o: ["Salsa golf", "Chorrillana (cebolla morada, ají amarillo, ají panca, tomate)", "Leche de tigre"], c: 1, explanation: "El Tacu Chalaco lleva milanesa de pescado con chorrillana y huevo frito, más banana frita." },
+        { dish: "Ravioles de Choclo", emoji: "🍝", category: "PLATO", q: "¿Con qué salsa se sirven los Ravioles de Choclo?", o: ["Tuco tradicional", "Salsa chupe de langostinos", "Pesto peruano"], c: 1, explanation: "Los ravioles de choclo y queso fresco peruano se sirven con salsa chupe (de langostinos) y langostinos decorativos." },
+        // SOPAS
+        { dish: "Parihuela", emoji: "🍲", category: "SOPA", q: "¿Con qué acompaña la Parihuela?", o: ["Pan de campo", "Yukitas", "Papas doradas"], c: 1, explanation: "La Parihuela sale con yukitas (bastoncitos de masa de harina fritos). Siempre con dips de picante, canchita y limón." },
+        { dish: "Chilcano", emoji: "🍜", category: "SOPA", q: "¿Qué fideos lleva el Chilcano?", o: ["Spaghetti", "Fideos chinos", "Ravioles de choclo"], c: 1, explanation: "El Chilcano lleva fideos chinos junto con fondo de pescado, jengibre, papa milla aplastada y cubos de pesca." },
+        // SALSAS
+        { dish: "Salsa Golf", emoji: "🥫", category: "SALSA", q: "¿Qué ingrediente alcohólico lleva la Salsa Golf de la casa?", o: ["Vino blanco", "Brandy", "Ron"], c: 1, explanation: "La Salsa Golf de Barra Chalaca lleva mayonesa, ketchup, salsa inglesa, jugo de naranja y BRANDY." },
+        { dish: "Salsa Tari", emoji: "🌶️", category: "SALSA", q: "¿Qué compone la Salsa Tari?", o: ["Maracuyá, rocoto y leche", "Ají amarillo, mostaza, ají limo y mayonesa", "Ají panca, tomate y cebolla"], c: 1, explanation: "La Tari es ají amarillo + mostaza + ají limo + mayonesa. Acompaña a las croquetas y otros platos." },
+        { dish: "Tempura", emoji: "🍳", category: "PREPARACIÓN", q: "¿Qué cerveza o gaseosa lleva la masa Tempura?", o: ["Solo agua fría", "Soda y cerveza con hielo", "Leche y huevo"], c: 1, explanation: "La tempura de Barra Chalaca lleva semita (harina de maíz), SODA, CERVEZA, sal, huevo e hielo." },
+        { dish: "Leche de Tigre", emoji: "🐯", category: "PREPARACIÓN", q: "¿Qué potenciador de sabor contiene la Leche de Tigre de Barra Chalaca?", o: ["Cúrcuma", "Ajinomoto", "Ajo en polvo"], c: 1, explanation: "La Leche de Tigre base lleva fondo de pescado, pescado, apio, sal, limón, lima, cilantro, jengibre y AJINOMOTO." }
+    ],
     sim: []
 };
+
 
 const RANKS = {
     trivia: [
@@ -1772,6 +1845,7 @@ function selectRandomSimScenarios(count = 5) {
 const app = (() => {
     let state = {
         dni: "",
+        nombre: "",
         mode: "trivia",
         step: 0,
         score: 0,
@@ -1782,7 +1856,8 @@ const app = (() => {
         timer: null,
         xp: 0,
         soundEnabled: true,
-        currentTimer: 0
+        currentTimer: 0,
+        ingrSelected: []
     };
 
     const playSound = (type) => {
@@ -1889,13 +1964,45 @@ const app = (() => {
     const showCombo = (text) => {
         const toast = document.getElementById('combo-toast');
         if (!toast) return;
-        
         toast.textContent = text;
         toast.classList.add('show');
-        
+        setTimeout(() => toast.classList.remove('show'), 2000);
+    };
+
+    // Animation helpers
+    const pulseCorrect = () => {
+        const container = document.getElementById('app-container');
+        if (!container) return;
+        container.style.transition = 'box-shadow 0.15s ease';
+        container.style.boxShadow = '0 0 0 3px rgba(74,222,128,0.5), 0 40px 100px rgba(0,0,0,0.7)';
+        setTimeout(() => { container.style.boxShadow = ''; }, 400);
+    };
+
+    const shakeWrong = () => {
+        const container = document.getElementById('app-container');
+        if (!container) return;
+        container.style.transition = 'none';
+        container.style.boxShadow = '0 0 0 3px rgba(248,113,113,0.5), 0 40px 100px rgba(0,0,0,0.7)';
+        container.classList.add('shake');
         setTimeout(() => {
-            toast.classList.remove('show');
-        }, 2000);
+            container.classList.remove('shake');
+            container.style.boxShadow = '';
+        }, 500);
+    };
+
+    const renderSimPips = () => {
+        const el = document.getElementById('sim-pips');
+        if (!el) return;
+        el.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const pip = document.createElement('div');
+            pip.className = 'sim-score-pip';
+            if (i < state.simScores.length) {
+                const s = state.simScores[i];
+                pip.classList.add(s === 5 ? 'filled' : s >= 3 ? 'partial' : 'low');
+            }
+            el.appendChild(pip);
+        }
     };
 
     const updateXpBar = (pct) => {
@@ -1919,22 +2026,6 @@ const app = (() => {
         const streakVal = document.getElementById('streak-val');
         if (streakVal) {
             streakVal.textContent = state.streak >= 3 ? `×${state.streak} 🔥` : `×${state.streak || 1}`;
-        }
-    };
-
-    const renderSimPips = () => {
-        const el = document.getElementById('sim-pips');
-        if (!el) return;
-        
-        el.innerHTML = '';
-        for (let i = 0; i < 5; i++) {
-            const pip = document.createElement('div');
-            pip.className = 'sim-score-pip';
-            if (i < state.simScores.length) {
-                const s = state.simScores[i];
-                pip.classList.add(s === 5 ? 'filled' : s >= 3 ? 'partial' : 'low');
-            }
-            el.appendChild(pip);
         }
     };
 
@@ -1998,10 +2089,12 @@ const app = (() => {
 
         initGame: () => {
             const dniInput = document.getElementById('user-dni');
+            const nombreInput = document.getElementById('user-nombre');
             state.dni = dniInput ? dniInput.value.trim() : '';
+            state.nombre = nombreInput ? nombreInput.value.trim() : '';
             
             if (state.dni.length < 6) { 
-                alert("Ingresa un DNI válido (mínimo 6 dígitos)");
+                alert("Ingresá un DNI válido (mínimo 6 dígitos)");
                 if (dniInput) dniInput.focus();
                 return; 
             }
@@ -2014,9 +2107,11 @@ const app = (() => {
             state.simScores = []; 
             state.xp = 0;
             
-            // Select random scenarios for sim mode
             if (state.mode === 'sim') {
                 DATA.sim = selectRandomSimScenarios(5);
+            }
+            if (state.mode === 'ingredientes') {
+                state.ingrSelected = shuffleArray(DATA.ingredientesBank).slice(0, 7);
             }
 
             if (state.mode === 'trivia') {
@@ -2024,6 +2119,9 @@ const app = (() => {
                 renderStreakDots();
                 updateTriviaProgress();
                 app.renderTrivia();
+            } else if (state.mode === 'ingredientes') {
+                switchView('ingredientes');
+                app.renderIngredientes();
             } else {
                 switchView('sim');
                 renderSimPips();
@@ -2245,14 +2343,14 @@ const app = (() => {
             if (opt.s === 5) {
                 state.streak++;
                 if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+                pulseCorrect();
             } else {
                 state.streak = 0;
+                if (opt.s <= 2) shakeWrong();
             }
             
             const optionsContainer = document.getElementById('sim-options');
-            if (optionsContainer) {
-                optionsContainer.innerHTML = '';
-            }
+            if (optionsContainer) optionsContainer.innerHTML = '';
             
             showScoreExplanation(opt.s);
 
@@ -2262,14 +2360,11 @@ const app = (() => {
                 wb.textContent = opt.r;
                 chat.appendChild(wb);
                 chat.scrollTop = chat.scrollHeight;
-                renderSimPods();
+                renderSimPips();
                 
                 if (opt.s >= 5) {
                     playSound('correct');
-                    if (state.streak >= 3) {
-                        showCombo(`🔥 ¡Servicio excelente ×${state.streak}!`);
-                        playSound('combo');
-                    }
+                    if (state.streak >= 3) { showCombo(`🔥 ¡Servicio excelente ×${state.streak}!`); playSound('combo'); }
                 } else if (opt.s <= 2) {
                     playSound('wrong');
                 }
@@ -2277,12 +2372,145 @@ const app = (() => {
 
             setTimeout(() => {
                 state.step++;
-                if (state.step < DATA.sim.length) {
-                    app.renderSim();
-                } else {
-                    app.finish();
-                }
+                if (state.step < DATA.sim.length) app.renderSim();
+                else app.finish();
             }, 1800);
+        },
+
+        /* ── INGREDIENTES ── */
+        renderIngredientes: () => {
+            const total = state.ingrSelected.length;
+            if (state.step >= total) { app.finish(); return; }
+
+            const q = state.ingrSelected[state.step];
+
+            document.getElementById('ingr-count').textContent = `PREGUNTA ${state.step + 1} / ${total}`;
+            document.getElementById('ingr-dish-name').textContent = q.dish;
+            document.getElementById('ingr-dish-category').textContent = q.category;
+            document.getElementById('ingr-dish-emoji').textContent = q.emoji;
+            document.getElementById('ingr-text').textContent = q.q;
+
+            updateXpBar((state.step / total) * 80);
+
+            // Progress pips
+            const pipsEl = document.getElementById('ingr-progress-pips');
+            if (pipsEl) {
+                pipsEl.innerHTML = '';
+                for (let i = 0; i < total; i++) {
+                    const pip = document.createElement('div');
+                    pip.className = 'sim-score-pip' + (i < state.step ? ' filled' : i === state.step ? ' partial' : '');
+                    pip.style.cssText = 'flex: 0 0 24px; height: 6px; border-radius: 3px;';
+                    pipsEl.appendChild(pip);
+                }
+            }
+
+            // Streak dots (reuse same logic)
+            const sd = document.getElementById('ingr-streak-dots');
+            if (sd) {
+                sd.innerHTML = '';
+                for (let i = 0; i < 5; i++) {
+                    const d = document.createElement('div');
+                    d.className = 'streak-dot' + (i < state.streak ? ' active' : '');
+                    sd.appendChild(d);
+                }
+            }
+            const sv = document.getElementById('ingr-streak-val');
+            if (sv) sv.textContent = state.streak >= 3 ? `×${state.streak} 🔥` : `×${state.streak || 1}`;
+
+            // Medals
+            const medals = document.querySelectorAll('#ingr-medals .medal');
+            medals.forEach((m, i) => m.classList.toggle('active', i < state.score));
+
+            // Options
+            const opts = document.getElementById('ingr-options');
+            opts.innerHTML = '';
+            const letters = ['A','B','C'];
+            q.o.forEach((text, i) => {
+                const b = document.createElement('button');
+                b.className = 'option';
+                b.innerHTML = `<span class="option-letter">${letters[i]}</span>${text}`;
+                b.onclick = () => app.checkIngredientes(i, b);
+                opts.appendChild(b);
+            });
+
+            // Timer (15s for ingredientes — a bit more time)
+            app.startIngrTimer(15);
+            lucide.createIcons();
+        },
+
+        startIngrTimer: (sec) => {
+            let left = sec;
+            const fill = document.getElementById('ingr-fill');
+            const timerNum = document.getElementById('ingr-timer');
+            clearInterval(state.timer);
+            if (fill) fill.style.width = '100%';
+
+            state.timer = setInterval(() => {
+                left = Math.max(0, left - 0.1);
+                const pct = (left / sec) * 100;
+                if (fill) fill.style.width = pct + '%';
+                if (timerNum) timerNum.textContent = Math.ceil(left) + 's';
+                if (Math.ceil(left) <= 3) {
+                    if (fill) fill.classList.add('urgent');
+                    if (timerNum) timerNum.classList.add('urgent');
+                } else {
+                    if (fill) fill.classList.remove('urgent');
+                    if (timerNum) timerNum.classList.remove('urgent');
+                }
+                if (left <= 0) { clearInterval(state.timer); app.checkIngredientes(-1, null); }
+            }, 100);
+        },
+
+        checkIngredientes: (idx, btn) => {
+            clearInterval(state.timer);
+            const q = state.ingrSelected[state.step];
+            const allOptions = document.querySelectorAll('#ingr-options .option');
+            allOptions.forEach(b => b.disabled = true);
+
+            const isCorrect = idx === q.c;
+
+            if (isCorrect) {
+                if (btn) btn.classList.add('correct');
+                state.score++;
+                state.streak++;
+                if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+                const mult = Math.min(state.streak, 5);
+                state.xp += 20 * mult;
+                playSound('correct');
+                pulseCorrect();
+                if (state.streak >= 3) { showCombo(`🔥 COMBO ×${state.streak}!`); playSound('combo'); }
+                else if (state.streak === 2) showCombo('¡Doble acierto!');
+                updateXpBar(Math.min(((state.step + 1) / state.ingrSelected.length) * 80 + 5, 85));
+            } else {
+                if (btn) btn.classList.add('wrong');
+                if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
+                state.streak = 0;
+                playSound('wrong');
+                shakeWrong();
+
+                // Show explanation
+                if (q.explanation) {
+                    const expl = document.createElement('div');
+                    expl.style.cssText = 'background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--text-muted);animation:slideUp 0.3s ease;';
+                    expl.textContent = `💡 ${q.explanation}`;
+                    document.getElementById('ingr-options').appendChild(expl);
+                }
+            }
+
+            // Update streak display
+            const sd = document.getElementById('ingr-streak-dots');
+            if (sd) {
+                const dots = sd.querySelectorAll('.streak-dot');
+                dots.forEach((d, i) => d.classList.toggle('active', i < state.streak));
+            }
+            const sv = document.getElementById('ingr-streak-val');
+            if (sv) sv.textContent = state.streak >= 3 ? `×${state.streak} 🔥` : `×${state.streak || 1}`;
+
+            setTimeout(() => {
+                state.step++;
+                if (state.step < state.ingrSelected.length) app.renderIngredientes();
+                else app.finish();
+            }, isCorrect ? 1200 : 2600);
         },
 
         /* ── RESULTADOS ── */
@@ -2407,174 +2635,6 @@ const app = (() => {
     };
 })();
 
-// Fix typo in renderSimPips call
-const originalCheckSim = app.checkSim;
-app.checkSim = function(opt) {
-    // Fix the renderSimPods to renderSimPips
-    const chat = document.getElementById('sim-chat');
-    if (!chat) return;
-    
-    this.state.score += opt.s;
-    this.state.simScores.push(opt.s);
-    this.state.xp += opt.s * 10;
-    
-    if (opt.s === 5) {
-        this.state.streak++;
-        if (this.state.streak > this.state.maxStreak) this.state.maxStreak = this.state.streak;
-    } else {
-        this.state.streak = 0;
-    }
-    
-    const optionsContainer = document.getElementById('sim-options');
-    if (optionsContainer) {
-        optionsContainer.innerHTML = '';
-    }
-    
-    showScoreExplanation(opt.s);
-
-    setTimeout(() => {
-        const wb = document.createElement('div');
-        wb.className = 'bubble waiter-bubble';
-        wb.textContent = opt.r;
-        chat.appendChild(wb);
-        chat.scrollTop = chat.scrollHeight;
-        renderSimPips(); // Fixed typo here
-        
-        if (opt.s >= 5) {
-            playSound('correct');
-            if (this.state.streak >= 3) {
-                showCombo(`🔥 ¡Servicio excelente ×${this.state.streak}!`);
-                playSound('combo');
-            }
-        } else if (opt.s <= 2) {
-            playSound('wrong');
-        }
-    }, 200);
-
-    setTimeout(() => {
-        this.state.step++;
-        if (this.state.step < DATA.sim.length) {
-            app.renderSim();
-        } else {
-            app.finish();
-        }
-    }, 1800);
-};
-
-// Helper functions need to be accessible
-function showScoreExplanation(score) {
-    const container = document.getElementById('sim-score-explanation');
-    if (!container) return;
-    
-    let message = '';
-    
-    if (score === 5) {
-        message = '🌟 ¡Respuesta perfecta! Servicio excepcional';
-    } else if (score >= 3) {
-        message = '👍 Respuesta aceptable. Hay margen de mejora';
-    } else {
-        message = '⚠️ Respuesta que puede generar una mala experiencia';
-    }
-    
-    container.innerHTML = `
-        <div class="score-explanation">
-            <span class="score-value" style="color: ${score === 5 ? 'var(--success)' : score >= 3 ? 'var(--accent)' : 'var(--danger)'}">
-                ${score}/5 puntos
-            </span>
-            <br>${message}
-        </div>
-    `;
-    
-    setTimeout(() => {
-        if (container) container.innerHTML = '';
-    }, 3000);
-}
-
-function renderSimPips() {
-    const el = document.getElementById('sim-pips');
-    if (!el) return;
-    
-    el.innerHTML = '';
-    for (let i = 0; i < 5; i++) {
-        const pip = document.createElement('div');
-        pip.className = 'sim-score-pip';
-        if (i < app.state.simScores.length) {
-            const s = app.state.simScores[i];
-            pip.classList.add(s === 5 ? 'filled' : s >= 3 ? 'partial' : 'low');
-        }
-        el.appendChild(pip);
-    }
-}
-
-function playSound(type) {
-    if (!app.state.soundEnabled) return;
-    
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    
-    try {
-        const ctx = new AudioContext();
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        
-        const now = ctx.currentTime;
-        
-        switch(type) {
-            case 'correct':
-                oscillator.frequency.setValueAtTime(800, now);
-                oscillator.frequency.setValueAtTime(1000, now + 0.1);
-                gainNode.gain.setValueAtTime(0.1, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                oscillator.start(now);
-                oscillator.stop(now + 0.3);
-                break;
-            case 'wrong':
-                oscillator.frequency.setValueAtTime(300, now);
-                oscillator.frequency.setValueAtTime(200, now + 0.2);
-                gainNode.gain.setValueAtTime(0.1, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                oscillator.start(now);
-                oscillator.stop(now + 0.4);
-                break;
-            case 'combo':
-                oscillator.frequency.setValueAtTime(600, now);
-                oscillator.frequency.setValueAtTime(800, now + 0.1);
-                oscillator.frequency.setValueAtTime(1200, now + 0.2);
-                gainNode.gain.setValueAtTime(0.15, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-                oscillator.start(now);
-                oscillator.stop(now + 0.5);
-                break;
-            case 'complete':
-                oscillator.frequency.setValueAtTime(400, now);
-                oscillator.frequency.linearRampToValueAtTime(800, now + 0.3);
-                oscillator.frequency.linearRampToValueAtTime(400, now + 0.6);
-                gainNode.gain.setValueAtTime(0.15, now);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-                oscillator.start(now);
-                oscillator.stop(now + 0.8);
-                break;
-        }
-    } catch (e) {
-        console.log('Audio not available:', e);
-    }
-}
-
-function showCombo(text) {
-    const toast = document.getElementById('combo-toast');
-    if (!toast) return;
-    
-    toast.textContent = text;
-    toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2000);
-}
-
 // Initialize event listeners
 document.addEventListener('DOMContentLoaded', () => {
     const soundToggle = document.getElementById('sound-toggle');
@@ -2604,14 +2664,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keyboard shortcuts for trivia
     document.addEventListener('keypress', (e) => {
         const triviaView = document.getElementById('view-trivia');
+        const ingrView = document.getElementById('view-ingredientes');
+        const key = e.key.toLowerCase();
+
         if (triviaView && triviaView.classList.contains('active')) {
-            const key = e.key.toLowerCase();
             const options = document.querySelectorAll('#trivia-options .option:not(:disabled)');
-            
             if (key === 'a' && options[0]) options[0].click();
             else if (key === 'b' && options[1]) options[1].click();
             else if (key === 'c' && options[2]) options[2].click();
             else if (key === 'd' && options[3]) options[3].click();
+        }
+
+        if (ingrView && ingrView.classList.contains('active')) {
+            const options = document.querySelectorAll('#ingr-options .option:not(:disabled)');
+            if (key === 'a' && options[0]) options[0].click();
+            else if (key === 'b' && options[1]) options[1].click();
+            else if (key === 'c' && options[2]) options[2].click();
         }
     });
 });
@@ -2627,10 +2695,11 @@ const ACHIEVEMENTS = [
     { id: 'ten_games',    icon: '🔟', name: '10 partidas',         check: (p) => p.totalGames >= 10 },
     { id: 'perfect_tri',  icon: '🎯', name: 'Trivia perfecta',     check: (p) => p.bestTriviaScore >= 7 },
     { id: 'perfect_sim',  icon: '⭐', name: 'Sim 5 estrellas',     check: (p) => p.bestSimScore >= 24 },
+    { id: 'perfect_ingr', icon: '🍽️', name: 'Carta perfecta',     check: (p) => p.bestIngrScore >= 7 },
     { id: 'streak5',      icon: '🔥', name: 'Racha ×5',            check: (p) => p.bestStreak >= 5 },
     { id: 'xp500',        icon: '⚡', name: '500 XP',              check: (p) => p.totalXp >= 500 },
     { id: 'xp2000',       icon: '💎', name: '2000 XP',             check: (p) => p.totalXp >= 2000 },
-    { id: 'both_modes',   icon: '🎭', name: 'Doble modo',          check: (p) => p.triviaGames >= 1 && p.simGames >= 1 },
+    { id: 'all_modes',    icon: '🎭', name: 'Triple modo',          check: (p) => p.triviaGames >= 1 && p.simGames >= 1 && p.ingrGames >= 1 },
 ];
 
 const DB = {
@@ -2643,18 +2712,7 @@ const DB = {
     getPlayer(dni) {
         const db = this.load();
         if (!db[dni]) {
-            db[dni] = {
-                dni,
-                totalXp: 0,
-                totalGames: 0,
-                triviaGames: 0,
-                simGames: 0,
-                bestTriviaScore: 0,
-                bestSimScore: 0,
-                bestStreak: 0,
-                unlockedAchievements: [],
-                history: []
-            };
+            db[dni] = { dni, nombre: '', totalXp: 0, totalGames: 0, triviaGames: 0, simGames: 0, ingrGames: 0, bestTriviaScore: 0, bestSimScore: 0, bestIngrScore: 0, bestStreak: 0, unlockedAchievements: [], history: [] };
             this.save(db);
         }
         return db[dni];
@@ -2663,12 +2721,16 @@ const DB = {
         const db = this.load();
         const p = db[dni] || this.getPlayer(dni);
 
+        if (gameData.nombre) p.nombre = gameData.nombre;
         p.totalXp = (p.totalXp || 0) + gameData.xp;
         p.totalGames = (p.totalGames || 0) + 1;
 
         if (gameData.mode === 'trivia') {
             p.triviaGames = (p.triviaGames || 0) + 1;
             if (gameData.score > (p.bestTriviaScore || 0)) p.bestTriviaScore = gameData.score;
+        } else if (gameData.mode === 'ingredientes') {
+            p.ingrGames = (p.ingrGames || 0) + 1;
+            if (gameData.score > (p.bestIngrScore || 0)) p.bestIngrScore = gameData.score;
         } else {
             p.simGames = (p.simGames || 0) + 1;
             if (gameData.score > (p.bestSimScore || 0)) p.bestSimScore = gameData.score;
@@ -2676,20 +2738,12 @@ const DB = {
 
         if (gameData.maxStreak > (p.bestStreak || 0)) p.bestStreak = gameData.maxStreak;
 
-        // History (max 20 entries)
         const now = new Date();
         const label = now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) + ' ' + now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
         p.history = p.history || [];
-        p.history.unshift({
-            mode: gameData.mode,
-            score: gameData.score,
-            xp: gameData.xp,
-            streak: gameData.maxStreak,
-            date: label
-        });
+        p.history.unshift({ mode: gameData.mode, score: gameData.score, xp: gameData.xp, streak: gameData.maxStreak, date: label });
         if (p.history.length > 20) p.history.pop();
 
-        // Check achievements
         const newAchievements = [];
         for (const ach of ACHIEVEMENTS) {
             if (!p.unlockedAchievements.includes(ach.id) && ach.check(p)) {
@@ -2732,9 +2786,10 @@ function renderProfileView(dni) {
     const level = getLevel(p.totalXp);
     const prog = getLevelProgress(p.totalXp);
     const levelName = LEVEL_NAMES[level] || LEVEL_NAMES[LEVEL_NAMES.length - 1];
+    const displayName = p.nombre || ('DNI ' + dni);
 
-    document.getElementById('profile-avatar').textContent = dni.slice(-2);
-    document.getElementById('profile-dni').textContent = 'DNI ' + dni;
+    document.getElementById('profile-avatar').textContent = p.nombre ? p.nombre.slice(0,2).toUpperCase() : dni.slice(-2);
+    document.getElementById('profile-dni').textContent = (p.nombre ? p.nombre + ' · ' : '') + 'DNI ' + dni;
     document.getElementById('profile-level-name').textContent = `Nivel ${level + 1} · ${levelName}`;
     document.getElementById('profile-xp-label').textContent = `${p.totalXp} XP total`;
     document.getElementById('profile-next-level').textContent = level < LEVEL_THRESHOLDS.length - 1 ? `Próx: ${prog.nextXp} XP` : '¡Nivel máximo!';
@@ -2743,27 +2798,22 @@ function renderProfileView(dni) {
     document.getElementById('pstat-xp').textContent = p.totalXp;
     document.getElementById('pstat-streak').textContent = p.bestStreak || 0;
 
-    // Achievements
     const achGrid = document.getElementById('achievement-grid');
     achGrid.innerHTML = '';
     for (const ach of ACHIEVEMENTS) {
         const unlocked = p.unlockedAchievements && p.unlockedAchievements.includes(ach.id);
-        achGrid.innerHTML += `
-            <div class="achievement ${unlocked ? 'unlocked' : 'locked'}" title="${ach.name}">
-                <div class="achievement-icon">${ach.icon}</div>
-                <div class="achievement-name">${ach.name}</div>
-            </div>`;
+        achGrid.innerHTML += `<div class="achievement ${unlocked ? 'unlocked' : 'locked'}" title="${ach.name}"><div class="achievement-icon">${ach.icon}</div><div class="achievement-name">${ach.name}</div></div>`;
     }
 
-    // History
     const histList = document.getElementById('history-list');
+    const modeLabel = { trivia: 'Trivia', sim: 'Sim', ingredientes: 'Carta' };
     if (!p.history || p.history.length === 0) {
         histList.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:16px;">Sin partidas aún</div>';
     } else {
         histList.innerHTML = p.history.map(h => `
             <div class="history-item">
-                <span class="history-mode-badge ${h.mode}">${h.mode === 'trivia' ? 'Trivia' : 'Sim'}</span>
-                <span class="history-score">${h.mode === 'trivia' ? h.score + '/' + DATA.trivia.length : h.score + 'pts'}</span>
+                <span class="history-mode-badge ${h.mode === 'ingredientes' ? 'sim' : h.mode}">${modeLabel[h.mode] || h.mode}</span>
+                <span class="history-score">${h.score} pts</span>
                 <span class="history-xp">+${h.xp} XP</span>
                 <span class="history-date">${h.date}</span>
             </div>`).join('');
@@ -2812,9 +2862,9 @@ function renderLeaderboard(tab, currentDni) {
         return `
         <div class="lb-item ${isMe ? 'me' : ''}">
             <div class="lb-rank ${rankClass}">${i < 3 ? rankIcons[i] : '#' + (i + 1)}</div>
-            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.dni.slice(-2)}</div>
+            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : p.dni.slice(-2)}</div>
             <div class="lb-info">
-                <div class="lb-dni">DNI ${p.dni}${isMe ? ' <span style="font-size:8px;color:var(--accent);">← VOS</span>' : ''}</div>
+                <div class="lb-dni">${p.nombre || ('DNI ' + p.dni)}${isMe ? ' <span style="font-size:8px;color:var(--accent);">← VOS</span>' : ''}</div>
                 <div class="lb-level">Niv.${level + 1} · ${LEVEL_NAMES[level]}</div>
             </div>
             <div style="text-align:right;">
@@ -2842,6 +2892,7 @@ app.finish = function() {
 
         const result = DB.updatePlayer(dni, {
             mode: app.state.mode,
+            nombre: app.state.nombre,
             score: app.state.score,
             xp: app.state.xp,
             maxStreak: app.state.maxStreak
@@ -2898,12 +2949,12 @@ app.finish = function() {
 
 app.showProfile = function() {
     const dniInput = document.getElementById('user-dni');
+    const nombreInput = document.getElementById('user-nombre');
     const dni = dniInput ? dniInput.value.trim() : app.state.dni;
-    if (!dni || dni.length < 6) {
-        alert('Ingresá tu DNI primero para ver tu perfil');
-        return;
-    }
+    const nombre = nombreInput ? nombreInput.value.trim() : app.state.nombre;
+    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero para ver tu perfil'); return; }
     app.state.dni = dni;
+    if (nombre) { app.state.nombre = nombre; const p = DB.getPlayer(dni); if (nombre) { p.nombre = nombre; const db = DB.load(); db[dni] = p; DB.save(db); } }
     renderProfileView(dni);
     const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
     const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };

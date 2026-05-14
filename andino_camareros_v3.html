@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
@@ -2702,24 +2705,61 @@ const ACHIEVEMENTS = [
     { id: 'all_modes',    icon: '🎭', name: 'Triple modo',          check: (p) => p.triviaGames >= 1 && p.simGames >= 1 && p.ingrGames >= 1 },
 ];
 
+// ── FIREBASE INIT ────────────────────────────────────────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+    authDomain: "rrhhsystem.firebaseapp.com",
+    projectId: "rrhhsystem",
+    storageBucket: "rrhhsystem.firebasestorage.app",
+    messagingSenderId: "71511125212",
+    appId: "1:71511125212:web:03a0ad11b281e397a29819"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const fsdb = firebase.firestore();
+const PLAYERS_COL = 'andino_players';
+
 const DB = {
-    load() {
+    // ── LOCAL CACHE (por dispositivo) ──
+    _localLoad() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
     },
-    save(data) {
+    _localSave(data) {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
     },
+
+    // ── FIRESTORE: leer jugador (async) ──
+    async fetchPlayer(dni) {
+        try {
+            const doc = await fsdb.collection(PLAYERS_COL).doc(dni).get();
+            if (doc.exists) return doc.data();
+        } catch(e) { console.warn('Firestore fetchPlayer error:', e); }
+        return null;
+    },
+
+    // ── GETPLAYER: local primero, luego Firestore ──
     getPlayer(dni) {
-        const db = this.load();
+        const db = this._localLoad();
         if (!db[dni]) {
             db[dni] = { dni, nombre: '', totalXp: 0, totalGames: 0, triviaGames: 0, simGames: 0, ingrGames: 0, bestTriviaScore: 0, bestSimScore: 0, bestIngrScore: 0, bestStreak: 0, unlockedAchievements: [], history: [] };
-            this.save(db);
+            this._localSave(db);
         }
         return db[dni];
     },
-    updatePlayer(dni, gameData) {
-        const db = this.load();
-        const p = db[dni] || this.getPlayer(dni);
+
+    // ── UPDATEPLAYER: actualiza local + Firestore ──
+    async updatePlayer(dni, gameData) {
+        // 1. Intentar traer datos actuales desde Firestore para no pisar XP de otra sesión
+        let p;
+        const remote = await this.fetchPlayer(dni);
+        if (remote) {
+            p = remote;
+            // sincronizar también a local
+            const db = this._localLoad();
+            db[dni] = p;
+            this._localSave(db);
+        } else {
+            p = this.getPlayer(dni);
+        }
 
         if (gameData.nombre) p.nombre = gameData.nombre;
         p.totalXp = (p.totalXp || 0) + gameData.xp;
@@ -2752,12 +2792,35 @@ const DB = {
             }
         }
 
+        // Guardar local
+        const db = this._localLoad();
         db[dni] = p;
-        this.save(db);
+        this._localSave(db);
+
+        // Guardar en Firestore (merge para no pisar campos no incluidos)
+        try {
+            await fsdb.collection(PLAYERS_COL).doc(dni).set(p);
+        } catch(e) { console.warn('Firestore updatePlayer error:', e); }
+
         return { player: p, newAchievements };
     },
+
+    // ── GETALLPLAYERS: desde Firestore, fallback a local ──
+    async getAllPlayersAsync() {
+        try {
+            const snap = await fsdb.collection(PLAYERS_COL).orderBy('totalXp', 'desc').limit(50).get();
+            if (!snap.empty) {
+                return snap.docs.map(d => d.data());
+            }
+        } catch(e) { console.warn('Firestore getAllPlayers error:', e); }
+        // fallback local
+        const db = this._localLoad();
+        return Object.values(db).sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+    },
+
+    // Mantener sync para compatibilidad con código que no puede ser async
     getAllPlayers() {
-        const db = this.load();
+        const db = this._localLoad();
         return Object.values(db).sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
     }
 };
@@ -2824,14 +2887,17 @@ function renderProfileView(dni) {
 
 let currentLbTab = 'global';
 
-function renderLeaderboard(tab, currentDni) {
+async function renderLeaderboard(tab, currentDni) {
     currentLbTab = tab;
     const tabs = ['global','trivia','sim'];
     tabs.forEach(t => {
         document.getElementById('lb-tab-' + t).classList.toggle('active', t === tab);
     });
 
-    const players = DB.getAllPlayers();
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Cargando ranking…</div>';
+
+    const players = await DB.getAllPlayersAsync();
     let sorted;
     if (tab === 'trivia') {
         sorted = [...players].sort((a, b) => (b.bestTriviaScore || 0) - (a.bestTriviaScore || 0));
@@ -2841,7 +2907,6 @@ function renderLeaderboard(tab, currentDni) {
         sorted = [...players].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
     }
 
-    const list = document.getElementById('leaderboard-list');
     if (sorted.length === 0) {
         list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Sin jugadores aún. ¡Sé el primero!</div>';
         return;
@@ -2878,7 +2943,7 @@ function renderLeaderboard(tab, currentDni) {
 // ── EXTEND APP WITH PERSISTENCE ─────────────────────────────────────────────
 
 const _originalFinish = app.finish.bind(app);
-app.finish = function() {
+app.finish = async function() {
     // 1. Save to persistence BEFORE calling original finish
     const dni = app.state.dni;
     let savedPlayer = null;
@@ -2890,7 +2955,7 @@ app.finish = function() {
         const prevPlayer = DB.getPlayer(dni);
         const prevLevel = getLevel(prevPlayer.totalXp);
 
-        const result = DB.updatePlayer(dni, {
+        const result = await DB.updatePlayer(dni, {
             mode: app.state.mode,
             nombre: app.state.nombre,
             score: app.state.score,
@@ -2954,7 +3019,15 @@ app.showProfile = function() {
     const nombre = nombreInput ? nombreInput.value.trim() : app.state.nombre;
     if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero para ver tu perfil'); return; }
     app.state.dni = dni;
-    if (nombre) { app.state.nombre = nombre; const p = DB.getPlayer(dni); if (nombre) { p.nombre = nombre; const db = DB.load(); db[dni] = p; DB.save(db); } }
+    if (nombre) {
+        app.state.nombre = nombre;
+        const p = DB.getPlayer(dni);
+        p.nombre = nombre;
+        const ldb = DB._localLoad();
+        ldb[dni] = p;
+        DB._localSave(ldb);
+        try { fsdb.collection(PLAYERS_COL).doc(dni).set(p, {merge:true}); } catch(e) {}
+    }
     renderProfileView(dni);
     const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
     const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
@@ -2967,24 +3040,22 @@ app.showProfile = function() {
     }, 200);
 };
 
-app.showLeaderboard = function() {
+app.showLeaderboard = async function() {
     const dniInput = document.getElementById('user-dni');
     const dni = (dniInput ? dniInput.value.trim() : '') || app.state.dni || '';
     if (dni.length >= 6) app.state.dni = dni;
-    renderLeaderboard('global', app.state.dni);
     const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
     const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
     showLoading();
-    setTimeout(() => {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('view-leaderboard').classList.add('active');
-        lucide.createIcons();
-        hideLoading();
-    }, 200);
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-leaderboard').classList.add('active');
+    lucide.createIcons();
+    await renderLeaderboard('global', app.state.dni);
+    hideLoading();
 };
 
 app.switchLbTab = function(tab) {
-    renderLeaderboard(tab, app.state.dni);
+    renderLeaderboard(tab, app.state.dni); // async, no-await intentional
 };
 
 app.goHome = function() {

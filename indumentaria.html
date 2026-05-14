@@ -463,10 +463,48 @@ body::before {
   font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
 }
 
-@media (max-width: 640px) {
-  .ind-prenda-card {
-    grid-template-columns: 1fr;
-  }
+/* ─── FILTROS TALLE MODAL ─────────────────────────────────────── */
+.ind-todas-filtros {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ind-talle-chip {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--bc-t);
+  letter-spacing: .04em;
+}
+.ind-talle-chip:hover { border-color: var(--m9); color: var(--m9); }
+.ind-talle-chip.active {
+  background: color-mix(in srgb, var(--m9) 18%, transparent);
+  border-color: var(--m9);
+  color: var(--m9);
+}
+.ind-talle-chip.all.active {
+  background: var(--bc-text);
+  border-color: var(--bc-text);
+  color: #fff;
+}
+.ind-filtros-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  flex-shrink: 0;
+}
   .ind-stock-bar {
     grid-column: 1;
     border-right: none;
@@ -825,6 +863,7 @@ body::before {
           <optgroup label="🟦 Barra Chalaca">
             <option value="Remera blanca|torso|Barra Chalaca|XS,S,M,L,XL,XXL|Remera manga corta blanca institucional">Remera blanca</option>
             <option value="Delantal|delantal|Barra Chalaca|Único|Delantal de trabajo Barra Chalaca">Delantal</option>
+            <option value="Faja|otro|Barra Chalaca|XS,S,M,L,XL,XXL|Faja institucional Barra Chalaca">Faja</option>
             <option value="Pantalón azul|pantalon|Barra Chalaca|36,38,40,42,44,46|Pantalón de cocina azul">Pantalón azul</option>
             <option value="Botines de trabajo|calzado|Barra Chalaca|35,36,37,38,39,40,41,42,43,44,45,46|Botines de seguridad">Botines de trabajo</option>
             <option value="Gorra|cabeza|Barra Chalaca|Único|Gorra institucional Barra Chalaca">Gorra</option>
@@ -1693,17 +1732,51 @@ const IND = (() => {
   }
 
   // ── VER TODAS LAS ENTREGAS ───────────────────────────────────────
+  let _todasPrendaId = null;
+  let _todasTalleFiltro = '';
+
   function verTodas(prendaId) {
+    _todasPrendaId   = prendaId;
+    _todasTalleFiltro = '';
     const p = _prendas.find(x => x.id === prendaId);
     if (!p) return;
-    const entregas = (p.entregas || []).slice().reverse();
 
     document.getElementById('ind-todas-icon').textContent  = CAT_ICON[p.cat] || '📦';
     document.getElementById('ind-todas-title').textContent = p.nombre + (p.local ? ' · ' + p.local : '');
-    document.getElementById('ind-todas-count').textContent = `${entregas.length} entrega${entregas.length !== 1 ? 's' : ''}`;
+
+    // Construir chips de talle dinámicamente según los talles que tenga la prenda
+    const tallesDisponibles = [...new Set((p.entregas||[]).map(e => e.talle).filter(Boolean))];
+    const filtrosEl = document.getElementById('ind-todas-filtros');
+    filtrosEl.innerHTML = `<span class="ind-filtros-label">Talle:</span>
+      <span class="ind-talle-chip all active" onclick="IND.filtrarTalle('')">Todos</span>
+      ${tallesDisponibles.map(t => `<span class="ind-talle-chip" onclick="IND.filtrarTalle('${_esc(t)}')">${_esc(t)}</span>`).join('')}`;
+
+    _renderTodasTabla(p);
+    document.getElementById('ind-todas-overlay').classList.add('open');
+  }
+
+  function filtrarTalle(talle) {
+    _todasTalleFiltro = talle;
+    // Actualizar chips activos
+    document.querySelectorAll('.ind-talle-chip').forEach(chip => {
+      const isAll = chip.classList.contains('all');
+      chip.classList.toggle('active', talle === '' ? isAll : chip.textContent === talle);
+    });
+    const p = _prendas.find(x => x.id === _todasPrendaId);
+    if (p) _renderTodasTabla(p);
+  }
+
+  function _renderTodasTabla(p) {
+    const todas = (p.entregas || []).slice().reverse();
+    const filtradas = _todasTalleFiltro
+      ? todas.filter(e => e.talle === _todasTalleFiltro)
+      : todas;
+
+    document.getElementById('ind-todas-count').textContent =
+      `${filtradas.length} entrega${filtradas.length !== 1 ? 's' : ''}${_todasTalleFiltro ? ' · Talle ' + _todasTalleFiltro : ''}`;
 
     const tbody = document.getElementById('ind-todas-tbody');
-    tbody.innerHTML = entregas.length ? entregas.map(e => {
+    tbody.innerHTML = filtradas.length ? filtradas.map(e => {
       const nombre   = e.empNombre || 'Empleado eliminado';
       const dni      = e.empDni    || '—';
       const inits    = nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -1719,13 +1792,15 @@ const IND = (() => {
           <td><button class="ind-entrega-del" title="Quitar" onclick="IND.quitarEntrega('${p.id}','${e.id}');IND.cerrarTodas()">✕</button></td>
         </tr>`;
     }).join('')
-    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Sin entregas</td></tr>`;
-
-    document.getElementById('ind-todas-overlay').classList.add('open');
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">
+        ${_todasTalleFiltro ? `Sin entregas en talle ${_todasTalleFiltro}` : 'Sin entregas registradas'}
+       </td></tr>`;
   }
 
   function cerrarTodas() {
     document.getElementById('ind-todas-overlay').classList.remove('open');
+    _todasPrendaId    = null;
+    _todasTalleFiltro = '';
   }
 
   return {
@@ -1734,7 +1809,7 @@ const IND = (() => {
     onPrendaSelect,
     abrirAsignar, cerrarAsignar, _onDniInput, _validarAsignar, confirmarEntrega, quitarEntrega,
     buscarPorDni,
-    verTodas, cerrarTodas,
+    verTodas, cerrarTodas, filtrarTalle,
   };
 })();
 
@@ -1751,6 +1826,11 @@ IND.init();
         <div class="ind-todas-title" id="ind-todas-title">—</div>
       </div>
       <button class="bj-modal-close" onclick="IND.cerrarTodas()" style="margin-left:auto">✕</button>
+    </div>
+    <!-- Filtros de talle -->
+    <div class="ind-todas-filtros" id="ind-todas-filtros">
+      <span class="ind-filtros-label">Talle:</span>
+      <span class="ind-talle-chip all active" onclick="IND.filtrarTalle('')">Todos</span>
     </div>
     <div class="ind-todas-body">
       <table class="ind-todas-table">

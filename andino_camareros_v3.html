@@ -1377,6 +1377,217 @@
             color: var(--text-muted);
             margin-top: 6px;
         }
+
+        /* ── DAILY STREAK BANNER ── */
+        .streak-banner {
+            background: linear-gradient(135deg, rgba(232,200,74,0.12), rgba(232,200,74,0.04));
+            border: 1px solid rgba(232,200,74,0.3);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .streak-fire {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .streak-banner-info {
+            flex: 1;
+        }
+        .streak-banner-days {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+        .streak-banner-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+        .streak-banner-multiplier {
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(232,200,74,0.15);
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        /* ── DAILY CHALLENGE CARD ── */
+        .daily-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 1px solid rgba(100,150,255,0.3);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .daily-card::before {
+            content: '';
+            position: absolute;
+            top: -30px; right: -30px;
+            width: 100px; height: 100px;
+            background: radial-gradient(circle, rgba(100,150,255,0.15), transparent 70%);
+            pointer-events: none;
+        }
+        .daily-card:hover { border-color: rgba(100,150,255,0.6); transform: translateY(-1px); }
+        .daily-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .daily-badge {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            background: rgba(100,150,255,0.2);
+            color: #6496ff;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+        }
+        .daily-card-title {
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 900;
+            letter-spacing: 0.3px;
+        }
+        .daily-card-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .daily-completed {
+            color: var(--success);
+            font-family: var(--font-mono);
+            font-size: 10px;
+        }
+
+        /* ── UNLOCK BADGES ── */
+        .unlock-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 8px 0 4px;
+        }
+        .unlock-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .unlock-badge.unlocked {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(232,200,74,0.08);
+        }
+        .unlock-badge.locked {
+            opacity: 0.4;
+        }
+
+        /* ── ADMIN PANEL ── */
+        #view-admin .admin-section {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+        .admin-section-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+        .admin-q-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .admin-q-text {
+            flex: 1;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text);
+        }
+        .admin-q-delete {
+            background: rgba(248,113,113,0.1);
+            border: 1px solid rgba(248,113,113,0.3);
+            color: var(--danger);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .admin-q-delete:hover { background: rgba(248,113,113,0.25); }
+        .admin-add-form {
+            background: var(--surface);
+            border: 1px solid var(--border-hover);
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 10px;
+        }
+        .admin-add-form textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 12px;
+            padding: 8px 10px;
+            resize: vertical;
+            min-height: 60px;
+            margin-bottom: 8px;
+        }
+        .admin-add-form input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 12px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+        .admin-add-form input::placeholder,
+        .admin-add-form textarea::placeholder { color: var(--text-muted); }
+        .admin-tabs { display:flex; gap:6px; margin-bottom:14px; }
+        .admin-tab {
+            flex: 1; padding: 8px 4px; border-radius: 8px; text-align:center;
+            font-size: 11px; font-family: var(--font-mono); font-weight:600;
+            cursor: pointer; border: 1px solid var(--border); color: var(--text-muted);
+            background: var(--surface-2); transition: all 0.2s;
+        }
+        .admin-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(232,200,74,0.08); }
+        .admin-status { font-size:11px; margin-top:6px; min-height:16px; }
+        .admin-status.ok { color: var(--success); }
+        .admin-status.err { color: var(--danger); }
+
     </style>
 </head>
 <body>
@@ -1403,7 +1614,7 @@
 
     <div class="app-header">
         <h1>ANDINO <span style="color: var(--accent); -webkit-text-fill-color: initial;">CAMAREROS</span></h1>
-        <span class="header-badge">v4.0</span>
+        <span class="header-badge">v6.0</span>
     </div>
     <div class="xp-strip"><div class="xp-strip-fill" id="xp-bar" style="width:0%"></div></div>
 
@@ -1442,9 +1653,28 @@
             </div>
         </div>
 
+        <!-- Daily streak banner (populated by JS) -->
+        <div id="daily-streak-banner" style="display:none;" class="streak-banner">
+            <div class="streak-fire" id="streak-fire-emoji">🔥</div>
+            <div class="streak-banner-info">
+                <div class="streak-banner-days" id="streak-days-text">3 días seguidos</div>
+                <div class="streak-banner-sub" id="streak-sub-text">¡Seguí jugando para no romper la racha!</div>
+            </div>
+            <div class="streak-banner-multiplier" id="streak-multiplier">×1.5</div>
+        </div>
+
+        <!-- Daily challenge card -->
+        <div class="daily-card" onclick="app.startDailyChallenge()" id="daily-card">
+            <div class="daily-card-header">
+                <span class="daily-badge">DESAFÍO DEL DÍA</span>
+            </div>
+            <div class="daily-card-title">⚡ Trivia de Hoy</div>
+            <div class="daily-card-sub" id="daily-card-sub">Mismas preguntas para todo el equipo · XP ×2</div>
+        </div>
+
         <button class="btn" onclick="app.initGame()">
             <i data-lucide="play"></i>
-            Comenzar Nivel
+            Comenzar Entrenamiento Libre
         </button>
 
         <div style="display:flex; gap:8px; margin-top:10px;">
@@ -1455,6 +1685,12 @@
             <button class="btn btn-secondary" style="flex:1; font-size:13px;" onclick="app.showLeaderboard()">
                 <i data-lucide="trophy"></i>
                 Ranking
+            </button>
+        </div>
+
+        <div id="admin-access-btn" style="display:none; margin-top:8px;">
+            <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(232,200,74,0.3);" onclick="app.showAdmin()">
+                <i data-lucide="settings"></i> Panel de Administración
             </button>
         </div>
 
@@ -3070,10 +3306,484 @@ app.goHome = function() {
     }, 200);
 };
 
+
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 1: DAILY STREAK (rachas entre días)
+// ══════════════════════════════════════════════════════════════════
+
+const STREAK_COL = 'andino_streaks';
+
+async function loadDailyStreak(dni) {
+    try {
+        const doc = await fsdb.collection(STREAK_COL).doc(dni).get();
+        if (doc.exists) return doc.data();
+    } catch(e) {}
+    return { currentStreak: 0, lastPlayDate: null, longestStreak: 0 };
+}
+
+async function updateDailyStreak(dni) {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    let streak = await loadDailyStreak(dni);
+
+    const last = streak.lastPlayDate;
+    if (last === today) return streak; // ya jugó hoy, no suma
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().slice(0, 10);
+
+    if (last === yStr) {
+        streak.currentStreak = (streak.currentStreak || 0) + 1;
+    } else {
+        streak.currentStreak = 1; // se rompió la racha
+    }
+    streak.lastPlayDate = today;
+    streak.longestStreak = Math.max(streak.longestStreak || 0, streak.currentStreak);
+
+    try { await fsdb.collection(STREAK_COL).doc(dni).set(streak); } catch(e) {}
+    return streak;
+}
+
+function getStreakMultiplier(days) {
+    if (days >= 7) return 2.0;
+    if (days >= 3) return 1.5;
+    if (days >= 2) return 1.25;
+    return 1.0;
+}
+
+async function renderStreakBanner(dni) {
+    const banner = document.getElementById('daily-streak-banner');
+    if (!dni || dni.length < 6) { banner.style.display = 'none'; return; }
+    const streak = await loadDailyStreak(dni);
+    const days = streak.currentStreak || 0;
+    if (days < 2) { banner.style.display = 'none'; return; }
+
+    const mult = getStreakMultiplier(days);
+    const today = new Date().toISOString().slice(0, 10);
+    const playedToday = streak.lastPlayDate === today;
+
+    document.getElementById('streak-fire-emoji').textContent = days >= 7 ? '🔥' : days >= 3 ? '🔥' : '✨';
+    document.getElementById('streak-days-text').textContent = `${days} días seguidos`;
+    document.getElementById('streak-sub-text').textContent = playedToday
+        ? '¡Ya jugaste hoy! Volvé mañana para mantener la racha.'
+        : '¡Jugá hoy para no romper la racha!';
+    document.getElementById('streak-multiplier').textContent = `×${mult}`;
+    banner.style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 2: DAILY CHALLENGE (desafío del día)
+// ══════════════════════════════════════════════════════════════════
+
+function getDailyDateStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function getDailySeed() {
+    // Simple deterministic seed from date so same questions each día
+    const s = getDailyDateStr().replace(/-/g, '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+    return Math.abs(h);
+}
+
+function seededShuffle(arr, seed) {
+    const a = [...arr];
+    let s = seed;
+    const rand = () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function getDailyQuestions() {
+    const seed = getDailySeed();
+    const allTrivia = [...DATA.trivia, ...(window._extraTrivia || [])];
+    const shuffled = seededShuffle(allTrivia, seed);
+    return shuffled.slice(0, Math.min(7, shuffled.length));
+}
+
+function hasDailyCompleted(dni) {
+    const key = 'daily_done_' + getDailyDateStr();
+    try { return localStorage.getItem(key + '_' + dni) === '1'; } catch { return false; }
+}
+
+function markDailyCompleted(dni) {
+    const key = 'daily_done_' + getDailyDateStr() + '_' + dni;
+    try { localStorage.setItem(key, '1'); } catch {}
+}
+
+function renderDailyCard(dni) {
+    const sub = document.getElementById('daily-card-sub');
+    const card = document.getElementById('daily-card');
+    if (!sub) return;
+    const dateStr = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+    const done = dni && hasDailyCompleted(dni);
+    if (done) {
+        sub.innerHTML = `<span class="daily-completed">✓ Completado hoy</span> · ${dateStr}`;
+        card.style.opacity = '0.6';
+        card.style.cursor = 'default';
+    } else {
+        sub.textContent = `Mismas preguntas para todo el equipo · XP ×2 · ${dateStr}`;
+        card.style.opacity = '1';
+        card.style.cursor = 'pointer';
+    }
+}
+
+app.startDailyChallenge = function() {
+    const dni = (document.getElementById('user-dni') || {}).value?.trim() || app.state.dni;
+    const nombre = (document.getElementById('user-nombre') || {}).value?.trim() || app.state.nombre;
+    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero'); return; }
+    if (hasDailyCompleted(dni)) { alert('¡Ya completaste el desafío de hoy! Volvé mañana 🔥'); return; }
+
+    app.state.dni = dni;
+    app.state.nombre = nombre;
+    app.state.mode = 'trivia';
+    app.state.isDaily = true;
+    app.state.dailyXpMult = 2;
+
+    // Override DATA.trivia temporarily with daily questions
+    window._dailyQuestions = getDailyQuestions();
+    window._triviaOverride = window._dailyQuestions;
+
+    app.initGame();
+};
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 6: DESBLOQUEABLES POR NIVEL
+// ══════════════════════════════════════════════════════════════════
+
+const UNLOCKS = [
+    { level: 3, id: 'hard_mode', label: '⚡ Modo Difícil', desc: 'Menos tiempo por pregunta' },
+    { level: 5, id: 'vip_rank',  label: '👑 Destacado en Ranking', desc: 'Tu avatar brilla en el leaderboard' },
+    { level: 7, id: 'add_q',     label: '✏️ Crear Preguntas', desc: 'Aportás preguntas al banco' },
+];
+
+function renderUnlockBadges(playerXp) {
+    const level = getLevel(playerXp);
+    const container = document.getElementById('unlock-badges-row');
+    if (!container) return;
+    container.innerHTML = UNLOCKS.map(u => {
+        const unlocked = level >= u.level;
+        return `<span class="unlock-badge ${unlocked ? 'unlocked' : 'locked'}" title="${u.desc}">
+            ${u.label} ${unlocked ? '' : '(Niv.' + u.level + ')'}
+        </span>`;
+    }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════════════════
+
+// DNIs autorizados como admin
+const ADMIN_DNIS = ['admin', '00000000'];
+// Collection overrides stored in Firestore
+const EXTRA_COL = 'andino_extra_questions';
+
+let _adminTab = 'trivia';
+let _extraData = { trivia: [], sim: [], ingr: [] };
+
+async function loadExtraQuestions() {
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        if (doc.exists) {
+            _extraData = doc.data();
+            window._extraTrivia = _extraData.trivia || [];
+            window._extraSim = _extraData.sim || [];
+            window._extraIngr = _extraData.ingr || [];
+            // Merge into DATA
+            DATA.trivia = [...DATA.trivia.filter(q => !q._extra), ...(window._extraTrivia || [])];
+            DATA.simBank = [...DATA.simBank.filter(q => !q._extra), ...(window._extraSim || [])];
+            DATA.ingredientesBank = [...DATA.ingredientesBank.filter(q => !q._extra), ...(window._extraIngr || [])];
+        }
+    } catch(e) { console.warn('loadExtraQuestions error:', e); }
+}
+
+async function saveExtraQuestions() {
+    try {
+        await fsdb.collection(EXTRA_COL).doc('bank').set(_extraData);
+    } catch(e) { console.warn('saveExtraQuestions error:', e); }
+}
+
+function isAdmin(dni) {
+    return ADMIN_DNIS.includes(String(dni).toLowerCase().trim());
+}
+
+app.showAdmin = function() {
+    const dni = (document.getElementById('user-dni') || {}).value?.trim() || app.state.dni || '';
+    if (!isAdmin(dni)) { alert('Acceso denegado'); return; }
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-admin').classList.add('active');
+    lucide.createIcons();
+    app.switchAdminTab('trivia');
+};
+
+app.switchAdminTab = function(tab) {
+    _adminTab = tab;
+    ['trivia', 'sim', 'ingr'].forEach(t => {
+        document.getElementById('atab-' + t).classList.toggle('active', t === tab);
+        const addForm = document.getElementById('admin-add-' + t);
+        if (addForm) addForm.style.display = t === tab ? 'block' : 'none';
+    });
+
+    const labels = { trivia: 'Preguntas de Trivia', sim: 'Situaciones del Simulador', ingr: 'Preguntas de Carta' };
+    document.getElementById('admin-section-label').textContent = labels[tab];
+
+    renderAdminList(tab);
+};
+
+function renderAdminList(tab) {
+    const list = document.getElementById('admin-q-list');
+    let items = [];
+    if (tab === 'trivia') items = (_extraData.trivia || []);
+    if (tab === 'sim')    items = (_extraData.sim || []);
+    if (tab === 'ingr')   items = (_extraData.ingr || []);
+
+    if (!items.length) {
+        list.innerHTML = '<div style="font-size:11px; color:var(--text-muted); padding:8px 0;">Sin preguntas extra aún. Las del juego base no se pueden borrar desde acá.</div>';
+        return;
+    }
+
+    list.innerHTML = items.map((q, i) => {
+        const preview = tab === 'trivia' ? q.q : tab === 'sim' ? q.client : `[${q.category}] ${q.dish}: ${q.q}`;
+        return `<div class="admin-q-item">
+            <div class="admin-q-text">${preview.slice(0, 120)}${preview.length > 120 ? '…' : ''}</div>
+            <button class="admin-q-delete" onclick="app.adminDelete('${tab}', ${i})">✕</button>
+        </div>`;
+    }).join('');
+}
+
+app.adminDelete = async function(tab, idx) {
+    if (!confirm('¿Eliminar esta pregunta?')) return;
+    _extraData[tab] = (_extraData[tab] || []).filter((_, i) => i !== idx);
+    await saveExtraQuestions();
+    await loadExtraQuestions();
+    renderAdminList(tab);
+};
+
+app.adminAddTrivia = async function() {
+    const status = document.getElementById('admin-trivia-status');
+    const q = document.getElementById('adm-trivia-q').value.trim();
+    const o0 = document.getElementById('adm-trivia-o0').value.trim();
+    const o1 = document.getElementById('adm-trivia-o1').value.trim();
+    const o2 = document.getElementById('adm-trivia-o2').value.trim();
+    const exp = document.getElementById('adm-trivia-exp').value.trim();
+    if (!q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+
+    const newQ = { q, o: [o0, o1, o2], c: 0, explanation: exp, _extra: true };
+    _extraData.trivia = [...(_extraData.trivia || []), newQ];
+    await saveExtraQuestions();
+    await loadExtraQuestions();
+    ['adm-trivia-q','adm-trivia-o0','adm-trivia-o1','adm-trivia-o2','adm-trivia-exp'].forEach(id => document.getElementById(id).value = '');
+    status.textContent = '✓ Pregunta agregada correctamente';
+    status.className = 'admin-status ok';
+    renderAdminList('trivia');
+    setTimeout(() => status.textContent = '', 3000);
+};
+
+app.adminAddSim = async function() {
+    const status = document.getElementById('admin-sim-status');
+    const client = document.getElementById('adm-sim-client').value.trim();
+    const good = document.getElementById('adm-sim-good').value.trim();
+    const mid = document.getElementById('adm-sim-mid').value.trim();
+    const bad = document.getElementById('adm-sim-bad').value.trim();
+    if (!client || !good || !mid || !bad) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+
+    const newQ = { client, options: [
+        { t: good, s: 5, r: '¡Excelente respuesta!' },
+        { t: mid, s: 3, r: 'Podría ser mejor.' },
+        { t: bad, s: 1, r: 'Respuesta incorrecta.' }
+    ], _extra: true };
+    _extraData.sim = [...(_extraData.sim || []), newQ];
+    await saveExtraQuestions();
+    await loadExtraQuestions();
+    ['adm-sim-client','adm-sim-good','adm-sim-mid','adm-sim-bad'].forEach(id => document.getElementById(id).value = '');
+    status.textContent = '✓ Situación agregada correctamente';
+    status.className = 'admin-status ok';
+    renderAdminList('sim');
+    setTimeout(() => status.textContent = '', 3000);
+};
+
+app.adminAddIngr = async function() {
+    const status = document.getElementById('admin-ingr-status');
+    const dish = document.getElementById('adm-ingr-dish').value.trim();
+    const emoji = document.getElementById('adm-ingr-emoji').value.trim() || '🍽️';
+    const cat = document.getElementById('adm-ingr-cat').value.trim().toUpperCase();
+    const q = document.getElementById('adm-ingr-q').value.trim();
+    const o0 = document.getElementById('adm-ingr-o0').value.trim();
+    const o1 = document.getElementById('adm-ingr-o1').value.trim();
+    const o2 = document.getElementById('adm-ingr-o2').value.trim();
+    const exp = document.getElementById('adm-ingr-exp').value.trim();
+    if (!dish || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá los campos obligatorios'; status.className = 'admin-status err'; return; }
+
+    const newQ = { dish, emoji, category: cat, q, o: [o0, o1, o2], c: 0, explanation: exp, _extra: true };
+    _extraData.ingr = [...(_extraData.ingr || []), newQ];
+    await saveExtraQuestions();
+    await loadExtraQuestions();
+    ['adm-ingr-dish','adm-ingr-emoji','adm-ingr-cat','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
+    status.textContent = '✓ Pregunta de carta agregada';
+    status.className = 'admin-status ok';
+    renderAdminList('ingr');
+    setTimeout(() => status.textContent = '', 3000);
+};
+
+// ══════════════════════════════════════════════════════════════════
+// HOME INIT: cargar streak + daily card + unlock badges + extras
+// ══════════════════════════════════════════════════════════════════
+
+// Patch initGame to handle daily override
+const _origInitGame = app.initGame.bind(app);
+app.initGame = function() {
+    if (app.state.isDaily && window._triviaOverride) {
+        // Temporarily override for this session
+        app._dailyTriviaBackup = DATA.trivia;
+        DATA.trivia = window._triviaOverride;
+        window._triviaOverride = null;
+    }
+    _origInitGame();
+};
+
+// Patch finish to restore daily override and mark completed
+const _origFinish2 = app.finish.bind(app);
+app.finish = async function() {
+    const isDaily = app.state.isDaily;
+    const dni = app.state.dni;
+
+    // Apply daily XP multiplier
+    if (isDaily && app.state.dailyXpMult) {
+        app.state.xp = Math.round(app.state.xp * app.state.dailyXpMult);
+    }
+
+    await _origFinish2();
+
+    // Restore trivia bank
+    if (app._dailyTriviaBackup) {
+        DATA.trivia = app._dailyTriviaBackup;
+        app._dailyTriviaBackup = null;
+    }
+
+    // Mark daily completed + update streak
+    if (isDaily && dni) {
+        markDailyCompleted(dni);
+        await updateDailyStreak(dni);
+    } else if (dni) {
+        await updateDailyStreak(dni);
+    }
+
+    app.state.isDaily = false;
+    app.state.dailyXpMult = 1;
+};
+
+// Called on DNI input change or home load
+async function onHomeInit() {
+    const dniInput = document.getElementById('user-dni');
+    if (!dniInput) return;
+    const dni = dniInput.value.trim();
+
+    // Show/hide admin button
+    const adminBtn = document.getElementById('admin-access-btn');
+    if (adminBtn) adminBtn.style.display = isAdmin(dni) ? 'block' : 'none';
+
+    // Render streak banner
+    await renderStreakBanner(dni);
+    // Render daily card
+    renderDailyCard(dni);
+}
+
+// Wire DNI input to live-update home
+document.addEventListener('DOMContentLoaded', async () => {
+    const dniInput = document.getElementById('user-dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', () => onHomeInit());
+        dniInput.addEventListener('change', () => onHomeInit());
+    }
+    // Load extra questions from Firestore on startup
+    await loadExtraQuestions();
+});
+
+// Also call onHomeInit when going home
+const _origGoHome = app.goHome.bind(app);
+app.goHome = function() {
+    _origGoHome();
+    setTimeout(() => onHomeInit(), 250);
+};
+
 // Error handling
 window.addEventListener('error', (e) => {
     console.error('App error:', e.error);
 });
 </script>
+
+    <!-- ── ADMIN PANEL ── -->
+    <div id="view-admin" class="view">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">
+                🛠️ Admin
+            </div>
+            <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="app.goHome()">
+                <i data-lucide="arrow-left"></i> Volver
+            </button>
+        </div>
+
+        <div class="admin-tabs">
+            <div class="admin-tab active" id="atab-trivia" onclick="app.switchAdminTab('trivia')">Trivia</div>
+            <div class="admin-tab" id="atab-sim" onclick="app.switchAdminTab('sim')">Simulador</div>
+            <div class="admin-tab" id="atab-ingr" onclick="app.switchAdminTab('ingr')">Carta</div>
+        </div>
+
+        <div class="admin-section">
+            <div class="admin-section-title" id="admin-section-label">Preguntas de Trivia</div>
+            <div id="admin-q-list" style="max-height:300px; overflow-y:auto;"></div>
+
+            <div class="admin-add-form" id="admin-add-trivia">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA</div>
+                <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
+                <input id="adm-trivia-o0" placeholder="Opción A (la correcta)">
+                <input id="adm-trivia-o1" placeholder="Opción B">
+                <input id="adm-trivia-o2" placeholder="Opción C">
+                <textarea id="adm-trivia-exp" placeholder="Explicación al responder" style="min-height:44px;"></textarea>
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddTrivia()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-trivia-status"></div>
+            </div>
+
+            <div class="admin-add-form" id="admin-add-sim" style="display:none;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR SITUACIÓN</div>
+                <textarea id="adm-sim-client" placeholder="Frase del cliente"></textarea>
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta buena (5pts):</div>
+                <input id="adm-sim-good" placeholder="Texto respuesta buena">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta media (3pts):</div>
+                <input id="adm-sim-mid" placeholder="Texto respuesta media">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta mala (1pt):</div>
+                <input id="adm-sim-bad" placeholder="Texto respuesta mala">
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddSim()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-sim-status"></div>
+            </div>
+
+            <div class="admin-add-form" id="admin-add-ingr" style="display:none;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
+                <input id="adm-ingr-dish" placeholder="Nombre del plato">
+                <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:100px;">
+                <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
+                <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
+                <input id="adm-ingr-o0" placeholder="Opción A (correcta)">
+                <input id="adm-ingr-o1" placeholder="Opción B">
+                <input id="adm-ingr-o2" placeholder="Opción C">
+                <textarea id="adm-ingr-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddIngr()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-ingr-status"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
+                                                                                                                                        

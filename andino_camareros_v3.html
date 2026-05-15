@@ -7,7 +7,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@0.263.1"></script>
     <!-- Firebase compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -2271,7 +2271,7 @@
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
                 <div class="mode-card selected" onclick="app.setMode('trivia', this)">
-                    <div class="mode-icon"><i data-lucide="brain-circuit"></i></div>
+                    <div class="mode-icon"><i data-lucide="cpu"></i></div>
                     <div>
                         <span class="mode-title">Trivia Operativa</span>
                         <span class="mode-desc">Protocolos, seguridad y rapidez.</span>
@@ -2658,8 +2658,12 @@
 </div><!-- /container -->
 
 <script>
-// Initialize Lucide icons
-lucide.createIcons();
+// Initialize Lucide icons — safe wrapper for dynamic views
+function safeCreateIcons() {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+    }
+}
 
 // Updated DATA with new sim scenarios and random selection
 const DATA = {
@@ -2925,7 +2929,7 @@ const app = (() => {
             if (viewElement) {
                 viewElement.classList.add('active');
             }
-            lucide.createIcons();
+            safeCreateIcons();
             hideLoading();
         }, 300);
     };
@@ -3157,7 +3161,7 @@ const app = (() => {
             
             renderStreakDots();
             app.startTimer(10);
-            lucide.createIcons();
+            safeCreateIcons();
         },
 
         startTimer: (sec) => {
@@ -3306,7 +3310,7 @@ const app = (() => {
                     opts.appendChild(b);
                 });
                 
-                lucide.createIcons();
+                safeCreateIcons();
             }, 300);
         },
 
@@ -3413,7 +3417,7 @@ const app = (() => {
 
             // Timer (15s for ingredientes — a bit more time)
             app.startIngrTimer(15);
-            lucide.createIcons();
+            safeCreateIcons();
         },
 
         startIngrTimer: (sec) => {
@@ -3577,7 +3581,7 @@ const app = (() => {
                     if (clampedStars === 5) { createConfetti(); createConfetti(); }
                 }
 
-                lucide.createIcons();
+                safeCreateIcons();
             }, 500);
         },
 
@@ -3633,7 +3637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const icon = soundToggle.querySelector('i');
             if (icon) {
                 icon.setAttribute('data-lucide', app.state.soundEnabled ? 'volume-2' : 'volume-x');
-                lucide.createIcons();
+                safeCreateIcons();
             }
         });
     }
@@ -4019,7 +4023,7 @@ app.showProfile = function() {
     setTimeout(() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-profile').classList.add('active');
-        lucide.createIcons();
+        safeCreateIcons();
         hideLoading();
     }, 200);
 };
@@ -4033,7 +4037,7 @@ app.showLeaderboard = async function() {
     showLoading();
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-leaderboard').classList.add('active');
-    lucide.createIcons();
+    safeCreateIcons();
     await renderLeaderboard('global', app.state.dni);
     hideLoading();
 };
@@ -4049,7 +4053,7 @@ app.goHome = function() {
     setTimeout(() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-login').classList.add('active');
-        lucide.createIcons();
+        safeCreateIcons();
         hideLoading();
     }, 200);
 };
@@ -4377,7 +4381,7 @@ app.finish = async function() {
             if (btn && pending > 0) {
                 btn.style.display = 'flex';
                 btn.innerHTML = `<i data-lucide="brain"></i> Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
-                lucide.createIcons();
+                safeCreateIcons();
             } else if (btn) {
                 btn.style.display = 'none';
             }
@@ -4421,7 +4425,7 @@ app.startRepaso = function() {
 
     const pending = REPASODB.getPending(dni);
     switchView('repaso');
-    lucide.createIcons();
+    safeCreateIcons();
 
     if (pending.length === 0) {
         document.getElementById('repaso-empty-state').style.display = 'block';
@@ -4511,7 +4515,7 @@ function renderRepasoQuestion() {
         opts.appendChild(b);
     });
 
-    lucide.createIcons();
+    safeCreateIcons();
     startRepasoTimer(12);
 }
 
@@ -4673,7 +4677,7 @@ app.showAdmin = function() {
     if (!isAdmin(dni)) { alert('Acceso denegado'); return; }
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-admin').classList.add('active');
-    lucide.createIcons();
+    safeCreateIcons();
     app.switchAdminTab('dash'); // default to dashboard
 };
 
@@ -4933,6 +4937,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         dniInput.addEventListener('input', () => onHomeInit());
         dniInput.addEventListener('change', () => onHomeInit());
     }
+    // Initialize icons on load
+    safeCreateIcons();
     // Load extra questions from Firestore on startup
     await loadExtraQuestions();
 });

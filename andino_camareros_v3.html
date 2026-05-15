@@ -2444,10 +2444,6 @@
             <i data-lucide="play"></i>
             Comenzar Entrenamiento Libre
         </button>
-        <button class="btn" style="margin-top: 15px; background-color: #333; color: white;" onclick="app.showAdmin()">
-    🔒 Acceso 
-</button>
-        
 
         <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="btn btn-secondary" style="flex:1; font-size:13px;" onclick="app.showProfile()">
@@ -2461,8 +2457,8 @@
         </div>
 
         <div style="margin-top:8px;">
-            <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(200,0,26,0.25); color:var(--text-muted);" onclick="openLogin()">
-                <i data-lucide="shield"></i> Acceso istración
+            <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(200,0,26,0.25); color:var(--text-muted);" onclick="openAdminLogin()">
+                <i data-lucide="shield"></i> Acceso Administración
             </button>
         </div>
 
@@ -4751,17 +4747,18 @@ if (typeof MODE_META !== 'undefined') {
 //  PANEL
 // ══════════════════════════════════════════════════════════════════
 
-// Credenciales de  (usuario: contraseña)
+// Credenciales de admin (usuario: contraseña)
 const _CREDENTIALS = {
     '': 'andino2024',
     'gerencia': 'chalaca2024'
 };
-// DNIs autorizados como  (acceso legacy por DNI deshabilitado)
+// DNIs autorizados como admin (acceso legacy por DNI deshabilitado)
 const _DNIS = [];
 // Collection overrides stored in Firestore
 const EXTRA_COL = 'andino_extra_questions';
 
 let _Tab = 'trivia';
+let _adminTab = 'trivia'; // tab activo del panel admin
 let _extraData = { trivia: [], sim: [], ingr: [] };
 
 async function loadExtraQuestions() {
@@ -4787,7 +4784,7 @@ async function saveExtraQuestions() {
 }
 
 function is(dni) {
-    return ADMIN_DNIS.includes(String(dni).toLowerCase().trim());
+    return _DNIS.includes(String(dni).toLowerCase().trim());
 }
 
 app.showAdmin = function() {
@@ -5301,6 +5298,51 @@ window.addEventListener('error', (e) => {
 </script>
 
 
+    <!-- ── ADMIN LOGIN MODAL ── -->
+    <div id="admin-login-overlay" style="
+        display:none; position:fixed; inset:0; z-index:200;
+        background:rgba(26,20,0,0.65); backdrop-filter:blur(6px);
+        align-items:center; justify-content:center; padding:20px;">
+        <div class="admin-login-box" style="
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--radius); padding:28px 26px; width:100%;
+            max-width:340px; box-shadow:0 40px 100px rgba(0,0,0,0.25);">
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:900;
+                text-transform:uppercase; letter-spacing:2px; margin-bottom:6px;">
+                🔒 Acceso Admin
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);
+                margin-bottom:20px;">Ingresá tus credenciales de administrador</div>
+
+            <label>Usuario</label>
+            <input id="admin-login-user" class="input" type="text"
+                placeholder="usuario" autocomplete="username"
+                onkeydown="if(event.key==='Enter') document.getElementById('admin-login-pass').focus()">
+
+            <label>Contraseña</label>
+            <input id="admin-login-pass" class="input" type="password"
+                placeholder="contraseña" autocomplete="current-password"
+                onkeydown="if(event.key==='Enter') submitAdminLogin()">
+
+            <div id="admin-login-error" style="
+                display:none; color:var(--danger); font-size:12px;
+                font-family:var(--font-mono); margin-bottom:12px;
+                background:var(--danger-dim); border:1px solid var(--danger);
+                border-radius:8px; padding:8px 12px;">
+                Usuario o contraseña incorrectos
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:4px;">
+                <button class="btn btn-secondary" style="flex:1; font-size:13px;"
+                    onclick="closeAdminLogin()">Cancelar</button>
+                <button class="btn" style="flex:1; font-size:13px;"
+                    onclick="submitAdminLogin()">
+                    <i data-lucide="log-in"></i> Entrar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── ONBOARDING OVERLAY ── -->
     <div id="onboarding-overlay">
         <div class="onb-card">
@@ -5446,6 +5488,18 @@ window.addEventListener('error', (e) => {
 </div><!-- /container -->
 
 <script>
+// ── ADMIN CREDENTIALS (definidas correctamente) ──────────────────────────────
+const ADMIN_CREDENTIALS = {
+    '': 'andino2024',
+    'gerencia': 'chalaca2024'
+};
+const ADMIN_DNIS = []; // DNIs legacy (vacío por diseño)
+
+// Alias para compatibilidad con código que usa isAdmin()
+function isAdmin(dni) {
+    return ADMIN_DNIS.includes(String(dni).toLowerCase().trim());
+}
+
 // ── ADMIN LOGIN MODAL FUNCTIONS ──────────────────────────────────
 function openAdminLogin() {
     const overlay = document.getElementById('admin-login-overlay');
@@ -5456,14 +5510,14 @@ function openAdminLogin() {
     // Reset fields
     if (userInput) userInput.value = '';
     if (passInput) passInput.value = '';
-    if (errorEl)  errorEl.classList.remove('show');
-    overlay.classList.add('active');
+    if (errorEl)  errorEl.style.display = 'none';
+    overlay.style.display = 'flex';
     setTimeout(() => { if (userInput) userInput.focus(); }, 120);
 }
 
 function closeAdminLogin() {
     const overlay = document.getElementById('admin-login-overlay');
-    if (overlay) overlay.classList.remove('active');
+    if (overlay) overlay.style.display = 'none';
 }
 
 function submitAdminLogin() {
@@ -5471,12 +5525,12 @@ function submitAdminLogin() {
     const pass  = (document.getElementById('admin-login-pass')?.value || '').trim();
     const errorEl = document.getElementById('admin-login-error');
 
-    if (ADMIN_CREDENTIALS[user] && ADMIN_CREDENTIALS[user] === pass) {
+    if (ADMIN_CREDENTIALS[user] !== undefined && ADMIN_CREDENTIALS[user] === pass) {
         closeAdminLogin();
         app.showAdmin();
     } else {
         if (errorEl) {
-            errorEl.classList.add('show');
+            errorEl.style.display = 'block';
             // Shake the box
             const box = document.querySelector('.admin-login-box');
             if (box) { box.classList.add('shake'); setTimeout(() => box.classList.remove('shake'), 600); }

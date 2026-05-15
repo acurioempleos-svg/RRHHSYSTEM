@@ -2761,6 +2761,121 @@
         </button>
     </div>
 
+    <!-- ── ADMIN PANEL ── -->
+    <div id="view-admin" class="view">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <div style="font-family:var(--font-display); font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">
+                🛠️ Admin
+            </div>
+            <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="app.goHome()">
+                <i data-lucide="arrow-left"></i> Volver
+            </button>
+        </div>
+
+        <div class="admin-tabs">
+            <div class="admin-tab" id="atab-dash" onclick="app.switchAdminTab('dash')">📊 Dashboard</div>
+            <div class="admin-tab active" id="atab-trivia" onclick="app.switchAdminTab('trivia')">Trivia</div>
+            <div class="admin-tab" id="atab-sim" onclick="app.switchAdminTab('sim')">Simulador</div>
+            <div class="admin-tab" id="atab-ingr" onclick="app.switchAdminTab('ingr')">Carta</div>
+        </div>
+
+        <!-- Dashboard panel -->
+        <div class="admin-section" id="admin-dash-panel" style="display:none;">
+            <div class="dash-summary">
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-total">—</div>
+                    <div class="dash-kpi-label">Jugadores</div>
+                </div>
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-active">—</div>
+                    <div class="dash-kpi-label">Activos 7d</div>
+                </div>
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-games">—</div>
+                    <div class="dash-kpi-label">Partidas tot.</div>
+                </div>
+            </div>
+            <div class="dash-filters">
+                <div class="dash-filter-btn active" id="df-all" onclick="app.dashFilter('all')">Todos</div>
+                <div class="dash-filter-btn" id="df-active" onclick="app.dashFilter('active')">✅ Activos</div>
+                <div class="dash-filter-btn" id="df-inactive" onclick="app.dashFilter('inactive')">⚠️ Inactivos 7d</div>
+                <div class="dash-filter-btn" id="df-new" onclick="app.dashFilter('new')">🆕 Sin jugar</div>
+            </div>
+            <input class="dash-search" id="dash-search" placeholder="🔍 Buscar por nombre o DNI..." oninput="app.dashRender()">
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th onclick="app.dashSort('nombre')">Empleado</th>
+                            <th onclick="app.dashSort('totalXp')">XP ▾</th>
+                            <th onclick="app.dashSort('totalGames')">Partidas</th>
+                            <th onclick="app.dashSort('lastSeen')">Último acceso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dash-tbody">
+                        <tr><td colspan="4" class="dash-loading">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="dash-player-detail" id="dash-player-detail">
+                <div class="dash-detail-title" id="dash-detail-name"></div>
+                <div id="dash-detail-content"></div>
+            </div>
+            <div class="dash-export-row">
+                <div class="dash-export-btn" onclick="app.dashExportCSV()">⬇ Exportar CSV</div>
+                <div class="dash-export-btn" onclick="app.dashRefresh()">↻ Actualizar</div>
+            </div>
+        </div>
+
+        <div class="admin-section" id="admin-questions-panel">
+            <div class="admin-section-title" id="admin-section-label">Preguntas de Trivia</div>
+            <div id="admin-q-list" style="max-height:300px; overflow-y:auto;"></div>
+
+            <div class="admin-add-form" id="admin-add-trivia">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA</div>
+                <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
+                <input id="adm-trivia-o0" placeholder="Opción A (la correcta)">
+                <input id="adm-trivia-o1" placeholder="Opción B">
+                <input id="adm-trivia-o2" placeholder="Opción C">
+                <textarea id="adm-trivia-exp" placeholder="Explicación al responder" style="min-height:44px;"></textarea>
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddTrivia()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-trivia-status"></div>
+            </div>
+
+            <div class="admin-add-form" id="admin-add-sim" style="display:none;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR SITUACIÓN</div>
+                <textarea id="adm-sim-client" placeholder="Frase del cliente"></textarea>
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta buena (5pts):</div>
+                <input id="adm-sim-good" placeholder="Texto respuesta buena">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta media (3pts):</div>
+                <input id="adm-sim-mid" placeholder="Texto respuesta media">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta mala (1pt):</div>
+                <input id="adm-sim-bad" placeholder="Texto respuesta mala">
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddSim()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-sim-status"></div>
+            </div>
+
+            <div class="admin-add-form" id="admin-add-ingr" style="display:none;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
+                <input id="adm-ingr-dish" placeholder="Nombre del plato">
+                <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:100px;">
+                <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
+                <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
+                <input id="adm-ingr-o0" placeholder="Opción A (correcta)">
+                <input id="adm-ingr-o1" placeholder="Opción B">
+                <input id="adm-ingr-o2" placeholder="Opción C">
+                <textarea id="adm-ingr-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
+                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddIngr()">
+                    <i data-lucide="plus"></i> Agregar
+                </button>
+                <div class="admin-status" id="admin-ingr-status"></div>
+            </div>
+        </div>
+    </div><!-- /view-admin -->
 
 </div><!-- /container -->
 
@@ -4788,10 +4903,24 @@ function is(dni) {
 }
 
 app.showAdmin = function() {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-admin').classList.add('active');
-    safeCreateIcons();
-    app.switchAdminTab('dash'); // default to dashboard
+    console.log('[Admin] showAdmin llamado, vistas actuales:', 
+        [...document.querySelectorAll('.view.active')].map(v=>v.id).join(','));
+    const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
+    const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
+    showLoading();
+    setTimeout(() => {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        const adminView = document.getElementById('view-admin');
+        if (adminView) {
+            adminView.classList.add('active');
+            console.log('[Admin] view-admin activado OK');
+        } else {
+            console.error('[Admin] ERROR: view-admin no encontrado en el DOM');
+        }
+        safeCreateIcons();
+        hideLoading();
+        app.switchAdminTab('dash');
+    }, 250);
 };
 
 app.switchAdminTab = function(tab) {
@@ -5359,133 +5488,6 @@ window.addEventListener('error', (e) => {
         </div>
     </div>
 
-    <!-- ── ADMIN PANEL ── -->
-    <div id="view-admin" class="view">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-            <div style="font-family:var(--font-display); font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">
-                🛠️ Admin
-            </div>
-            <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="app.goHome()">
-                <i data-lucide="arrow-left"></i> Volver
-            </button>
-        </div>
-
-        <div class="admin-tabs">
-            <div class="admin-tab" id="atab-dash" onclick="app.switchAdminTab('dash')">📊 Dashboard</div>
-            <div class="admin-tab active" id="atab-trivia" onclick="app.switchAdminTab('trivia')">Trivia</div>
-            <div class="admin-tab" id="atab-sim" onclick="app.switchAdminTab('sim')">Simulador</div>
-            <div class="admin-tab" id="atab-ingr" onclick="app.switchAdminTab('ingr')">Carta</div>
-        </div>
-
-        <!-- Dashboard panel -->
-        <div class="admin-section" id="admin-dash-panel" style="display:none;">
-            <!-- KPIs -->
-            <div class="dash-summary">
-                <div class="dash-kpi">
-                    <div class="dash-kpi-val" id="dash-kpi-total">—</div>
-                    <div class="dash-kpi-label">Jugadores</div>
-                </div>
-                <div class="dash-kpi">
-                    <div class="dash-kpi-val" id="dash-kpi-active">—</div>
-                    <div class="dash-kpi-label">Activos 7d</div>
-                </div>
-                <div class="dash-kpi">
-                    <div class="dash-kpi-val" id="dash-kpi-games">—</div>
-                    <div class="dash-kpi-label">Partidas tot.</div>
-                </div>
-            </div>
-
-            <!-- Filters + search -->
-            <div class="dash-filters">
-                <div class="dash-filter-btn active" id="df-all" onclick="app.dashFilter('all')">Todos</div>
-                <div class="dash-filter-btn" id="df-active" onclick="app.dashFilter('active')">✅ Activos</div>
-                <div class="dash-filter-btn" id="df-inactive" onclick="app.dashFilter('inactive')">⚠️ Inactivos 7d</div>
-                <div class="dash-filter-btn" id="df-new" onclick="app.dashFilter('new')">🆕 Sin jugar</div>
-            </div>
-            <input class="dash-search" id="dash-search" placeholder="🔍 Buscar por nombre o DNI..." oninput="app.dashRender()">
-
-            <!-- Table -->
-            <div class="dash-table-wrap">
-                <table class="dash-table">
-                    <thead>
-                        <tr>
-                            <th onclick="app.dashSort('nombre')">Empleado</th>
-                            <th onclick="app.dashSort('totalXp')">XP ▾</th>
-                            <th onclick="app.dashSort('totalGames')">Partidas</th>
-                            <th onclick="app.dashSort('lastSeen')">Último acceso</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dash-tbody">
-                        <tr><td colspan="4" class="dash-loading">Cargando...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Player detail drawer -->
-            <div class="dash-player-detail" id="dash-player-detail">
-                <div class="dash-detail-title" id="dash-detail-name"></div>
-                <div id="dash-detail-content"></div>
-            </div>
-
-            <!-- Export buttons -->
-            <div class="dash-export-row">
-                <div class="dash-export-btn" onclick="app.dashExportCSV()">⬇ Exportar CSV</div>
-                <div class="dash-export-btn" onclick="app.dashRefresh()">↻ Actualizar</div>
-            </div>
-        </div>
-
-        <div class="admin-section" id="admin-questions-panel">
-            <div class="admin-section-title" id="admin-section-label">Preguntas de Trivia</div>
-            <div id="admin-q-list" style="max-height:300px; overflow-y:auto;"></div>
-
-            <div class="admin-add-form" id="admin-add-trivia">
-                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA</div>
-                <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
-                <input id="adm-trivia-o0" placeholder="Opción A (la correcta)">
-                <input id="adm-trivia-o1" placeholder="Opción B">
-                <input id="adm-trivia-o2" placeholder="Opción C">
-                <textarea id="adm-trivia-exp" placeholder="Explicación al responder" style="min-height:44px;"></textarea>
-                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddTrivia()">
-                    <i data-lucide="plus"></i> Agregar
-                </button>
-                <div class="admin-status" id="admin-trivia-status"></div>
-            </div>
-
-            <div class="admin-add-form" id="admin-add-sim" style="display:none;">
-                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR SITUACIÓN</div>
-                <textarea id="adm-sim-client" placeholder="Frase del cliente"></textarea>
-                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta buena (5pts):</div>
-                <input id="adm-sim-good" placeholder="Texto respuesta buena">
-                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta media (3pts):</div>
-                <input id="adm-sim-mid" placeholder="Texto respuesta media">
-                <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Respuesta mala (1pt):</div>
-                <input id="adm-sim-bad" placeholder="Texto respuesta mala">
-                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddSim()">
-                    <i data-lucide="plus"></i> Agregar
-                </button>
-                <div class="admin-status" id="admin-sim-status"></div>
-            </div>
-
-            <div class="admin-add-form" id="admin-add-ingr" style="display:none;">
-                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
-                <input id="adm-ingr-dish" placeholder="Nombre del plato">
-                <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:100px;">
-                <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
-                <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
-                <input id="adm-ingr-o0" placeholder="Opción A (correcta)">
-                <input id="adm-ingr-o1" placeholder="Opción B">
-                <input id="adm-ingr-o2" placeholder="Opción C">
-                <textarea id="adm-ingr-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
-                <button class="btn" style="font-size:13px; margin-top:4px;" onclick="app.adminAddIngr()">
-                    <i data-lucide="plus"></i> Agregar
-                </button>
-                <div class="admin-status" id="admin-ingr-status"></div>
-            </div>
-        </div>
-        </div><!-- /admin-questions-panel -->
-    </div>
-
-</div><!-- /container -->
 
 <script>
 // ── ADMIN CREDENTIALS (definidas correctamente) ──────────────────────────────
@@ -5525,10 +5527,18 @@ function submitAdminLogin() {
     const pass  = (document.getElementById('admin-login-pass')?.value || '').trim();
     const errorEl = document.getElementById('admin-login-error');
 
+    console.log('[Admin] Intentando login con usuario:', user || '(vacío)');
+
     if (ADMIN_CREDENTIALS[user] !== undefined && ADMIN_CREDENTIALS[user] === pass) {
+        console.log('[Admin] Login correcto, cerrando modal...');
         closeAdminLogin();
-        app.showAdmin();
+        // Pequeño delay para asegurarse que el modal terminó de cerrar
+        setTimeout(() => {
+            console.log('[Admin] Llamando showAdmin...');
+            app.showAdmin();
+        }, 50);
     } else {
+        console.log('[Admin] Credenciales incorrectas');
         if (errorEl) {
             errorEl.style.display = 'block';
             // Shake the box

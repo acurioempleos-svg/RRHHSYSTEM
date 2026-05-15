@@ -7,7 +7,6 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@0.263.1"></script>
     <!-- Firebase compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -2229,9 +2228,117 @@
             box-shadow: 0 6px 24px rgba(248,113,113,0.25) !important;
         }
 
+        /* ── ADMIN LOGIN MODAL ── */
+        .admin-login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 20, 0, 0.65);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 20px;
+        }
+        .admin-login-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .admin-login-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px 28px 28px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 0 40px rgba(200,0,26,0.10);
+            animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .admin-login-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(200,0,26,0.10);
+            border: 1px solid rgba(200,0,26,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+            color: var(--red-intense);
+        }
+        .admin-login-title {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .admin-login-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 24px;
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+        }
+        .admin-login-error {
+            background: var(--danger-dim);
+            border: 1px solid rgba(200,0,26,0.3);
+            border-radius: var(--radius-sm);
+            color: var(--danger);
+            font-size: 12px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            font-family: var(--font-mono);
+            display: none;
+        }
+        .admin-login-error.show { display: block; }
+        .admin-login-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 18px;
+            line-height: 1;
+            padding: 4px;
+            display: none;
+        }
+        .admin-login-box { position: relative; }
+
     </style>
 </head>
 <body>
+
+<!-- ── ADMIN LOGIN MODAL ── -->
+<div class="admin-login-overlay" id="admin-login-overlay" onclick="if(event.target===this) closeAdminLogin()">
+    <div class="admin-login-box">
+        <div class="admin-login-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="admin-login-title">Acceso Admin</div>
+        <div class="admin-login-sub">Panel de Administración · Barra Chalaca</div>
+        <div class="admin-login-error" id="admin-login-error">Usuario o contraseña incorrectos</div>
+        <label>Usuario</label>
+        <input type="text" id="admin-login-user" class="input" placeholder="admin" autocomplete="username" style="margin-bottom:14px;">
+        <label>Contraseña</label>
+        <input type="password" id="admin-login-pass" class="input" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitAdminLogin()">
+        <button class="btn" onclick="submitAdminLogin()" style="margin-top:4px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Ingresar
+        </button>
+        <button class="btn btn-secondary" onclick="closeAdminLogin()" style="margin-top:8px; font-size:12px;">
+            Cancelar
+        </button>
+    </div>
+</div>
 
 <div class="combo-toast" id="combo-toast"></div>
 <div class="confetti-container" id="confetti-container"></div>
@@ -2349,9 +2456,9 @@
             </button>
         </div>
 
-        <div id="admin-access-btn" style="display:none; margin-top:8px;">
-            <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(232,200,74,0.3);" onclick="app.showAdmin()">
-                <i data-lucide="settings"></i> Panel de Administración
+        <div style="margin-top:8px;">
+            <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(200,0,26,0.25); color:var(--text-muted);" onclick="openAdminLogin()">
+                <i data-lucide="shield"></i> Acceso Administración
             </button>
         </div>
 
@@ -2662,6 +2769,13 @@
 function safeCreateIcons() {
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
+    } else {
+        // Lucide aún no cargó, reintentar en 200ms
+        setTimeout(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }, 200);
     }
 }
 
@@ -3066,12 +3180,7 @@ const app = (() => {
             state.dni = dniInput ? dniInput.value.trim() : '';
             state.nombre = nombreInput ? nombreInput.value.trim() : '';
 
-            // EXCEPCIÓN PARA ADMIN
-            if (isAdmin(state.dni)) {
-                app.showAdmin();
-                return;
-            }
-            
+            // VALIDACIÓN DE DNI
             if (state.dni.length < 6) { 
                 alert("Ingresá un DNI válido (mínimo 6 dígitos)");
                 if (dniInput) dniInput.focus();
@@ -4638,8 +4747,13 @@ if (typeof MODE_META !== 'undefined') {
 // ADMIN PANEL
 // ══════════════════════════════════════════════════════════════════
 
-// DNIs autorizados como admin
-const ADMIN_DNIS = ['admin', '00000000'];
+// Credenciales de admin (usuario: contraseña)
+const ADMIN_CREDENTIALS = {
+    'admin': 'andino2024',
+    'gerencia': 'chalaca2024'
+};
+// DNIs autorizados como admin (acceso legacy por DNI deshabilitado)
+const ADMIN_DNIS = [];
 // Collection overrides stored in Firestore
 const EXTRA_COL = 'andino_extra_questions';
 
@@ -4673,8 +4787,6 @@ function isAdmin(dni) {
 }
 
 app.showAdmin = function() {
-    const dni = (document.getElementById('user-dni') || {}).value?.trim() || app.state.dni || '';
-    if (!isAdmin(dni)) { alert('Acceso denegado'); return; }
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-admin').classList.add('active');
     safeCreateIcons();
@@ -5326,6 +5438,58 @@ window.addEventListener('error', (e) => {
         </div>
         </div><!-- /admin-questions-panel -->
     </div>
+
+</div><!-- /container -->
+
+<script>
+// ── ADMIN LOGIN MODAL FUNCTIONS ──────────────────────────────────
+function openAdminLogin() {
+    const overlay = document.getElementById('admin-login-overlay');
+    const userInput = document.getElementById('admin-login-user');
+    const passInput = document.getElementById('admin-login-pass');
+    const errorEl  = document.getElementById('admin-login-error');
+    if (!overlay) return;
+    // Reset fields
+    if (userInput) userInput.value = '';
+    if (passInput) passInput.value = '';
+    if (errorEl)  errorEl.classList.remove('show');
+    overlay.classList.add('active');
+    setTimeout(() => { if (userInput) userInput.focus(); }, 120);
+}
+
+function closeAdminLogin() {
+    const overlay = document.getElementById('admin-login-overlay');
+    if (overlay) overlay.classList.remove('active');
+}
+
+function submitAdminLogin() {
+    const user  = (document.getElementById('admin-login-user')?.value || '').trim().toLowerCase();
+    const pass  = (document.getElementById('admin-login-pass')?.value || '').trim();
+    const errorEl = document.getElementById('admin-login-error');
+
+    if (ADMIN_CREDENTIALS[user] && ADMIN_CREDENTIALS[user] === pass) {
+        closeAdminLogin();
+        app.showAdmin();
+    } else {
+        if (errorEl) {
+            errorEl.classList.add('show');
+            // Shake the box
+            const box = document.querySelector('.admin-login-box');
+            if (box) { box.classList.add('shake'); setTimeout(() => box.classList.remove('shake'), 600); }
+        }
+        const passInput = document.getElementById('admin-login-pass');
+        if (passInput) { passInput.value = ''; passInput.focus(); }
+    }
+}
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAdminLogin();
+});
+</script>
+
+<!-- Lucide icons: carga al final para garantizar que el DOM ya existe -->
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js" onload="safeCreateIcons()"></script>
 
 </body>
 </html>

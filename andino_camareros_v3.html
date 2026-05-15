@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Andino Salón · Entrenamiento de Camareros</title>
+    <title>Ultra Mega Camarero · Entrenamiento</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Firebase compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -14,28 +14,32 @@
 
     <style>
         :root {
-            --bg: #0a0a0c;
-            --surface: #141416;
-            --surface-2: #1e1e22;
-            --accent: #e8c84a;
-            --accent-dim: rgba(232, 200, 74, 0.12);
-            --accent-glow: rgba(232, 200, 74, 0.35);
-            --text: #f0ede8;
-            --text-muted: #666;
-            --border: #262628;
-            --border-hover: #3a3a3e;
-            --success: #4ade80;
-            --success-dim: rgba(74, 222, 128, 0.15);
-            --danger: #f87171;
-            --danger-dim: rgba(248, 113, 113, 0.15);
-            --google-blue: #4285F4;
-            --xp-color: #a78bfa;
-            --xp-dim: rgba(167, 139, 250, 0.15);
+            --bg: #FDF8EE;
+            --surface: #FFFFFF;
+            --surface-2: #F2ECD9;
+            --accent: #D4A800;
+            --accent-dim: rgba(212, 168, 0, 0.14);
+            --accent-glow: rgba(212, 168, 0, 0.30);
+            --text: #1A1400;
+            --text-muted: #8A7A50;
+            --border: #DDD4B0;
+            --border-hover: #C4B880;
+            --success: #1B8A4A;
+            --success-dim: rgba(27, 138, 74, 0.15);
+            --danger: #C8001A;
+            --danger-dim: rgba(200, 0, 26, 0.13);
+            --red-intense: #C8001A;
+            --red-bright: #E8001F;
+            --red-glow: rgba(200, 0, 26, 0.35);
+            --google-blue: #C8001A;
+            --xp-color: #C8001A;
+            --xp-dim: rgba(200, 0, 26, 0.13);
             --radius: 18px;
             --radius-sm: 10px;
             --font-mono: 'IBM Plex Mono', monospace;
-            --font-display: 'Barlow Condensed', sans-serif;
-            --font-body: 'Barlow', sans-serif;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Lato', sans-serif;
+            --font-serif: 'Playfair Display', serif;
         }
 
         *, *::before, *::after { 
@@ -67,7 +71,7 @@
             transform: translateX(-50%);
             width: 600px;
             height: 400px;
-            background: radial-gradient(ellipse, rgba(232,200,74,0.04) 0%, transparent 70%);
+            background: radial-gradient(ellipse, rgba(200,0,26,0.07) 0%, rgba(212,168,0,0.04) 50%, transparent 70%);
             pointer-events: none;
             z-index: 0;
         }
@@ -81,9 +85,10 @@
             overflow: hidden;
             position: relative;
             box-shadow:
-                0 0 0 1px rgba(255,255,255,0.03) inset,
-                0 40px 100px rgba(0,0,0,0.7),
-                0 0 80px rgba(232,200,74,0.03);
+                0 0 0 1px rgba(200,0,26,0.06) inset,
+                0 40px 100px rgba(0,0,0,0.12),
+                0 0 80px rgba(200,0,26,0.08),
+                0 0 40px rgba(212,168,0,0.05);
             z-index: 1;
             transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -122,7 +127,7 @@
         .loading-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(10, 10, 12, 0.8);
+            background: rgba(253, 248, 238, 0.88);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -149,8 +154,8 @@
         }
 
         .app-header {
-            background: linear-gradient(180deg, rgba(232,200,74,0.06) 0%, transparent 100%);
-            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(200,0,26,0.08) 0%, rgba(212,168,0,0.05) 60%, transparent 100%);
+            border-bottom: 1px solid rgba(200,0,26,0.20);
             padding: 18px 26px 16px;
             display: flex;
             align-items: center;
@@ -161,10 +166,10 @@
         .app-header h1 {
             font-family: var(--font-display);
             font-size: 22px;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            font-weight: 900;
-            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            font-weight: 700;
+            background: linear-gradient(135deg, #1A1400 0%, var(--red-intense) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -175,7 +180,7 @@
             font-size: 9px;
             background: var(--accent-dim);
             color: var(--accent);
-            border: 1px solid rgba(232,200,74,0.25);
+            border: 1px solid rgba(212,168,0,0.35);
             padding: 4px 10px;
             border-radius: 20px;
             letter-spacing: 1px;
@@ -184,8 +189,8 @@
         }
 
         @keyframes badgePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(232, 200, 74, 0.4); }
-            50% { box-shadow: 0 0 0 4px rgba(232, 200, 74, 0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(212, 168, 0, 0.35); }
+            50% { box-shadow: 0 0 0 4px rgba(212, 168, 0, 0); }
         }
 
         .xp-strip {
@@ -197,7 +202,7 @@
         
         .xp-strip-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--xp-color), var(--accent), var(--xp-color));
+            background: linear-gradient(90deg, var(--red-intense), #ff2040, var(--red-bright), var(--red-intense));
             background-size: 200% 100%;
             transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
             animation: xpShimmer 2s linear infinite;
@@ -220,7 +225,7 @@
         
         .input {
             width: 100%;
-            background: #000;
+            background: #FFFEF5;
             border: 1px solid var(--border);
             padding: 14px 16px;
             border-radius: var(--radius-sm);
@@ -235,11 +240,11 @@
         .input:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-dim);
-            background: #0a0a0c;
+            background: #FDF8EE;
         }
         
         .input::placeholder { 
-            color: #333; 
+            color: #B0A070; 
         }
 
         .modes-grid { 
@@ -274,7 +279,7 @@
         .mode-card:hover { 
             border-color: var(--border-hover); 
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
         }
         
         .mode-card:hover::before { 
@@ -355,11 +360,11 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
         }
         
         .btn:hover { 
-            box-shadow: 0 6px 24px var(--accent-glow); 
+            box-shadow: 0 6px 24px var(--accent-glow), 0 0 20px var(--red-glow); 
             filter: brightness(1.05);
             transform: translateY(-1px);
         }
@@ -425,8 +430,8 @@
         }
 
         @keyframes dotGlow {
-            0%, 100% { box-shadow: 0 0 6px var(--accent-glow); }
-            50% { box-shadow: 0 0 12px var(--accent-glow); }
+            0%, 100% { box-shadow: 0 0 4px var(--accent-glow); }
+            50% { box-shadow: 0 0 8px var(--accent-glow); }
         }
 
         .medals-row {
@@ -460,7 +465,7 @@
             border-color: var(--accent);
             color: #000;
             transform: scale(1.15);
-            box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(232,200,74,0.15);
+            box-shadow: 0 0 12px var(--accent-glow), 0 0 24px rgba(212,168,0,0.12);
             animation: medalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         
@@ -469,7 +474,7 @@
             position: absolute;
             inset: -4px;
             border-radius: 50%;
-            border: 1px solid rgba(232,200,74,0.3);
+            border: 1px solid rgba(212,168,0,0.30);
             animation: medalPulse 1.5s ease-out forwards;
         }
         
@@ -528,7 +533,7 @@
         }
         
         .timer-fill.urgent {
-            background: linear-gradient(90deg, var(--danger), #ff4040);
+            background: linear-gradient(90deg, var(--red-intense), var(--red-bright), #ff4040);
         }
 
         .q-text {
@@ -630,8 +635,8 @@
             top: 60px;
             left: 50%;
             transform: translateX(-50%) translateY(-20px);
-            background: var(--accent);
-            color: #000;
+            background: var(--red-intense);
+            color: #fff;
             font-family: var(--font-display);
             font-size: 18px;
             font-weight: 900;
@@ -719,7 +724,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            background: #0d0d0f;
+            background: #FAF5E4;
             padding: 14px;
             border-radius: 12px;
             margin-bottom: 14px;
@@ -752,13 +757,13 @@
         .client-bubble {
             background: var(--surface-2);
             align-self: flex-start;
-            color: #ddd;
+            color: #2A2000;
             border-bottom-left-radius: 4px;
             border: 1px solid var(--border);
         }
         
         .waiter-bubble {
-            background: linear-gradient(135deg, var(--accent), #f0a020);
+            background: linear-gradient(135deg, var(--accent), #B8860B);
             color: #000;
             align-self: flex-end;
             font-weight: 600;
@@ -766,7 +771,7 @@
         }
 
         .google-review {
-            background: #0d0d0f;
+            background: #F0EAD6;
             padding: 18px;
             border-radius: 12px;
             border-left: 3px solid var(--google-blue);
@@ -806,7 +811,7 @@
             align-items: center;
             gap: 6px;
             background: var(--accent-dim);
-            border: 1px solid rgba(232,200,74,0.3);
+            border: 1px solid rgba(212,168,0,0.35);
             border-radius: 14px;
             padding: 20px 30px;
             margin-bottom: 16px;
@@ -838,7 +843,7 @@
             letter-spacing: 1px;
             text-transform: uppercase;
             margin: 0 0 4px;
-            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            background: linear-gradient(135deg, #1A1400 0%, var(--accent) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -888,7 +893,7 @@
 
         .xp-gained {
             background: var(--xp-dim);
-            border: 1px solid rgba(167,139,250,0.25);
+            border: 1px solid rgba(26,58,143,0.20);
             border-radius: 10px;
             padding: 12px 16px;
             display: flex;
@@ -1038,7 +1043,7 @@
 
         /* ── PROFILE & LEADERBOARD ── */
         .profile-card {
-            background: linear-gradient(135deg, var(--surface-2) 0%, rgba(232,200,74,0.05) 100%);
+            background: linear-gradient(135deg, var(--surface-2) 0%, rgba(212,168,0,0.06) 100%);
             border: 1px solid var(--border);
             border-radius: 14px;
             padding: 18px;
@@ -1056,7 +1061,7 @@
             width: 52px;
             height: 52px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #f0a020);
+            background: linear-gradient(135deg, var(--accent), #B8860B);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1180,7 +1185,7 @@
         .achievement.unlocked {
             border-color: var(--accent);
             background: var(--accent-dim);
-            box-shadow: 0 0 12px rgba(232,200,74,0.15);
+            box-shadow: 0 0 10px rgba(212,168,0,0.12);
         }
         .achievement-icon { font-size: 20px; line-height: 1; margin-bottom: 4px; }
         .achievement-name {
@@ -1221,7 +1226,7 @@
             flex-shrink: 0;
         }
         .history-mode-badge.trivia { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(232,200,74,0.3); }
-        .history-mode-badge.sim { background: var(--xp-dim); color: var(--xp-color); border: 1px solid rgba(167,139,250,0.3); }
+        .history-mode-badge.sim { background: var(--xp-dim); color: var(--xp-color); border: 1px solid rgba(26,58,143,0.25); }
         .history-score { font-weight: 700; color: var(--text); flex: 1; }
         .history-xp { font-family: var(--font-mono); font-size: 10px; color: var(--xp-color); }
         .history-date { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
@@ -1341,7 +1346,7 @@
         .level-up-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(10,10,12,0.85);
+            background: rgba(253,248,238,0.88);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1366,7 +1371,7 @@
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 2px;
-            background: linear-gradient(135deg, var(--accent), #f0a020);
+            background: linear-gradient(135deg, var(--accent), #B8860B);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1378,9 +1383,299 @@
             margin-top: 6px;
         }
 
+
+        /* ── ONBOARDING OVERLAY ── */
+        #onboarding-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(20,16,0,0.80);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        #onboarding-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .onb-card {
+            background: var(--surface);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius);
+            max-width: 400px;
+            width: 100%;
+            padding: 28px 24px 22px;
+            text-align: center;
+            position: relative;
+        }
+        .onb-step-dots {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 22px;
+        }
+        .onb-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--border-hover);
+            transition: background 0.3s, transform 0.3s;
+        }
+        .onb-dot.active {
+            background: var(--accent);
+            transform: scale(1.3);
+        }
+        .onb-emoji {
+            font-size: 52px;
+            margin-bottom: 14px;
+            display: block;
+            animation: onbBounce 0.5s ease;
+        }
+        @keyframes onbBounce {
+            0% { transform: scale(0.5); opacity:0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity:1; }
+        }
+        .onb-title {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .onb-body {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+        .onb-body strong { color: var(--text); }
+        .onb-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            background: var(--accent);
+            color: #000;
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .onb-btn:hover { opacity: 0.88; }
+        .onb-skip {
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: underline;
+            display: block;
+        }
+
+        /* ── MODE PREVIEW TOOLTIP ── */
+        .mode-card { position: relative; }
+        .mode-preview-tag {
+            position: absolute;
+            bottom: -1px; right: -1px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 0 0 10px 0;
+            font-size: 9px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            padding: 2px 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        .mode-card:hover .mode-preview-tag,
+        .mode-card.selected .mode-preview-tag {
+            opacity: 1;
+        }
+
+        /* ── MODE PREVIEW PANEL ── */
+        #mode-preview-panel {
+            background: var(--surface-2);
+            border: 1px solid var(--border-hover);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin: 10px 0 14px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            transition: all 0.25s ease;
+        }
+        .mode-preview-icon { font-size: 28px; flex-shrink: 0; }
+        .mode-preview-info { flex: 1; }
+        .mode-preview-name {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+            margin-bottom: 3px;
+        }
+        .mode-preview-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .mode-preview-meta span {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        /* ── RESULTS OVERHAUL ── */
+        .res-header {
+            text-align: center;
+            padding: 10px 0 6px;
+        }
+        .res-rank-icon-big {
+            font-size: 64px;
+            display: block;
+            margin: 0 auto 6px;
+            animation: resBounce 0.6s cubic-bezier(.36,.07,.19,.97);
+        }
+        @keyframes resBounce {
+            0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+            60%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+            80%  { transform: scale(0.95); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        .res-rank-label-top {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .res-rank-title-big {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            line-height: 1.1;
+            margin: 4px 0 2px;
+        }
+        .res-rank-sub-big {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+        }
+        .res-stats-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .res-stat {
+            flex: 1;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        .res-stat-val {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--text);
+            line-height: 1;
+        }
+        .res-stat-key {
+            font-size: 9px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .res-xp-bar-wrap {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .res-xp-icon { font-size: 24px; flex-shrink: 0; }
+        .res-xp-info { flex: 1; }
+        .res-xp-label {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .res-xp-track {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .res-xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--xp-color), var(--accent));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 1.2s cubic-bezier(.22,.61,.36,1);
+        }
+        .res-xp-amount {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--xp-color);
+            flex-shrink: 0;
+        }
+
+        /* ── WRONG ANSWERS RECAP ── */
+        .res-recap {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .res-recap-title {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .recap-item {
+            background: var(--surface);
+            border-left: 3px solid var(--danger);
+            border-radius: 0 8px 8px 0;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .recap-item-q { color: var(--text); margin-bottom: 3px; }
+        .recap-item-ans { color: var(--success); font-size: 11px; }
+
         /* ── DAILY STREAK BANNER ── */
         .streak-banner {
-            background: linear-gradient(135deg, rgba(232,200,74,0.12), rgba(232,200,74,0.04));
+            background: linear-gradient(135deg, rgba(212,168,0,0.12), rgba(212,168,0,0.04));
             border: 1px solid rgba(232,200,74,0.3);
             border-radius: 14px;
             padding: 14px 16px;
@@ -1413,15 +1708,15 @@
             font-size: 18px;
             font-weight: 700;
             color: var(--accent);
-            background: rgba(232,200,74,0.15);
+            background: rgba(212,168,0,0.15);
             padding: 4px 10px;
             border-radius: 8px;
         }
 
         /* ── DAILY CHALLENGE CARD ── */
         .daily-card {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border: 1px solid rgba(100,150,255,0.3);
+            background: linear-gradient(135deg, #E8F0FF, #D0DCFF);
+            border: 1px solid rgba(26,58,143,0.25);
             border-radius: 14px;
             padding: 14px 16px;
             margin-bottom: 14px;
@@ -1435,10 +1730,10 @@
             position: absolute;
             top: -30px; right: -30px;
             width: 100px; height: 100px;
-            background: radial-gradient(circle, rgba(100,150,255,0.15), transparent 70%);
+            background: radial-gradient(circle, rgba(26,58,143,0.10), transparent 70%);
             pointer-events: none;
         }
-        .daily-card:hover { border-color: rgba(100,150,255,0.6); transform: translateY(-1px); }
+        .daily-card:hover { border-color: rgba(26,58,143,0.55); transform: translateY(-1px); }
         .daily-card-header {
             display: flex;
             align-items: center;
@@ -1449,8 +1744,9 @@
             font-family: var(--font-mono);
             font-size: 9px;
             font-weight: 700;
-            background: rgba(100,150,255,0.2);
-            color: #6496ff;
+            background: rgba(200,0,26,0.13);
+            color: var(--red-intense);
+            border: 1px solid rgba(200,0,26,0.30);
             padding: 2px 7px;
             border-radius: 4px;
             letter-spacing: 1px;
@@ -1492,11 +1788,189 @@
         .unlock-badge.unlocked {
             border-color: var(--accent);
             color: var(--accent);
-            background: rgba(232,200,74,0.08);
+            background: rgba(212,168,0,0.10);
         }
         .unlock-badge.locked {
             opacity: 0.4;
         }
+
+
+        /* ── DASHBOARD ── */
+        .dash-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .dash-kpi {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        .dash-kpi-val {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .dash-kpi-label {
+            font-size: 9px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .dash-filters {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .dash-filter-btn {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dash-filter-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(212,168,0,0.10);
+        }
+        .dash-search {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 12px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-family: var(--font-body);
+        }
+        .dash-search::placeholder { color: var(--text-muted); }
+        .dash-table-wrap {
+            max-height: 340px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .dash-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .dash-table th {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding: 8px 10px;
+            text-align: left;
+            background: var(--surface-2);
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .dash-table th:hover { color: var(--accent); }
+        .dash-table th.sorted { color: var(--accent); }
+        .dash-table td {
+            padding: 9px 10px;
+            border-top: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        .dash-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .activity-dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            margin-right: 5px;
+            flex-shrink: 0;
+        }
+        .activity-dot.green  { background: var(--success); }
+        .activity-dot.yellow { background: var(--accent); }
+        .activity-dot.red    { background: var(--danger); }
+        .activity-dot.grey   { background: var(--text-muted); }
+        .dash-name-cell { display: flex; align-items: center; gap: 6px; }
+        .dash-avatar-sm {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 700; flex-shrink: 0;
+        }
+        .dash-export-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .dash-export-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .dash-export-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .dash-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 24px;
+        }
+        .dash-loading {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 20px;
+            font-family: var(--font-mono);
+        }
+        .dash-player-detail {
+            background: var(--surface-2);
+            border: 1px solid var(--border-hover);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+        .dash-player-detail.open { display: block; }
+        .dash-detail-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        .dash-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+        }
+        .dash-history-item:last-child { border-bottom: none; }
 
         /* ── ADMIN PANEL ── */
         #view-admin .admin-section {
@@ -1552,7 +2026,7 @@
         }
         .admin-add-form textarea {
             width: 100%;
-            background: var(--bg);
+            background: #FFFEF5;
             border: 1px solid var(--border);
             border-radius: 8px;
             color: var(--text);
@@ -1583,10 +2057,177 @@
             cursor: pointer; border: 1px solid var(--border); color: var(--text-muted);
             background: var(--surface-2); transition: all 0.2s;
         }
-        .admin-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(232,200,74,0.08); }
+        .admin-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(212,168,0,0.10); }
         .admin-status { font-size:11px; margin-top:6px; min-height:16px; }
         .admin-status.ok { color: var(--success); }
         .admin-status.err { color: var(--danger); }
+
+        /* ── REPASO INTELIGENTE ── */
+        .repaso-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--danger);
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        .mode-card.repaso-mode {
+            border-color: rgba(192,57,43,0.30);
+        }
+        .mode-card.repaso-mode .mode-icon {
+            background: rgba(192,57,43,0.10);
+        }
+        .mode-card.repaso-mode.selected {
+            border-color: var(--danger);
+            box-shadow: 0 0 20px rgba(192,57,43,0.20);
+        }
+        .mode-card.repaso-mode.selected .mode-icon {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* Repaso view */
+        .repaso-header-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(192,57,43,0.07);
+            border: 1px solid rgba(192,57,43,0.22);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+        }
+        .repaso-fire { font-size: 22px; }
+        .repaso-header-info { flex: 1; }
+        .repaso-header-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--danger);
+        }
+        .repaso-header-sub {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .repaso-dominio-bar-wrap {
+            margin-bottom: 20px;
+        }
+        .repaso-dominio-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .repaso-dominio-track {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .repaso-dominio-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--accent), var(--success));
+            border-radius: 3px;
+            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .repaso-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .repaso-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--danger), var(--accent));
+        }
+        .repaso-card-label {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--danger);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+        }
+
+        .repaso-domination-meter {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .repaso-dom-pip {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .repaso-dom-pip.done { background: var(--success); box-shadow: 0 0 6px rgba(74,222,128,0.4); }
+        .repaso-dom-pip.active { background: var(--accent); }
+
+        .repaso-pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+        .repaso-pill {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-muted);
+            transition: all 0.3s;
+        }
+        .repaso-pill.mastered { border-color: var(--success); color: var(--success); background: rgba(74,222,128,0.08); }
+        .repaso-pill.pending  { border-color: var(--danger);  color: var(--danger);  background: rgba(248,113,113,0.08); }
+        .repaso-pill.current  { border-color: var(--accent);  color: var(--accent);  background: rgba(232,200,74,0.10); }
+
+        .repaso-empty {
+            text-align: center;
+            padding: 32px 20px;
+        }
+        .repaso-empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .repaso-empty-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--success);
+            margin-bottom: 6px;
+        }
+        .repaso-empty-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+        /* Results: "Ir a Repasar" button */
+        .btn-repaso {
+            background: rgba(248,113,113,0.12) !important;
+            border: 1px solid rgba(248,113,113,0.4) !important;
+            color: var(--danger) !important;
+        }
+        .btn-repaso:hover {
+            box-shadow: 0 6px 24px rgba(248,113,113,0.25) !important;
+        }
 
     </style>
 </head>
@@ -1613,8 +2254,8 @@
     </div>
 
     <div class="app-header">
-        <h1>ANDINO <span style="color: var(--accent); -webkit-text-fill-color: initial;">CAMAREROS</span></h1>
-        <span class="header-badge">v6.0</span>
+        <h1>ULTRA MEGA <span style="color: var(--red-intense); -webkit-text-fill-color: initial;">CAMARERO</span></h1>
+        <span class="header-badge" style="background:rgba(200,0,26,0.12); color:var(--red-intense); border-color:rgba(200,0,26,0.35);">v9.0</span>
     </div>
     <div class="xp-strip"><div class="xp-strip-fill" id="xp-bar" style="width:0%"></div></div>
 
@@ -1625,7 +2266,7 @@
             <input type="text" id="user-nombre" class="input" placeholder="Ej: Valentina" maxlength="30" autocomplete="given-name">
 
             <label>Tu DNI / Legajo</label>
-            <input type="number" id="user-dni" class="input" placeholder="Ej: 38123456" maxlength="10">
+            <input type="text" id="user-dni" class="input" placeholder="Ej: 38123456 o admin" maxlength="10" inputmode="numeric">
 
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
@@ -1649,6 +2290,26 @@
                         <span class="mode-title">Conocé la Carta</span>
                         <span class="mode-desc">Ingredientes y preparaciones de Barra Chalaca.</span>
                     </div>
+                </div>
+                <div class="mode-card repaso-mode" id="repaso-mode-card" onclick="app.setMode('repaso', this)">
+                    <div class="mode-icon"><i data-lucide="brain"></i></div>
+                    <div style="flex:1;">
+                        <span class="mode-title">Repaso Inteligente <span class="repaso-badge" id="repaso-count-badge" style="display:none;">0</span></span>
+                        <span class="mode-desc">Solo tus errores · dominás cuando la clavás 3 veces.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode preview panel -->
+        <div id="mode-preview-panel">
+            <div class="mode-preview-icon" id="mpv-icon">🧠</div>
+            <div class="mode-preview-info">
+                <div class="mode-preview-name" id="mpv-name">Trivia Operativa</div>
+                <div class="mode-preview-meta">
+                    <span>⏱ ~4 min</span>
+                    <span>❓ 14 preguntas</span>
+                    <span>⚡ Hasta 100 XP</span>
                 </div>
             </div>
         </div>
@@ -1852,6 +2513,60 @@
         </div>
     </div>
 
+    <!-- ── REPASO INTELIGENTE ── -->
+    <div id="view-repaso" class="view">
+        <!-- Empty state (shown when no pending) -->
+        <div id="repaso-empty-state" class="repaso-empty" style="display:none;">
+            <div class="repaso-empty-icon">🎯</div>
+            <div class="repaso-empty-title">¡Todo dominado!</div>
+            <div class="repaso-empty-sub">No tenés preguntas pendientes de repaso.<br>Jugá una partida para generar nuevos errores.</div>
+            <button class="btn" style="margin-top:20px;" onclick="app.goHome()">
+                <i data-lucide="arrow-left"></i> Volver al inicio
+            </button>
+        </div>
+
+        <!-- Active repaso game -->
+        <div id="repaso-game-state">
+            <div class="repaso-header-bar">
+                <div class="repaso-fire">🧠</div>
+                <div class="repaso-header-info">
+                    <div class="repaso-header-title">Repaso Inteligente</div>
+                    <div class="repaso-header-sub" id="repaso-sub-text">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- Overall domination bar -->
+            <div class="repaso-dominio-bar-wrap">
+                <div class="repaso-dominio-label">
+                    <span>Progreso de dominio</span>
+                    <span id="repaso-dominio-pct">0%</span>
+                </div>
+                <div class="repaso-dominio-track">
+                    <div class="repaso-dominio-fill" id="repaso-dominio-fill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Per-question pill row -->
+            <div class="repaso-pill-row" id="repaso-pill-row"></div>
+
+            <!-- The question card -->
+            <div class="repaso-card">
+                <div class="repaso-card-label" id="repaso-card-label">PREGUNTA A DOMINAR</div>
+                <div class="q-text" id="repaso-q-text" style="font-size:17px;"></div>
+                <!-- Domination pips (3 hits to master) -->
+                <div class="repaso-domination-meter" id="repaso-dom-pips"></div>
+            </div>
+
+            <div id="repaso-options"></div>
+            <!-- Timer bar (same style) -->
+            <div class="q-meta" style="margin-top:14px;">
+                <span id="repaso-count-label">PREGUNTA 1 / ?</span>
+                <span class="timer-num" id="repaso-timer">12s</span>
+            </div>
+            <div class="timer-bar"><div id="repaso-fill" class="timer-fill" style="background: linear-gradient(90deg, var(--danger), #ff6b6b);"></div></div>
+        </div>
+    </div>
+
     <!-- ── SIMULADOR ── -->
     <div id="view-sim" class="view">
         <div class="sim-header">
@@ -1869,38 +2584,47 @@
 
     <!-- ── RESULTADOS ── -->
     <div id="view-results" class="view">
-        <div class="results-hero">
-            <div class="rank-badge">
-                <div class="rank-icon" id="res-icon">🏆</div>
-                <span class="rank-label" id="res-rank-label">Rango</span>
-            </div>
-            <h2 class="rank-title" id="res-title"></h2>
-            <p class="rank-sub" id="res-desc"></p>
+        <!-- Big rank display -->
+        <div class="res-header">
+            <span class="res-rank-icon-big" id="res-icon">🏆</span>
+            <div class="res-rank-label-top" id="res-rank-label">RANGO</div>
+            <div class="res-rank-title-big" id="res-title"></div>
+            <div class="res-rank-sub-big" id="res-desc"></div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="stat-val" id="res-score">—</div>
-                <div class="stat-key">Puntaje</div>
+        <!-- Stats row -->
+        <div class="res-stats-row">
+            <div class="res-stat">
+                <div class="res-stat-val" id="res-score">—</div>
+                <div class="res-stat-key">Puntaje</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-val" id="res-time">—</div>
-                <div class="stat-key">Tiempo</div>
+            <div class="res-stat">
+                <div class="res-stat-val" id="res-time">—</div>
+                <div class="res-stat-key">Tiempo</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-val" id="res-streak">—</div>
-                <div class="stat-key">Racha Máx.</div>
-            </div>
-        </div>
-
-        <div class="xp-gained">
-            <span class="xp-icon">⚡</span>
-            <div class="xp-text">
-                <div class="xp-label">Experiencia ganada</div>
-                <div class="xp-amount" id="res-xp">+0 XP</div>
+            <div class="res-stat">
+                <div class="res-stat-val" id="res-streak">—</div>
+                <div class="res-stat-key">Racha Máx.</div>
             </div>
         </div>
 
+        <!-- XP bar animated -->
+        <div class="res-xp-bar-wrap">
+            <div class="res-xp-icon">⚡</div>
+            <div class="res-xp-info">
+                <div class="res-xp-label">XP ganada esta partida</div>
+                <div class="res-xp-track"><div class="res-xp-fill" id="res-xp-fill"></div></div>
+            </div>
+            <div class="res-xp-amount" id="res-xp">+0 XP</div>
+        </div>
+
+        <!-- Wrong answers recap -->
+        <div class="res-recap" id="res-recap" style="display:none;">
+            <div class="res-recap-title">📚 Para repasar</div>
+            <div id="res-recap-list"></div>
+        </div>
+
+        <!-- Google review card (sim only) -->
         <div id="res-google-card" style="display:none;">
             <div class="google-review">
                 <div class="review-platform">Google Maps · Reseña Simulada</div>
@@ -1909,11 +2633,16 @@
             </div>
         </div>
 
-        <button class="btn" style="margin-top: 20px;" onclick="location.reload()">
+        <button class="btn" style="margin-top: 18px;" onclick="app.goHome(); setTimeout(()=>{ var nd=document.getElementById('user-nombre'); var dd=document.getElementById('user-dni'); if(nd) nd.value=app.state.nombre; if(dd) dd.value=app.state.dni; onHomeInit(); }, 300);">
             <i data-lucide="rotate-ccw"></i>
-            Nuevo Turno
+            Jugar de nuevo
         </button>
-        
+
+        <button class="btn btn-repaso" id="res-repaso-btn" style="margin-top: 10px; display:none;" onclick="app.startRepaso()">
+            <i data-lucide="brain"></i>
+            Repasar mis errores ahora
+        </button>
+
         <button class="btn" style="margin-top: 10px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);" onclick="app.showProfile()">
             <i data-lucide="user"></i>
             Ver Mi Perfil
@@ -1924,6 +2653,7 @@
             Compartir Resultado
         </button>
     </div>
+
 
 </div><!-- /container -->
 
@@ -2344,6 +3074,7 @@ const app = (() => {
             state.streak = 0; 
             state.maxStreak = 0;
             state.simScores = []; 
+            state.wrongAnswers = [];
             state.xp = 0;
             
             if (state.mode === 'sim') {
@@ -2519,6 +3250,8 @@ const app = (() => {
                 
                 state.streak = 0;
                 playSound('wrong');
+                state.wrongAnswers = state.wrongAnswers || [];
+                state.wrongAnswers.push({ q: q.q, correct: q.o[q.c] });
             }
             
             renderStreakDots();
@@ -2779,43 +3512,54 @@ const app = (() => {
 
                 if (resTime) resTime.textContent = elapsed + 's';
                 if (resStreak) resStreak.textContent = state.maxStreak || '—';
-                if (resXp) resXp.textContent = '+' + state.xp + ' XP';
 
-                if (state.mode === 'trivia') {
+                // Animated XP bar
+                const resXpFill = document.getElementById('res-xp-fill');
+                if (resXp) resXp.textContent = '+' + state.xp + ' XP';
+                if (resXpFill) setTimeout(() => { resXpFill.style.width = Math.min((state.xp / 200) * 100, 100) + '%'; }, 400);
+
+                if (state.mode === 'trivia' || state.mode === 'ingredientes') {
+                    const isTrivia = state.mode === 'trivia';
                     const rank = RANKS.trivia.find(r => state.score >= r.min) || RANKS.trivia[RANKS.trivia.length - 1];
-                    
+                    const total = isTrivia ? DATA.trivia.length : 7;
                     if (resIcon) resIcon.textContent = rank.icon;
-                    if (resRankLabel) resRankLabel.textContent = 'RANGO TRIVIA';
+                    if (resRankLabel) resRankLabel.textContent = isTrivia ? 'RANGO TRIVIA' : 'RANGO CARTA';
                     if (resTitle) resTitle.textContent = rank.label;
                     if (resDesc) resDesc.textContent = rank.sub;
-                    if (resScore) resScore.textContent = state.score + ' / ' + DATA.trivia.length;
-                    
+                    if (resScore) resScore.textContent = state.score + '/' + total;
                     if (resGoogleCard) resGoogleCard.style.display = 'none';
+                    // Wrong answers recap
+                    const recapEl = document.getElementById('res-recap');
+                    const recapList = document.getElementById('res-recap-list');
+                    const wrongs = state.wrongAnswers || [];
+                    if (recapEl && recapList && wrongs.length > 0) {
+                        recapList.innerHTML = wrongs.slice(0, 4).map(w =>
+                            `<div class="recap-item"><div class="recap-item-q">${w.q}</div><div class="recap-item-ans">✓ ${w.correct}</div></div>`
+                        ).join('');
+                        recapEl.style.display = 'block';
+                    } else if (recapEl) { recapEl.style.display = 'none'; }
+                    if (state.score === total) { createConfetti(); createConfetti(); }
                 } else {
-                    // Calculate stars based on percentage of max possible score
-                    const maxPossibleScore = 25; // 5 scenarios × 5 points each
+                    const maxPossibleScore = 25;
                     const percentage = (state.score / maxPossibleScore) * 100;
                     const stars = Math.round((percentage / 100) * 5);
                     const clampedStars = Math.min(5, Math.max(1, stars));
-
                     const rank = RANKS.sim.find(r => state.score >= r.min) || RANKS.sim[RANKS.sim.length - 1];
-                    
                     if (resIcon) resIcon.textContent = rank.icon;
                     if (resRankLabel) resRankLabel.textContent = 'RANGO SERVICIO';
                     if (resTitle) resTitle.textContent = rank.label;
                     if (resDesc) resDesc.textContent = rank.sub;
                     if (resScore) resScore.textContent = clampedStars + ' ★';
-
+                    const recapEl2 = document.getElementById('res-recap');
+                    if (recapEl2) recapEl2.style.display = 'none';
                     if (resGoogleCard) resGoogleCard.style.display = 'block';
-                    
                     if (resStars) {
                         let starHtml = '';
                         for (let i = 0; i < 5; i++) {
-                            starHtml += `<i data-lucide="star" style="fill:${i < clampedStars ? '#FFD700' : 'none'}; color:${i < clampedStars ? '#FFD700' : '#333'}; width:18px; height:18px;"></i>`;
+                            starHtml += `<i data-lucide="star" style="fill:${i < clampedStars ? '#FFD700' : 'none'}; color:${i < clampedStars ? '#FFD700' : '#555'}; width:18px; height:18px;"></i>`;
                         }
                         resStars.innerHTML = starHtml;
                     }
-
                     const msgs = [
                         "Pésimo servicio. No recomendaría este lugar.",
                         "Atención mediocre. Mucho por mejorar.",
@@ -2823,12 +3567,10 @@ const app = (() => {
                         "Muy buena atención. Volvería sin dudas.",
                         "¡Servicio impecable! El mejor restaurante de la zona."
                     ];
-                    
-                    if (resComment) {
-                        resComment.textContent = `"${msgs[clampedStars - 1]}. El camarero DNI ${state.dni} atendió la mesa."`;
-                    }
+                    if (resComment) resComment.textContent = `"${msgs[clampedStars - 1]}. El camarero DNI ${state.dni} atendió la mesa."`;
+                    if (clampedStars === 5) { createConfetti(); createConfetti(); }
                 }
-                
+
                 lucide.createIcons();
             }, 500);
         },
@@ -2844,7 +3586,7 @@ const app = (() => {
             };
             
             const shareText = `
-🏆 ¡Resultados de ${state.mode === 'trivia' ? 'Trivia' : 'Simulador'} en Andino Salón!
+🏆 ¡Resultados de ${state.mode === 'trivia' ? 'Trivia' : 'Simulador'} en Ultra Mega Camarero!
 ⭐ Puntaje: ${results.score}
 ⚡ XP: ${results.xp}
 🔥 Racha máxima: ${results.streak}
@@ -2854,7 +3596,7 @@ const app = (() => {
             
             if (navigator.share) {
                 navigator.share({
-                    title: 'Andino Salón - Resultados',
+                    title: 'Ultra Mega Camarero - Resultados',
                     text: shareText
                 }).catch(() => {
                     this.copyToClipboard(shareText);
@@ -3475,6 +4217,404 @@ function renderUnlockBadges(playerXp) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// REPASO INTELIGENTE — Sistema tipo Anki
+// ══════════════════════════════════════════════════════════════════
+//
+// Mecánica: cada pregunta incorrecta se guarda con un contador de
+// aciertos consecutivos. Necesitás REPASO_HITS aciertos para "dominar"
+// una pregunta. Si volvés a fallarla, el contador se reinicia.
+
+const REPASO_COL  = 'andino_repaso';
+const REPASO_HITS = 3;      // aciertos consecutivos para dominar
+const REPASO_KEY  = 'andino_repaso_v1';
+
+function repasoQId(mode, q) {
+    const base = (mode + '_' + (q.q || q.client || '').slice(0, 40))
+        .replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    return base || (mode + '_' + Math.random().toString(36).slice(2));
+}
+
+const REPASODB = {
+    _key(dni) { return REPASO_KEY + '_' + dni; },
+
+    load(dni) {
+        try { return JSON.parse(localStorage.getItem(this._key(dni))) || {}; } catch { return {}; }
+    },
+
+    save(dni, data) {
+        try { localStorage.setItem(this._key(dni), JSON.stringify(data)); } catch {}
+        try { fsdb.collection(REPASO_COL).doc(dni).set(data); } catch(e) {}
+    },
+
+    async fetch(dni) {
+        try {
+            const doc = await fsdb.collection(REPASO_COL).doc(dni).get();
+            if (doc.exists) {
+                const data = doc.data();
+                localStorage.setItem(this._key(dni), JSON.stringify(data));
+                return data;
+            }
+        } catch(e) {}
+        return this.load(dni);
+    },
+
+    addWrongs(dni, mode, wrongQs) {
+        if (!dni || !wrongQs || !wrongQs.length) return;
+        const data = this.load(dni);
+        wrongQs.forEach(item => {
+            const id = repasoQId(mode, item);
+            if (!data[id]) {
+                data[id] = { id, mode, q: item.q || item.client || '', o: item.o, c: item.c,
+                    explanation: item.explanation || '', dish: item.dish, emoji: item.emoji,
+                    category: item.category, hits: 0, mastered: false, addedAt: Date.now() };
+            } else {
+                // Fallo de vuelta → reset
+                data[id].hits = 0;
+                data[id].mastered = false;
+            }
+        });
+        this.save(dni, data);
+    },
+
+    markHit(dni, id) {
+        const data = this.load(dni);
+        if (!data[id]) return null;
+        data[id].hits = (data[id].hits || 0) + 1;
+        data[id].lastSeen = Date.now();
+        if (data[id].hits >= REPASO_HITS) data[id].mastered = true;
+        this.save(dni, data);
+        return data[id];
+    },
+
+    markMiss(dni, id) {
+        const data = this.load(dni);
+        if (!data[id]) return;
+        data[id].hits = 0;
+        data[id].mastered = false;
+        data[id].lastSeen = Date.now();
+        this.save(dni, data);
+    },
+
+    getPending(dni) {
+        return Object.values(this.load(dni)).filter(x => !x.mastered);
+    },
+
+    getAll(dni) {
+        return Object.values(this.load(dni));
+    },
+
+    countPending(dni) {
+        if (!dni || dni.length < 6) return 0;
+        return this.getPending(dni).length;
+    }
+};
+
+// ── Parchear checkTrivia para capturar el objeto completo ──
+const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
+app.checkTrivia = function(idx, btn) {
+    const q = DATA.trivia[app.state.step];
+    if (idx !== q.c) {
+        app.state._wrongFull = app.state._wrongFull || [];
+        // Avoid duplicates
+        const id = repasoQId('trivia', q);
+        if (!app.state._wrongFull.find(x => repasoQId(x.mode || 'trivia', x) === id)) {
+            app.state._wrongFull.push({ ...q, mode: 'trivia' });
+        }
+    }
+    _origCheckTriviaRepaso(idx, btn);
+};
+
+// ── Parchear checkIngredientes ──
+const _origCheckIngrRepaso = app.checkIngredientes.bind(app);
+app.checkIngredientes = function(idx, btn) {
+    const q = app.state.ingrSelected[app.state.step];
+    if (idx !== q.c) {
+        app.state._wrongFull = app.state._wrongFull || [];
+        const id = repasoQId('ingredientes', q);
+        if (!app.state._wrongFull.find(x => repasoQId(x.mode || 'ingredientes', x) === id)) {
+            app.state._wrongFull.push({ ...q, mode: 'ingredientes' });
+        }
+    }
+    _origCheckIngrRepaso(idx, btn);
+};
+
+// ── Parchear initGame para limpiar _wrongFull ──
+const _origInitGameRepaso = app.initGame.bind(app);
+app.initGame = function() {
+    if (app.state.mode === 'repaso') {
+        app.startRepaso();
+        return;
+    }
+    app.state._wrongFull = [];
+    _origInitGameRepaso();
+};
+
+// ── Parchear finish para guardar wrongFull en REPASODB y mostrar botón ──
+const _origFinishRepaso = app.finish.bind(app);
+app.finish = async function() {
+    const dni   = app.state.dni;
+    const mode  = app.state.mode;
+    const wrongs = app.state._wrongFull || [];
+
+    if (dni && wrongs.length > 0) {
+        REPASODB.addWrongs(dni, mode, wrongs);
+    }
+    app.state._wrongFull = [];
+
+    await _origFinishRepaso();
+
+    // Show "Repasar ahora" button if there are pending
+    setTimeout(() => {
+        if (dni) {
+            const pending = REPASODB.countPending(dni);
+            const btn = document.getElementById('res-repaso-btn');
+            if (btn && pending > 0) {
+                btn.style.display = 'flex';
+                btn.innerHTML = `<i data-lucide="brain"></i> Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
+                lucide.createIcons();
+            } else if (btn) {
+                btn.style.display = 'none';
+            }
+        }
+        updateRepasoBadge(dni);
+    }, 1100);
+};
+
+function updateRepasoBadge(dni) {
+    const badge = document.getElementById('repaso-count-badge');
+    if (!badge) return;
+    const count = REPASODB.countPending(dni);
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// ── REPASO GAME STATE ──
+let _repasoQueue = [];
+let _repasoIdx   = 0;
+let _repasoTimer = null;
+
+app.startRepaso = function() {
+    clearInterval(_repasoTimer);
+    const dni = app.state.dni || (document.getElementById('user-dni') || {}).value?.trim() || '';
+    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero'); return; }
+    app.state.dni = dni;
+
+    const pending = REPASODB.getPending(dni);
+    switchView('repaso');
+    lucide.createIcons();
+
+    if (pending.length === 0) {
+        document.getElementById('repaso-empty-state').style.display = 'block';
+        document.getElementById('repaso-game-state').style.display = 'none';
+        return;
+    }
+
+    // Ordenar: primero los que tienen menos hits (los más frescos/difíciles)
+    _repasoQueue = [...pending].sort((a, b) => (a.hits || 0) - (b.hits || 0));
+    _repasoIdx   = 0;
+
+    document.getElementById('repaso-empty-state').style.display = 'none';
+    document.getElementById('repaso-game-state').style.display  = 'block';
+    renderRepasoQuestion();
+};
+
+function renderRepasoQuestion() {
+    const dni     = app.state.dni;
+    const allData = REPASODB.load(dni);
+    const allArr  = Object.values(allData);
+
+    // Filtrar dominadas de la queue en tiempo real
+    _repasoQueue = _repasoQueue.filter(q => !allData[q.id]?.mastered);
+
+    if (_repasoQueue.length === 0) {
+        document.getElementById('repaso-empty-state').style.display = 'block';
+        document.getElementById('repaso-game-state').style.display  = 'none';
+        createConfetti(); createConfetti();
+        showCombo('🎯 ¡Todo dominado!');
+        updateRepasoBadge(dni);
+        return;
+    }
+
+    if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+
+    const masteredCount = allArr.filter(x => x.mastered).length;
+    const totalInBank   = allArr.length;
+    const pct = totalInBank > 0 ? Math.round((masteredCount / totalInBank) * 100) : 0;
+
+    // Domination bar
+    document.getElementById('repaso-dominio-fill').style.width = pct + '%';
+    document.getElementById('repaso-dominio-pct').textContent  = pct + '%';
+    document.getElementById('repaso-sub-text').textContent     = `${_repasoQueue.length} pendiente${_repasoQueue.length !== 1 ? 's' : ''} · ${masteredCount}/${totalInBank} dominadas`;
+    document.getElementById('repaso-count-label').textContent  = `PREGUNTA ${_repasoIdx + 1} / ${_repasoQueue.length}`;
+
+    // Pills (max 10)
+    const pillRow = document.getElementById('repaso-pill-row');
+    pillRow.innerHTML = allArr.slice(0, 10).map(item => {
+        const isCurrent = _repasoQueue[_repasoIdx] && item.id === _repasoQueue[_repasoIdx].id;
+        let cls = 'repaso-pill' + (item.mastered ? ' mastered' : isCurrent ? ' current' : ' pending');
+        const label = (item.q || '').slice(0, 18) + '…';
+        const icon  = item.mastered ? '✓' : isCurrent ? '→' : '○';
+        return `<span class="${cls}">${icon} ${label}</span>`;
+    }).join('');
+
+    const currentItem = _repasoQueue[_repasoIdx];
+    const freshItem   = allData[currentItem.id] || currentItem;
+    const hits        = freshItem.hits || 0;
+    const hitsLeft    = REPASO_HITS - hits;
+
+    document.getElementById('repaso-card-label').textContent = hits === 0
+        ? 'PREGUNTA A DOMINAR'
+        : `CASI DOMINADA · ${hits}/${REPASO_HITS} aciertos`;
+    document.getElementById('repaso-q-text').textContent = freshItem.q || '';
+
+    // Domination pips
+    const pipsEl = document.getElementById('repaso-dom-pips');
+    pipsEl.innerHTML = '';
+    for (let i = 0; i < REPASO_HITS; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'repaso-dom-pip' + (i < hits ? ' done' : i === hits ? ' active' : '');
+        pipsEl.appendChild(pip);
+    }
+
+    // Options: shuffle to avoid memorizing position
+    const opts = document.getElementById('repaso-options');
+    opts.innerHTML = '';
+    const letters  = ['A','B','C','D'];
+    const shuffled = [...freshItem.o.map((_, i) => i)].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach((origIdx, displayIdx) => {
+        const b = document.createElement('button');
+        b.className = 'option';
+        b.innerHTML = `<span class="option-letter">${letters[displayIdx]}</span>${freshItem.o[origIdx]}`;
+        b.setAttribute('data-orig', origIdx);
+        b.onclick = () => checkRepasoAnswer(origIdx === freshItem.c, b, freshItem, opts);
+        opts.appendChild(b);
+    });
+
+    lucide.createIcons();
+    startRepasoTimer(12);
+}
+
+function checkRepasoAnswer(isCorrect, clickedBtn, item, optsContainer) {
+    clearInterval(_repasoTimer);
+    const dni = app.state.dni;
+
+    const allBtns = optsContainer.querySelectorAll('.option');
+    allBtns.forEach(b => {
+        b.disabled = true;
+        if (parseInt(b.getAttribute('data-orig')) === item.c) b.classList.add('correct');
+    });
+
+    if (isCorrect) {
+        if (clickedBtn) clickedBtn.classList.add('correct');
+        playSound('correct');
+        const result = REPASODB.markHit(dni, item.id);
+        if (result && result.mastered) {
+            showCombo('🎯 ¡Dominada! +1 dominada');
+            playSound('combo');
+        } else if (result) {
+            showCombo(`✅ Acierto ${result.hits}/${REPASO_HITS}`);
+        }
+        setTimeout(() => {
+            _repasoIdx++;
+            if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+            renderRepasoQuestion();
+        }, 1200);
+    } else {
+        if (clickedBtn) clickedBtn.classList.add('wrong');
+        playSound('wrong');
+        REPASODB.markMiss(dni, item.id);
+        showCombo('❌ Reinicia el contador');
+
+        if (item.explanation) {
+            const expl = document.createElement('div');
+            expl.style.cssText = 'background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--text-muted);animation:slideUp 0.3s ease;';
+            expl.textContent = `💡 ${item.explanation}`;
+            optsContainer.appendChild(expl);
+        }
+        setTimeout(() => {
+            // Mover al final de la queue para volver a intentar
+            const moved = _repasoQueue.splice(_repasoIdx, 1)[0];
+            _repasoQueue.push(moved);
+            if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+            renderRepasoQuestion();
+        }, 2600);
+    }
+    updateRepasoBadge(dni);
+}
+
+function startRepasoTimer(sec) {
+    let left = sec;
+    const fill     = document.getElementById('repaso-fill');
+    const timerNum = document.getElementById('repaso-timer');
+    clearInterval(_repasoTimer);
+    if (fill) { fill.style.width = '100%'; fill.classList.remove('urgent'); }
+    if (timerNum) { timerNum.textContent = sec + 's'; timerNum.classList.remove('urgent'); }
+
+    _repasoTimer = setInterval(() => {
+        left = Math.max(0, left - 0.1);
+        if (fill) fill.style.width = (left / sec * 100) + '%';
+        if (timerNum) timerNum.textContent = Math.ceil(left) + 's';
+        if (Math.ceil(left) <= 3) {
+            if (fill) fill.classList.add('urgent');
+            if (timerNum) timerNum.classList.add('urgent');
+        }
+        if (left <= 0) {
+            clearInterval(_repasoTimer);
+            const optsContainer = document.getElementById('repaso-options');
+            const current = _repasoQueue[_repasoIdx];
+            if (!current || !optsContainer) return;
+            optsContainer.querySelectorAll('.option').forEach(b => {
+                b.disabled = true;
+                if (parseInt(b.getAttribute('data-orig')) === current.c) b.classList.add('correct');
+            });
+            REPASODB.markMiss(app.state.dni, current.id);
+            showCombo('⏱ ¡Tiempo!');
+            if (current.explanation) {
+                const expl = document.createElement('div');
+                expl.style.cssText = 'background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--text-muted);animation:slideUp 0.3s ease;';
+                expl.textContent = `💡 ${current.explanation}`;
+                optsContainer.appendChild(expl);
+            }
+            setTimeout(() => {
+                const moved = _repasoQueue.splice(_repasoIdx, 1)[0];
+                _repasoQueue.push(moved);
+                if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+                renderRepasoQuestion();
+            }, 2200);
+        }
+    }, 100);
+}
+
+// Update badge on home
+const _repasoGoHome = app.goHome.bind(app);
+app.goHome = function() {
+    clearInterval(_repasoTimer);
+    _repasoGoHome();
+    setTimeout(() => {
+        const dni = app.state.dni || (document.getElementById('user-dni') || {}).value?.trim() || '';
+        updateRepasoBadge(dni);
+    }, 400);
+};
+
+// Wire DNI input → badge update
+document.addEventListener('DOMContentLoaded', () => {
+    const dniInput = document.getElementById('user-dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', () => updateRepasoBadge(dniInput.value.trim()));
+    }
+});
+
+// Add to MODE_META
+if (typeof MODE_META !== 'undefined') {
+    MODE_META['repaso'] = { icon: '🧠', name: 'Repaso Inteligente', time: 'Hasta dominar', questions: 'Solo tus errores', xp: 'Sin XP · aprendizaje puro' };
+}
+
+// ══════════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ══════════════════════════════════════════════════════════════════
 
@@ -3518,20 +4658,37 @@ app.showAdmin = function() {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-admin').classList.add('active');
     lucide.createIcons();
-    app.switchAdminTab('trivia');
+    app.switchAdminTab('dash'); // default to dashboard
 };
 
 app.switchAdminTab = function(tab) {
     _adminTab = tab;
+    // Toggle tab buttons (now includes 'dash')
+    ['dash', 'trivia', 'sim', 'ingr'].forEach(t => {
+        const btn = document.getElementById('atab-' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
+    });
+
+    // Show/hide panels
+    const dashPanel = document.getElementById('admin-dash-panel');
+    const qPanel    = document.getElementById('admin-questions-panel');
+    if (tab === 'dash') {
+        if (dashPanel) dashPanel.style.display = 'block';
+        if (qPanel)    qPanel.style.display    = 'none';
+        app.dashRefresh();
+        return;
+    }
+    if (dashPanel) dashPanel.style.display = 'none';
+    if (qPanel)    qPanel.style.display    = 'block';
+
+    // Questions panel
     ['trivia', 'sim', 'ingr'].forEach(t => {
-        document.getElementById('atab-' + t).classList.toggle('active', t === tab);
         const addForm = document.getElementById('admin-add-' + t);
         if (addForm) addForm.style.display = t === tab ? 'block' : 'none';
     });
-
     const labels = { trivia: 'Preguntas de Trivia', sim: 'Situaciones del Simulador', ingr: 'Preguntas de Carta' };
-    document.getElementById('admin-section-label').textContent = labels[tab];
-
+    const labelEl = document.getElementById('admin-section-label');
+    if (labelEl) labelEl.textContent = labels[tab] || '';
     renderAdminList(tab);
 };
 
@@ -3631,6 +4788,64 @@ app.adminAddIngr = async function() {
 };
 
 // ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// ONBOARDING (primera vez)
+// ══════════════════════════════════════════════════════════════════
+const ONB_KEY = 'andino_onboarded_v1';
+const ONB_STEPS = [
+    { emoji: '👋', title: '¡Bienvenido al equipo!', body: 'Esta app te ayuda a conocer <strong>protocolos, la carta y técnicas de servicio</strong> de Barra Chalaca de forma práctica. Completás mini-desafíos y acumulás XP.' },
+    { emoji: '⚡', title: 'XP y Niveles', body: 'Cada respuesta correcta suma <strong>XP</strong>. Con las rachas y el desafío diario podés multiplicar lo que ganás. Subí de nivel y desbloqueá nuevos modos.' },
+    { emoji: '🎯', title: '¿Por dónde empezar?', body: '<strong>Trivia Operativa</strong> para protocolos del salón. <strong>Cliente vs Camarero</strong> para situaciones reales. <strong>Conocé la Carta</strong> para ingredientes del menú.' }
+];
+let _onbStep = 0;
+
+function showOnboarding() {
+    _onbStep = 0;
+    renderOnbStep(0);
+    document.getElementById('onboarding-overlay').classList.add('active');
+}
+function renderOnbStep(step) {
+    const s = ONB_STEPS[step];
+    document.getElementById('onb-emoji').textContent = s.emoji;
+    document.getElementById('onb-title').textContent = s.title;
+    document.getElementById('onb-body').innerHTML = s.body;
+    document.getElementById('onb-next-btn').textContent = step < ONB_STEPS.length - 1 ? 'Siguiente →' : '¡Empezar! 🚀';
+    ONB_STEPS.forEach((_, i) => { const d = document.getElementById('onb-dot-' + i); if (d) d.classList.toggle('active', i === step); });
+    const emojiEl = document.getElementById('onb-emoji');
+    emojiEl.style.animation = 'none'; void emojiEl.offsetWidth; emojiEl.style.animation = 'onbBounce 0.5s ease';
+}
+app.onbNext = function() { if (_onbStep < ONB_STEPS.length - 1) { _onbStep++; renderOnbStep(_onbStep); } else { app.onbSkip(); } };
+app.onbSkip = function() { document.getElementById('onboarding-overlay').classList.remove('active'); try { localStorage.setItem(ONB_KEY, '1'); } catch {} };
+function checkShowOnboarding(dni) {
+    try {
+        const done = localStorage.getItem(ONB_KEY);
+        const p = DB.getPlayer(dni);
+        if (!done && (!p || p.totalGames === 0)) setTimeout(() => showOnboarding(), 600);
+    } catch {}
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODE PREVIEW PANEL
+// ══════════════════════════════════════════════════════════════════
+const MODE_META = {
+    trivia:      { icon: '🧠', name: 'Trivia Operativa',    time: '~4 min', questions: '14 preguntas', xp: 'Hasta 140 XP' },
+    sim:         { icon: '🎭', name: 'Cliente vs Camarero', time: '~5 min', questions: '5 situaciones', xp: 'Hasta 75 XP' },
+    ingredientes:{ icon: '🍽️', name: 'Conocé la Carta',    time: '~3 min', questions: '7 preguntas',   xp: 'Hasta 70 XP' }
+};
+function updateModePreview(mode) {
+    const m = MODE_META[mode] || MODE_META.trivia;
+    const panel = document.getElementById('mode-preview-panel');
+    if (!panel) return;
+    document.getElementById('mpv-icon').textContent = m.icon;
+    document.getElementById('mpv-name').textContent = m.name;
+    const meta = panel.querySelector('.mode-preview-meta');
+    if (meta) meta.innerHTML = `<span>⏱ ${m.time}</span><span>❓ ${m.questions}</span><span>⚡ ${m.xp}</span>`;
+    panel.style.transform = 'scale(0.98)'; setTimeout(() => { panel.style.transform = ''; }, 150);
+}
+const _origSetMode = app.setMode.bind(app);
+app.setMode = function(m, el) { _origSetMode(m, el); updateModePreview(m); };
+
 // HOME INIT: cargar streak + daily card + unlock badges + extras
 // ══════════════════════════════════════════════════════════════════
 
@@ -3691,6 +4906,8 @@ async function onHomeInit() {
     await renderStreakBanner(dni);
     // Render daily card
     renderDailyCard(dni);
+    if (dni.length >= 6) checkShowOnboarding(dni);
+    updateModePreview(app.state ? app.state.mode : 'trivia');
 }
 
 // Wire DNI input to live-update home
@@ -3711,11 +4928,256 @@ app.goHome = function() {
     setTimeout(() => onHomeInit(), 250);
 };
 
+
+// ══════════════════════════════════════════════════════════════════
+// DASHBOARD DE SUPERVISOR
+// ══════════════════════════════════════════════════════════════════
+
+let _dashPlayers  = [];   // full list from Firestore
+let _dashFilter   = 'all';
+let _dashSortKey  = 'totalXp';
+let _dashSortAsc  = false;
+let _dashSelected = null; // DNI of expanded player
+
+function dashActivityStatus(p) {
+    // Returns { label, css, days }
+    const hist = p.history || [];
+    if (!hist.length && (!p.totalGames || p.totalGames === 0)) {
+        return { label: 'Sin jugar', css: 'grey', days: 9999 };
+    }
+    // Try to parse last date from history[0].date  "DD/MM HH:MM"
+    let daysSince = 9999;
+    if (hist.length && hist[0].date) {
+        try {
+            const parts = hist[0].date.split(' ');
+            const [dd, mm] = parts[0].split('/');
+            const [hh, mi] = (parts[1] || '00:00').split(':');
+            const year = new Date().getFullYear();
+            const d = new Date(year, parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(mi));
+            daysSince = Math.floor((Date.now() - d.getTime()) / 86400000);
+        } catch {}
+    }
+    if (daysSince <= 1)  return { label: 'Hoy/ayer',     css: 'green',  days: daysSince };
+    if (daysSince <= 7)  return { label: daysSince + 'd', css: 'yellow', days: daysSince };
+    if (daysSince <= 30) return { label: daysSince + 'd', css: 'red',    days: daysSince };
+    return { label: '+30d', css: 'red', days: daysSince };
+}
+
+app.dashRefresh = async function() {
+    const tbody = document.getElementById('dash-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" class="dash-loading">Cargando datos...</td></tr>';
+
+    _dashPlayers = await DB.getAllPlayersAsync();
+    app.dashRender();
+};
+
+app.dashFilter = function(f) {
+    _dashFilter = f;
+    ['all', 'active', 'inactive', 'new'].forEach(k => {
+        const btn = document.getElementById('df-' + k);
+        if (btn) btn.classList.toggle('active', k === f);
+    });
+    app.dashRender();
+};
+
+app.dashSort = function(key) {
+    if (_dashSortKey === key) _dashSortAsc = !_dashSortAsc;
+    else { _dashSortKey = key; _dashSortAsc = false; }
+    // Update header indicators
+    document.querySelectorAll('.dash-table th').forEach(th => th.classList.remove('sorted'));
+    app.dashRender();
+};
+
+app.dashRender = function() {
+    const tbody = document.getElementById('dash-tbody');
+    const search = (document.getElementById('dash-search') || {}).value?.toLowerCase() || '';
+    if (!tbody) return;
+
+    let players = [..._dashPlayers];
+
+    // Filter
+    if (_dashFilter === 'active') {
+        players = players.filter(p => dashActivityStatus(p).days <= 7);
+    } else if (_dashFilter === 'inactive') {
+        players = players.filter(p => { const s = dashActivityStatus(p); return s.days > 7 && s.days < 9999; });
+    } else if (_dashFilter === 'new') {
+        players = players.filter(p => !p.totalGames || p.totalGames === 0);
+    }
+
+    // Search
+    if (search) {
+        players = players.filter(p =>
+            (p.nombre || '').toLowerCase().includes(search) ||
+            (p.dni || '').toLowerCase().includes(search)
+        );
+    }
+
+    // Sort
+    players.sort((a, b) => {
+        let av = a[_dashSortKey] || 0;
+        let bv = b[_dashSortKey] || 0;
+        if (_dashSortKey === 'nombre') { av = a.nombre || a.dni || ''; bv = b.nombre || b.dni || ''; }
+        if (_dashSortKey === 'lastSeen') {
+            av = dashActivityStatus(a).days;
+            bv = dashActivityStatus(b).days;
+            // Lower days = more recent = should come first when desc
+            return _dashSortAsc ? bv - av : av - bv;
+        }
+        if (typeof av === 'string') return _dashSortAsc ? bv.localeCompare(av) : av.localeCompare(bv);
+        return _dashSortAsc ? av - bv : bv - av;
+    });
+
+    // KPIs
+    const totalGames = _dashPlayers.reduce((s, p) => s + (p.totalGames || 0), 0);
+    const activeLast7 = _dashPlayers.filter(p => dashActivityStatus(p).days <= 7).length;
+    const kpiTotal = document.getElementById('dash-kpi-total');
+    const kpiActive = document.getElementById('dash-kpi-active');
+    const kpiGames = document.getElementById('dash-kpi-games');
+    if (kpiTotal)  kpiTotal.textContent  = _dashPlayers.length;
+    if (kpiActive) kpiActive.textContent = activeLast7;
+    if (kpiGames)  kpiGames.textContent  = totalGames;
+
+    if (!players.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="dash-empty">No hay resultados para este filtro</td></tr>';
+        return;
+    }
+
+    const LEVEL_NAMES_SHORT = ['Ap.','MJr.','Mes.','MSr.','SomJr.','Som.','JdR.','Chef','Dire.','Légende'];
+    tbody.innerHTML = players.map(p => {
+        const status = dashActivityStatus(p);
+        const level  = typeof getLevel === 'function' ? getLevel(p.totalXp || 0) : 0;
+        const lvlName = LEVEL_NAMES_SHORT[level] || 'Niv.' + (level + 1);
+        const initials = (p.nombre || p.dni || '??').slice(0, 2).toUpperCase();
+        const isSelected = _dashSelected === p.dni;
+        return `<tr onclick="app.dashSelectPlayer('${p.dni}')" style="cursor:pointer; ${isSelected ? 'background:rgba(232,200,74,0.06)' : ''}">
+            <td>
+                <div class="dash-name-cell">
+                    <span class="activity-dot ${status.css}"></span>
+                    <div class="dash-avatar-sm">${initials}</div>
+                    <div>
+                        <div style="font-weight:600;">${p.nombre || '—'}</div>
+                        <div style="font-size:9px; color:var(--text-muted); font-family:var(--font-mono);">DNI ${p.dni} · ${lvlName}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="font-family:var(--font-mono); color:var(--xp-color);">${p.totalXp || 0}</td>
+            <td style="font-family:var(--font-mono);">${p.totalGames || 0}</td>
+            <td>
+                <span style="color:var(--${status.css === 'green' ? 'success' : status.css === 'yellow' ? 'accent' : status.css === 'red' ? 'danger' : 'text-muted'});">
+                    ${status.label}
+                </span>
+            </td>
+        </tr>`;
+    }).join('');
+};
+
+app.dashSelectPlayer = function(dni) {
+    _dashSelected = _dashSelected === dni ? null : dni;
+    const detail = document.getElementById('dash-player-detail');
+    if (!detail) return;
+
+    if (!_dashSelected) {
+        detail.classList.remove('open');
+        app.dashRender();
+        return;
+    }
+
+    const p = _dashPlayers.find(x => x.dni === dni);
+    if (!p) return;
+
+    const level = typeof getLevel === 'function' ? getLevel(p.totalXp || 0) : 0;
+    const status = dashActivityStatus(p);
+    const hist = (p.history || []).slice(0, 8);
+
+    document.getElementById('dash-detail-name').textContent = (p.nombre || 'Sin nombre') + ' — DNI ' + p.dni;
+    document.getElementById('dash-detail-content').innerHTML = `
+        <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+            <span style="font-size:11px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 8px;">
+                Nivel ${level + 1}
+            </span>
+            <span style="font-size:11px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 8px;">
+                ${p.totalXp || 0} XP total
+            </span>
+            <span style="font-size:11px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 8px; color:var(--${status.css === 'green' ? 'success' : status.css === 'red' ? 'danger' : 'accent'});">
+                Últ. acceso: ${status.label}
+            </span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px;">
+            <div style="text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px;">
+                <div style="font-family:var(--font-display); font-size:20px; font-weight:900;">${p.triviaGames || 0}</div>
+                <div style="font-size:9px; color:var(--text-muted); font-family:var(--font-mono);">TRIVIA</div>
+            </div>
+            <div style="text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px;">
+                <div style="font-family:var(--font-display); font-size:20px; font-weight:900;">${p.simGames || 0}</div>
+                <div style="font-size:9px; color:var(--text-muted); font-family:var(--font-mono);">SIMULADOR</div>
+            </div>
+            <div style="text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px;">
+                <div style="font-family:var(--font-display); font-size:20px; font-weight:900;">${p.ingrGames || 0}</div>
+                <div style="font-size:9px; color:var(--text-muted); font-family:var(--font-mono);">CARTA</div>
+            </div>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Historial reciente</div>
+        ${hist.length ? hist.map(h => `
+            <div class="dash-history-item">
+                <span style="color:var(--text-muted);">${h.date || '—'}</span>
+                <span style="font-family:var(--font-mono); font-size:10px; background:var(--surface); padding:2px 6px; border-radius:4px;">${h.mode || '?'}</span>
+                <span>Score: <strong>${h.score ?? '—'}</strong></span>
+                <span style="color:var(--xp-color);">+${h.xp || 0} XP</span>
+            </div>`).join('')
+        : '<div style="font-size:11px; color:var(--text-muted);">Sin historial disponible</div>'}
+    `;
+    detail.classList.add('open');
+    app.dashRender();
+};
+
+app.dashExportCSV = function() {
+    if (!_dashPlayers.length) { alert('No hay datos para exportar'); return; }
+    const rows = [
+        ['DNI', 'Nombre', 'Nivel', 'XP Total', 'Partidas', 'Trivia', 'Simulador', 'Carta', 'Mejor Trivia', 'Mejor Sim', 'Mejor Racha', 'Último acceso', 'Estado']
+    ];
+    _dashPlayers.forEach(p => {
+        const level  = typeof getLevel === 'function' ? getLevel(p.totalXp || 0) + 1 : 1;
+        const status = dashActivityStatus(p);
+        rows.push([
+            p.dni, p.nombre || '', level, p.totalXp || 0,
+            p.totalGames || 0, p.triviaGames || 0, p.simGames || 0, p.ingrGames || 0,
+            p.bestTriviaScore || 0, p.bestSimScore || 0, p.bestStreak || 0,
+            status.label, status.days <= 7 ? 'Activo' : status.days === 9999 ? 'Sin jugar' : 'Inactivo'
+        ]);
+    });
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = 'andino_camareros_' + date + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
 // Error handling
 window.addEventListener('error', (e) => {
     console.error('App error:', e.error);
 });
 </script>
+
+
+    <!-- ── ONBOARDING OVERLAY ── -->
+    <div id="onboarding-overlay">
+        <div class="onb-card">
+            <div class="onb-step-dots">
+                <div class="onb-dot active" id="onb-dot-0"></div>
+                <div class="onb-dot" id="onb-dot-1"></div>
+                <div class="onb-dot" id="onb-dot-2"></div>
+            </div>
+            <span class="onb-emoji" id="onb-emoji">🎯</span>
+            <div class="onb-title" id="onb-title">Bienvenido</div>
+            <div class="onb-body" id="onb-body">Cargando...</div>
+            <button class="onb-btn" id="onb-next-btn" onclick="app.onbNext()">Siguiente →</button>
+            <span class="onb-skip" onclick="app.onbSkip()">Saltear introducción</span>
+        </div>
+    </div>
 
     <!-- ── ADMIN PANEL ── -->
     <div id="view-admin" class="view">
@@ -3729,12 +5191,70 @@ window.addEventListener('error', (e) => {
         </div>
 
         <div class="admin-tabs">
+            <div class="admin-tab" id="atab-dash" onclick="app.switchAdminTab('dash')">📊 Dashboard</div>
             <div class="admin-tab active" id="atab-trivia" onclick="app.switchAdminTab('trivia')">Trivia</div>
             <div class="admin-tab" id="atab-sim" onclick="app.switchAdminTab('sim')">Simulador</div>
             <div class="admin-tab" id="atab-ingr" onclick="app.switchAdminTab('ingr')">Carta</div>
         </div>
 
-        <div class="admin-section">
+        <!-- Dashboard panel -->
+        <div class="admin-section" id="admin-dash-panel" style="display:none;">
+            <!-- KPIs -->
+            <div class="dash-summary">
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-total">—</div>
+                    <div class="dash-kpi-label">Jugadores</div>
+                </div>
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-active">—</div>
+                    <div class="dash-kpi-label">Activos 7d</div>
+                </div>
+                <div class="dash-kpi">
+                    <div class="dash-kpi-val" id="dash-kpi-games">—</div>
+                    <div class="dash-kpi-label">Partidas tot.</div>
+                </div>
+            </div>
+
+            <!-- Filters + search -->
+            <div class="dash-filters">
+                <div class="dash-filter-btn active" id="df-all" onclick="app.dashFilter('all')">Todos</div>
+                <div class="dash-filter-btn" id="df-active" onclick="app.dashFilter('active')">✅ Activos</div>
+                <div class="dash-filter-btn" id="df-inactive" onclick="app.dashFilter('inactive')">⚠️ Inactivos 7d</div>
+                <div class="dash-filter-btn" id="df-new" onclick="app.dashFilter('new')">🆕 Sin jugar</div>
+            </div>
+            <input class="dash-search" id="dash-search" placeholder="🔍 Buscar por nombre o DNI..." oninput="app.dashRender()">
+
+            <!-- Table -->
+            <div class="dash-table-wrap">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th onclick="app.dashSort('nombre')">Empleado</th>
+                            <th onclick="app.dashSort('totalXp')">XP ▾</th>
+                            <th onclick="app.dashSort('totalGames')">Partidas</th>
+                            <th onclick="app.dashSort('lastSeen')">Último acceso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dash-tbody">
+                        <tr><td colspan="4" class="dash-loading">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Player detail drawer -->
+            <div class="dash-player-detail" id="dash-player-detail">
+                <div class="dash-detail-title" id="dash-detail-name"></div>
+                <div id="dash-detail-content"></div>
+            </div>
+
+            <!-- Export buttons -->
+            <div class="dash-export-row">
+                <div class="dash-export-btn" onclick="app.dashExportCSV()">⬇ Exportar CSV</div>
+                <div class="dash-export-btn" onclick="app.dashRefresh()">↻ Actualizar</div>
+            </div>
+        </div>
+
+        <div class="admin-section" id="admin-questions-panel">
             <div class="admin-section-title" id="admin-section-label">Preguntas de Trivia</div>
             <div id="admin-q-list" style="max-height:300px; overflow-y:auto;"></div>
 
@@ -3782,8 +5302,8 @@ window.addEventListener('error', (e) => {
                 <div class="admin-status" id="admin-ingr-status"></div>
             </div>
         </div>
+        </div><!-- /admin-questions-panel -->
     </div>
 
 </body>
 </html>
-                                                                                                                                        

@@ -3061,6 +3061,12 @@ const app = (() => {
             const nombreInput = document.getElementById('user-nombre');
             state.dni = dniInput ? dniInput.value.trim() : '';
             state.nombre = nombreInput ? nombreInput.value.trim() : '';
+
+            // EXCEPCIÓN PARA ADMIN
+            if (isAdmin(state.dni)) {
+                app.showAdmin();
+                return;
+            }
             
             if (state.dni.length < 6) { 
                 alert("Ingresá un DNI válido (mínimo 6 dígitos)");
@@ -4399,13 +4405,11 @@ let _repasoTimer = null;
 
 app.startRepaso = function() {
     clearInterval(_repasoTimer);
-    initGame: () => {
     const dni = document.getElementById('user-dni').value.trim();
     
     // EXCEPCIÓN PARA ADMIN
-    if (dni.toLowerCase() === 'admin') {
-        app.showView('view-admin'); // Esto te lleva directo al panel
-        app.dashRender(); // Carga los datos de los empleados
+    if (dni.toLowerCase() === 'admin' || dni === '00000000') {
+        app.showAdmin();
         return;
     }
 

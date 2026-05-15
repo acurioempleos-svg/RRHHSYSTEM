@@ -4399,9 +4399,21 @@ let _repasoTimer = null;
 
 app.startRepaso = function() {
     clearInterval(_repasoTimer);
-    const dni = app.state.dni || (document.getElementById('user-dni') || {}).value?.trim() || '';
-    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero'); return; }
-    app.state.dni = dni;
+    initGame: () => {
+    const dni = document.getElementById('user-dni').value.trim();
+    
+    // EXCEPCIÓN PARA ADMIN
+    if (dni.toLowerCase() === 'admin') {
+        app.showView('view-admin'); // Esto te lleva directo al panel
+        app.dashRender(); // Carga los datos de los empleados
+        return;
+    }
+
+    // Validación normal para el resto de los camareros
+    if (!dni || dni.length < 6) {
+        alert('Ingresá tu DNI (mínimo 6 números)');
+        return;
+    }
 
     const pending = REPASODB.getPending(dni);
     switchView('repaso');

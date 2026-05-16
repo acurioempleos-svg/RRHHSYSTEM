@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Admin · Andino</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg: #FDF8EE;
+            --surface: #FFFFFF;
+            --surface-2: #F2ECD9;
+            --accent: #D4A800;
+            --accent-dim: rgba(212,168,0,0.14);
+            --border: rgba(26,20,0,0.10);
+            --text: #1A1400;
+            --text-muted: #8A7A50;
+            --danger: #C8001A;
+            --danger-dim: rgba(200,0,26,0.08);
+            --success: #1A7A3A;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Lato', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+            --radius: 16px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            padding: 0;
+        }
+        .page {
+            width: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 20px 16px 40px;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .back-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-family: var(--font-body);
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--text);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-btn:hover { background: var(--surface-2); }
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        /* ── Tabs ── */
+        .admin-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+        .admin-tab {
+            padding:7px 14px; border-radius:10px; font-size:12px;
+            font-family:var(--font-mono); cursor:pointer; font-weight:600;
+            background:var(--surface); border:1px solid var(--border);
+            color:var(--text-muted); transition:all .15s;
+        }
+        .admin-tab.active {
+            background:var(--text); color:var(--bg);
+            border-color:var(--text);
+        }
+        /* ── Secciones ── */
+        .admin-section { margin-bottom:16px; }
+        .admin-section-title {
+            font-family:var(--font-display); font-size:14px; font-weight:700;
+            text-transform:uppercase; letter-spacing:1px;
+            margin-bottom:10px; color:var(--text-muted);
+        }
+        .admin-add-form {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--radius); padding:14px;
+            display:flex; flex-direction:column; gap:8px;
+        }
+        .admin-add-form input, .admin-add-form textarea {
+            background:var(--surface-2); border:1px solid var(--border);
+            border-radius:8px; padding:9px 12px;
+            font-family:var(--font-body); font-size:13px;
+            color:var(--text); width:100%;
+        }
+        .admin-add-form textarea { min-height:60px; resize:vertical; }
+        .admin-q-item {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:10px; padding:10px 12px;
+            display:flex; align-items:flex-start; justify-content:space-between;
+            gap:8px; margin-bottom:6px; font-size:12px;
+        }
+        .admin-q-text { flex:1; line-height:1.4; }
+        .admin-q-delete {
+            background:none; border:none; color:var(--danger);
+            cursor:pointer; font-size:16px; flex-shrink:0;
+        }
+        .admin-status { font-size:11px; font-family:var(--font-mono); margin-top:4px; }
+        .admin-status.ok { color:var(--success); }
+        .admin-status.err { color:var(--danger); }
+        /* ── Botón ── */
+        .btn {
+            width:100%; padding:12px 16px; border-radius:12px;
+            border:none; cursor:pointer; font-family:var(--font-display);
+            font-size:14px; font-weight:600; text-transform:uppercase;
+            letter-spacing:1px; background:var(--text); color:var(--bg);
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn:active { opacity:0.8; }
+        /* ── Dashboard ── */
+        .dash-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+        .dash-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; }
+        .dash-kpi-val { font-family:var(--font-display); font-size:24px; font-weight:700; }
+        .dash-kpi-label { font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; }
+        .dash-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .dash-filter-btn { padding:5px 10px; border-radius:8px; font-size:11px; font-family:var(--font-mono); cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--text-muted); }
+        .dash-filter-btn.active { background:var(--text); color:var(--bg); border-color:var(--text); }
+        .dash-search { width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:10px; }
+        .dash-table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); margin-bottom:10px; }
+        .dash-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .dash-table th { padding:10px 12px; text-align:left; font-family:var(--font-mono); font-size:10px; color:var(--text-muted); border-bottom:1px solid var(--border); cursor:pointer; white-space:nowrap; background:var(--surface-2); }
+        .dash-table td { padding:10px 12px; border-bottom:1px solid var(--border); }
+        .dash-table tr:last-child td { border-bottom:none; }
+        .activity-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; }
+        .activity-dot.green { background:var(--success); }
+        .activity-dot.yellow { background:var(--accent); }
+        .activity-dot.red { background:var(--danger); }
+        .activity-dot.grey { background:var(--text-muted); }
+        .dash-export-row { display:flex; gap:8px; margin-top:8px; }
+        .dash-export-btn { flex:1; padding:9px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-size:12px; font-family:var(--font-mono); cursor:pointer; text-align:center; color:var(--text-muted); }
+        .dash-export-btn:hover { border-color:var(--accent); color:var(--accent); }
+        .dash-loading { text-align:center; color:var(--text-muted); padding:20px; font-family:var(--font-mono); font-size:11px; }
+        .dash-player-detail { display:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; margin-top:8px; }
+        .dash-player-detail.open { display:block; }
+        .dash-detail-title { font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:10px; }
+        .dash-name-cell { display:flex; align-items:center; gap:6px; }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <div class="top-bar">
+        <a href="andino_camareros_v3__6_.html" class="back-btn">← Volver al juego</a>
+        <div class="page-title">🛠️ Admin</div>
+    </div>
+
+    <div class="admin-tabs">
+        <div class="admin-tab active" id="atab-dash" onclick="switchTab('dash')">📊 Dashboard</div>
+        <div class="admin-tab" id="atab-trivia" onclick="switchTab('trivia')">Trivia</div>
+        <div class="admin-tab" id="atab-sim" onclick="switchTab('sim')">Simulador</div>
+        <div class="admin-tab" id="atab-ingr" onclick="switchTab('ingr')">Carta</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="panel-dash">
+        <div class="dash-summary">
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-total">—</div><div class="dash-kpi-label">Jugadores</div></div>
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-active">—</div><div class="dash-kpi-label">Activos 7d</div></div>
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-games">—</div><div class="dash-kpi-label">Partidas</div></div>
+        </div>
+        <div class="dash-filters">
+            <div class="dash-filter-btn active" id="df-all" onclick="dashFilter('all')">Todos</div>
+            <div class="dash-filter-btn" id="df-active" onclick="dashFilter('active')">✅ Activos</div>
+            <div class="dash-filter-btn" id="df-inactive" onclick="dashFilter('inactive')">⚠️ Inactivos 7d</div>
+            <div class="dash-filter-btn" id="df-new" onclick="dashFilter('new')">🆕 Sin jugar</div>
+        </div>
+        <input class="dash-search" id="dash-search" placeholder="🔍 Buscar por nombre o DNI..." oninput="dashRender()">
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead><tr>
+                    <th onclick="dashSort('nombre')">Empleado</th>
+                    <th onclick="dashSort('totalXp')">XP ▾</th>
+                    <th onclick="dashSort('totalGames')">Partidas</th>
+                    <th onclick="dashSort('lastSeen')">Último acceso</th>
+                </tr></thead>
+                <tbody id="dash-tbody"><tr><td colspan="4" class="dash-loading">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="dash-player-detail" id="dash-player-detail">
+            <div class="dash-detail-title" id="dash-detail-name"></div>
+            <div id="dash-detail-content"></div>
+        </div>
+        <div class="dash-export-row">
+            <div class="dash-export-btn" onclick="dashExportCSV()">⬇ Exportar CSV</div>
+            <div class="dash-export-btn" onclick="dashRefresh()">↻ Actualizar</div>
+        </div>
+    </div>
+
+    <!-- Trivia -->
+    <div id="panel-trivia" style="display:none;">
+        <div class="admin-section-title">Preguntas de Trivia</div>
+        <div id="q-list-trivia" style="max-height:300px; overflow-y:auto; margin-bottom:12px;"></div>
+        <div class="admin-add-form">
+            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR PREGUNTA</div>
+            <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
+            <input id="adm-trivia-o0" placeholder="Opción A (la correcta)">
+            <input id="adm-trivia-o1" placeholder="Opción B">
+            <input id="adm-trivia-o2" placeholder="Opción C">
+            <textarea id="adm-trivia-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
+            <button class="btn" onclick="adminAdd('trivia')">+ Agregar</button>
+            <div class="admin-status" id="status-trivia"></div>
+        </div>
+    </div>
+
+    <!-- Simulador -->
+    <div id="panel-sim" style="display:none;">
+        <div class="admin-section-title">Situaciones de Simulador</div>
+        <div id="q-list-sim" style="max-height:300px; overflow-y:auto; margin-bottom:12px;"></div>
+        <div class="admin-add-form">
+            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR SITUACIÓN</div>
+            <textarea id="adm-sim-client" placeholder="Frase del cliente"></textarea>
+            <input id="adm-sim-good" placeholder="Respuesta buena (5pts)">
+            <input id="adm-sim-mid" placeholder="Respuesta media (3pts)">
+            <input id="adm-sim-bad" placeholder="Respuesta mala (1pt)">
+            <button class="btn" onclick="adminAdd('sim')">+ Agregar</button>
+            <div class="admin-status" id="status-sim"></div>
+        </div>
+    </div>
+
+    <!-- Carta -->
+    <div id="panel-ingr" style="display:none;">
+        <div class="admin-section-title">Preguntas de Carta</div>
+        <div id="q-list-ingr" style="max-height:300px; overflow-y:auto; margin-bottom:12px;"></div>
+        <div class="admin-add-form">
+            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
+            <input id="adm-ingr-dish" placeholder="Nombre del plato">
+            <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:120px;">
+            <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
+            <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
+            <input id="adm-ingr-o0" placeholder="Opción A (correcta)">
+            <input id="adm-ingr-o1" placeholder="Opción B">
+            <input id="adm-ingr-o2" placeholder="Opción C">
+            <textarea id="adm-ingr-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
+            <button class="btn" onclick="adminAdd('ingr')">+ Agregar</button>
+            <div class="admin-status" id="status-ingr"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Firebase ──────────────────────────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+    authDomain: "rrhhsystem.firebaseapp.com",
+    projectId: "rrhhsystem",
+    storageBucket: "rrhhsystem.firebasestorage.app",
+    messagingSenderId: "71511125212",
+    appId: "1:71511125212:web:03a0ad11b281e397a29819"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const fsdb = firebase.firestore();
+const PLAYERS_COL = 'andino_players';
+
+const DB = {
+    // ── LOCAL CACHE (por dispositivo) ──
+    _localLoad() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+    },
+    _localSave(data) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+    },
+
+    // ── FIRESTORE: leer jugador (async) ──
+    async fetchPlayer(dni) {
+        try {
+            const doc = await fsdb.collection(PLAYERS_COL).doc(dni).get();
+            if (doc.exists) return doc.data();
+        } catch(e) { console.warn('Firestore fetchPlayer error:', e); }
+        return null;
+    },
+
+    // ── GETPLAYER: local primero, luego Firestore ──
+    getPlayer(dni) {
+        const db = this._localLoad();
+        if (!db[dni]) {
+            db[dni] = { dni, nombre: '', totalXp: 0, totalGames: 0, triviaGames: 0, simGames: 0, ingrGames: 0, bestTriviaScore: 0, bestSimScore: 0, bestIngrScore: 0, bestStreak: 0, unlockedAchievements: [], history: [] };
+            this._localSave(db);
+        }
+        return db[dni];
+    },
+
+    // ── UPDATEPLAYER: actualiza local + Firestore ──
+    async updatePlayer(dni, gameData) {
+        // 1. Intentar traer datos actuales desde Firestore para no pisar XP de otra sesión
+        let p;
+        const remote = await this.fetchPlayer(dni);
+        if (remote) {
+            p = remote;
+            // sincronizar también a local
+            const db = this._localLoad();
+            db[dni] = p;
+            this._localSave(db);
+        } else {
+            p = this.getPlayer(dni);
+        }
+
+        if (gameData.nombre) p.nombre = gameData.nombre;
+        p.totalXp = (p.totalXp || 0) + gameData.xp;
+        p.totalGames = (p.totalGames || 0) + 1;
+
+        if (gameData.mode === 'trivia') {
+            p.triviaGames = (p.triviaGames || 0) + 1;
+            if (gameData.score > (p.bestTriviaScore || 0)) p.bestTriviaScore = gameData.score;
+        } else if (gameData.mode === 'ingredientes') {
+            p.ingrGames = (p.ingrGames || 0) + 1;
+            if (gameData.score > (p.bestIngrScore || 0)) p.bestIngrScore = gameData.score;
+        } else {
+            p.simGames = (p.simGames || 0) + 1;
+            if (gameData.score > (p.bestSimScore || 0)) p.bestSimScore = gameData.score;
+        }
+
+        if (gameData.maxStreak > (p.bestStreak || 0)) p.bestStreak = gameData.maxStreak;
+
+        const now = new Date();
+        const label = now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) + ' ' + now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+        p.history = p.history || [];
+        p.history.unshift({ mode: gameData.mode, score: gameData.score, xp: gameData.xp, streak: gameData.maxStreak, date: label });
+        if (p.history.length > 20) p.history.pop();
+
+        const newAchievements = [];
+        for (const ach of ACHIEVEMENTS) {
+            if (!p.unlockedAchievements.includes(ach.id) && ach.check(p)) {
+                p.unlockedAchievements.push(ach.id);
+                newAchievements.push(ach);
+            }
+        }
+
+        // Guardar local
+        const db = this._localLoad();
+        db[dni] = p;
+        this._localSave(db);
+
+        // Guardar en Firestore (merge para no pisar campos no incluidos)
+        try {
+            await fsdb.collection(PLAYERS_COL).doc(dni).set(p);
+        } catch(e) { console.warn('Firestore updatePlayer error:', e); }
+
+        return { player: p, newAchievements };
+    },
+
+    // ── GETALLPLAYERS: desde Firestore, fallback a local ──
+    async getAllPlayersAsync() {
+        try {
+            const snap = await fsdb.collection(PLAYERS_COL).orderBy('totalXp', 'desc').limit(50).get();
+            if (!snap.empty) {
+                return snap.docs.map(d => d.data());
+            }
+        } catch(e) { console.warn('Firestore getAllPlayers error:', e); }
+        // fallback local
+        const db = this._localLoad();
+        return Object.values(db).sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+    },
+
+    // Mantener sync para compatibilidad con código que no puede ser async
+    getAllPlayers() {
+        const db = this._localLoad();
+        return Object.values(db).sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+    }
+};
+
+function getLevel(xp) {
+    let level = 0;
+    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+        if (xp >= LEVEL_THRESHOLDS[i]) { level = i; break; }
+    }
+    return level;
+}
+
+function getLevelProgress(xp) {
+    const level = getLevel(xp);
+    const current = LEVEL_THRESHOLDS[level] || 0;
+    const next = LEVEL_THRESHOLDS[level + 1];
+    if (!next) return { pct: 100, current: xp, next: xp };
+    const pct = Math.round(((xp - current) / (next - current)) * 100);
+    return { pct, current: xp - current, next: next - current, nextXp: next };
+}
+
+// ── PROFILE RENDERING ───────────────────────────────────────────────────────
+
+function renderProfileView(dni) {
+    const p = DB.getPlayer(dni);
+    const level = getLevel(p.totalXp);
+    const prog = getLevelProgress(p.totalXp);
+    const levelName = LEVEL_NAMES[level] || LEVEL_NAMES[LEVEL_NAMES.length - 1];
+    const displayName = p.nombre || ('DNI ' + dni);
+
+    document.getElementById('profile-avatar').textContent = p.nombre ? p.nombre.slice(0,2).toUpperCase() : dni.slice(-2);
+    document.getElementById('profile-dni').textContent = (p.nombre ? p.nombre + ' · ' : '') + 'DNI ' + dni;
+    document.getElementById('profile-level-name').textContent = `Nivel ${level + 1} · ${levelName}`;
+    document.getElementById('profile-xp-label').textContent = `${p.totalXp} XP total`;
+    document.getElementById('profile-next-level').textContent = level < LEVEL_THRESHOLDS.length - 1 ? `Próx: ${prog.nextXp} XP` : '¡Nivel máximo!';
+    document.getElementById('profile-xp-bar').style.width = prog.pct + '%';
+    document.getElementById('pstat-games').textContent = p.totalGames;
+    document.getElementById('pstat-xp').textContent = p.totalXp;
+    document.getElementById('pstat-streak').textContent = p.bestStreak || 0;
+
+    const achGrid = document.getElementById('achievement-grid');
+    achGrid.innerHTML = '';
+    for (const ach of ACHIEVEMENTS) {
+        const unlocked = p.unlockedAchievements && p.unlockedAchievements.includes(ach.id);
+        achGrid.innerHTML += `<div class="achievement ${unlocked ? 'unlocked' : 'locked'}" title="${ach.name}"><div class="achievement-icon">${ach.icon}</div><div class="achievement-name">${ach.name}</div></div>`;
+    }
+
+    const histList = document.getElementById('history-list');
+    const modeLabel = { trivia: 'Trivia', sim: 'Sim', ingredientes: 'Carta' };
+    if (!p.history || p.history.length === 0) {
+        histList.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:16px;">Sin partidas aún</div>';
+    } else {
+        histList.innerHTML = p.history.map(h => `
+            <div class="history-item">
+                <span class="history-mode-badge ${h.mode === 'ingredientes' ? 'sim' : h.mode}">${modeLabel[h.mode] || h.mode}</span>
+                <span class="history-score">${h.score} pts</span>
+                <span class="history-xp">+${h.xp} XP</span>
+                <span class="history-date">${h.date}</span>
+            </div>`).join('');
+    }
+}
+
+// ── LEADERBOARD RENDERING ───────────────────────────────────────────────────
+
+let currentLbTab = 'global';
+
+async function renderLeaderboard(tab, currentDni) {
+    currentLbTab = tab;
+    const tabs = ['global','trivia','sim'];
+    tabs.forEach(t => {
+        document.getElementById('lb-tab-' + t).classList.toggle('active', t === tab);
+    });
+
+    const list = document.getElementById('leaderboard-list');
+    list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Cargando ranking…</div>';
+
+    const players = await DB.getAllPlayersAsync();
+    let sorted;
+    if (tab === 'trivia') {
+        sorted = [...players].sort((a, b) => (b.bestTriviaScore || 0) - (a.bestTriviaScore || 0));
+    } else if (tab === 'sim') {
+        sorted = [...players].sort((a, b) => (b.bestSimScore || 0) - (a.bestSimScore || 0));
+    } else {
+        sorted = [...players].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+    }
+
+    if (sorted.length === 0) {
+        list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Sin jugadores aún. ¡Sé el primero!</div>';
+        return;
+    }
+
+    const rankColors = ['gold', 'silver', 'bronze'];
+    const rankIcons = ['🥇', '🥈', '🥉'];
+
+    list.innerHTML = sorted.slice(0, 15).map((p, i) => {
+        const isMe = p.dni === currentDni;
+        const rankClass = rankColors[i] || 'other';
+        const level = getLevel(p.totalXp);
+        let scoreVal;
+        if (tab === 'trivia') scoreVal = (p.bestTriviaScore || 0) + '/' + DATA.trivia.length + ' ✓';
+        else if (tab === 'sim') scoreVal = (p.bestSimScore || 0) + ' pts';
+        else scoreVal = (p.totalXp || 0) + ' XP';
+
+        return `
+        <div class="lb-item ${isMe ? 'me' : ''}">
+            <div class="lb-rank ${rankClass}">${i < 3 ? rankIcons[i] : '#' + (i + 1)}</div>
+            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : p.dni.slice(-2)}</div>
+            <div class="lb-info">
+                <div class="lb-dni">${p.nombre || ('DNI ' + p.dni)}${isMe ? ' <span style="font-size:8px;color:var(--accent);">← VOS</span>' : ''}</div>
+                <div class="lb-level">Niv.${level + 1} · ${LEVEL_NAMES[level]}</div>
+            </div>
+            <div style="text-align:right;">
+                <div class="lb-xp">${scoreVal}</div>
+                <div class="lb-games">${p.totalGames} partidas</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── EXTEND APP WITH PERSISTENCE ─────────────────────────────────────────────
+
+const _originalFinish = app.finish.bind(app);
+app.finish = async function() {
+    // 1. Save to persistence BEFORE calling original finish
+    const dni = app.state.dni;
+    let savedPlayer = null;
+    let newAchievements = [];
+    let leveledUp = false;
+    let newLevel = 0;
+
+    if (dni) {
+        const prevPlayer = DB.getPlayer(dni);
+        const prevLevel = getLevel(prevPlayer.totalXp);
+
+        const result = await DB.updatePlayer(dni, {
+            mode: app.state.mode,
+            nombre: app.state.nombre,
+            score: app.state.score,
+            xp: app.state.xp,
+            maxStreak: app.state.maxStreak
+        });
+
+        savedPlayer = result.player;
+        newAchievements = result.newAchievements;
+        newLevel = getLevel(savedPlayer.totalXp);
+        leveledUp = newLevel > prevLevel;
+    }
+
+    // 2. Call the original finish (handles navigation + UI correctly)
+    _originalFinish();
+
+    // 3. After original finish renders results (it uses 500ms timeout internally),
+    //    patch the XP box with total stats
+    setTimeout(() => {
+        if (savedPlayer) {
+            const xpGainedBox = document.querySelector('.xp-gained');
+            if (xpGainedBox) {
+                xpGainedBox.innerHTML = `
+                    <span class="xp-icon">⚡</span>
+                    <div class="xp-text">
+                        <div class="xp-label">XP ganada · Total acumulado</div>
+                        <div class="xp-amount">+${app.state.xp} XP · ${savedPlayer.totalXp} XP totales</div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Partidas</div>
+                        <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--accent);">${savedPlayer.totalGames}</div>
+                    </div>`;
+            }
+        }
+
+        // Level up overlay
+        if (leveledUp) {
+            setTimeout(() => {
+                const overlay = document.getElementById('level-up-overlay');
+                document.getElementById('level-up-title').textContent = `¡NIVEL ${newLevel + 1}!`;
+                document.getElementById('level-up-sub').textContent = `Ahora sos ${LEVEL_NAMES[newLevel]}`;
+                overlay.classList.add('show');
+                createConfetti();
+                setTimeout(() => overlay.classList.remove('show'), 3500);
+            }, 600);
+        }
+
+        // New achievement toasts
+        if (newAchievements.length > 0) {
+            newAchievements.forEach((ach, i) => {
+                setTimeout(() => showCombo(`${ach.icon} ¡Logro desbloqueado: ${ach.name}!`), 800 + i * 2300);
+            });
+        }
+    }, 900); // after the original 500ms + render time
+};
+
+app.showProfile = function() {
+    const dniInput = document.getElementById('user-dni');
+    const nombreInput = document.getElementById('user-nombre');
+    const dni = dniInput ? dniInput.value.trim() : app.state.dni;
+    const nombre = nombreInput ? nombreInput.value.trim() : app.state.nombre;
+    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero para ver tu perfil'); return; }
+    app.state.dni = dni;
+    if (nombre) {
+        app.state.nombre = nombre;
+        const p = DB.getPlayer(dni);
+        p.nombre = nombre;
+        const ldb = DB._localLoad();
+        ldb[dni] = p;
+        DB._localSave(ldb);
+        try { fsdb.collection(PLAYERS_COL).doc(dni).set(p, {merge:true}); } catch(e) {}
+    }
+    renderProfileView(dni);
+    const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
+    const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
+    showLoading();
+    setTimeout(() => {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-profile').classList.add('active');
+        safeCreateIcons();
+        hideLoading();
+    }, 200);
+};
+
+app.showLeaderboard = async function() {
+    const dniInput = document.getElementById('user-dni');
+    const dni = (dniInput ? dniInput.value.trim() : '') || app.state.dni || '';
+    if (dni.length >= 6) app.state.dni = dni;
+    const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
+    const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
+    showLoading();
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-leaderboard').classList.add('active');
+    safeCreateIcons();
+    await renderLeaderboard('global', app.state.dni);
+    hideLoading();
+};
+
+app.switchLbTab = function(tab) {
+    renderLeaderboard(tab, app.state.dni); // async, no-await intentional
+};
+
+app.goHome = function() {
+    const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
+    const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
+    showLoading();
+    setTimeout(() => {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-login').classList.add('active');
+        safeCreateIcons();
+        hideLoading();
+    }, 200);
+};
+
+
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 1: DAILY STREAK (rachas entre días)
+// ══════════════════════════════════════════════════════════════════
+
+const STREAK_COL = 'andino_streaks';
+
+async function loadDailyStreak(dni) {
+    try {
+        const doc = await fsdb.collection(STREAK_COL).doc(dni).get();
+        if (doc.exists) return doc.data();
+    } catch(e) {}
+    return { currentStreak: 0, lastPlayDate: null, longestStreak: 0 };
+}
+
+async function updateDailyStreak(dni) {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    let streak = await loadDailyStreak(dni);
+
+    const last = streak.lastPlayDate;
+    if (last === today) return streak; // ya jugó hoy, no suma
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().slice(0, 10);
+
+    if (last === yStr) {
+        streak.currentStreak = (streak.currentStreak || 0) + 1;
+    } else {
+        streak.currentStreak = 1; // se rompió la racha
+    }
+    streak.lastPlayDate = today;
+    streak.longestStreak = Math.max(streak.longestStreak || 0, streak.currentStreak);
+
+    try { await fsdb.collection(STREAK_COL).doc(dni).set(streak); } catch(e) {}
+    return streak;
+}
+
+function getStreakMultiplier(days) {
+    if (days >= 7) return 2.0;
+    if (days >= 3) return 1.5;
+    if (days >= 2) return 1.25;
+    return 1.0;
+}
+
+async function renderStreakBanner(dni) {
+    const banner = document.getElementById('daily-streak-banner');
+    if (!dni || dni.length < 6) { banner.style.display = 'none'; return; }
+    const streak = await loadDailyStreak(dni);
+    const days = streak.currentStreak || 0;
+    if (days < 2) { banner.style.display = 'none'; return; }
+
+    const mult = getStreakMultiplier(days);
+    const today = new Date().toISOString().slice(0, 10);
+    const playedToday = streak.lastPlayDate === today;
+
+    document.getElementById('streak-fire-emoji').textContent = days >= 7 ? '🔥' : days >= 3 ? '🔥' : '✨';
+    document.getElementById('streak-days-text').textContent = `${days} días seguidos`;
+    document.getElementById('streak-sub-text').textContent = playedToday
+        ? '¡Ya jugaste hoy! Volvé mañana para mantener la racha.'
+        : '¡Jugá hoy para no romper la racha!';
+    document.getElementById('streak-multiplier').textContent = `×${mult}`;
+    banner.style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 2: DAILY CHALLENGE (desafío del día)
+// ══════════════════════════════════════════════════════════════════
+
+function getDailyDateStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function getDailySeed() {
+    // Simple deterministic seed from date so same questions each día
+    const s = getDailyDateStr().replace(/-/g, '');
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+    return Math.abs(h);
+}
+
+function seededShuffle(arr, seed) {
+    const a = [...arr];
+    let s = seed;
+    const rand = () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function getDailyQuestions() {
+    const seed = getDailySeed();
+    const allTrivia = [...DATA.trivia, ...(window._extraTrivia || [])];
+    const shuffled = seededShuffle(allTrivia, seed);
+    return shuffled.slice(0, Math.min(7, shuffled.length));
+}
+
+function hasDailyCompleted(dni) {
+    const key = 'daily_done_' + getDailyDateStr();
+    try { return localStorage.getItem(key + '_' + dni) === '1'; } catch { return false; }
+}
+
+function markDailyCompleted(dni) {
+    const key = 'daily_done_' + getDailyDateStr() + '_' + dni;
+    try { localStorage.setItem(key, '1'); } catch {}
+}
+
+function renderDailyCard(dni) {
+    const sub = document.getElementById('daily-card-sub');
+    const card = document.getElementById('daily-card');
+    if (!sub) return;
+    const dateStr = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+    const done = dni && hasDailyCompleted(dni);
+    if (done) {
+        sub.innerHTML = `<span class="daily-completed">✓ Completado hoy</span> · ${dateStr}`;
+        card.style.opacity = '0.6';
+        card.style.cursor = 'default';
+    } else {
+        sub.textContent = `Mismas preguntas para todo el equipo · XP ×2 · ${dateStr}`;
+        card.style.opacity = '1';
+        card.style.cursor = 'pointer';
+    }
+}
+
+app.startDailyChallenge = function() {
+    const dni = (document.getElementById('user-dni') || {}).value?.trim() || app.state.dni;
+    const nombre = (document.getElementById('user-nombre') || {}).value?.trim() || app.state.nombre;
+    if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero'); return; }
+    if (hasDailyCompleted(dni)) { alert('¡Ya completaste el desafío de hoy! Volvé mañana 🔥'); return; }
+
+    app.state.dni = dni;
+    app.state.nombre = nombre;
+    app.state.mode = 'trivia';
+    app.state.isDaily = true;
+    app.state.dailyXpMult = 2;
+
+    // Override DATA.trivia temporarily with daily questions
+    window._dailyQuestions = getDailyQuestions();
+    window._triviaOverride = window._dailyQuestions;
+
+    app.initGame();
+};
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 6: DESBLOQUEABLES POR NIVEL
+// ══════════════════════════════════════════════════════════════════
+
+const UNLOCKS = [
+    { level: 3, id: 'hard_mode', label: '⚡ Modo Difícil', desc: 'Menos tiempo por pregunta' },
+    { level: 5, id: 'vip_rank',  label: '👑 Destacado en Ranking', desc: 'Tu avatar brilla en el leaderboard' },
+    { level: 7, id: 'add_q',     label: '✏️ Crear Preguntas', desc: 'Aportás preguntas al banco' },
+];
+
+function renderUnlockBadges(playerXp) {
+    const level = getLevel(playerXp);
+    const container = document.getElementById('unlock-badges-row');
+    if (!container) return;
+    container.innerHTML = UNLOCKS.map(u => {
+        const unlocked = level >= u.level;
+        return `<span class="unlock-badge ${unlocked ? 'unlocked' : 'locked'}" title="${u.desc}">
+            ${u.label} ${unlocked ? '' : '(Niv.' + u.level + ')'}
+        </span>`;
+    }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// REPASO INTELIGENTE — Sistema tipo Anki
+// ══════════════════════════════════════════════════════════════════
+//
+// Mecánica: cada pregunta incorrecta se guarda con un contador de
+// aciertos consecutivos. Necesitás REPASO_HITS aciertos para "dominar"
+// una pregunta. Si volvés a fallarla, el contador se reinicia.
+
+const REPASO_COL  = 'andino_repaso';
+const REPASO_HITS = 3;      // aciertos consecutivos para dominar
+const REPASO_KEY  = 'andino_repaso_v1';
+
+function repasoQId(mode, q) {
+    const base = (mode + '_' + (q.q || q.client || '').slice(0, 40))
+        .replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    return base || (mode + '_' + Math.random().toString(36).slice(2));
+}
+
+const REPASODB = {
+    _key(dni) { return REPASO_KEY + '_' + dni; },
+
+    load(dni) {
+        try { return JSON.parse(localStorage.getItem(this._key(dni))) || {}; } catch { return {}; }
+    },
+
+    save(dni, data) {
+        try { localStorage.setItem(this._key(dni), JSON.stringify(data)); } catch {}
+        try { fsdb.collection(REPASO_COL).doc(dni).set(data); } catch(e) {}
+    },
+
+    async fetch(dni) {
+        try {
+            const doc = await fsdb.collection(REPASO_COL).doc(dni).get();
+            if (doc.exists) {
+                const data = doc.data();
+                localStorage.setItem(this._key(dni), JSON.stringify(data));
+                return data;
+            }
+        } catch(e) {}
+        return this.load(dni);
+    },
+
+    addWrongs(dni, mode, wrongQs) {
+        if (!dni || !wrongQs || !wrongQs.length) return;
+        const data = this.load(dni);
+        wrongQs.forEach(item => {
+            const id = repasoQId(mode, item);
+            if (!data[id]) {
+                data[id] = { id, mode, q: item.q || item.client || '', o: item.o, c: item.c,
+                    explanation: item.explanation || '', dish: item.dish, emoji: item.emoji,
+                    category: item.category, hits: 0, mastered: false, addedAt: Date.now() };
+            } else {
+                // Fallo de vuelta → reset
+                data[id].hits = 0;
+                data[id].mastered = false;
+            }
+        });
+        this.save(dni, data);
+    },
+
+    markHit(dni, id) {
+        const data = this.load(dni);
+        if (!data[id]) return null;
+        data[id].hits = (data[id].hits || 0) + 1;
+        data[id].lastSeen = Date.now();
+        if (data[id].hits >= REPASO_HITS) data[id].mastered = true;
+        this.save(dni, data);
+        return data[id];
+    },
+
+    markMiss(dni, id) {
+        const data = this.load(dni);
+        if (!data[id]) return;
+        data[id].hits = 0;
+        data[id].mastered = false;
+        data[id].lastSeen = Date.now();
+        this.save(dni, data);
+    },
+
+    getPending(dni) {
+        return Object.values(this.load(dni)).filter(x => !x.mastered);
+    },
+
+    getAll(dni) {
+        return Object.values(this.load(dni));
+    },
+
+    countPending(dni) {
+        if (!dni || dni.length < 6) return 0;
+        return this.getPending(dni).length;
+    }
+};
+
+// ── Parchear checkTrivia para capturar el objeto completo ──
+const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
+app.checkTrivia = function(idx, btn) {
+    const q = DATA.trivia[app.state.step];
+    if (idx !== q.c) {
+        app.state._wrongFull = app.state._wrongFull || [];
+        // Avoid duplicates
+        const id = repasoQId('trivia', q);
+        if (!app.state._wrongFull.find(x => repasoQId(x.mode || 'trivia', x) === id)) {
+            app.state._wrongFull.push({ ...q, mode: 'trivia' });
+        }
+    }
+    _origCheckTriviaRepaso(idx, btn);
+};
+
+// ── Parchear checkIngredientes ──
+const _origCheckIngrRepaso = app.checkIngredientes.bind(app);
+app.checkIngredientes = function(idx, btn) {
+    const q = app.state.ingrSelected[app.state.step];
+    if (idx !== q.c) {
+        app.state._wrongFull = app.state._wrongFull || [];
+        const id = repasoQId('ingredientes', q);
+        if (!app.state._wrongFull.find(x => repasoQId(x.mode || 'ingredientes', x) === id)) {
+            app.state._wrongFull.push({ ...q, mode: 'ingredientes' });
+        }
+    }
+    _origCheckIngrRepaso(idx, btn);
+};
+
+// ── Parchear initGame para limpiar _wrongFull ──
+const _origInitGameRepaso = app.initGame.bind(app);
+app.initGame = function() {
+    if (app.state.mode === 'repaso') {
+        app.startRepaso();
+        return;
+    }
+    app.state._wrongFull = [];
+    _origInitGameRepaso();
+};
+
+// ── Parchear finish para guardar wrongFull en REPASODB y mostrar botón ──
+const _origFinishRepaso = app.finish.bind(app);
+app.finish = async function() {
+    const dni   = app.state.dni;
+    const mode  = app.state.mode;
+    const wrongs = app.state._wrongFull || [];
+
+    if (dni && wrongs.length > 0) {
+        REPASODB.addWrongs(dni, mode, wrongs);
+    }
+    app.state._wrongFull = [];
+
+    await _origFinishRepaso();
+
+    // Show "Repasar ahora" button if there are pending
+    setTimeout(() => {
+        if (dni) {
+            const pending = REPASODB.countPending(dni);
+            const btn = document.getElementById('res-repaso-btn');
+            if (btn && pending > 0) {
+                btn.style.display = 'flex';
+                btn.innerHTML = `<i data-lucide="brain"></i> Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
+                safeCreateIcons();
+            } else if (btn) {
+                btn.style.display = 'none';
+            }
+        }
+        updateRepasoBadge(dni);
+    }, 1100);
+};
+
+function updateRepasoBadge(dni) {
+    const badge = document.getElementById('repaso-count-badge');
+    if (!badge) return;
+    const count = REPASODB.countPending(dni);
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+// ── REPASO GAME STATE ──
+let _repasoQueue = [];
+let _repasoIdx   = 0;
+let _repasoTimer = null;
+
+app.startRepaso = function() {
+    clearInterval(_repasoTimer);
+    const dni = document.getElementById('user-dni').value.trim();
+    
+    // EXCEPCIÓN PARA 
+    if (dni.toLowerCase() === '' || dni === '00000000') {
+        app.show();
+        return;
+    }
+
+    // Validación normal para el resto de los camareros
+    if (!dni || dni.length < 6) {
+        alert('Ingresá tu DNI (mínimo 6 números)');
+        return;
+    }
+
+    const pending = REPASODB.getPending(dni);
+    switchView('repaso');
+    safeCreateIcons();
+
+    if (pending.length === 0) {
+        document.getElementById('repaso-empty-state').style.display = 'block';
+        document.getElementById('repaso-game-state').style.display = 'none';
+        return;
+    }
+
+    // Ordenar: primero los que tienen menos hits (los más frescos/difíciles)
+    _repasoQueue = [...pending].sort((a, b) => (a.hits || 0) - (b.hits || 0));
+    _repasoIdx   = 0;
+
+    document.getElementById('repaso-empty-state').style.display = 'none';
+    document.getElementById('repaso-game-state').style.display  = 'block';
+    renderRepasoQuestion();
+};
+
+function renderRepasoQuestion() {
+    const dni     = app.state.dni;
+    const allData = REPASODB.load(dni);
+    const allArr  = Object.values(allData);
+
+    // Filtrar dominadas de la queue en tiempo real
+    _repasoQueue = _repasoQueue.filter(q => !allData[q.id]?.mastered);
+
+    if (_repasoQueue.length === 0) {
+        document.getElementById('repaso-empty-state').style.display = 'block';
+        document.getElementById('repaso-game-state').style.display  = 'none';
+        createConfetti(); createConfetti();
+        showCombo('🎯 ¡Todo dominado!');
+        updateRepasoBadge(dni);
+        return;
+    }
+
+    if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+
+    const masteredCount = allArr.filter(x => x.mastered).length;
+    const totalInBank   = allArr.length;
+    const pct = totalInBank > 0 ? Math.round((masteredCount / totalInBank) * 100) : 0;
+
+    // Domination bar
+    document.getElementById('repaso-dominio-fill').style.width = pct + '%';
+    document.getElementById('repaso-dominio-pct').textContent  = pct + '%';
+    document.getElementById('repaso-sub-text').textContent     = `${_repasoQueue.length} pendiente${_repasoQueue.length !== 1 ? 's' : ''} · ${masteredCount}/${totalInBank} dominadas`;
+    document.getElementById('repaso-count-label').textContent  = `PREGUNTA ${_repasoIdx + 1} / ${_repasoQueue.length}`;
+
+    // Pills (max 10)
+    const pillRow = document.getElementById('repaso-pill-row');
+    pillRow.innerHTML = allArr.slice(0, 10).map(item => {
+        const isCurrent = _repasoQueue[_repasoIdx] && item.id === _repasoQueue[_repasoIdx].id;
+        let cls = 'repaso-pill' + (item.mastered ? ' mastered' : isCurrent ? ' current' : ' pending');
+        const label = (item.q || '').slice(0, 18) + '…';
+        const icon  = item.mastered ? '✓' : isCurrent ? '→' : '○';
+        return `<span class="${cls}">${icon} ${label}</span>`;
+    }).join('');
+
+    const currentItem = _repasoQueue[_repasoIdx];
+    const freshItem   = allData[currentItem.id] || currentItem;
+    const hits        = freshItem.hits || 0;
+    const hitsLeft    = REPASO_HITS - hits;
+
+    document.getElementById('repaso-card-label').textContent = hits === 0
+        ? 'PREGUNTA A DOMINAR'
+        : `CASI DOMINADA · ${hits}/${REPASO_HITS} aciertos`;
+    document.getElementById('repaso-q-text').textContent = freshItem.q || '';
+
+    // Domination pips
+    const pipsEl = document.getElementById('repaso-dom-pips');
+    pipsEl.innerHTML = '';
+    for (let i = 0; i < REPASO_HITS; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'repaso-dom-pip' + (i < hits ? ' done' : i === hits ? ' active' : '');
+        pipsEl.appendChild(pip);
+    }
+
+    // Options: shuffle to avoid memorizing position
+    const opts = document.getElementById('repaso-options');
+    opts.innerHTML = '';
+    const letters  = ['A','B','C','D'];
+    const shuffled = [...freshItem.o.map((_, i) => i)].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach((origIdx, displayIdx) => {
+        const b = document.createElement('button');
+        b.className = 'option';
+        b.innerHTML = `<span class="option-letter">${letters[displayIdx]}</span>${freshItem.o[origIdx]}`;
+        b.setAttribute('data-orig', origIdx);
+        b.onclick = () => checkRepasoAnswer(origIdx === freshItem.c, b, freshItem, opts);
+        opts.appendChild(b);
+    });
+
+    safeCreateIcons();
+    startRepasoTimer(12);
+}
+
+function checkRepasoAnswer(isCorrect, clickedBtn, item, optsContainer) {
+    clearInterval(_repasoTimer);
+    const dni = app.state.dni;
+
+    const allBtns = optsContainer.querySelectorAll('.option');
+    allBtns.forEach(b => {
+        b.disabled = true;
+        if (parseInt(b.getAttribute('data-orig')) === item.c) b.classList.add('correct');
+    });
+
+    if (isCorrect) {
+        if (clickedBtn) clickedBtn.classList.add('correct');
+        playSound('correct');
+        const result = REPASODB.markHit(dni, item.id);
+        if (result && result.mastered) {
+            showCombo('🎯 ¡Dominada! +1 dominada');
+            playSound('combo');
+        } else if (result) {
+            showCombo(`✅ Acierto ${result.hits}/${REPASO_HITS}`);
+        }
+        setTimeout(() => {
+            _repasoIdx++;
+            if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+            renderRepasoQuestion();
+        }, 1200);
+    } else {
+        if (clickedBtn) clickedBtn.classList.add('wrong');
+        playSound('wrong');
+        REPASODB.markMiss(dni, item.id);
+        showCombo('❌ Reinicia el contador');
+
+        if (item.explanation) {
+            const expl = document.createElement('div');
+            expl.style.cssText = 'background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--text-muted);animation:slideUp 0.3s ease;';
+            expl.textContent = `💡 ${item.explanation}`;
+            optsContainer.appendChild(expl);
+        }
+        setTimeout(() => {
+            // Mover al final de la queue para volver a intentar
+            const moved = _repasoQueue.splice(_repasoIdx, 1)[0];
+            _repasoQueue.push(moved);
+            if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+            renderRepasoQuestion();
+        }, 2600);
+    }
+    updateRepasoBadge(dni);
+}
+
+function startRepasoTimer(sec) {
+    let left = sec;
+    const fill     = document.getElementById('repaso-fill');
+    const timerNum = document.getElementById('repaso-timer');
+    clearInterval(_repasoTimer);
+    if (fill) { fill.style.width = '100%'; fill.classList.remove('urgent'); }
+    if (timerNum) { timerNum.textContent = sec + 's'; timerNum.classList.remove('urgent'); }
+
+    _repasoTimer = setInterval(() => {
+        left = Math.max(0, left - 0.1);
+        if (fill) fill.style.width = (left / sec * 100) + '%';
+        if (timerNum) timerNum.textContent = Math.ceil(left) + 's';
+        if (Math.ceil(left) <= 3) {
+            if (fill) fill.classList.add('urgent');
+            if (timerNum) timerNum.classList.add('urgent');
+        }
+        if (left <= 0) {
+            clearInterval(_repasoTimer);
+            const optsContainer = document.getElementById('repaso-options');
+            const current = _repasoQueue[_repasoIdx];
+            if (!current || !optsContainer) return;
+            optsContainer.querySelectorAll('.option').forEach(b => {
+                b.disabled = true;
+                if (parseInt(b.getAttribute('data-orig')) === current.c) b.classList.add('correct');
+            });
+            REPASODB.markMiss(app.state.dni, current.id);
+            showCombo('⏱ ¡Tiempo!');
+            if (current.explanation) {
+                const expl = document.createElement('div');
+                expl.style.cssText = 'background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:var(--text-muted);animation:slideUp 0.3s ease;';
+                expl.textContent = `💡 ${current.explanation}`;
+                optsContainer.appendChild(expl);
+            }
+            setTimeout(() => {
+                const moved = _repasoQueue.splice(_repasoIdx, 1)[0];
+                _repasoQueue.push(moved);
+                if (_repasoIdx >= _repasoQueue.length) _repasoIdx = 0;
+                renderRepasoQuestion();
+            }, 2200);
+        }
+    }, 100);
+}
+
+// Update badge on home
+const _repasoGoHome = app.goHome.bind(app);
+app.goHome = function() {
+    clearInterval(_repasoTimer);
+    _repasoGoHome();
+    setTimeout(() => {
+        const dni = app.state.dni || (document.getElementById('user-dni') || {}).value?.trim() || '';
+        updateRepasoBadge(dni);
+    }, 400);
+};
+
+// Wire DNI input → badge update
+document.addEventListener('DOMContentLoaded', () => {
+    const dniInput = document.getElementById('user-dni');
+    if (dniInput) {
+        dniInput.addEventListener('input', () => updateRepasoBadge(dniInput.value.trim()));
+    }
+})
+
+// ── Estado ───────────────────────────────────────────────
+const EXTRA_COL = 'andino_extra_questions';
+const STORAGE_KEY = 'andino_ultra_players';
+let extraData = { trivia: [], sim: [], ingr: [] };
+let allPlayers = [];
+let dashFilter_ = 'all';
+let dashSortKey = 'totalXp';
+let dashSortAsc = false;
+let selectedDni = null;
+
+// ── Tabs ─────────────────────────────────────────────────
+function switchTab(tab) {
+    ['dash','trivia','sim','ingr'].forEach(t => {
+        document.getElementById('atab-' + t).classList.toggle('active', t === tab);
+        document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+    if (tab === 'dash') dashRefresh();
+    else renderList(tab);
+}
+
+// ── Preguntas extra (Firestore) ───────────────────────────
+async function loadExtra() {
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        if (doc.exists) extraData = doc.data();
+    } catch(e) { console.warn('loadExtra:', e); }
+}
+
+async function saveExtra() {
+    try { await fsdb.collection(EXTRA_COL).doc('bank').set(extraData); }
+    catch(e) { console.warn('saveExtra:', e); }
+}
+
+function renderList(tab) {
+    const el = document.getElementById('q-list-' + tab);
+    const items = extraData[tab] || [];
+    if (!items.length) { el.innerHTML = '<div class="dash-loading">Sin preguntas extra agregadas</div>'; return; }
+    el.innerHTML = items.map((it, i) => `
+        <div class="admin-q-item">
+            <div class="admin-q-text">${tab === 'sim' ? it.client : it.q}</div>
+            <button class="admin-q-delete" onclick="adminDelete('${tab}',${i})">✕</button>
+        </div>`).join('');
+}
+
+async function adminDelete(tab, idx) {
+    extraData[tab].splice(idx, 1);
+    await saveExtra();
+    renderList(tab);
+}
+
+async function adminAdd(tab) {
+    const status = document.getElementById('status-' + tab);
+    let item;
+    if (tab === 'trivia') {
+        const q = document.getElementById('adm-trivia-q').value.trim();
+        const o0 = document.getElementById('adm-trivia-o0').value.trim();
+        const o1 = document.getElementById('adm-trivia-o1').value.trim();
+        const o2 = document.getElementById('adm-trivia-o2').value.trim();
+        const exp = document.getElementById('adm-trivia-exp').value.trim();
+        if (!q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        item = { q, options: [o0,o1,o2], explanation: exp };
+        ['adm-trivia-q','adm-trivia-o0','adm-trivia-o1','adm-trivia-o2','adm-trivia-exp'].forEach(id => document.getElementById(id).value = '');
+    } else if (tab === 'sim') {
+        const client = document.getElementById('adm-sim-client').value.trim();
+        const good = document.getElementById('adm-sim-good').value.trim();
+        const mid  = document.getElementById('adm-sim-mid').value.trim();
+        const bad  = document.getElementById('adm-sim-bad').value.trim();
+        if (!client || !good || !mid || !bad) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        item = { client, options: [{text:good,pts:5},{text:mid,pts:3},{text:bad,pts:1}] };
+        ['adm-sim-client','adm-sim-good','adm-sim-mid','adm-sim-bad'].forEach(id => document.getElementById(id).value = '');
+    } else {
+        const dish = document.getElementById('adm-ingr-dish').value.trim();
+        const emoji = document.getElementById('adm-ingr-emoji').value.trim();
+        const cat  = document.getElementById('adm-ingr-cat').value.trim();
+        const q    = document.getElementById('adm-ingr-q').value.trim();
+        const o0   = document.getElementById('adm-ingr-o0').value.trim();
+        const o1   = document.getElementById('adm-ingr-o1').value.trim();
+        const o2   = document.getElementById('adm-ingr-o2').value.trim();
+        const exp  = document.getElementById('adm-ingr-exp').value.trim();
+        if (!dish || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        item = { dish, emoji, category:cat, q, options:[o0,o1,o2], explanation:exp };
+        ['adm-ingr-dish','adm-ingr-emoji','adm-ingr-cat','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
+    }
+    if (!extraData[tab]) extraData[tab] = [];
+    extraData[tab].push(item);
+    await saveExtra();
+    status.textContent = '✓ Guardado'; status.className = 'admin-status ok';
+    setTimeout(() => status.textContent = '', 2000);
+    renderList(tab);
+}
+
+// ── Dashboard ─────────────────────────────────────────────
+async function dashRefresh() {
+    document.getElementById('dash-tbody').innerHTML = '<tr><td colspan="4" class="dash-loading">Cargando...</td></tr>';
+    try {
+        const snap = await fsdb.collection('andino_players').get();
+        allPlayers = snap.docs.map(d => ({ dni: d.id, ...d.data() }));
+    } catch(e) {
+        // Fallback a localStorage si Firestore falla
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const db = raw ? JSON.parse(raw) : {};
+            allPlayers = Object.entries(db).map(([dni, p]) => ({ dni, ...p }));
+        } catch(e2) { allPlayers = []; }
+    }
+    updateKPIs();
+    dashRender();
+}
+
+function updateKPIs() {
+    const now = Date.now();
+    const active = allPlayers.filter(p => p.lastSeen && (now - p.lastSeen) < 7*24*3600*1000).length;
+    const games  = allPlayers.reduce((s, p) => s + (p.totalGames || 0), 0);
+    document.getElementById('dash-kpi-total').textContent  = allPlayers.length;
+    document.getElementById('dash-kpi-active').textContent = active;
+    document.getElementById('dash-kpi-games').textContent  = games;
+}
+
+function dashFilter(f) {
+    dashFilter_ = f;
+    ['all','active','inactive','new'].forEach(x => document.getElementById('df-'+x).classList.toggle('active', x === f));
+    dashRender();
+}
+
+function dashSort(key) {
+    dashSortAsc = dashSortKey === key ? !dashSortAsc : false;
+    dashSortKey = key;
+    dashRender();
+}
+
+function dashRender() {
+    const now = Date.now();
+    const search = (document.getElementById('dash-search').value || '').toLowerCase();
+    let list = allPlayers.filter(p => {
+        if (search && !((p.nombre||'').toLowerCase().includes(search) || (p.dni||'').includes(search))) return false;
+        if (dashFilter_ === 'active')   return p.lastSeen && (now - p.lastSeen) < 7*24*3600*1000;
+        if (dashFilter_ === 'inactive') return !p.lastSeen || (now - p.lastSeen) >= 7*24*3600*1000;
+        if (dashFilter_ === 'new')      return !p.totalGames || p.totalGames === 0;
+        return true;
+    });
+    list.sort((a,b) => {
+        const va = a[dashSortKey] ?? 0, vb = b[dashSortKey] ?? 0;
+        return dashSortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+    if (!list.length) { document.getElementById('dash-tbody').innerHTML = '<tr><td colspan="4" class="dash-loading">Sin resultados</td></tr>'; return; }
+    document.getElementById('dash-tbody').innerHTML = list.map(p => {
+        const days = p.lastSeen ? Math.floor((now - p.lastSeen) / 86400000) : 999;
+        const dot = days <= 1 ? 'green' : days <= 7 ? 'yellow' : days <= 30 ? 'red' : 'grey';
+        const last = p.lastSeen ? new Date(p.lastSeen).toLocaleDateString('es-AR') : '—';
+        return `<tr onclick="selectPlayer('${p.dni}')" style="cursor:pointer;">
+            <td><span class="dash-name-cell"><span class="activity-dot ${dot}"></span>${p.nombre || p.dni}</span></td>
+            <td>${p.totalXp || 0}</td>
+            <td>${p.totalGames || 0}</td>
+            <td>${last}</td>
+        </tr>`;
+    }).join('');
+}
+
+function selectPlayer(dni) {
+    const p = allPlayers.find(x => x.dni === dni);
+    if (!p) return;
+    const det = document.getElementById('dash-player-detail');
+    document.getElementById('dash-detail-name').textContent = p.nombre || dni;
+    document.getElementById('dash-detail-content').innerHTML = `
+        <div style="font-size:12px; line-height:1.8; font-family:var(--font-mono);">
+            DNI/Legajo: ${p.dni}<br>
+            XP Total: ${p.totalXp || 0}<br>
+            Partidas: ${p.totalGames || 0}<br>
+            Racha: ${p.currentStreak || 0} días<br>
+            Último acceso: ${p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR') : '—'}
+        </div>`;
+    det.classList.toggle('open', selectedDni !== dni);
+    selectedDni = selectedDni === dni ? null : dni;
+}
+
+function dashExportCSV() {
+    const rows = [['DNI','Nombre','XP','Partidas','Racha','Ultimo acceso']];
+    allPlayers.forEach(p => rows.push([p.dni, p.nombre||'', p.totalXp||0, p.totalGames||0, p.currentStreak||0, p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR') : '']));
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'andino_jugadores.csv';
+    a.click();
+}
+
+// ── Iniciar ───────────────────────────────────────────────
+loadExtra().then(() => { dashRefresh(); });
+</script>
+</body>
+</html>

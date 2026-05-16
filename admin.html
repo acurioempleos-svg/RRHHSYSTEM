@@ -163,6 +163,7 @@
 
     <div class="admin-tabs">
         <div class="admin-tab active" id="atab-dash" onclick="switchTab('dash')">📊 Dashboard</div>
+        <div class="admin-tab" id="atab-prize" onclick="switchTab('prize')">🏆 Premio</div>
         <div class="admin-tab" id="atab-trivia" onclick="switchTab('trivia')">Trivia</div>
         <div class="admin-tab" id="atab-sim" onclick="switchTab('sim')">Simulador</div>
         <div class="admin-tab" id="atab-ingr" onclick="switchTab('ingr')">Carta</div>
@@ -203,16 +204,89 @@
         </div>
     </div>
 
+    <!-- Premio Quincenal -->
+    <div id="panel-prize" style="display:none;">
+        <div class="admin-section-title">🏆 Premio Quincenal</div>
+        <div style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:14px; line-height:1.6;">
+            Este cartel aparece en la pantalla de inicio del juego para todos los empleados.<br>
+            Mostrá qué pueden ganar si quedan primeros en el ranking quincenal.
+        </div>
+
+        <!-- Current period info -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:14px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Período actual</div>
+            <div style="font-family:var(--font-display); font-size:16px; font-weight:700; color:var(--text);" id="admin-period-label">—</div>
+            <div style="font-family:var(--font-mono); font-size:11px; color:var(--text-muted); margin-top:3px;" id="admin-period-days">— días restantes</div>
+        </div>
+
+        <!-- Prize form -->
+        <div class="admin-add-form" style="gap:10px;">
+            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">⚙️ CONFIGURAR PREMIO</div>
+
+            <div style="display:flex; gap:8px; align-items:center;">
+                <div style="flex:0 0 80px;">
+                    <label style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:4px; display:block;">EMOJI</label>
+                    <input id="prize-emoji-input" placeholder="🎁" style="text-align:center; font-size:22px; padding:8px; width:100%;">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:4px; display:block;">TÍTULO DEL PREMIO</label>
+                    <input id="prize-title-input" placeholder="Ej: Día libre extra" style="width:100%;">
+                </div>
+            </div>
+
+            <div>
+                <label style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:4px; display:block;">DESCRIPCIÓN</label>
+                <textarea id="prize-desc-input" placeholder="Ej: El camarero con más XP de la quincena gana un franco extra el fin de semana que elija." style="min-height:60px; resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px;">
+                <label style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">VISIBLE EN EL JUEGO</label>
+                <div style="display:flex; gap:6px;">
+                    <button id="prize-active-yes" class="btn" style="flex:0 0 auto; width:auto; padding:6px 14px; font-size:12px;" onclick="setPrizeActive(true)">✓ Sí</button>
+                    <button id="prize-active-no" class="btn btn-secondary" style="flex:0 0 auto; width:auto; padding:6px 14px; font-size:12px;" onclick="setPrizeActive(false)">✗ No</button>
+                </div>
+            </div>
+
+            <button class="btn" onclick="savePrize()" style="margin-top:4px;">💾 Guardar Premio</button>
+            <div class="admin-status" id="status-prize"></div>
+        </div>
+
+        <!-- Preview -->
+        <div style="margin-top:16px;">
+            <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Vista previa</div>
+            <div id="prize-preview" style="
+                background: linear-gradient(135deg, #0A1A00 0%, #142800 50%, #0A1A00 100%);
+                border: 1.5px solid rgba(27,138,74,0.50);
+                border-radius: 14px;
+                padding: 14px 16px;
+                display: none;
+            ">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-family:var(--font-mono); font-size:8px; letter-spacing:1.5px; text-transform:uppercase; background:rgba(27,138,74,0.25); border:1px solid rgba(27,138,74,0.4); color:#4ADE80; padding:3px 8px; border-radius:5px;">🏆 Premio Quincenal</span>
+                    <span id="preview-countdown" style="font-family:var(--font-mono); font-size:9px; color:rgba(255,255,255,0.35); margin-left:auto;"></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span id="preview-emoji" style="font-size:32px;">🎁</span>
+                    <div>
+                        <div id="preview-title" style="font-family:'Oswald',sans-serif; font-size:16px; font-weight:900; text-transform:uppercase; color:#fff; margin-bottom:3px;">Premio</div>
+                        <div id="preview-desc" style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(255,255,255,0.45);">Descripción del premio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Trivia -->
     <div id="panel-trivia" style="display:none;">
         <div class="admin-section-title">Preguntas de Trivia</div>
         <div id="q-list-trivia" style="max-height:300px; overflow-y:auto; margin-bottom:12px;"></div>
         <div class="admin-add-form">
             <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR PREGUNTA</div>
+            <div style="font-size:11px; color:var(--success); font-family:var(--font-mono); background:rgba(26,122,58,0.08); border-radius:6px; padding:6px 10px;">✓ La Opción A siempre es la CORRECTA. Las demás son incorrectas.</div>
             <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
-            <input id="adm-trivia-o0" placeholder="Opción A (la correcta)">
-            <input id="adm-trivia-o1" placeholder="Opción B">
-            <input id="adm-trivia-o2" placeholder="Opción C">
+            <input id="adm-trivia-o0" placeholder="✓ Opción A — la CORRECTA" style="border-color:var(--success);">
+            <input id="adm-trivia-o1" placeholder="Opción B (incorrecta)">
+            <input id="adm-trivia-o2" placeholder="Opción C (incorrecta)">
             <textarea id="adm-trivia-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
             <button class="btn" onclick="adminAdd('trivia')">+ Agregar</button>
             <div class="admin-status" id="status-trivia"></div>
@@ -240,13 +314,14 @@
         <div id="q-list-ingr" style="max-height:300px; overflow-y:auto; margin-bottom:12px;"></div>
         <div class="admin-add-form">
             <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
+            <div style="font-size:11px; color:var(--success); font-family:var(--font-mono); background:rgba(26,122,58,0.08); border-radius:6px; padding:6px 10px;">✓ La Opción A siempre es la CORRECTA. Las demás son incorrectas.</div>
             <input id="adm-ingr-dish" placeholder="Nombre del plato">
             <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:120px;">
             <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
             <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
-            <input id="adm-ingr-o0" placeholder="Opción A (correcta)">
-            <input id="adm-ingr-o1" placeholder="Opción B">
-            <input id="adm-ingr-o2" placeholder="Opción C">
+            <input id="adm-ingr-o0" placeholder="✓ Opción A — la CORRECTA" style="border-color:var(--success);">
+            <input id="adm-ingr-o1" placeholder="Opción B (incorrecta)">
+            <input id="adm-ingr-o2" placeholder="Opción C (incorrecta)">
             <textarea id="adm-ingr-exp" placeholder="Explicación" style="min-height:44px;"></textarea>
             <button class="btn" onclick="adminAdd('ingr')">+ Agregar</button>
             <div class="admin-status" id="status-ingr"></div>
@@ -256,6 +331,34 @@
 </div>
 
 <script>
+// ── Constantes (copiadas del juego principal) ─────────────
+const LEVEL_THRESHOLDS = [0, 200, 600, 1400, 3000, 6000, 11000, 19000, 32000, 52000, 82000, 130000];
+const LEVEL_NAMES = [
+    'Bachero',
+    'Bachero Senior',
+    'Ayudante de Salón',
+    'Camarero Jr.',
+    'Camarero',
+    'Camarero Senior',
+    'Jefe de Sector',
+    'Sommelier',
+    'Maître Jr.',
+    'Maître',
+    'Maître Ejecutivo',
+    'Gerente de Salón'
+];
+const ACHIEVEMENTS = [
+    { id: 'first_game',   icon: '🎮', name: 'Primera partida',    check: (p) => p.totalGames >= 1 },
+    { id: 'ten_games',    icon: '🔟', name: '10 partidas',         check: (p) => p.totalGames >= 10 },
+    { id: 'perfect_tri',  icon: '🎯', name: 'Trivia perfecta',     check: (p) => p.bestTriviaScore >= 7 },
+    { id: 'perfect_sim',  icon: '⭐', name: 'Sim 5 estrellas',     check: (p) => p.bestSimScore >= 24 },
+    { id: 'perfect_ingr', icon: '🍽️', name: 'Carta perfecta',     check: (p) => p.bestIngrScore >= 7 },
+    { id: 'streak5',      icon: '🔥', name: 'Racha ×5',            check: (p) => p.bestStreak >= 5 },
+    { id: 'xp500',        icon: '⚡', name: '500 XP',              check: (p) => p.totalXp >= 500 },
+    { id: 'xp2000',       icon: '💎', name: '2000 XP',             check: (p) => p.totalXp >= 2000 },
+    { id: 'all_modes',    icon: '🎭', name: 'Triple modo',          check: (p) => p.triviaGames >= 1 && p.simGames >= 1 && p.ingrGames >= 1 },
+];
+
 // ── Firebase ──────────────────────────────────────────────
 const firebaseConfig = {
     apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
@@ -1204,12 +1307,103 @@ let selectedDni = null;
 
 // ── Tabs ─────────────────────────────────────────────────
 function switchTab(tab) {
-    ['dash','trivia','sim','ingr'].forEach(t => {
+    ['dash','prize','trivia','sim','ingr'].forEach(t => {
         document.getElementById('atab-' + t).classList.toggle('active', t === tab);
-        document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
+        const panel = document.getElementById('panel-' + t);
+        if (panel) panel.style.display = t === tab ? 'block' : 'none';
     });
     if (tab === 'dash') dashRefresh();
+    else if (tab === 'prize') loadPrizePanel();
     else renderList(tab);
+}
+
+// ── PRIZE QUINCENAL ──────────────────────────────────────
+const PRIZE_COL = 'andino_config';
+const PRIZE_DOC = 'prize_quincenal';
+let prizeActive = true;
+
+function getCurrentPeriodKey() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const half = now.getDate() <= 15 ? '1' : '2';
+    return `${y}-${m}-${half}`;
+}
+function getDaysUntilPeriodEnd() {
+    const now = new Date();
+    const day = now.getDate();
+    if (day <= 15) return 15 - day;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return lastDay - day;
+}
+function getPeriodLabel() {
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.toLocaleDateString('es-AR', { month: 'long' });
+    if (day <= 15) return `1–15 de ${month}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return `16–${lastDay} de ${month}`;
+}
+
+function setPrizeActive(active) {
+    prizeActive = active;
+    document.getElementById('prize-active-yes').className = active ? 'btn' : 'btn btn-secondary';
+    document.getElementById('prize-active-no').className = active ? 'btn btn-secondary' : 'btn';
+}
+
+async function loadPrizePanel() {
+    document.getElementById('admin-period-label').textContent = getPeriodLabel();
+    document.getElementById('admin-period-days').textContent = `${getDaysUntilPeriodEnd()} días restantes`;
+    try {
+        const doc = await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).get();
+        if (doc.exists) {
+            const d = doc.data();
+            document.getElementById('prize-emoji-input').value = d.emoji || '🎁';
+            document.getElementById('prize-title-input').value = d.title || '';
+            document.getElementById('prize-desc-input').value = d.description || '';
+            setPrizeActive(d.active !== false);
+            updatePrizePreview();
+        }
+    } catch(e) { console.warn('loadPrizePanel:', e); }
+}
+
+function updatePrizePreview() {
+    const emoji = document.getElementById('prize-emoji-input').value || '🎁';
+    const title = document.getElementById('prize-title-input').value || 'Premio';
+    const desc = document.getElementById('prize-desc-input').value || 'Descripción';
+    const preview = document.getElementById('prize-preview');
+    document.getElementById('preview-emoji').textContent = emoji;
+    document.getElementById('preview-title').textContent = title;
+    document.getElementById('preview-desc').textContent = desc;
+    document.getElementById('preview-countdown').textContent = `Termina en ${getDaysUntilPeriodEnd()}d`;
+    preview.style.display = 'block';
+}
+
+['prize-emoji-input','prize-title-input','prize-desc-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePrizePreview);
+});
+
+async function savePrize() {
+    const status = document.getElementById('status-prize');
+    const emoji = document.getElementById('prize-emoji-input').value.trim() || '🎁';
+    const title = document.getElementById('prize-title-input').value.trim();
+    const description = document.getElementById('prize-desc-input').value.trim();
+    if (!title) { status.textContent = 'Ingresá un título para el premio'; status.className = 'admin-status err'; return; }
+    status.textContent = 'Guardando…'; status.className = 'admin-status';
+    try {
+        await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).set({
+            emoji, title, description,
+            active: prizeActive,
+            period: getCurrentPeriodKey(),
+            updatedAt: Date.now()
+        });
+        status.textContent = '✓ Premio guardado y visible en el juego'; status.className = 'admin-status ok';
+        updatePrizePreview();
+    } catch(e) {
+        status.textContent = 'Error al guardar: ' + e.message; status.className = 'admin-status err';
+    }
+    setTimeout(() => status.textContent = '', 3000);
 }
 
 // ── Preguntas extra (Firestore) ───────────────────────────
@@ -1229,11 +1423,25 @@ function renderList(tab) {
     const el = document.getElementById('q-list-' + tab);
     const items = extraData[tab] || [];
     if (!items.length) { el.innerHTML = '<div class="dash-loading">Sin preguntas extra agregadas</div>'; return; }
-    el.innerHTML = items.map((it, i) => `
-        <div class="admin-q-item">
-            <div class="admin-q-text">${tab === 'sim' ? it.client : it.q}</div>
-            <button class="admin-q-delete" onclick="adminDelete('${tab}',${i})">✕</button>
-        </div>`).join('');
+    el.innerHTML = items.map((it, i) => {
+        let detail = '';
+        if (tab === 'trivia' || tab === 'ingr') {
+            const opts = it.o || it.options || [];
+            detail = opts.map((o, idx) => `<span style="color:${idx === (it.c ?? 0) ? 'var(--success)' : 'var(--text-muted)'}; font-size:11px;">${idx === (it.c ?? 0) ? '✓' : '○'} ${o}</span>`).join('<br>');
+        } else if (tab === 'sim') {
+            const opts = it.options || [];
+            detail = opts.map(o => `<span style="color:var(--text-muted);font-size:11px;">${o.pts}pts: ${o.text}</span>`).join('<br>');
+        }
+        const title = tab === 'sim' ? it.client : (tab === 'ingr' ? `${it.emoji||''} ${it.dish} — ${it.q}` : it.q);
+        return `
+        <div class="admin-q-item" style="flex-direction:column; align-items:stretch;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                <div class="admin-q-text" style="font-weight:600;">${title}</div>
+                <button class="admin-q-delete" onclick="adminDelete('${tab}',${i})">✕</button>
+            </div>
+            <div style="margin-top:4px; line-height:1.6;">${detail}</div>
+        </div>`;
+    }).join('');
 }
 
 async function adminDelete(tab, idx) {
@@ -1252,7 +1460,8 @@ async function adminAdd(tab) {
         const o2 = document.getElementById('adm-trivia-o2').value.trim();
         const exp = document.getElementById('adm-trivia-exp').value.trim();
         if (!q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
-        item = { q, options: [o0,o1,o2], explanation: exp };
+        // Formato correcto: o = array de opciones, c = índice correcto (0 = opción A es la correcta)
+        item = { q, o: [o0, o1, o2], c: 0, explanation: exp };
         ['adm-trivia-q','adm-trivia-o0','adm-trivia-o1','adm-trivia-o2','adm-trivia-exp'].forEach(id => document.getElementById(id).value = '');
     } else if (tab === 'sim') {
         const client = document.getElementById('adm-sim-client').value.trim();
@@ -1260,6 +1469,7 @@ async function adminAdd(tab) {
         const mid  = document.getElementById('adm-sim-mid').value.trim();
         const bad  = document.getElementById('adm-sim-bad').value.trim();
         if (!client || !good || !mid || !bad) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        // Formato correcto para simulador
         item = { client, options: [{text:good,pts:5},{text:mid,pts:3},{text:bad,pts:1}] };
         ['adm-sim-client','adm-sim-good','adm-sim-mid','adm-sim-bad'].forEach(id => document.getElementById(id).value = '');
     } else {
@@ -1272,7 +1482,8 @@ async function adminAdd(tab) {
         const o2   = document.getElementById('adm-ingr-o2').value.trim();
         const exp  = document.getElementById('adm-ingr-exp').value.trim();
         if (!dish || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
-        item = { dish, emoji, category:cat, q, options:[o0,o1,o2], explanation:exp };
+        // Formato correcto: o = array de opciones, c = índice correcto (0 = opción A es la correcta)
+        item = { dish, emoji, category:cat, q, o:[o0,o1,o2], c:0, explanation:exp };
         ['adm-ingr-dish','adm-ingr-emoji','adm-ingr-cat','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
     }
     if (!extraData[tab]) extraData[tab] = [];

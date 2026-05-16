@@ -157,7 +157,7 @@
 <div class="page">
 
     <div class="top-bar">
-        <a href="andino_camareros_v3__6_.html" class="back-btn">← Volver al juego</a>
+        <a href="andino_camareros_v3.html" class="back-btn">← Volver al juego</a>
         <div class="page-title">🛠️ Admin</div>
     </div>
 
@@ -331,6 +331,10 @@
 </div>
 
 <script>
+// ── Constantes globales (primero para que DB las use) ─────
+const STORAGE_KEY = 'andino_ultra_players';
+const EXTRA_COL = 'andino_extra_questions';
+
 // ── Constantes (copiadas del juego principal) ─────────────
 const LEVEL_THRESHOLDS = [0, 200, 600, 1400, 3000, 6000, 11000, 19000, 32000, 52000, 82000, 130000];
 const LEVEL_NAMES = [
@@ -1296,8 +1300,6 @@ document.addEventListener('DOMContentLoaded', () => {
 })
 
 // ── Estado ───────────────────────────────────────────────
-const EXTRA_COL = 'andino_extra_questions';
-const STORAGE_KEY = 'andino_ultra_players';
 let extraData = { trivia: [], sim: [], ingr: [] };
 let allPlayers = [];
 let dashFilter_ = 'all';

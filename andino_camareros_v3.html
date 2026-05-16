@@ -139,6 +139,29 @@
             display: flex;
         }
 
+        /* ── Category modal ── */
+        #ingr-category-modal { display: none; }
+        #ingr-category-modal.open { display: flex; }
+
+        .ingr-cat-btn {
+            padding: 9px 14px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--surface);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .ingr-cat-btn.active,
+        .ingr-cat-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            color: var(--text);
+        }
+
         .spinner {
             width: 40px;
             height: 40px;
@@ -2228,6 +2251,227 @@
             box-shadow: 0 6px 24px rgba(248,113,113,0.25) !important;
         }
 
+        /* ── LOGIN STREAK HERO ── */
+        .login-streak-hero {
+            background: linear-gradient(135deg, #1A0800 0%, #3A1200 50%, #1A0800 100%);
+            border: 1.5px solid rgba(200,0,26,0.50);
+            border-radius: 18px;
+            padding: 20px 18px 18px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
+            display: none;
+            animation: streakHeroIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes streakHeroIn {
+            from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .login-streak-hero::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 120px; height: 120px;
+            background: radial-gradient(circle, rgba(200,0,26,0.3) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .login-streak-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(200,0,26,0.6), var(--accent), rgba(200,0,26,0.6), transparent);
+        }
+        .lsh-fire {
+            font-size: 42px;
+            display: block;
+            margin-bottom: 6px;
+            animation: fireWiggle 1.5s ease-in-out infinite;
+            filter: drop-shadow(0 0 12px rgba(200,0,26,0.7));
+        }
+        @keyframes fireWiggle {
+            0%, 100% { transform: rotate(-3deg) scale(1); }
+            50% { transform: rotate(3deg) scale(1.08); }
+        }
+        .lsh-days {
+            font-family: var(--font-display);
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: var(--accent);
+            line-height: 1;
+            text-shadow: 0 0 20px rgba(212,168,0,0.5);
+        }
+        .lsh-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.45);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .lsh-message {
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.92);
+            line-height: 1.4;
+            margin-top: 8px;
+        }
+        .lsh-message em {
+            color: var(--accent);
+            font-style: normal;
+        }
+        .lsh-mult {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent);
+            background: rgba(212,168,0,0.18);
+            border: 1px solid rgba(212,168,0,0.35);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+        .lsh-dots {
+            display: flex;
+            gap: 5px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .lsh-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transition: all 0.3s;
+        }
+        .lsh-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(212,168,0,0.6);
+        }
+        .lsh-dot.today {
+            background: var(--red-intense);
+            box-shadow: 0 0 8px rgba(200,0,26,0.6);
+            animation: dotPulse 1s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        /* ── PRIZE CARD ── */
+        .prize-card {
+            background: linear-gradient(135deg, #0A1A00 0%, #142800 50%, #0A1A00 100%);
+            border: 1.5px solid rgba(27,138,74,0.50);
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+            display: none;
+            animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .prize-card::before {
+            content: '';
+            position: absolute;
+            top: -30px; left: -30px;
+            width: 100px; height: 100px;
+            background: radial-gradient(circle, rgba(27,138,74,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .prize-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(27,138,74,0.6), rgba(212,168,0,0.6), rgba(27,138,74,0.6), transparent);
+        }
+        .prize-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .prize-badge {
+            font-family: var(--font-mono);
+            font-size: 8px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            background: rgba(27,138,74,0.25);
+            border: 1px solid rgba(27,138,74,0.4);
+            color: #4ADE80;
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+        .prize-countdown {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: rgba(255,255,255,0.4);
+            margin-left: auto;
+        }
+        .prize-emoji {
+            font-size: 32px;
+            filter: drop-shadow(0 0 8px rgba(27,138,74,0.5));
+            flex-shrink: 0;
+        }
+        .prize-info { flex: 1; }
+        .prize-title {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            line-height: 1.2;
+            margin-bottom: 3px;
+        }
+        .prize-sub {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: rgba(255,255,255,0.45);
+        }
+        .prize-body {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ── QUINCENAL RANKING HEADER ── */
+        .lb-period-header {
+            background: linear-gradient(135deg, rgba(212,168,0,0.10), rgba(212,168,0,0.04));
+            border: 1px solid rgba(212,168,0,0.25);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .lb-period-icon { font-size: 20px; flex-shrink: 0; }
+        .lb-period-info { flex: 1; }
+        .lb-period-title {
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+        }
+        .lb-period-sub {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+        .lb-period-reset {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
         /* ──  LOGIN MODAL ── */
         .-login-overlay {
             position: fixed;
@@ -2356,6 +2600,30 @@
         <div class="spinner"></div>
     </div>
 
+    <!-- ── Modal selector de categoría para Carta ── -->
+    <div id="ingr-category-modal" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(26,20,0,0.55); backdrop-filter:blur(4px);
+        align-items:flex-end; justify-content:center;
+    " onclick="if(event.target===this) document.getElementById('ingr-category-modal').classList.remove('open')">
+        <div style="
+            background:var(--bg); border-radius:20px 20px 0 0;
+            padding:20px 16px 32px; width:100%; max-width:520px;
+            border-top:1px solid var(--border);
+        ">
+            <div style="font-family:var(--font-display); font-size:16px; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px;">
+                🍽️ Elegí una categoría
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:14px;">
+                Podés practicar toda la carta o enfocarte en una sección
+            </div>
+            <div id="ingr-cat-grid" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;"></div>
+            <button class="btn" onclick="confirmIngrCategory()" style="margin-top:4px;">
+                ▶ Jugar
+            </button>
+        </div>
+    </div>
+
     <div class="sound-toggle" id="sound-toggle" title="Toggle Sound">
         <i data-lucide="volume-2"></i>
     </div>
@@ -2368,6 +2636,32 @@
 
     <!-- ── LOGIN ── -->
     <div id="view-login" class="view active">
+
+        <!-- ── STREAK HERO (visible cuando hay racha) ── -->
+        <div class="login-streak-hero" id="login-streak-hero">
+            <div class="lsh-mult" id="lsh-mult">×1</div>
+            <span class="lsh-fire" id="lsh-fire">🔥</span>
+            <div class="lsh-label">Racha activa</div>
+            <div class="lsh-days" id="lsh-days">0</div>
+            <div class="lsh-message" id="lsh-message">Cargando...</div>
+            <div class="lsh-dots" id="lsh-dots"></div>
+        </div>
+
+        <!-- ── PREMIO QUINCENAL ── -->
+        <div class="prize-card" id="prize-card">
+            <div class="prize-header">
+                <span class="prize-badge">🏆 Premio Quincenal</span>
+                <span class="prize-countdown" id="prize-countdown"></span>
+            </div>
+            <div class="prize-body">
+                <span class="prize-emoji" id="prize-emoji">🎁</span>
+                <div class="prize-info">
+                    <div class="prize-title" id="prize-title">Premio en juego</div>
+                    <div class="prize-sub" id="prize-sub">Al mejor del ranking · Ranking quincenal</div>
+                </div>
+            </div>
+        </div>
+
         <div style="margin-bottom: 22px; padding-top: 4px;">
             <label>Tu Nombre</label>
             <input type="text" id="user-nombre" class="input" placeholder="Ej: Valentina" maxlength="30" autocomplete="given-name">
@@ -2377,14 +2671,7 @@
 
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
-                <div class="mode-card selected" onclick="app.setMode('trivia', this)">
-                    <div class="mode-icon"><i data-lucide="cpu"></i></div>
-                    <div>
-                        <span class="mode-title">Trivia Operativa</span>
-                        <span class="mode-desc">Protocolos, seguridad y rapidez.</span>
-                    </div>
-                </div>
-                <div class="mode-card" onclick="app.setMode('sim', this)">
+                <div class="mode-card selected" onclick="app.setMode('sim', this)">
                     <div class="mode-icon"><i data-lucide="users"></i></div>
                     <div>
                         <span class="mode-title">Cliente vs Camarero</span>
@@ -2396,6 +2683,7 @@
                     <div>
                         <span class="mode-title">Conocé la Carta</span>
                         <span class="mode-desc">Ingredientes y preparaciones de Barra Chalaca.</span>
+                        <span id="ingr-cat-label" style="display:block; font-family:var(--font-mono); font-size:10px; color:var(--accent); margin-top:3px;">🍴 Todas</span>
                     </div>
                 </div>
                 <div class="mode-card repaso-mode" id="repaso-mode-card" onclick="app.setMode('repaso', this)">
@@ -2440,7 +2728,7 @@
             <div class="daily-card-sub" id="daily-card-sub">Mismas preguntas para todo el equipo · XP ×2</div>
         </div>
 
-        <button class="btn" onclick="app.initGame()">
+        <button class="btn" onclick="app.state.mode === 'ingredientes' ? showCategoriasModal() : app.initGame()">
             <i data-lucide="play"></i>
             Comenzar Entrenamiento Libre
         </button>
@@ -2529,8 +2817,19 @@
             </button>
         </div>
 
+        <!-- Quincenal period info -->
+        <div class="lb-period-header" id="lb-period-header">
+            <span class="lb-period-icon">📅</span>
+            <div class="lb-period-info">
+                <div class="lb-period-title" id="lb-period-title">Ranking Quincenal</div>
+                <div class="lb-period-sub" id="lb-period-sub">XP acumulada en este período</div>
+            </div>
+            <div class="lb-period-reset" id="lb-period-reset">Reinicia en —d</div>
+        </div>
+
         <div class="nav-tabs">
-            <div class="nav-tab active" id="lb-tab-global" onclick="app.switchLbTab('global')">Global XP</div>
+            <div class="nav-tab active" id="lb-tab-quincenal" onclick="app.switchLbTab('quincenal')">🏆 Quincenal</div>
+            <div class="nav-tab" id="lb-tab-global" onclick="app.switchLbTab('global')">Global XP</div>
             <div class="nav-tab" id="lb-tab-trivia" onclick="app.switchLbTab('trivia')">Trivia</div>
             <div class="nav-tab" id="lb-tab-sim" onclick="app.switchLbTab('sim')">Simulador</div>
         </div>
@@ -2925,6 +3224,66 @@ function shuffleArray(array) {
     return shuffled;
 }
 
+// ── Emojis por categoría de carta ──────────────────────────
+const CATEGORY_EMOJIS = {
+    'TIRADITO':    '🐟',
+    'CEBICHE':     '🦑',
+    'CAUSA':       '🥑',
+    'PIQUEO':      '🌮',
+    'CHICHARRÓN':  '🍟',
+    'ARROZ':       '🍚',
+    'CHAUFA':      '🥢',
+    'SANGUCHE':    '🥪',
+    'PLATO':       '🍽️',
+    'SOPA':        '🍲',
+    'SALSA':       '🥫',
+    'PREPARACIÓN': '👨‍🍳',
+};
+function getCategoryEmoji(cat) {
+    return CATEGORY_EMOJIS[cat] || '🍴';
+}
+
+// ── Selector de categoría para el juego de Carta ───────────
+let _ingrSelectedCategory = null; // null = todas
+
+function getIngrCategories() {
+    const all = [...DATA.ingredientesBank, ...(typeof extraData !== 'undefined' ? (extraData.ingr || []) : [])];
+    const cats = [...new Set(all.map(q => q.category).filter(Boolean))];
+    return cats.sort();
+}
+
+function showCategoriasModal() {
+    const modal = document.getElementById('ingr-category-modal');
+    if (!modal) return;
+    const cats = getIngrCategories();
+    const grid = document.getElementById('ingr-cat-grid');
+    grid.innerHTML = `
+        <button class="ingr-cat-btn ${_ingrSelectedCategory === null ? 'active' : ''}" onclick="selectIngrCategory(null)">
+            🍴 Todas las categorías
+        </button>
+        ${cats.map(c => `
+        <button class="ingr-cat-btn ${_ingrSelectedCategory === c ? 'active' : ''}" onclick="selectIngrCategory('${c}')">
+            ${getCategoryEmoji(c)} ${c}
+        </button>`).join('')}
+    `;
+    modal.classList.add('open');
+}
+
+function selectIngrCategory(cat) {
+    _ingrSelectedCategory = cat;
+    document.querySelectorAll('.ingr-cat-btn').forEach(b => b.classList.remove('active'));
+    const clicked = document.querySelector(`.ingr-cat-btn[onclick*="${cat === null ? 'null' : "'" + cat + "'"}"]`);
+    if (clicked) clicked.classList.add('active');
+    // Update label in mode card
+    const label = document.getElementById('ingr-cat-label');
+    if (label) label.textContent = cat ? (getCategoryEmoji(cat) + ' ' + cat) : '🍴 Todas';
+}
+
+function confirmIngrCategory() {
+    document.getElementById('ingr-category-modal').classList.remove('open');
+    app.initGame();
+}
+
 // Select random scenarios from the bank
 function selectRandomSimScenarios(count = 5) {
     const shuffled = shuffleArray(DATA.simBank);
@@ -2935,7 +3294,7 @@ const app = (() => {
     let state = {
         dni: "",
         nombre: "",
-        mode: "trivia",
+        mode: "sim",
         step: 0,
         score: 0,
         streak: 0,
@@ -3197,12 +3556,18 @@ const app = (() => {
             state.simScores = []; 
             state.wrongAnswers = [];
             state.xp = 0;
+            state.wrongCount = 0; // contador de errores para penalización
             
             if (state.mode === 'sim') {
                 DATA.sim = selectRandomSimScenarios(5);
             }
             if (state.mode === 'ingredientes') {
-                state.ingrSelected = shuffleArray(DATA.ingredientesBank).slice(0, 7);
+                let bank = DATA.ingredientesBank;
+                if (_ingrSelectedCategory) {
+                    bank = bank.filter(q => q.category === _ingrSelectedCategory);
+                    if (bank.length === 0) bank = DATA.ingredientesBank; // fallback si no hay preguntas
+                }
+                state.ingrSelected = shuffleArray(bank).slice(0, 7);
             }
 
             if (state.mode === 'trivia') {
@@ -3373,6 +3738,12 @@ const app = (() => {
                 playSound('wrong');
                 state.wrongAnswers = state.wrongAnswers || [];
                 state.wrongAnswers.push({ q: q.q, correct: q.o[q.c] });
+                state.wrongCount = (state.wrongCount || 0) + 1;
+                if (state.wrongCount > 2) {
+                    state.score -= 1;
+                    state.xp = Math.max(0, (state.xp || 0) - 10);
+                    showCombo('💀 -1 punto · -10 XP');
+                }
             }
             
             renderStreakDots();
@@ -3479,7 +3850,7 @@ const app = (() => {
 
             document.getElementById('ingr-count').textContent = `PREGUNTA ${state.step + 1} / ${total}`;
             document.getElementById('ingr-dish-name').textContent = q.dish;
-            document.getElementById('ingr-dish-category').textContent = q.category;
+            document.getElementById('ingr-dish-category').textContent = getCategoryEmoji(q.category) + ' ' + q.category;
             document.getElementById('ingr-dish-emoji').textContent = q.emoji;
             document.getElementById('ingr-text').textContent = q.q;
 
@@ -3580,6 +3951,12 @@ const app = (() => {
                 state.streak = 0;
                 playSound('wrong');
                 shakeWrong();
+                state.wrongCount = (state.wrongCount || 0) + 1;
+                if (state.wrongCount > 2) {
+                    state.score -= 1;
+                    state.xp = Math.max(0, (state.xp || 0) - 10);
+                    showCombo('💀 -1 punto · -10 XP');
+                }
 
                 // Show explanation
                 if (q.explanation) {
@@ -3752,6 +4129,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Inicializar íconos de la vista de login (que ya está activa al cargar)
+    safeCreateIcons();
+    setTimeout(safeCreateIcons, 300);
+    setTimeout(safeCreateIcons, 800);
     
     const dniInput = document.getElementById('user-dni');
     if (dniInput) {
@@ -3789,8 +4171,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── PERSISTENCE SYSTEM ──────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'andino_players_v1';
-const LEVEL_THRESHOLDS = [0, 200, 500, 900, 1400, 2000, 2800, 3700, 4800, 6000, 8000];
-const LEVEL_NAMES = ['Aprendiz','Mesero Jr.','Mesero','Mesero Sr.','Sommelier Jr.','Sommelier','Jefe de Rango','Maître Jr.','Maître','Maître Ejecutivo','Leyenda del Salón'];
+const LEVEL_THRESHOLDS = [0, 200, 600, 1400, 3000, 6000, 11000, 19000, 32000, 52000, 82000, 130000];
+const LEVEL_NAMES = [
+    'Bachero',
+    'Bachero Senior',
+    'Ayudante de Salón',
+    'Camarero Jr.',
+    'Camarero',
+    'Camarero Senior',
+    'Jefe de Sector',
+    'Sommelier',
+    'Maître Jr.',
+    'Maître',
+    'Maître Ejecutivo',
+    'Gerente de Salón'
+];
 
 const ACHIEVEMENTS = [
     { id: 'first_game',   icon: '🎮', name: 'Primera partida',    check: (p) => p.totalGames >= 1 },
@@ -3982,32 +4377,131 @@ function renderProfileView(dni) {
     }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// RANKING QUINCENAL
+// ══════════════════════════════════════════════════════════════════
+
+// Returns the current quincenal period key: "YYYY-MM-1" or "YYYY-MM-2"
+function getCurrentPeriodKey() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const half = now.getDate() <= 15 ? '1' : '2';
+    return `${y}-${m}-${half}`;
+}
+
+// Returns days remaining until end of current period
+function getDaysUntilPeriodEnd() {
+    const now = new Date();
+    const day = now.getDate();
+    let endDay;
+    if (day <= 15) {
+        endDay = 15;
+    } else {
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        endDay = lastDay;
+    }
+    return endDay - day;
+}
+
+function getPeriodLabel() {
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.toLocaleDateString('es-AR', { month: 'long' });
+    if (day <= 15) {
+        return `1–15 de ${month}`;
+    } else {
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        return `16–${lastDay} de ${month}`;
+    }
+}
+
+// Add XP to current quincenal period for a player
+async function addQuincenalXP(dni, xp) {
+    const period = getCurrentPeriodKey();
+    const col = 'andino_quincenal';
+    const docId = `${dni}_${period}`;
+    try {
+        const doc = await fsdb.collection(col).doc(docId).get();
+        const current = doc.exists ? (doc.data().xp || 0) : 0;
+        await fsdb.collection(col).doc(docId).set({ dni, period, xp: current + xp, lastUpdate: Date.now() }, { merge: true });
+    } catch(e) { console.warn('Quincenal XP error:', e); }
+}
+
+async function getQuincenalLeaderboard() {
+    const period = getCurrentPeriodKey();
+    const col = 'andino_quincenal';
+    try {
+        const snap = await fsdb.collection(col)
+            .where('period', '==', period)
+            .orderBy('xp', 'desc')
+            .limit(20)
+            .get();
+        if (!snap.empty) return snap.docs.map(d => d.data());
+    } catch(e) { console.warn('Quincenal leaderboard error:', e); }
+    return [];
+}
+
+function updateLbPeriodHeader(tab) {
+    const header = document.getElementById('lb-period-header');
+    const titleEl = document.getElementById('lb-period-title');
+    const subEl = document.getElementById('lb-period-sub');
+    const resetEl = document.getElementById('lb-period-reset');
+    if (!header) return;
+
+    if (tab === 'quincenal') {
+        header.style.display = 'flex';
+        titleEl.textContent = `Ranking Quincenal · ${getPeriodLabel()}`;
+        subEl.textContent = 'XP ganada en esta quincena · Se reinicia al cambio de período';
+        resetEl.textContent = `Reinicia en ${getDaysUntilPeriodEnd()}d`;
+    } else {
+        header.style.display = 'none';
+    }
+}
+
 // ── LEADERBOARD RENDERING ───────────────────────────────────────────────────
 
-let currentLbTab = 'global';
+let currentLbTab = 'quincenal';
 
 async function renderLeaderboard(tab, currentDni) {
     currentLbTab = tab;
-    const tabs = ['global','trivia','sim'];
+    const tabs = ['quincenal', 'global','trivia','sim'];
     tabs.forEach(t => {
-        document.getElementById('lb-tab-' + t).classList.toggle('active', t === tab);
+        const el = document.getElementById('lb-tab-' + t);
+        if (el) el.classList.toggle('active', t === tab);
     });
+
+    updateLbPeriodHeader(tab);
 
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Cargando ranking…</div>';
 
-    const players = await DB.getAllPlayersAsync();
     let sorted;
-    if (tab === 'trivia') {
-        sorted = [...players].sort((a, b) => (b.bestTriviaScore || 0) - (a.bestTriviaScore || 0));
-    } else if (tab === 'sim') {
-        sorted = [...players].sort((a, b) => (b.bestSimScore || 0) - (a.bestSimScore || 0));
+    if (tab === 'quincenal') {
+        const qData = await getQuincenalLeaderboard();
+        // Enrich with player names
+        const allPlayers = await DB.getAllPlayersAsync();
+        const playerMap = {};
+        allPlayers.forEach(p => { playerMap[p.dni] = p; });
+        sorted = qData.map(q => ({
+            ...q,
+            nombre: (playerMap[q.dni] || {}).nombre || '',
+            totalGames: (playerMap[q.dni] || {}).totalGames || 0,
+            totalXp: (playerMap[q.dni] || {}).totalXp || 0,
+        })).sort((a, b) => (b.xp || 0) - (a.xp || 0));
     } else {
-        sorted = [...players].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+        const players = await DB.getAllPlayersAsync();
+        if (tab === 'trivia') {
+            sorted = [...players].sort((a, b) => (b.bestTriviaScore || 0) - (a.bestTriviaScore || 0));
+        } else if (tab === 'sim') {
+            sorted = [...players].sort((a, b) => (b.bestSimScore || 0) - (a.bestSimScore || 0));
+        } else {
+            sorted = [...players].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+        }
     }
 
     if (sorted.length === 0) {
-        list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Sin jugadores aún. ¡Sé el primero!</div>';
+        list.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:24px;">Sin jugadores aún en este período. ¡Jugá para aparecer!</div>';
         return;
     }
 
@@ -4017,23 +4511,33 @@ async function renderLeaderboard(tab, currentDni) {
     list.innerHTML = sorted.slice(0, 15).map((p, i) => {
         const isMe = p.dni === currentDni;
         const rankClass = rankColors[i] || 'other';
-        const level = getLevel(p.totalXp);
-        let scoreVal;
-        if (tab === 'trivia') scoreVal = (p.bestTriviaScore || 0) + '/' + DATA.trivia.length + ' ✓';
-        else if (tab === 'sim') scoreVal = (p.bestSimScore || 0) + ' pts';
-        else scoreVal = (p.totalXp || 0) + ' XP';
+        const level = getLevel(p.totalXp || 0);
+        let scoreVal, gamesLabel;
+        if (tab === 'quincenal') {
+            scoreVal = (p.xp || 0) + ' XP';
+            gamesLabel = 'esta quincena';
+        } else if (tab === 'trivia') {
+            scoreVal = (p.bestTriviaScore || 0) + '/' + DATA.trivia.length + ' ✓';
+            gamesLabel = p.totalGames + ' partidas';
+        } else if (tab === 'sim') {
+            scoreVal = (p.bestSimScore || 0) + ' pts';
+            gamesLabel = p.totalGames + ' partidas';
+        } else {
+            scoreVal = (p.totalXp || 0) + ' XP';
+            gamesLabel = p.totalGames + ' partidas';
+        }
 
         return `
         <div class="lb-item ${isMe ? 'me' : ''}">
             <div class="lb-rank ${rankClass}">${i < 3 ? rankIcons[i] : '#' + (i + 1)}</div>
-            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : p.dni.slice(-2)}</div>
+            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : (p.dni || '??').slice(-2)}</div>
             <div class="lb-info">
                 <div class="lb-dni">${p.nombre || ('DNI ' + p.dni)}${isMe ? ' <span style="font-size:8px;color:var(--accent);">← VOS</span>' : ''}</div>
                 <div class="lb-level">Niv.${level + 1} · ${LEVEL_NAMES[level]}</div>
             </div>
             <div style="text-align:right;">
                 <div class="lb-xp">${scoreVal}</div>
-                <div class="lb-games">${p.totalGames} partidas</div>
+                <div class="lb-games">${gamesLabel}</div>
             </div>
         </div>`;
     }).join('');
@@ -4061,6 +4565,11 @@ app.finish = async function() {
             xp: app.state.xp,
             maxStreak: app.state.maxStreak
         });
+
+        // Save to quincenal ranking
+        if (app.state.xp > 0) {
+            addQuincenalXP(dni, app.state.xp).catch(() => {});
+        }
 
         savedPlayer = result.player;
         newAchievements = result.newAchievements;
@@ -4149,7 +4658,7 @@ app.showLeaderboard = async function() {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-leaderboard').classList.add('active');
     safeCreateIcons();
-    await renderLeaderboard('global', app.state.dni);
+    await renderLeaderboard('quincenal', app.state.dni);
     hideLoading();
 };
 
@@ -4216,23 +4725,91 @@ function getStreakMultiplier(days) {
 }
 
 async function renderStreakBanner(dni) {
+    // Legacy banner (hide it always — replaced by login hero)
     const banner = document.getElementById('daily-streak-banner');
-    if (!dni || dni.length < 6) { banner.style.display = 'none'; return; }
+    if (banner) banner.style.display = 'none';
+
+    const hero = document.getElementById('login-streak-hero');
+    if (!hero) return;
+    if (!dni || dni.length < 6) { hero.style.display = 'none'; return; }
+
     const streak = await loadDailyStreak(dni);
     const days = streak.currentStreak || 0;
-    if (days < 2) { banner.style.display = 'none'; return; }
-
-    const mult = getStreakMultiplier(days);
     const today = new Date().toISOString().slice(0, 10);
     const playedToday = streak.lastPlayDate === today;
+    const mult = getStreakMultiplier(days);
 
-    document.getElementById('streak-fire-emoji').textContent = days >= 7 ? '🔥' : days >= 3 ? '🔥' : '✨';
-    document.getElementById('streak-days-text').textContent = `${days} días seguidos`;
-    document.getElementById('streak-sub-text').textContent = playedToday
-        ? '¡Ya jugaste hoy! Volvé mañana para mantener la racha.'
-        : '¡Jugá hoy para no romper la racha!';
-    document.getElementById('streak-multiplier').textContent = `×${mult}`;
-    banner.style.display = 'flex';
+    if (days < 2) {
+        // Single day: show small hint only if they played yesterday (about to start a streak)
+        hero.style.display = 'none';
+        return;
+    }
+
+    hero.style.display = 'block';
+
+    // Fire emoji scales with days
+    const fireEl = document.getElementById('lsh-fire');
+    if (fireEl) fireEl.textContent = days >= 14 ? '🔥🔥🔥' : days >= 7 ? '🔥🔥' : '🔥';
+
+    const daysEl = document.getElementById('lsh-days');
+    if (daysEl) daysEl.textContent = days + (days === 1 ? ' día' : ' días');
+
+    const multEl = document.getElementById('lsh-mult');
+    if (multEl) multEl.textContent = '×' + mult;
+
+    const msgEl = document.getElementById('lsh-message');
+    if (msgEl) {
+        if (playedToday) {
+            msgEl.innerHTML = `¡Ya jugaste hoy! Volvé <em>mañana</em> para mantener la racha.`;
+        } else {
+            const msgs = [
+                `Llevás <em>${days} días seguidos</em> — no rompas la racha hoy.`,
+                `<em>${days} días</em> de racha activa. ¿Lo sostenés hoy también?`,
+                `¡Impresionante! <em>${days} días seguidos</em>. Hoy es el que más importa.`,
+            ];
+            msgEl.innerHTML = days >= 7
+                ? `🔥 <em>${days} días</em> sin parar. Sos imparable — ¡jugá hoy!`
+                : msgs[Math.min(days - 2, msgs.length - 1)];
+        }
+    }
+
+    // Dots: show last 7 or all days, whichever is less
+    const dotsEl = document.getElementById('lsh-dots');
+    if (dotsEl) {
+        const showDots = Math.min(days + (playedToday ? 0 : 1), 14);
+        dotsEl.innerHTML = '';
+        for (let i = 0; i < showDots; i++) {
+            const d = document.createElement('div');
+            const isToday = !playedToday && i === showDots - 1;
+            const isPast = i < (playedToday ? days : days);
+            d.className = 'lsh-dot' + (isToday ? ' today' : isPast ? ' active' : '');
+            dotsEl.appendChild(d);
+        }
+    }
+}
+
+// ── PRIZE CARD LOADER ──────────────────────────────────────────────────────
+const PRIZE_COL = 'andino_config';
+const PRIZE_DOC = 'prize_quincenal';
+
+async function loadAndRenderPrize() {
+    const card = document.getElementById('prize-card');
+    if (!card) return;
+    try {
+        const doc = await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).get();
+        if (!doc.exists) return;
+        const data = doc.data();
+        if (!data.active || !data.title) return;
+
+        document.getElementById('prize-emoji').textContent = data.emoji || '🎁';
+        document.getElementById('prize-title').textContent = data.title;
+        document.getElementById('prize-sub').textContent = data.description || 'Al mejor del ranking · Ranking quincenal';
+
+        const daysLeft = getDaysUntilPeriodEnd();
+        document.getElementById('prize-countdown').textContent = `Termina en ${daysLeft}d`;
+
+        card.style.display = 'block';
+    } catch(e) { console.warn('Prize load error:', e); }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -4320,9 +4897,9 @@ app.startDailyChallenge = function() {
 // ══════════════════════════════════════════════════════════════════
 
 const UNLOCKS = [
-    { level: 3, id: 'hard_mode', label: '⚡ Modo Difícil', desc: 'Menos tiempo por pregunta' },
-    { level: 5, id: 'vip_rank',  label: '👑 Destacado en Ranking', desc: 'Tu avatar brilla en el leaderboard' },
-    { level: 7, id: 'add_q',     label: '✏️ Crear Preguntas', desc: 'Aportás preguntas al banco' },
+    { level: 3,  id: 'hard_mode', label: '⚡ Modo Difícil', desc: 'Menos tiempo por pregunta (desbloqueás en Camarero Jr.)' },
+    { level: 6,  id: 'vip_rank',  label: '👑 Destacado en Ranking', desc: 'Tu avatar brilla (Jefe de Sector+)' },
+    { level: 9,  id: 'add_q',     label: '✏️ Crear Preguntas', desc: 'Aportás preguntas al banco (Maître+)' },
 ];
 
 function renderUnlockBadges(playerXp) {
@@ -4732,12 +5309,27 @@ app.goHome = function() {
     }, 400);
 };
 
-// Wire DNI input → badge update
+// Wire DNI input → badge update + streak hero
 document.addEventListener('DOMContentLoaded', () => {
     const dniInput = document.getElementById('user-dni');
     if (dniInput) {
-        dniInput.addEventListener('input', () => updateRepasoBadge(dniInput.value.trim()));
+        let streakDebounce;
+        dniInput.addEventListener('input', () => {
+            const dni = dniInput.value.trim();
+            updateRepasoBadge(dni);
+            clearTimeout(streakDebounce);
+            streakDebounce = setTimeout(() => {
+                if (dni.length >= 6) renderStreakBanner(dni);
+                else {
+                    const hero = document.getElementById('login-streak-hero');
+                    if (hero) hero.style.display = 'none';
+                }
+            }, 400);
+        });
     }
+
+    // Load prize card on startup (doesn't need DNI)
+    loadAndRenderPrize();
 });
 
 // Add to MODE_META
@@ -4776,7 +5368,24 @@ window.addEventListener('error', (e) => {
 
 
 <!-- Lucide icons: carga al final para garantizar que el DOM ya existe -->
-<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js" onload="safeCreateIcons()"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+<script>
+(function initLucide() {
+    function tryCreate() {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
+    }
+    // Intentar de inmediato (ya cargó)
+    tryCreate();
+    // Fallback: en cada evento de carga
+    window.addEventListener('load', tryCreate);
+    // Fallback extra: después de un tick
+    setTimeout(tryCreate, 0);
+    setTimeout(tryCreate, 200);
+    setTimeout(tryCreate, 600);
+})();
+</script>
 
 </body>
 </html>

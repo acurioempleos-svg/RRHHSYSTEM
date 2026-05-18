@@ -316,8 +316,21 @@
             <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">+ AGREGAR PREGUNTA DE CARTA</div>
             <div style="font-size:11px; color:var(--success); font-family:var(--font-mono); background:rgba(26,122,58,0.08); border-radius:6px; padding:6px 10px;">✓ La Opción A siempre es la CORRECTA. Las demás son incorrectas.</div>
             <input id="adm-ingr-dish" placeholder="Nombre del plato">
-            <input id="adm-ingr-emoji" placeholder="Emoji (ej: 🐟)" style="max-width:120px;">
-            <input id="adm-ingr-cat" placeholder="Categoría (ej: CEBICHE)">
+            <select id="adm-ingr-cat" style="background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-family:var(--font-body); font-size:13px; color:var(--text); width:100%;">
+                <option value="">— Seleccioná categoría —</option>
+                <option value="CEBICHE">CEBICHE</option>
+                <option value="TIRADITO">TIRADITO</option>
+                <option value="CAUSA">CAUSA</option>
+                <option value="ENTRANTE">ENTRANTE</option>
+                <option value="PRINCIPAL">PRINCIPAL</option>
+                <option value="GUARNICION">GUARNICION</option>
+                <option value="POSTRE">POSTRE</option>
+                <option value="BEBIDA">BEBIDA</option>
+                <option value="COCTEL">COCTEL</option>
+                <option value="VINO">VINO</option>
+                <option value="PROTOCOLO">PROTOCOLO</option>
+                <option value="ALERGIA">ALERGIA</option>
+            </select>
             <textarea id="adm-ingr-q" placeholder="Pregunta sobre el plato"></textarea>
             <input id="adm-ingr-o0" placeholder="✓ Opción A — la CORRECTA" style="border-color:var(--success);">
             <input id="adm-ingr-o1" placeholder="Opción B (incorrecta)">
@@ -331,6 +344,14 @@
 </div>
 
 <script>
+// ── Stubs de funciones del juego principal (no disponibles en admin standalone) ──
+window.DATA = window.DATA || { trivia: [], sim: [], ingredientes: [] };
+function safeCreateIcons() { if (window.lucide) try { lucide.createIcons(); } catch(e) {} }
+function showCombo() {}
+function createConfetti() {}
+function playSound() {}
+function switchView() {}
+
 // ── Constantes globales (primero para que DB las use) ─────
 const STORAGE_KEY = 'andino_ultra_players';
 const EXTRA_COL = 'andino_extra_questions';
@@ -600,7 +621,8 @@ async function renderLeaderboard(tab, currentDni) {
 
 // ── EXTEND APP WITH PERSISTENCE ─────────────────────────────────────────────
 
-const _originalFinish = app.finish.bind(app);
+if (typeof app === 'undefined') { window.app = { state: {}, finish: () => {}, show: () => {}, goHome: () => {}, showProfile: () => {}, showLeaderboard: () => {}, switchLbTab: () => {}, initGame: () => {}, setMode: () => {}, startDailyChallenge: () => {}, startRepaso: () => {}, checkTrivia: () => {}, checkIngredientes: () => {} }; }
+const _originalFinish = typeof app.finish === 'function' ? app.finish.bind(app) : () => {};
 app.finish = async function() {
     // 1. Save to persistence BEFORE calling original finish
     const dni = app.state.dni;
@@ -990,7 +1012,7 @@ const REPASODB = {
 };
 
 // ── Parchear checkTrivia para capturar el objeto completo ──
-const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
+const _origCheckTriviaRepaso = typeof app.checkTrivia === 'function' ? app.checkTrivia.bind(app) : () => {};
 app.checkTrivia = function(idx, btn) {
     const q = DATA.trivia[app.state.step];
     if (idx !== q.c) {
@@ -1005,7 +1027,7 @@ app.checkTrivia = function(idx, btn) {
 };
 
 // ── Parchear checkIngredientes ──
-const _origCheckIngrRepaso = app.checkIngredientes.bind(app);
+const _origCheckIngrRepaso = typeof app.checkIngredientes === 'function' ? app.checkIngredientes.bind(app) : () => {};
 app.checkIngredientes = function(idx, btn) {
     const q = app.state.ingrSelected[app.state.step];
     if (idx !== q.c) {
@@ -1019,7 +1041,7 @@ app.checkIngredientes = function(idx, btn) {
 };
 
 // ── Parchear initGame para limpiar _wrongFull ──
-const _origInitGameRepaso = app.initGame.bind(app);
+const _origInitGameRepaso = typeof app.initGame === 'function' ? app.initGame.bind(app) : () => {};
 app.initGame = function() {
     if (app.state.mode === 'repaso') {
         app.startRepaso();
@@ -1030,7 +1052,7 @@ app.initGame = function() {
 };
 
 // ── Parchear finish para guardar wrongFull en REPASODB y mostrar botón ──
-const _origFinishRepaso = app.finish.bind(app);
+const _origFinishRepaso = typeof app.finish === 'function' ? app.finish.bind(app) : () => {};
 app.finish = async function() {
     const dni   = app.state.dni;
     const mode  = app.state.mode;
@@ -1281,7 +1303,7 @@ function startRepasoTimer(sec) {
 }
 
 // Update badge on home
-const _repasoGoHome = app.goHome.bind(app);
+const _repasoGoHome = typeof app.goHome === 'function' ? app.goHome.bind(app) : () => {};
 app.goHome = function() {
     clearInterval(_repasoTimer);
     _repasoGoHome();
@@ -1476,17 +1498,17 @@ async function adminAdd(tab) {
         ['adm-sim-client','adm-sim-good','adm-sim-mid','adm-sim-bad'].forEach(id => document.getElementById(id).value = '');
     } else {
         const dish = document.getElementById('adm-ingr-dish').value.trim();
-        const emoji = document.getElementById('adm-ingr-emoji').value.trim();
         const cat  = document.getElementById('adm-ingr-cat').value.trim();
         const q    = document.getElementById('adm-ingr-q').value.trim();
         const o0   = document.getElementById('adm-ingr-o0').value.trim();
         const o1   = document.getElementById('adm-ingr-o1').value.trim();
         const o2   = document.getElementById('adm-ingr-o2').value.trim();
         const exp  = document.getElementById('adm-ingr-exp').value.trim();
-        if (!dish || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        if (!dish || !cat || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
         // Formato correcto: o = array de opciones, c = índice correcto (0 = opción A es la correcta)
-        item = { dish, emoji, category:cat, q, o:[o0,o1,o2], c:0, explanation:exp };
-        ['adm-ingr-dish','adm-ingr-emoji','adm-ingr-cat','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
+        item = { dish, emoji: '', category:cat, q, o:[o0,o1,o2], c:0, explanation:exp };
+        ['adm-ingr-dish','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('adm-ingr-cat').value = '';
     }
     if (!extraData[tab]) extraData[tab] = [];
     extraData[tab].push(item);

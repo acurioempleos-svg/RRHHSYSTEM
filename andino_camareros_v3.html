@@ -3066,18 +3066,51 @@
 </div><!-- /container -->
 
 <script>
-// Initialize Lucide icons — safe wrapper for dynamic views
+// ── SISTEMA DE ICONOS INLINE (sin dependencia de CDN) ──────────────────────
+const LUCIDE_ICONS = {
+    'play':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+    'user':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    'users':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    'trophy':     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 21 16 21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M6 3H18l-2 9a6 6 0 0 1-12 0L2 3z"/><path d="M4 7H2"/><path d="M20 7h2"/></svg>',
+    'arrow-left': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+    'rotate-ccw': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>',
+    'share-2':    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+    'brain':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.88A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.88A2.5 2.5 0 0 0 14.5 2Z"/></svg>',
+    'utensils':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
+    'star':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    'award':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
+    'leaf':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+    'volume-2':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+    'volume-x':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+};
+
 function safeCreateIcons() {
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        lucide.createIcons();
-    } else {
-        // Lucide aún no cargó, reintentar en 200ms
-        setTimeout(() => {
-            if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                lucide.createIcons();
-            }
-        }, 200);
-    }
+    document.querySelectorAll('i[data-lucide]').forEach(el => {
+        const name = el.getAttribute('data-lucide');
+        const svgStr = LUCIDE_ICONS[name];
+        if (!svgStr) return;
+        const tmp = document.createElement('span');
+        tmp.innerHTML = svgStr;
+        const svgEl = tmp.firstElementChild;
+        // Heredar dimensiones del elemento <i>
+        const w = el.style.width || '18px';
+        const h = el.style.height || '18px';
+        svgEl.setAttribute('width',  w);
+        svgEl.setAttribute('height', h);
+        svgEl.style.display = 'inline-block';
+        svgEl.style.verticalAlign = 'middle';
+        svgEl.style.flexShrink = '0';
+        // Propagar el style original del <i> (fill, color, etc.)
+        if (el.style.cssText) {
+            el.style.cssText.split(';').forEach(rule => {
+                if (rule.trim()) {
+                    const [prop, val] = rule.split(':');
+                    if (prop && val) svgEl.style[prop.trim()] = val.trim();
+                }
+            });
+        }
+        el.replaceWith(svgEl);
+    });
 }
 
 // Updated DATA with new sim scenarios and random selection
@@ -3395,7 +3428,7 @@ const app = (() => {
         }
     };
 
-    const switchView = (id) => {
+    const switchView = (id, callback) => {
         showLoading();
         
         setTimeout(() => {
@@ -3406,6 +3439,7 @@ const app = (() => {
             }
             safeCreateIcons();
             hideLoading();
+            if (typeof callback === 'function') callback();
         }, 300);
     };
 
@@ -3571,32 +3605,34 @@ const app = (() => {
             }
 
             if (state.mode === 'trivia') {
-                switchView('trivia');
-                renderStreakDots();
-                updateTriviaProgress();
-                app.renderTrivia();
+                switchView('trivia', () => {
+                    renderStreakDots();
+                    updateTriviaProgress();
+                    app.renderTrivia();
+                });
             } else if (state.mode === 'ingredientes') {
-                switchView('ingredientes');
-                app.renderIngredientes();
+                switchView('ingredientes', () => {
+                    app.renderIngredientes();
+                });
             } else {
-                switchView('sim');
-                renderSimPips();
-                app.renderSim();
+                switchView('sim', () => {
+                    renderSimPips();
+                    app.renderSim();
+                });
             }
         },
 
         /* ── TRIVIA ── */
         renderTrivia: () => {
-            const totalQuestions = DATA.trivia.length;
+            const triviaData = window._triviaOverride || DATA.trivia;
+            const totalQuestions = triviaData.length;
             
             if (state.step >= totalQuestions) {
                 app.finish();
                 return;
             }
             
-            const q = DATA.trivia[state.step];
-            
-            const countEl = document.getElementById('trivia-count');
+            const q = triviaData[state.step];
             const textEl = document.getElementById('trivia-text');
             
             if (countEl) {
@@ -3684,10 +3720,11 @@ const app = (() => {
         checkTrivia: (idx, btn) => {
             clearInterval(state.timer);
             
+            const triviaData = window._triviaOverride || DATA.trivia;
             const allOptions = document.querySelectorAll('#trivia-options .option');
             allOptions.forEach(b => b.disabled = true);
 
-            const q = DATA.trivia[state.step];
+            const q = triviaData[state.step];
             const medals = document.querySelectorAll('#trivia-medals .medal');
             const isCorrect = idx === q.c;
 
@@ -3712,7 +3749,7 @@ const app = (() => {
                     showCombo('¡Doble acierto!');
                 }
                 
-                updateXpBar(Math.min(((state.step + 1) / DATA.trivia.length) * 80 + 5, 85));
+                updateXpBar(Math.min(((state.step + 1) / triviaData.length) * 80 + 5, 85));
             } else {
                 if (btn) btn.classList.add('wrong');
                 
@@ -3751,7 +3788,7 @@ const app = (() => {
 
             setTimeout(() => {
                 state.step++;
-                if (state.step < DATA.trivia.length) {
+                if (state.step < triviaData.length) {
                     app.renderTrivia();
                 } else {
                     app.finish();
@@ -3992,10 +4029,8 @@ const app = (() => {
             
             playSound('complete');
             createConfetti();
-            
-            setTimeout(() => {
-                switchView('results');
-                
+
+            switchView('results', () => {
                 const resTime = document.getElementById('res-time');
                 const resStreak = document.getElementById('res-streak');
                 const resXp = document.getElementById('res-xp');
@@ -4018,8 +4053,9 @@ const app = (() => {
 
                 if (state.mode === 'trivia' || state.mode === 'ingredientes') {
                     const isTrivia = state.mode === 'trivia';
+                    const triviaData = window._triviaOverride || DATA.trivia;
                     const rank = RANKS.trivia.find(r => state.score >= r.min) || RANKS.trivia[RANKS.trivia.length - 1];
-                    const total = isTrivia ? DATA.trivia.length : 7;
+                    const total = isTrivia ? triviaData.length : 7;
                     if (resIcon) resIcon.textContent = rank.icon;
                     if (resRankLabel) resRankLabel.textContent = isTrivia ? 'RANGO TRIVIA' : 'RANGO CARTA';
                     if (resTitle) resTitle.textContent = rank.label;
@@ -4070,7 +4106,7 @@ const app = (() => {
                 }
 
                 safeCreateIcons();
-            }, 500);
+            });
         },
 
         shareResults: () => {
@@ -4113,7 +4149,7 @@ const app = (() => {
         },
 
         // Exponer funciones internas para uso desde código externo al IIFE
-        switchView:     (id) => switchView(id),
+        switchView:     (id, cb) => switchView(id, cb),
         showCombo:      (text) => showCombo(text),
         playSound:      (type) => playSound(type),
         createConfetti: () => createConfetti()
@@ -4138,12 +4174,10 @@ document.addEventListener('DOMContentLoaded', () => {
         soundToggle.addEventListener('click', () => {
             app.state.soundEnabled = !app.state.soundEnabled;
             soundToggle.classList.toggle('muted', !app.state.soundEnabled);
-            
-            const icon = soundToggle.querySelector('i');
-            if (icon) {
-                icon.setAttribute('data-lucide', app.state.soundEnabled ? 'volume-2' : 'volume-x');
-                safeCreateIcons();
-            }
+            // Reemplazar SVG actual con el ícono correcto
+            const iconName = app.state.soundEnabled ? 'volume-2' : 'volume-x';
+            soundToggle.innerHTML = `<i data-lucide="${iconName}"></i>`;
+            safeCreateIcons();
         });
     }
 
@@ -4597,6 +4631,15 @@ app.finish = async function() {
     // 2. Call the original finish (handles navigation + UI correctly)
     _originalFinish();
 
+    // Clear daily override after finish
+    if (app.state.isDaily) {
+        markDailyCompleted(app.state.dni);
+        renderDailyCard(app.state.dni);
+        window._triviaOverride = null;
+        app.state.isDaily = false;
+        app.state.dailyXpMult = 1;
+    }
+
     // 3. After original finish renders results (it uses 500ms timeout internally),
     //    patch the XP box with total stats
     setTimeout(() => {
@@ -5027,7 +5070,8 @@ const REPASODB = {
 // ── Parchear checkTrivia para capturar el objeto completo ──
 const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
 app.checkTrivia = function(idx, btn) {
-    const q = DATA.trivia[app.state.step];
+    const triviaData = window._triviaOverride || DATA.trivia;
+    const q = triviaData[app.state.step];
     if (idx !== q.c) {
         app.state._wrongFull = app.state._wrongFull || [];
         // Avoid duplicates
@@ -5128,29 +5172,29 @@ app.startRepaso = function() {
     const dniInput = document.getElementById('user-dni');
     const dni = (dniInput ? dniInput.value.trim() : '') || app.state.dni || '';
 
-    // Validación normal para el resto de los camareros
     if (!dni || dni.length < 6) {
         alert('Ingresá tu DNI (mínimo 6 números)');
         return;
     }
 
     const pending = REPASODB.getPending(dni);
-    app.switchView('repaso');
-    safeCreateIcons();
 
-    if (pending.length === 0) {
-        document.getElementById('repaso-empty-state').style.display = 'block';
-        document.getElementById('repaso-game-state').style.display = 'none';
-        return;
-    }
+    app.switchView('repaso', () => {
+        safeCreateIcons();
 
-    // Ordenar: primero los que tienen menos hits (los más frescos/difíciles)
-    _repasoQueue = [...pending].sort((a, b) => (a.hits || 0) - (b.hits || 0));
-    _repasoIdx   = 0;
+        if (pending.length === 0) {
+            document.getElementById('repaso-empty-state').style.display = 'block';
+            document.getElementById('repaso-game-state').style.display = 'none';
+            return;
+        }
 
-    document.getElementById('repaso-empty-state').style.display = 'none';
-    document.getElementById('repaso-game-state').style.display  = 'block';
-    renderRepasoQuestion();
+        _repasoQueue = [...pending].sort((a, b) => (a.hits || 0) - (b.hits || 0));
+        _repasoIdx   = 0;
+
+        document.getElementById('repaso-empty-state').style.display = 'none';
+        document.getElementById('repaso-game-state').style.display  = 'block';
+        renderRepasoQuestion();
+    });
 };
 
 function renderRepasoQuestion() {
@@ -5352,12 +5396,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load prize card on startup (doesn't need DNI)
     loadAndRenderPrize();
+
+    // Show onboarding for first-time users
+    showOnboarding();
 });
 
 // Add to MODE_META
 if (typeof MODE_META !== 'undefined') {
     MODE_META['repaso'] = { icon: '🧠', name: 'Repaso Inteligente', time: 'Hasta dominar', questions: 'Solo tus errores', xp: 'Sin XP · aprendizaje puro' };
 }
+
+// ── ONBOARDING ──────────────────────────────────────────────────────────────
+const ONB_STEPS = [
+    { emoji: '🎯', title: 'Bienvenido', body: 'Esta app te ayuda a entrenar como camarero de <strong>Andino</strong>. Practicá servicio, conocé la carta y dominá los protocolos.' },
+    { emoji: '🎮', title: 'Modos de juego', body: '<strong>Cliente vs Camarero</strong>: simulá situaciones reales de servicio.<br><strong>Conocé la Carta</strong>: aprendé ingredientes y preparaciones.<br><strong>Repaso Inteligente</strong>: repasá solo tus errores.' },
+    { emoji: '🔥', title: '¡A entrenar!', body: 'Ingresá tu nombre y DNI, elegí un modo y empezá. Las rachas diarias multiplican tu XP. ¡Buena suerte!' },
+];
+let _onbStep = 0;
+
+function showOnboarding() {
+    const overlay = document.getElementById('onboarding-overlay');
+    if (!overlay) return;
+    const seen = localStorage.getItem('andino_onb_seen');
+    if (seen) return; // ya lo vio
+    _onbStep = 0;
+    renderOnbStep();
+    overlay.classList.add('active');
+}
+
+function renderOnbStep() {
+    const s = ONB_STEPS[_onbStep];
+    const emojiEl = document.getElementById('onb-emoji');
+    const titleEl = document.getElementById('onb-title');
+    const bodyEl  = document.getElementById('onb-body');
+    const btn     = document.getElementById('onb-next-btn');
+    if (emojiEl) emojiEl.textContent = s.emoji;
+    if (titleEl) titleEl.textContent = s.title;
+    if (bodyEl)  bodyEl.innerHTML    = s.body;
+    if (btn)     btn.textContent     = _onbStep < ONB_STEPS.length - 1 ? 'Siguiente →' : '¡Empezar!';
+    // Dots
+    ONB_STEPS.forEach((_, i) => {
+        const d = document.getElementById('onb-dot-' + i);
+        if (d) d.classList.toggle('active', i === _onbStep);
+    });
+}
+
+app.onbNext = function() {
+    _onbStep++;
+    if (_onbStep >= ONB_STEPS.length) {
+        app.onbSkip();
+    } else {
+        renderOnbStep();
+    }
+};
+
+app.onbSkip = function() {
+    const overlay = document.getElementById('onboarding-overlay');
+    if (overlay) overlay.classList.remove('active');
+    try { localStorage.setItem('andino_onb_seen', '1'); } catch {}
+};
 
 // ══════════════════════════════════════════════════════════════════
 //  PANEL
@@ -5389,26 +5486,6 @@ window.addEventListener('error', (e) => {
 
 
 
-<!-- Lucide icons: carga al final para garantizar que el DOM ya existe -->
-<script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
-<script>
-(function initLucide() {
-    function tryCreate() {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-            return true;
-        }
-        return false;
-    }
-    // Intentar de inmediato (ya cargó)
-    if (!tryCreate()) {
-        // Fallback progresivo
-        [100, 300, 600, 1200, 2000].forEach(ms => setTimeout(tryCreate, ms));
-    }
-    // Fallback: en cada evento de carga
-    window.addEventListener('load', tryCreate);
-})();
-</script>
 
 </body>
 </html>

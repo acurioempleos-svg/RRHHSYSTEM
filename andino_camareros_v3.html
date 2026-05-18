@@ -2890,11 +2890,11 @@
     <!-- ── TRIVIA ── -->
     <div id="view-trivia" class="view">
         <div class="medals-row" id="trivia-medals">
-            <div class="medal"><i data-lucide="medal"></i></div>
-            <div class="medal"><i data-lucide="medal"></i></div>
-            <div class="medal"><i data-lucide="medal"></i></div>
-            <div class="medal"><i data-lucide="medal"></i></div>
-            <div class="medal"><i data-lucide="medal"></i></div>
+            <div class="medal"><i data-lucide="award"></i></div>
+            <div class="medal"><i data-lucide="award"></i></div>
+            <div class="medal"><i data-lucide="award"></i></div>
+            <div class="medal"><i data-lucide="award"></i></div>
+            <div class="medal"><i data-lucide="award"></i></div>
         </div>
 
         <div class="streak-bar">
@@ -5039,7 +5039,18 @@ app.checkIngredientes = function(idx, btn) {
 // ── Parchear initGame para limpiar _wrongFull ──
 const _origInitGameRepaso = app.initGame.bind(app);
 app.initGame = function() {
+    // Sync DNI/nombre from inputs into state before any branch
+    const dniInput = document.getElementById('user-dni');
+    const nombreInput = document.getElementById('user-nombre');
+    if (dniInput && dniInput.value.trim()) app.state.dni = dniInput.value.trim();
+    if (nombreInput && nombreInput.value.trim()) app.state.nombre = nombreInput.value.trim();
+
     if (app.state.mode === 'repaso') {
+        if (!app.state.dni || app.state.dni.length < 6) {
+            alert('Ingresá tu DNI (mínimo 6 números)');
+            if (dniInput) dniInput.focus();
+            return;
+        }
         app.startRepaso();
         return;
     }
@@ -5097,13 +5108,8 @@ let _repasoTimer = null;
 
 app.startRepaso = function() {
     clearInterval(_repasoTimer);
-    const dni = document.getElementById('user-dni').value.trim();
-    
-    // EXCEPCIÓN PARA 
-    if (dni.toLowerCase() === '' || dni === '00000000') {
-        app.show();
-        return;
-    }
+    const dniInput = document.getElementById('user-dni');
+    const dni = (dniInput ? dniInput.value.trim() : '') || app.state.dni || '';
 
     // Validación normal para el resto de los camareros
     if (!dni || dni.length < 6) {
@@ -5368,22 +5374,23 @@ window.addEventListener('error', (e) => {
 
 
 <!-- Lucide icons: carga al final para garantizar que el DOM ya existe -->
-<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.1/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"></script>
 <script>
 (function initLucide() {
     function tryCreate() {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             lucide.createIcons();
+            return true;
         }
+        return false;
     }
     // Intentar de inmediato (ya cargó)
-    tryCreate();
+    if (!tryCreate()) {
+        // Fallback progresivo
+        [100, 300, 600, 1200, 2000].forEach(ms => setTimeout(tryCreate, ms));
+    }
     // Fallback: en cada evento de carga
     window.addEventListener('load', tryCreate);
-    // Fallback extra: después de un tick
-    setTimeout(tryCreate, 0);
-    setTimeout(tryCreate, 200);
-    setTimeout(tryCreate, 600);
 })();
 </script>
 

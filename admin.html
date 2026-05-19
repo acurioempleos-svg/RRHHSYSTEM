@@ -29,7 +29,6 @@
         .page { width: 100%; max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
         .top-bar { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border); }
         .back-btn { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-family:var(--font-body); font-size:13px; cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
-        .back-btn:hover { background:var(--surface-2); }
         .page-title { font-family:var(--font-display); font-size:20px; font-weight:700; text-transform:uppercase; letter-spacing:2px; }
         /* Tabs */
         .admin-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
@@ -90,20 +89,59 @@
         .dash-name-cell { display:flex; align-items:center; gap:6px; }
         /* Premio preview */
         .prize-preview-box { background:linear-gradient(135deg,#0A1A00 0%,#142800 50%,#0A1A00 100%); border:1.5px solid rgba(27,138,74,0.50); border-radius:14px; padding:14px 16px; display:none; }
+        /* Login overlay */
+        .login-overlay { position:fixed; inset:0; background:rgba(26,20,0,0.65); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+        .login-box { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:28px 24px; width:100%; max-width:340px; margin:16px; }
+        .login-box-title { font-family:var(--font-display); font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
+        .login-box-sub { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:20px; }
+        .login-sel { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:10px; }
+        .login-inp { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:12px; }
+        .login-err { font-size:12px; color:var(--danger); font-family:var(--font-mono); margin-bottom:10px; min-height:16px; }
+        /* Hard questions tab */
+        .hard-q-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; }
+        .hard-q-bar-wrap { background:var(--surface-2); border-radius:4px; height:7px; margin:5px 0 3px; overflow:hidden; }
+        .hard-q-bar { height:100%; border-radius:4px; transition:width .4s; }
+        /* Pregunta stats rows */
+        .q-stat-row { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; }
+        .q-stat-row:last-child { border-bottom:none; }
+        .q-stat-pct { font-family:var(--font-mono); font-weight:700; min-width:36px; text-align:right; }
+        /* Local filter */
+        .local-badge { display:inline-block; font-size:9px; font-family:var(--font-mono); padding:2px 7px; border-radius:5px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted); text-transform:uppercase; margin-left:4px; }
     </style>
 </head>
 <body>
-<div class="page">
+
+<!-- ── LOGIN POR LOCAL ── -->
+<div class="login-overlay" id="admin-login-overlay">
+    <div class="login-box">
+        <div class="login-box-title">🛠️ Admin</div>
+        <div class="login-box-sub">Ingresá tu local y contraseña</div>
+        <select class="login-sel" id="admin-local-sel">
+            <option value="">— Seleccioná local —</option>
+            <option value="bcp">Barra Chalaca Palermo (BCP)</option>
+            <option value="bcbl">Barra Chalaca Belgrano (BCBL)</option>
+            <option value="bcc">Barra Chalaca Caballito (BCC)</option>
+            <option value="bcb">Barra Chalaca Barrancas (BCB)</option>
+            <option value="tanta">Tanta</option>
+            <option value="lamar">La Mar</option>
+        </select>
+        <input class="login-inp" id="admin-pass-inp" type="password" placeholder="Contraseña">
+        <div class="login-err" id="admin-login-err"></div>
+        <button class="btn" onclick="adminLogin()">Entrar</button>
+    </div>
+</div>
+
+<div class="page" id="admin-page" style="display:none;">
 
     <div class="top-bar">
         <a href="andino_camareros_v3.html" class="back-btn">← Volver al juego</a>
-        <div class="page-title">🛠️ Admin</div>
+        <div class="page-title">🛠️ Admin <span class="local-badge" id="admin-local-label">—</span></div>
     </div>
 
     <div class="admin-tabs">
         <div class="admin-tab active" id="atab-dash"   onclick="switchTab('dash')">📊 Dashboard</div>
+        <div class="admin-tab"        id="atab-daily"  onclick="switchTab('daily')">🔥 Trivia de Hoy</div>
         <div class="admin-tab"        id="atab-prize"  onclick="switchTab('prize')">🏆 Premio</div>
-        <div class="admin-tab"        id="atab-trivia" onclick="switchTab('trivia')">Trivia</div>
         <div class="admin-tab"        id="atab-sim"    onclick="switchTab('sim')">Simulador</div>
         <div class="admin-tab"        id="atab-ingr"   onclick="switchTab('ingr')">Carta</div>
     </div>
@@ -193,22 +231,23 @@
         </div>
     </div>
 
-    <!-- TRIVIA -->
-    <div id="panel-trivia" style="display:none;">
-        <div class="admin-section-title">Preguntas de Trivia</div>
-        <div id="q-list-trivia" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
-        <div class="admin-add-form">
-            <div class="form-label">+ AGREGAR PREGUNTA</div>
-            <div class="hint-box">✓ La Opción A siempre es la CORRECTA. Las demás son incorrectas.</div>
-            <textarea id="adm-trivia-q" placeholder="Texto de la pregunta"></textarea>
-            <input id="adm-trivia-o0" placeholder="✓ Opción A — la CORRECTA" style="border-color:var(--success);">
-            <input id="adm-trivia-o1" placeholder="Opción B (incorrecta)">
-            <input id="adm-trivia-o2" placeholder="Opción C (incorrecta)">
-            <textarea id="adm-trivia-exp" placeholder="Explicación (opcional)" style="min-height:44px;"></textarea>
-            <button class="btn" onclick="adminAdd('trivia')">+ Agregar</button>
-            <div class="admin-status" id="status-trivia"></div>
+    <!-- TRIVIA DE HOY -->
+    <div id="panel-daily" style="display:none;">
+        <div class="admin-section-title">🔥 Trivia de Hoy — Preguntas más difíciles</div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;line-height:1.6;">
+            Estas son las preguntas con <strong>mayor tasa de error</strong> del equipo.<br>
+            Se calculan en tiempo real desde el historial de partidas.
+        </div>
+        <div id="daily-local-info" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+            Cargando datos...
+        </div>
+        <div id="panel-daily-list">
+            <div class="dash-loading">Cargando preguntas...</div>
         </div>
     </div>
+
+    <!-- TRIVIA PANEL (eliminado — reemplazado por Trivia de Hoy) -->
+    <div id="panel-trivia" style="display:none;"></div>
 
     <!-- SIMULADOR -->
     <div id="panel-sim" style="display:none;">
@@ -275,12 +314,54 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const fsdb = firebase.firestore();
 
 // ═══════════════════════════════════════════════════════
+// LOCALES Y CONTRASEÑAS
+// ═══════════════════════════════════════════════════════
+const LOCAL_PASSWORDS = {
+    bcp:  'bcp2025',
+    bcbl: 'bcbl2025',
+    bcc:  'bcc2025',
+    bcb:  'bcb2025',
+    tanta: 'tanta2025',
+    lamar: 'lamar2025',
+};
+const LOCAL_LABELS = {
+    bcp:  'BCP · Palermo',
+    bcbl: 'BCBL · Belgrano',
+    bcc:  'BCC · Caballito',
+    bcb:  'BCB · Barrancas',
+    tanta: 'Tanta',
+    lamar: 'La Mar',
+};
+
+let currentLocal = null; // se setea al hacer login
+
+function adminLogin() {
+    const local = document.getElementById('admin-local-sel').value;
+    const pass  = document.getElementById('admin-pass-inp').value;
+    const err   = document.getElementById('admin-login-err');
+    if (!local) { err.textContent = 'Seleccioná un local'; return; }
+    if (LOCAL_PASSWORDS[local] !== pass) { err.textContent = 'Contraseña incorrecta'; return; }
+    currentLocal = local;
+    document.getElementById('admin-login-overlay').style.display = 'none';
+    document.getElementById('admin-page').style.display = 'block';
+    document.getElementById('admin-local-label').textContent = LOCAL_LABELS[local] || local;
+    dashRefresh();
+}
+
+// Enter key on password field
+document.getElementById('admin-pass-inp')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') adminLogin();
+});
+
+// ═══════════════════════════════════════════════════════
 // CONSTANTES
 // ═══════════════════════════════════════════════════════
 const EXTRA_COL   = 'andino_extra_questions';
 const PLAYERS_COL = 'andino_players';
 const PRIZE_COL   = 'andino_config';
 const PRIZE_DOC   = 'prize_quincenal';
+// Colección para stats por pregunta
+const Q_STATS_COL = 'andino_question_stats';
 
 const LEVEL_THRESHOLDS = [0,200,600,1400,3000,6000,11000,19000,32000,52000,82000,130000];
 const LEVEL_NAMES = ['Bachero','Bachero Senior','Ayudante de Salón','Camarero Jr.','Camarero','Camarero Senior','Jefe de Sector','Sommelier','Maître Jr.','Maître','Maître Ejecutivo','Gerente de Salón'];
@@ -295,15 +376,97 @@ function getLevel(xp) {
 // ═══════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════
+const ALL_TABS = ['dash','daily','prize','sim','ingr'];
+
 function switchTab(tab) {
-    ['dash','prize','trivia','sim','ingr'].forEach(t => {
-        document.getElementById('atab-' + t).classList.toggle('active', t === tab);
+    ALL_TABS.forEach(t => {
+        const btn = document.getElementById('atab-' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
         const panel = document.getElementById('panel-' + t);
         if (panel) panel.style.display = t === tab ? 'block' : 'none';
     });
     if (tab === 'dash')        dashRefresh();
+    else if (tab === 'daily')  loadDailyHard();
     else if (tab === 'prize')  loadPrizePanel();
     else                       loadExtra().then(() => renderList(tab));
+}
+
+// ═══════════════════════════════════════════════════════
+// TRIVIA DE HOY — Preguntas más difíciles
+// ═══════════════════════════════════════════════════════
+// Las stats de preguntas se guardan en Firestore bajo andino_question_stats
+// Estructura: doc_id = hash(pregunta), campos: { q, attempts, errors, local }
+
+async function loadDailyHard() {
+    const panel = document.getElementById('panel-daily-list');
+    const info  = document.getElementById('daily-local-info');
+    panel.innerHTML = '<div class="dash-loading">Cargando estadísticas...</div>';
+
+    try {
+        let query = fsdb.collection(Q_STATS_COL);
+        // Filtrar por local si no es un local compartido (BC*)
+        const isBc = currentLocal && ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
+        const localGroup = isBc ? 'bc' : currentLocal;
+
+        const snap = await query.get();
+        if (snap.empty) {
+            panel.innerHTML = '<div class="dash-loading">Aún no hay estadísticas de preguntas.<br>Los datos se acumulan a medida que el equipo juega.</div>';
+            return;
+        }
+
+        // Filtrar por local group
+        let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (localGroup) {
+            docs = docs.filter(d => !d.localGroup || d.localGroup === localGroup);
+        }
+
+        // Ordenar por tasa de error descendente, mínimo 3 intentos
+        const withErr = docs
+            .filter(d => (d.attempts || 0) >= 3)
+            .map(d => ({
+                ...d,
+                errorRate: ((d.errors || 0) / (d.attempts || 1)) * 100
+            }))
+            .sort((a, b) => b.errorRate - a.errorRate)
+            .slice(0, 10);
+
+        const totalDocs = docs.filter(d => (d.attempts || 0) >= 1).length;
+        const totalAttempts = docs.reduce((s, d) => s + (d.attempts || 0), 0);
+
+        info.innerHTML = `
+            <span style="color:var(--text);">Local: <strong>${LOCAL_LABELS[currentLocal] || currentLocal}</strong></span> ·
+            <span>${totalDocs} preguntas registradas</span> ·
+            <span>${totalAttempts} intentos totales</span>
+        `;
+
+        if (!withErr.length) {
+            panel.innerHTML = '<div class="dash-loading">Se necesitan al menos 3 intentos por pregunta para calcular dificultad.<br>El equipo necesita jugar más partidas.</div>';
+            return;
+        }
+
+        panel.innerHTML = withErr.map((d, i) => {
+            const color = d.errorRate >= 60 ? 'var(--danger)' : d.errorRate >= 40 ? 'var(--accent)' : 'var(--success)';
+            const pct   = Math.round(d.errorRate);
+            return `
+            <div class="hard-q-item">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">
+                    <div style="font-size:12px;font-weight:600;line-height:1.4;flex:1;">${i + 1}. ${d.q || '(pregunta sin texto)'}</div>
+                    <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:${color};flex-shrink:0;">${pct}%</div>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">error</div>
+                <div class="hard-q-bar-wrap">
+                    <div class="hard-q-bar" style="width:${pct}%;background:${color};"></div>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                    ${d.errors||0} errores de ${d.attempts||0} intentos
+                    ${d.localGroup ? '· ' + (d.localGroup === 'bc' ? 'Barra Chalaca' : LOCAL_LABELS[d.localGroup] || d.localGroup) : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch(e) {
+        panel.innerHTML = `<div class="dash-loading" style="color:var(--danger);">Error: ${e.message}</div>`;
+    }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -485,6 +648,16 @@ async function dashRefresh() {
     try {
         const snap = await fsdb.collection(PLAYERS_COL).get();
         allPlayers = snap.docs.map(d => ({ dni: d.id, ...d.data() }));
+        // Filtrar por local si aplica
+        if (currentLocal) {
+            const isBc = ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
+            const localGroup = isBc ? 'bc' : currentLocal;
+            allPlayers = allPlayers.filter(p => {
+                const pLocal = p.local || '';
+                if (localGroup === 'bc') return ['bcp','bcbl','bcc','bcb','bc',''].some(l => pLocal === l || !pLocal);
+                return pLocal === currentLocal || !pLocal;
+            });
+        }
         updateKPIs();
         dashRender();
     } catch(e) {
@@ -558,46 +731,33 @@ function dashRender() {
     }).join('');
 }
 
-function selectPlayer(dni) {
+async function selectPlayer(dni) {
     const p = allPlayers.find(x => x.dni === dni);
     if (!p) return;
     const det = document.getElementById('dash-player-detail');
     document.getElementById('dash-detail-name').textContent = p.nombre || ('DNI ' + dni);
     const lv = getLevel(p.totalXp || 0);
 
-    // ── Calcular correctas/incorrectas desde history ──
-    // history: [{ mode, score, xp, streak, date }, ...]
-    // Trivia e Ingredientes: score = respuestas correctas (sobre 7)
-    // Sim: score = puntos (max ~25), no es comparable directamente
     const history = p.history || [];
     const triviaH = history.filter(h => h.mode === 'trivia');
     const ingrH   = history.filter(h => h.mode === 'ingredientes');
     const simH    = history.filter(h => h.mode === 'sim');
 
-    const triviaPartidas   = p.triviaGames || triviaH.length;
-    const ingrPartidas     = p.ingrGames   || ingrH.length;
-    const simPartidas      = p.simGames    || simH.length;
+    const triviaPartidas = p.triviaGames || triviaH.length;
+    const ingrPartidas   = p.ingrGames   || ingrH.length;
+    const simPartidas    = p.simGames    || simH.length;
 
-    // Correctas/Incorrectas desde el historial disponible (últimas 20 partidas)
-    // Trivia e Ingr: max 7 preguntas por partida
     const PREGUNTAS_POR_PARTIDA = 7;
-    const triviaCorrectas  = triviaH.reduce((s,h) => s + (h.score||0), 0);
-    const triviaTotal      = triviaH.length * PREGUNTAS_POR_PARTIDA;
-    const triviaIncorrectas = triviaTotal - triviaCorrectas;
+    const triviaCorrectas   = triviaH.reduce((s,h) => s + (h.score||0), 0);
+    const triviaTotal       = triviaH.length * PREGUNTAS_POR_PARTIDA;
+    const ingrCorrectas     = ingrH.reduce((s,h) => s + (h.score||0), 0);
+    const ingrTotal         = ingrH.length * PREGUNTAS_POR_PARTIDA;
+    const totalCorrectas    = triviaCorrectas + ingrCorrectas;
+    const totalIncorrectas  = (triviaTotal - triviaCorrectas) + (ingrTotal - ingrCorrectas);
+    const totalPreguntas    = triviaTotal + ingrTotal;
+    const pctAcierto        = totalPreguntas > 0 ? Math.round((totalCorrectas / totalPreguntas) * 100) : null;
+    const barColor          = pctAcierto >= 70 ? 'var(--success)' : pctAcierto >= 40 ? 'var(--accent)' : 'var(--danger)';
 
-    const ingrCorrectas    = ingrH.reduce((s,h) => s + (h.score||0), 0);
-    const ingrTotal        = ingrH.length * PREGUNTAS_POR_PARTIDA;
-    const ingrIncorrectas  = ingrTotal - ingrCorrectas;
-
-    const totalCorrectas   = triviaCorrectas + ingrCorrectas;
-    const totalIncorrectas = triviaIncorrectas + ingrIncorrectas;
-    const totalPreguntas   = triviaTotal + ingrTotal;
-    const pctAcierto       = totalPreguntas > 0 ? Math.round((totalCorrectas / totalPreguntas) * 100) : null;
-
-    // Barra de acierto
-    const barColor = pctAcierto >= 70 ? 'var(--success)' : pctAcierto >= 40 ? 'var(--accent)' : 'var(--danger)';
-
-    // ── Últimas partidas (máx 5) ──
     const recentHistory = history.slice(0, 5).map(h => {
         const modeLabel = { trivia: 'Trivia', ingredientes: 'Carta', sim: 'Simulador' };
         const modeColor = h.mode === 'trivia' ? 'var(--accent)' : h.mode === 'ingredientes' ? 'var(--success)' : '#4A7AD4';
@@ -609,6 +769,9 @@ function selectPlayer(dni) {
             <span style="color:var(--text-muted);font-size:10px;">${h.date}</span>
         </div>`;
     }).join('');
+
+    // ── Preguntas acertadas/falladas por persona (desde Firestore) ──
+    let qStatsHtml = '<div class="dash-loading" style="padding:8px;">Cargando estadísticas por pregunta...</div>';
 
     document.getElementById('dash-detail-content').innerHTML = `
         <div style="font-size:12px;font-family:var(--font-mono);margin-bottom:12px;">
@@ -668,21 +831,94 @@ function selectPlayer(dni) {
             </div>
 
             ${recentHistory ? `
-            <div>
+            <div style="margin-bottom:10px;">
                 <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Últimas partidas</div>
                 ${recentHistory}
             </div>` : ''}
+
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">📊 Preguntas por persona</div>
+                <div id="player-q-stats-${dni}">${qStatsHtml}</div>
+            </div>
         </div>`;
 
     const isOpen = det.classList.contains('open') && selectedDni === dni;
     det.classList.toggle('open', !isOpen);
     selectedDni = isOpen ? null : dni;
+
+    if (!isOpen) {
+        // Cargar stats por pregunta para esta persona
+        loadPlayerQStats(dni);
+    }
+}
+
+async function loadPlayerQStats(dni) {
+    const container = document.getElementById('player-q-stats-' + dni);
+    if (!container) return;
+    try {
+        const snap = await fsdb.collection(Q_STATS_COL)
+            .where('players.' + dni + '.attempts', '>', 0)
+            .get()
+            .catch(() => null); // fallback si el índice no existe
+
+        // Alternativa: cargar todo y filtrar client-side (sin índice compuesto)
+        let allQ;
+        if (!snap || snap.empty) {
+            const snap2 = await fsdb.collection(Q_STATS_COL).get();
+            allQ = snap2.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => d.players && d.players[dni] && (d.players[dni].attempts || 0) > 0);
+        } else {
+            allQ = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        if (!allQ.length) {
+            container.innerHTML = '<div style="font-size:11px;color:var(--text-muted);">Sin datos individuales aún. Los datos se acumulan a medida que juega.</div>';
+            return;
+        }
+
+        // Separar en acertadas y falladas
+        const withStats = allQ.map(d => {
+            const pd = d.players[dni] || {};
+            const att = pd.attempts || 0;
+            const err = pd.errors   || 0;
+            const pct = att > 0 ? Math.round(((att - err) / att) * 100) : 0;
+            return { q: d.q || d.id, att, err, pct };
+        }).sort((a, b) => a.pct - b.pct); // peores primero
+
+        const worst = withStats.filter(d => d.pct < 70).slice(0, 5);
+        const best  = withStats.filter(d => d.pct >= 70).reverse().slice(0, 5);
+
+        const renderRow = (d) => {
+            const color = d.pct >= 70 ? 'var(--success)' : d.pct >= 40 ? 'var(--accent)' : 'var(--danger)';
+            return `<div class="q-stat-row">
+                <div style="flex:1;line-height:1.4;">${d.q.length > 60 ? d.q.slice(0,57) + '…' : d.q}</div>
+                <div class="q-stat-pct" style="color:${color};">${d.pct}%</div>
+                <div style="font-size:10px;color:var(--text-muted);">${d.att - d.err}/${d.att}</div>
+            </div>`;
+        };
+
+        container.innerHTML = `
+            ${worst.length ? `
+            <div style="margin-bottom:8px;">
+                <div style="font-size:9px;color:var(--danger);font-weight:700;text-transform:uppercase;margin-bottom:4px;">⚠ Más falladas</div>
+                ${worst.map(renderRow).join('')}
+            </div>` : ''}
+            ${best.length ? `
+            <div>
+                <div style="font-size:9px;color:var(--success);font-weight:700;text-transform:uppercase;margin-bottom:4px;">✓ Mejor dominio</div>
+                ${best.map(renderRow).join('')}
+            </div>` : ''}
+        `;
+    } catch(e) {
+        if (container) container.innerHTML = `<div style="font-size:11px;color:var(--text-muted);">No se pudieron cargar stats: ${e.message}</div>`;
+    }
 }
 
 function dashExportCSV() {
-    const rows = [['DNI','Nombre','XP','Partidas','Trivia','Carta','Simulador','Mejor Trivia','Mejor Carta','Mejor Sim','Racha','Ultimo acceso']];
+    const rows = [['DNI','Nombre','Local','XP','Partidas','Trivia','Carta','Simulador','Mejor Trivia','Mejor Carta','Mejor Sim','Racha','Ultimo acceso']];
     allPlayers.forEach(p => rows.push([
-        p.dni, p.nombre||'', p.totalXp||0, p.totalGames||0,
+        p.dni, p.nombre||'', p.local||'', p.totalXp||0, p.totalGames||0,
         p.triviaGames||0, p.ingrGames||0, p.simGames||0,
         p.bestTriviaScore||0, p.bestIngrScore||0, p.bestSimScore||0,
         p.currentStreak||0,
@@ -696,9 +932,11 @@ function dashExportCSV() {
 }
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// INIT — mostrar login overlay, no dashRefresh directo
 // ═══════════════════════════════════════════════════════
-dashRefresh();
+// dashRefresh se llama solo después del login exitoso
+
 </script>
+</div><!-- /admin-page -->
 </body>
 </html>

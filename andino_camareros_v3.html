@@ -2669,6 +2669,17 @@
             <label>Tu DNI / Legajo</label>
             <input type="text" id="user-dni" class="input" placeholder="Ej: 38123456 o " maxlength="10" inputmode="numeric">
 
+            <label>Tu Local</label>
+            <select id="user-local" class="input" style="cursor:pointer;">
+                <option value="">— Seleccioná tu local —</option>
+                <option value="bcp">Barra Chalaca · Palermo (BCP)</option>
+                <option value="bcbl">Barra Chalaca · Belgrano (BCBL)</option>
+                <option value="bcc">Barra Chalaca · Caballito (BCC)</option>
+                <option value="bcb">Barra Chalaca · Barrancas (BCB)</option>
+                <option value="tanta">Tanta</option>
+                <option value="lamar">La Mar</option>
+            </select>
+
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
                 <div class="mode-card selected" onclick="app.setMode('sim', this)">
@@ -3041,7 +3052,7 @@
             </div>
         </div>
 
-        <button class="btn" style="margin-top: 18px;" onclick="app.goHome(); setTimeout(()=>{ var nd=document.getElementById('user-nombre'); var dd=document.getElementById('user-dni'); if(nd) nd.value=app.state.nombre; if(dd) dd.value=app.state.dni; onHomeInit(); }, 300);">
+        <button class="btn" style="margin-top: 18px;" onclick="app.goHome(); setTimeout(()=>{ var nd=document.getElementById('user-nombre'); var dd=document.getElementById('user-dni'); var ld=document.getElementById('user-local'); if(nd) nd.value=app.state.nombre; if(dd) dd.value=app.state.dni; if(ld && app.state.local) ld.value=app.state.local; onHomeInit(); }, 300);">
             <i data-lucide="rotate-ccw"></i>
             Jugar de nuevo
         </button>
@@ -3232,8 +3243,97 @@ const DATA = {
     sim: []
 };
 
+// ══════════════════════════════════════════════════════════
+// LOCALES — Trivia e Ingredientes por local
+// ══════════════════════════════════════════════════════════
+// BC (Barra Chalaca): BCP, BCBL, BCC, BCB — comparten carta y trivia
+// Tanta y La Mar: tienen sus propias preguntas de trivia e ingredientes.
+// Por ahora Tanta y La Mar tienen un banco placeholder pequeño;
+// se puede expandir desde admin o editando este archivo.
 
-const RANKS = {
+const DATA_TANTA_TRIVIA = [
+    { q: "¿Cuál es el horario de apertura de Tanta?", o: ["9:00", "10:00", "8:00"], c: 0, explanation: "Tanta abre a las 9:00." },
+    { q: "¿Qué tipo de cocina identifica a Tanta?", o: ["Fusión peruana-italiana", "Cocina peruana de autor y café", "Comida rápida peruana"], c: 1, explanation: "Tanta es el restaurante casual de Gastón Acurio con cocina peruana de autor y propuesta de café." },
+    { q: "¿Cuál de estos platos es emblemático de Tanta?", o: ["Cebiche Del Puerto", "Sanguche de lomo saltado", "Jalea Chalaca"], c: 1, explanation: "El sanguche de lomo saltado es uno de los platos más pedidos en Tanta." },
+    { q: "¿Tanta sirve desayunos?", o: ["No, solo almuerzo y cena", "Sí, desde la apertura", "Solo los fines de semana"], c: 1, explanation: "Tanta sirve desayunos, siendo una de sus propuestas diferenciadas." },
+    { q: "¿Qué marca el tono del servicio en Tanta?", o: ["Formal y silencioso", "Cálido, ágil y casual", "Solo por encargo"], c: 1, explanation: "Tanta apunta a un servicio cercano, ágil y con ambiente de café-restaurante casual." },
+    { q: "¿Cuál es la propuesta de bebidas de Tanta?", o: ["Solo vinos importados", "Cócteles peruanos, café de especialidad y zumos", "Solo cerveza"], c: 1, explanation: "Tanta destaca por su propuesta de café de especialidad y cócteles con ingredientes peruanos." },
+    { q: "¿Tanta tiene propuesta para llevar?", o: ["No", "Sí, delivery y take away", "Solo para grupos"], c: 1, explanation: "Tanta ofrece opciones de delivery y take away además del salón." },
+];
+
+const DATA_LAMAR_TRIVIA = [
+    { q: "¿Quién es el chef creador del concepto La Mar?", o: ["Virgilio Martínez", "Gastón Acurio", "Mitsuharu Tsumura"], c: 1, explanation: "La Mar es un concepto creado por Gastón Acurio, especializado en cebichería peruana de alta calidad." },
+    { q: "¿En qué tipo de cocina se especializa La Mar?", o: ["Cocina nikkei", "Cebichería marina", "Parrilla criolla"], c: 1, explanation: "La Mar es una cebichería con foco en pescados y mariscos frescos." },
+    { q: "¿Cuál es el plato estrella de La Mar?", o: ["Tacu Tacu", "Cebiche clásico con leche de tigre", "Chaufa de mariscos"], c: 1, explanation: "El cebiche con leche de tigre es el plato emblema de La Mar." },
+    { q: "¿La Mar acepta reservas?", o: ["No, es solo orden de llegada", "Sí, tiene sistema de reservas", "Solo para grupos de más de 10"], c: 1, explanation: "La Mar generalmente acepta reservas aunque también recibe clientes sin reserva." },
+    { q: "¿Qué diferencia a la leche de tigre de La Mar?", o: ["Es importada de Perú", "Se hace en casa con ingredientes frescos del día", "Es en polvo"], c: 1, explanation: "La leche de tigre se prepara fresh daily con pescado, limón, cilantro y ají fresco." },
+    { q: "¿Cuándo se suele llenar La Mar a capacidad?", o: ["Solo en invierno", "Almuerzos de fin de semana", "Solo martes y miércoles"], c: 1, explanation: "Los almuerzos del fin de semana son los momentos de mayor demanda en La Mar." },
+    { q: "¿Qué protocolo se sigue con el cebiche en La Mar?", o: ["Se sirve caliente", "Se sirve frío, recién preparado al momento", "Se prepara con 2 horas de anticipación"], c: 1, explanation: "El cebiche se prepara al momento y se sirve inmediatamente para preservar frescura." },
+];
+
+// Ingredientes Tanta (menú más amplio, con sandwiches, pasta, etc.)
+const DATA_TANTA_INGR = [
+    { dish: "Sanguche de Lomo Saltado", emoji: "🥪", category: "SANGUCHE", q: "¿Qué pan se usa en el Sanguche de Lomo?", o: ["Baguette", "Pan de campo tostado", "Ciabatta"], c: 1, explanation: "El sanguche de lomo saltado de Tanta va en pan de campo tostado." },
+    { dish: "Causa Limeña", emoji: "🥑", category: "CAUSA", q: "¿Qué lleva la causa limeña de Tanta?", o: ["Solo atún", "Pollo, palta y huevo duro con mayo de rocoto", "Langostinos y lechuga"], c: 1, explanation: "La causa de Tanta es con pollo, palta, huevo y mayonesa de rocoto." },
+    { dish: "Anticucho de Corazón", emoji: "🍢", category: "PARRILLA", q: "¿Con qué se adoba el anticucho de corazón?", o: ["Salsa de soja y jengibre", "Ají panca, vinagre, comino y ajo", "Chimichurri verde"], c: 1, explanation: "El anticucho lleva adobo de ají panca, vinagre, comino y ajo — el clásico peruano." },
+    { dish: "Empanada de Ají Amarillo", emoji: "🥟", category: "ENTRADA", q: "¿Con qué se acompaña la empanada en Tanta?", o: ["Ketchup", "Crema de ají amarillo y salsa criolla", "Guacamole"], c: 1, explanation: "La empanada de Tanta sale con crema de ají amarillo y salsa criolla fresca." },
+    { dish: "Arroz con Leche", emoji: "🍚", category: "POSTRE", q: "¿Qué canela se usa en el arroz con leche de Tanta?", o: ["Canela molida importada", "Canela en rama peruana", "Canela de Ceilán"], c: 1, explanation: "Se usa canela en rama que se cocina junto con el arroz para mayor aroma." },
+    { dish: "Picarones", emoji: "🍩", category: "POSTRE", q: "¿Con qué miel se sirven los picarones de Tanta?", o: ["Miel de abeja", "Miel de chancaca con clavo y naranja", "Jarabe de maíz"], c: 1, explanation: "Los picarones se sirven con miel de chancaca preparada con clavo y naranja — receta tradicional peruana." },
+    { dish: "Café Peruano", emoji: "☕", category: "BEBIDA", q: "¿De qué región viene el café de especialidad que sirve Tanta?", o: ["Cusco y Lima", "Villa Rica y Chanchamayo", "Solo importado"], c: 1, explanation: "Tanta sirve café de origen peruano, principalmente de Villa Rica y Chanchamayo, regiones cafetaleras del país." },
+];
+
+// Ingredientes La Mar (foco en cebiches y mariscos)
+const DATA_LAMAR_INGR = [
+    { dish: "Cebiche Clásico", emoji: "🦑", category: "CEBICHE", q: "¿Cuánto tiempo se marina la pesca en La Mar?", o: ["2 horas en frío", "Solo al momento — no más de 2 minutos", "30 minutos"], c: 1, explanation: "En La Mar el cebiche se prepara al instante, el ácido del limón 'cocina' la pesca en el momento del servicio." },
+    { dish: "Leche de Tigre", emoji: "🐯", category: "PREPARACIÓN", q: "¿Qué función tiene el apio en la leche de tigre de La Mar?", o: ["Colorante", "Aromatizante y equilibrador de acidez", "Espesante"], c: 1, explanation: "El apio equilibra el sabor y aporta frescura a la leche de tigre junto al ají limo y el cilantro." },
+    { dish: "Tiradito de Trucha", emoji: "🍣", category: "TIRADITO", q: "¿Cómo se corta la trucha para el tiradito en La Mar?", o: ["En cubos", "En láminas finas al bies", "Desmenuzada"], c: 1, explanation: "El tiradito lleva la pesca cortada en láminas finas al bies — a diferencia del cebiche que va en cubos." },
+    { dish: "Mixto de Mariscos", emoji: "🦐", category: "CEBICHE", q: "¿Cuáles mariscos componen el mixto de La Mar?", o: ["Solo calamares", "Pesca del día, langostinos y pulpo", "Mejillones y almejas"], c: 1, explanation: "El mixto clásico de La Mar combina pesca del día, langostinos y pulpo en leche de tigre fresca." },
+    { dish: "Chicharrón de Calamar", emoji: "🍟", category: "CHICHARRÓN", q: "¿Cómo se sirve el chicharrón en La Mar?", o: ["Con arroz chaufa", "Con salsa tari, cancha y criolla", "Con papas fritas"], c: 1, explanation: "El chicharrón de calamar sale con salsa tari, canchita y criolla fresca — siempre bien caliente." },
+    { dish: "Parihuela La Mar", emoji: "🍲", category: "SOPA", q: "¿Qué base tiene el caldo de la parihuela de La Mar?", o: ["Caldo de pollo", "Fondo de pescado y mariscos con ají panca", "Caldo de verduras"], c: 1, explanation: "La parihuela tiene un fondo intenso de pescado y mariscos, con ají panca y tomate que le dan color." },
+    { dish: "Arroz con Mariscos", emoji: "🍚", category: "ARROZ", q: "¿Qué consistencia tiene el arroz con mariscos de La Mar?", o: ["Seco como paella", "Meloso — entre risotto y chaufa", "Líquido como sopa"], c: 1, explanation: "El arroz con mariscos de La Mar es meloso, cocinado al momento con fondo de mariscos y ají amarillo." },
+];
+
+function getLocalTrivia(local) {
+    // Tanta y La Mar tienen sus propias preguntas
+    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(typeof extraData !== 'undefined' ? (extraData.trivia_tanta || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(typeof extraData !== 'undefined' ? (extraData.trivia_lamar || []) : [])];
+    // Barra Chalaca (todos los BC comparten)
+    return [...DATA.trivia, ...(typeof extraData !== 'undefined' ? (extraData.trivia || []) : [])];
+}
+
+function getLocalIngredientes(local) {
+    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(typeof extraData !== 'undefined' ? (extraData.ingr_tanta || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(typeof extraData !== 'undefined' ? (extraData.ingr_lamar || []) : [])];
+    return [...DATA.ingredientesBank, ...(typeof extraData !== 'undefined' ? (extraData.ingr || []) : [])];
+}
+
+// ── Tracking de stats por pregunta en Firestore ────────────────────
+// Se llama cada vez que alguien responde una pregunta
+const Q_STATS_COL = 'andino_question_stats';
+
+async function trackQuestionStat(questionText, isCorrect, local, playerDni) {
+    if (!questionText) return;
+    // ID = hash simple del texto de la pregunta
+    const qid = questionText.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ]/g, '').slice(0, 60);
+    if (!qid) return;
+    const isBc = local && ['bcp','bcbl','bcc','bcb'].includes(local);
+    const localGroup = isBc ? 'bc' : (local || 'bc');
+    try {
+        const ref = fsdb.collection(Q_STATS_COL).doc(qid);
+        const update = {
+            q: questionText,
+            localGroup,
+            attempts: firebase.firestore.FieldValue.increment(1),
+        };
+        if (!isCorrect) update.errors = firebase.firestore.FieldValue.increment(1);
+        // Stats individuales por jugador
+        if (playerDni) {
+            update[`players.${playerDni}.attempts`] = firebase.firestore.FieldValue.increment(1);
+            if (!isCorrect) update[`players.${playerDni}.errors`] = firebase.firestore.FieldValue.increment(1);
+        }
+        await ref.set(update, { merge: true });
+    } catch(e) { /* fail silently — no bloquear el juego */ }
+}
     trivia: [
         { min: 6, icon: "👑", label: "MAESTRO DE SALÓN",  sub: "Protocolo impecable. El salón está en manos expertas." },
         { min: 4, icon: "🥈", label: "PROFESIONAL DESTACADO", sub: "Excelente desempeño. Casi perfecto." },
@@ -3570,36 +3670,49 @@ const app = (() => {
         },
 
         initGame: () => {
-            const dniInput = document.getElementById('user-dni');
+            const dniInput    = document.getElementById('user-dni');
             const nombreInput = document.getElementById('user-nombre');
-            state.dni = dniInput ? dniInput.value.trim() : '';
+            const localInput  = document.getElementById('user-local');
+            state.dni    = dniInput    ? dniInput.value.trim()    : '';
             state.nombre = nombreInput ? nombreInput.value.trim() : '';
+            state.local  = localInput  ? localInput.value         : '';
 
-            // VALIDACIÓN DE DNI
+            // VALIDACIÓN
             if (state.dni.length < 6) { 
                 alert("Ingresá un DNI válido (mínimo 6 dígitos)");
                 if (dniInput) dniInput.focus();
                 return; 
             }
+            if (!state.local) {
+                alert("Seleccioná tu local antes de comenzar");
+                if (localInput) localInput.focus();
+                return;
+            }
             
-            state.startTime = Date.now();
-            state.step = 0; 
-            state.score = 0; 
-            state.streak = 0; 
-            state.maxStreak = 0;
-            state.simScores = []; 
+            state.startTime  = Date.now();
+            state.step       = 0; 
+            state.score      = 0; 
+            state.streak     = 0; 
+            state.maxStreak  = 0;
+            state.simScores  = []; 
             state.wrongAnswers = [];
-            state.xp = 0;
-            state.wrongCount = 0; // contador de errores para penalización
+            state.xp         = 0;
+            state.wrongCount = 0;
             
+            // Seleccionar banco de preguntas según local
+            const localTrivia = getLocalTrivia(state.local);
+            window._localTrivia = localTrivia;
+
             if (state.mode === 'sim') {
                 DATA.sim = selectRandomSimScenarios(5);
             }
             if (state.mode === 'ingredientes') {
-                let bank = DATA.ingredientesBank;
+                // Carta: Tanta y La Mar tienen su propio banco, BC comparte
+                const localIngr = getLocalIngredientes(state.local);
+                let bank = localIngr;
                 if (_ingrSelectedCategory) {
-                    bank = bank.filter(q => q.category === _ingrSelectedCategory);
-                    if (bank.length === 0) bank = DATA.ingredientesBank; // fallback si no hay preguntas
+                    const filtered = bank.filter(q => q.category === _ingrSelectedCategory);
+                    if (filtered.length > 0) bank = filtered;
                 }
                 state.ingrSelected = shuffleArray(bank).slice(0, 7);
             }
@@ -3624,7 +3737,7 @@ const app = (() => {
 
         /* ── TRIVIA ── */
         renderTrivia: () => {
-            const triviaData = window._triviaOverride || DATA.trivia;
+            const triviaData = window._triviaOverride || window._localTrivia || DATA.trivia;
             const totalQuestions = triviaData.length;
             
             if (state.step >= totalQuestions) {
@@ -3720,13 +3833,16 @@ const app = (() => {
         checkTrivia: (idx, btn) => {
             clearInterval(state.timer);
             
-            const triviaData = window._triviaOverride || DATA.trivia;
+            const triviaData = window._triviaOverride || window._localTrivia || DATA.trivia;
             const allOptions = document.querySelectorAll('#trivia-options .option');
             allOptions.forEach(b => b.disabled = true);
 
             const q = triviaData[state.step];
             const medals = document.querySelectorAll('#trivia-medals .medal');
             const isCorrect = idx === q.c;
+
+            // Registrar stat de esta pregunta en Firestore
+            trackQuestionStat(q.q, isCorrect, state.local, state.dni);
 
             if (isCorrect) {
                 if (btn) btn.classList.add('correct');
@@ -3969,6 +4085,9 @@ const app = (() => {
             allOptions.forEach(b => b.disabled = true);
 
             const isCorrect = idx === q.c;
+
+            // Registrar stat de esta pregunta en Firestore
+            trackQuestionStat(q.q || q.dish, isCorrect, state.local, state.dni);
 
             if (isCorrect) {
                 if (btn) btn.classList.add('correct');
@@ -4307,6 +4426,7 @@ const DB = {
         }
 
         if (gameData.nombre) p.nombre = gameData.nombre;
+        if (gameData.local)  p.local  = gameData.local;
         p.totalXp = (p.totalXp || 0) + gameData.xp;
         p.totalGames = (p.totalGames || 0) + 1;
 
@@ -4612,6 +4732,7 @@ app.finish = async function() {
         const result = await DB.updatePlayer(dni, {
             mode: app.state.mode,
             nombre: app.state.nombre,
+            local: app.state.local,
             score: app.state.score,
             xp: app.state.xp,
             maxStreak: app.state.maxStreak
@@ -4899,9 +5020,9 @@ function seededShuffle(arr, seed) {
     return a;
 }
 
-function getDailyQuestions() {
+function getDailyQuestions(bank) {
     const seed = getDailySeed();
-    const allTrivia = [...DATA.trivia, ...(window._extraTrivia || [])];
+    const allTrivia = bank || [...DATA.trivia, ...(window._extraTrivia || [])];
     const shuffled = seededShuffle(allTrivia, seed);
     return shuffled.slice(0, Math.min(7, shuffled.length));
 }
@@ -4934,20 +5055,28 @@ function renderDailyCard(dni) {
 }
 
 app.startDailyChallenge = function() {
-    const dni = (document.getElementById('user-dni') || {}).value?.trim() || app.state.dni;
-    const nombre = (document.getElementById('user-nombre') || {}).value?.trim() || app.state.nombre;
+    const dniEl    = document.getElementById('user-dni');
+    const nombreEl = document.getElementById('user-nombre');
+    const localEl  = document.getElementById('user-local');
+    const dni    = (dniEl    ? dniEl.value.trim()    : '') || app.state.dni;
+    const nombre = (nombreEl ? nombreEl.value.trim() : '') || app.state.nombre;
+    const local  = (localEl  ? localEl.value         : '') || app.state.local;
     if (!dni || dni.length < 6) { alert('Ingresá tu DNI primero'); return; }
+    if (!local) { alert('Seleccioná tu local antes de comenzar'); return; }
     if (hasDailyCompleted(dni)) { alert('¡Ya completaste el desafío de hoy! Volvé mañana 🔥'); return; }
 
-    app.state.dni = dni;
+    app.state.dni    = dni;
     app.state.nombre = nombre;
-    app.state.mode = 'trivia';
-    app.state.isDaily = true;
+    app.state.local  = local;
+    app.state.mode   = 'trivia';
+    app.state.isDaily    = true;
     app.state.dailyXpMult = 2;
 
-    // Override DATA.trivia temporarily with daily questions
-    window._dailyQuestions = getDailyQuestions();
+    // Usar trivia del local para el desafío del día
+    const localTriviaBank = getLocalTrivia(local);
+    window._dailyQuestions = getDailyQuestions(localTriviaBank);
     window._triviaOverride = window._dailyQuestions;
+    window._localTrivia    = null; // override ya está seteado
 
     app.initGame();
 };

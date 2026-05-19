@@ -118,12 +118,12 @@
         <div class="login-box-sub">Ingresá tu local y contraseña</div>
         <select class="login-sel" id="admin-local-sel">
             <option value="">— Seleccioná local —</option>
-            <option value="bcp">Barra Chalaca Palermo (BCP)</option>
-            <option value="bcbl">Barra Chalaca Belgrano (BCBL)</option>
-            <option value="bcc">Barra Chalaca Caballito (BCC)</option>
-            <option value="bcb">Barra Chalaca Barrancas (BCB)</option>
             <option value="tanta">Tanta</option>
             <option value="lamar">La Mar</option>
+            <option value="bcp">BCP · Palermo</option>
+            <option value="bcb">BCB · Belgrano</option>
+            <option value="bcbl">BCBL · Bulnes</option>
+            <option value="bcc">BCC · San Telmo</option>
         </select>
         <input class="login-inp" id="admin-pass-inp" type="password" placeholder="Contraseña">
         <div class="login-err" id="admin-login-err"></div>
@@ -142,8 +142,9 @@
         <div class="admin-tab active" id="atab-dash"   onclick="switchTab('dash')">📊 Dashboard</div>
         <div class="admin-tab"        id="atab-daily"  onclick="switchTab('daily')">🔥 Trivia de Hoy</div>
         <div class="admin-tab"        id="atab-prize"  onclick="switchTab('prize')">🏆 Premio</div>
-        <div class="admin-tab"        id="atab-sim"    onclick="switchTab('sim')">Simulador</div>
-        <div class="admin-tab"        id="atab-ingr"   onclick="switchTab('ingr')">Carta</div>
+        <div class="admin-tab"        id="atab-banco"  onclick="switchTab('banco')">📚 Banco</div>
+        <div class="admin-tab"        id="atab-sim"    onclick="switchTab('sim')">➕ Simulador</div>
+        <div class="admin-tab"        id="atab-ingr"   onclick="switchTab('ingr')">➕ Carta</div>
     </div>
 
     <!-- DASHBOARD -->
@@ -195,9 +196,15 @@
         </div>
         <div class="admin-add-form" style="gap:10px;">
             <div class="form-label">⚙️ CONFIGURAR PREMIO</div>
-            <div>
-                <div class="form-label" style="margin-bottom:4px;">TÍTULO DEL PREMIO</div>
-                <input id="prize-title-input" placeholder="Ej: Día libre extra">
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div style="flex:0 0 auto;">
+                    <div class="form-label" style="margin-bottom:4px;">EMOJI</div>
+                    <input id="prize-emoji-input" placeholder="🎁" style="width:64px;text-align:center;font-size:20px;padding:6px 8px;">
+                </div>
+                <div style="flex:1;">
+                    <div class="form-label" style="margin-bottom:4px;">TÍTULO DEL PREMIO</div>
+                    <input id="prize-title-input" placeholder="Ej: Día libre extra">
+                </div>
             </div>
             <div>
                 <div class="form-label" style="margin-bottom:4px;">DESCRIPCIÓN</div>
@@ -297,6 +304,24 @@
         </div>
     </div>
 
+    <!-- BANCO DE PREGUNTAS -->
+    <div id="panel-banco" style="display:none;">
+        <div class="admin-section-title">📚 Banco de Preguntas</div>
+        <p style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:14px;line-height:1.6;">
+            Todas las preguntas del juego — hardcodeadas y de Firestore. Usá los tabs para filtrar por tipo.
+        </p>
+        <!-- 3 main tabs: Trivia / Simulador / Carta -->
+        <div class="admin-tabs" style="margin-bottom:4px;">
+            <div class="admin-tab active" id="btab2-trivia" onclick="switchBancoTab2('trivia')">🧠 Trivia</div>
+            <div class="admin-tab" id="btab2-sim" onclick="switchBancoTab2('sim')">🎭 Simulador</div>
+            <div class="admin-tab" id="btab2-ingr" onclick="switchBancoTab2('ingr')">🍽️ Carta</div>
+        </div>
+        <!-- Sub-tabs (local filter) -->
+        <div id="banco-subtabs" class="admin-tabs" style="margin-bottom:12px; padding:6px 0 2px; border-top:1px solid var(--border);"></div>
+        <div id="banco-content"></div>
+    </div>
+
+
 </div>
 <script>
 // ═══════════════════════════════════════════════════════
@@ -317,20 +342,20 @@ const fsdb = firebase.firestore();
 // LOCALES Y CONTRASEÑAS
 // ═══════════════════════════════════════════════════════
 const LOCAL_PASSWORDS = {
-    bcp:  'bcp2025',
-    bcbl: 'bcbl2025',
-    bcc:  'bcc2025',
-    bcb:  'bcb2025',
     tanta: 'tanta2025',
     lamar: 'lamar2025',
+    bcp:  'bcp2025',
+    bcb:  'bcb2025',
+    bcbl: 'bcbl2025',
+    bcc:  'bcc2025',
 };
 const LOCAL_LABELS = {
-    bcp:  'BCP · Palermo',
-    bcbl: 'BCBL · Belgrano',
-    bcc:  'BCC · Caballito',
-    bcb:  'BCB · Barrancas',
     tanta: 'Tanta',
     lamar: 'La Mar',
+    bcp:  'BCP · Palermo',
+    bcb:  'BCB · Belgrano',
+    bcbl: 'BCBL · Bulnes',
+    bcc:  'BCC · San Telmo',
 };
 
 let currentLocal = null; // se setea al hacer login
@@ -364,7 +389,7 @@ const PRIZE_DOC   = 'prize_quincenal';
 const Q_STATS_COL = 'andino_question_stats';
 
 const LEVEL_THRESHOLDS = [0,200,600,1400,3000,6000,11000,19000,32000,52000,82000,130000];
-const LEVEL_NAMES = ['Bachero','Bachero Senior','Ayudante de Salón','Camarero Jr.','Camarero','Camarero Senior','Jefe de Sector','Sommelier','Maître Jr.','Maître','Maître Ejecutivo','Gerente de Salón'];
+const LEVEL_NAMES = ['Runner','Runner Senior','Bachero','Ayudante de Salón','Camarero Jr.','Camarero','Camarero Senior','Jefe de Sector','Sommelier','Maître Jr.','Maître','Maître Ejecutivo'];
 
 function getLevel(xp) {
     for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -376,7 +401,7 @@ function getLevel(xp) {
 // ═══════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════
-const ALL_TABS = ['dash','daily','prize','sim','ingr'];
+const ALL_TABS = ['dash','daily','prize','banco','sim','ingr'];
 
 function switchTab(tab) {
     ALL_TABS.forEach(t => {
@@ -388,6 +413,7 @@ function switchTab(tab) {
     if (tab === 'dash')        dashRefresh();
     else if (tab === 'daily')  loadDailyHard();
     else if (tab === 'prize')  loadPrizePanel();
+    else if (tab === 'banco')  initBancoTab();
     else                       loadExtra().then(() => renderList(tab));
 }
 
@@ -598,9 +624,13 @@ function setPrizeActive(active) {
 function updatePrizePreview() {
     const title = document.getElementById('prize-title-input').value || 'Premio';
     const desc  = document.getElementById('prize-desc-input').value  || 'Descripción';
+    const emoji = document.getElementById('prize-emoji-input').value || '🎁';
     document.getElementById('preview-title').textContent = title;
     document.getElementById('preview-desc').textContent  = desc;
     document.getElementById('preview-countdown').textContent = `Termina en ${getDaysUntilPeriodEnd()}d`;
+    // Actualizar el emoji grande en el preview
+    const emojiEl = document.querySelector('#prize-preview span[style*="font-size:32px"]');
+    if (emojiEl) emojiEl.textContent = emoji;
     document.getElementById('prize-preview').style.display = 'block';
 }
 async function loadPrizePanel() {
@@ -612,6 +642,7 @@ async function loadPrizePanel() {
             const d = doc.data();
             document.getElementById('prize-title-input').value = d.title || '';
             document.getElementById('prize-desc-input').value  = d.description || '';
+            document.getElementById('prize-emoji-input').value = d.emoji || '🎁';
             setPrizeActive(d.active !== false);
             updatePrizePreview();
         }
@@ -621,16 +652,17 @@ async function savePrize() {
     const status = document.getElementById('status-prize');
     const title  = document.getElementById('prize-title-input').value.trim();
     const desc   = document.getElementById('prize-desc-input').value.trim();
+    const emoji  = document.getElementById('prize-emoji-input').value.trim() || '🎁';
     if (!title) { status.textContent = 'Ingresá un título'; status.className = 'admin-status err'; return; }
     status.textContent = 'Guardando…'; status.className = 'admin-status';
     try {
-        await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).set({ title, description:desc, active:prizeActive, period:getCurrentPeriodKey(), updatedAt:Date.now() });
+        await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).set({ title, description:desc, emoji, active:prizeActive, period:getCurrentPeriodKey(), updatedAt:Date.now() });
         status.textContent = '✓ Premio guardado y visible en el juego'; status.className = 'admin-status ok';
         updatePrizePreview();
     } catch(e) { status.textContent = 'Error: ' + e.message; status.className = 'admin-status err'; }
     setTimeout(() => status.textContent = '', 3000);
 }
-['prize-title-input','prize-desc-input'].forEach(id => {
+['prize-title-input','prize-desc-input','prize-emoji-input'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updatePrizePreview);
 });
 
@@ -935,6 +967,261 @@ function dashExportCSV() {
 // INIT — mostrar login overlay, no dashRefresh directo
 // ═══════════════════════════════════════════════════════
 // dashRefresh se llama solo después del login exitoso
+
+// ═══════════════════════════════════════════════════════
+// BANCO DE PREGUNTAS — datos hardcodeados del juego
+// ═══════════════════════════════════════════════════════
+
+const BANCO = {
+  trivia: [
+    { q: "¿Por qué lado se retiran los platos usados?", o: ["Por la derecha","Por la izquierda","Por donde sea más cómodo"], c: 0 },
+    { q: "Si un cliente es Celíaco, ¿cuál es el protocolo correcto?", o: ["Traerle pan integral","Avisar a cocina para evitar contaminación cruzada","Decirle que no hay opciones"], c: 1 },
+    { q: "¿Cuál es el tiempo ideal para llevar la bebida tras el pedido?", o: ["10 minutos","20 minutos","Menos de 5 minutos"], c: 2 },
+    { q: "¿Qué debe hacer si se rompe una copa en el salón?", o: ["Limpiar con la mano","Señalizar, juntar con pala y pasar trapo húmedo","Esperar al fin del turno"], c: 1 },
+    { q: "¿Cuál es el orden de prioridad para servir en la mesa?", o: ["Niños, Mujeres, Hombres","El que pidió primero","Hombres, Mujeres, Niños"], c: 0 },
+    { q: "¿Qué hacer si un cliente derrama vino tinto en el mantel?", o: ["Ignorarlo","Cubrir con sal y cambiar el mantel discretamente","Decirle al cliente que tenga cuidado"], c: 1 },
+    { q: "¿Cuándo se debe presentar la cuenta?", o: ["Cuando el cliente la pide","Automáticamente al terminar el plato principal","Al final del servicio sin que lo pida"], c: 0 },
+    { q: "¿Cómo se recomienda comer los tiraditos y cebiches?", o: ["Con tenedor y cuchillo","Con cuchara para combinar todos los sabores","Con palillos"], c: 1 },
+    { q: "¿Cuánto tarda en salir una pesca entera?", o: ["10 a 15 minutos","30 a 35 minutos","20 a 25 minutos"], c: 1 },
+  ],
+  'trivia-tanta': [
+    { q: "¿Cuál es el horario de apertura de Tanta?", o: ["9:00","10:00","8:00"], c: 0 },
+    { q: "¿Qué tipo de cocina identifica a Tanta?", o: ["Fusión peruana-italiana","Cocina peruana de autor y café","Comida rápida peruana"], c: 1 },
+    { q: "¿Cuál de estos platos es emblemático de Tanta?", o: ["Cebiche Del Puerto","Sanguche de lomo saltado","Jalea Chalaca"], c: 1 },
+    { q: "¿Tanta sirve desayunos?", o: ["No, solo almuerzo y cena","Sí, desde la apertura","Solo los fines de semana"], c: 1 },
+    { q: "¿Qué marca el tono del servicio en Tanta?", o: ["Formal y silencioso","Cálido, ágil y casual","Solo por encargo"], c: 1 },
+    { q: "¿Cuál es la propuesta de bebidas de Tanta?", o: ["Solo vinos importados","Cócteles peruanos, café de especialidad y zumos","Solo cerveza"], c: 1 },
+    { q: "¿Tanta tiene propuesta para llevar?", o: ["No","Sí, delivery y take away","Solo para grupos"], c: 1 },
+  ],
+  'trivia-lamar': [
+    { q: "¿Quién es el chef creador del concepto La Mar?", o: ["Virgilio Martínez","Gastón Acurio","Mitsuharu Tsumura"], c: 1 },
+    { q: "¿En qué tipo de cocina se especializa La Mar?", o: ["Cocina nikkei","Cebichería marina","Parrilla criolla"], c: 1 },
+    { q: "¿Cuál es el plato estrella de La Mar?", o: ["Tacu Tacu","Cebiche clásico con leche de tigre","Chaufa de mariscos"], c: 1 },
+    { q: "¿La Mar acepta reservas?", o: ["No, es solo orden de llegada","Sí, tiene sistema de reservas","Solo para grupos de más de 10"], c: 1 },
+    { q: "¿Qué diferencia a la leche de tigre de La Mar?", o: ["Es importada de Perú","Se hace en casa con ingredientes frescos del día","Es en polvo"], c: 1 },
+    { q: "¿Cuándo se suele llenar La Mar a capacidad?", o: ["Solo en invierno","Almuerzos de fin de semana","Solo martes y miércoles"], c: 1 },
+    { q: "¿Qué protocolo se sigue con el cebiche en La Mar?", o: ["Se sirve caliente","Se sirve frío, recién preparado al momento","Se prepara con 2 horas de anticipación"], c: 1 },
+  ],
+  sim: [
+    { client: "La mesa 5 me dice que lleva 40 minutos esperando el plato principal y nadie les avisó nada.", type: "demora" },
+    { client: "Tengo una intolerancia severa al gluten. ¿Pueden confirmarme qué platos son seguros?", type: "alergia" },
+    { client: "Le pedí al mozo que cambiara mi pesca por pollo y me dijo que no se puede. ¿Es eso cierto?", type: "cambio" },
+    { client: "La cuenta no cierra — pagué con tarjeta y me están cobrando de más.", type: "cuenta" },
+    { client: "El vino que pedí estaba a temperatura ambiente, no frío como pedí.", type: "temperatura" },
+    { client: "¿Me pueden explicar qué es la leche de tigre? No entiendo si es para tomar o para comer.", type: "descripcion" },
+    { client: "Hay un error en el menú — el precio dice $X pero me están cobrando $Y.", type: "precio" },
+    { client: "Me trajeron el plato equivocado. Yo había pedido el cebiche mixto, no el clásico.", type: "error_plato" },
+    { client: "¿Tienen opciones veganas? No veo nada en el menú.", type: "vegano" },
+    { client: "La mesa de al lado hace mucho ruido. ¿Pueden hacer algo?", type: "ambiente" },
+    { client: "Quiero recomendar este restaurante a mis jefes para una cena corporativa. ¿Tienen menú ejecutivo?", type: "grupo" },
+    { client: "El baño está muy sucio. Alguien debería revisarlo.", type: "limpieza" },
+  ],
+  ingr: [
+    { dish: "Cebiche Del Puerto", cat: "CEBICHE", q: "¿Con qué leche de tigre se prepara el Cebiche Del Puerto?", corr: "Leche de tigre clásica de limón y ají limo" },
+    { dish: "Tiradito Chalaco", cat: "TIRADITO", q: "¿Cómo va cortada la pesca en el Tiradito Chalaco?", corr: "En láminas finas al bies" },
+    { dish: "Causa Chalaca", cat: "CAUSA", q: "¿Qué tipo de papa se usa en la Causa Chalaca?", corr: "Papa amarilla" },
+    { dish: "Langostinos al Ajillo", cat: "PRINCIPAL", q: "¿Qué base lleva la salsa ajillo?", corr: "Manteca, ajo, vino blanco y perejil" },
+    { dish: "Arroz con Mariscos", cat: "ARROZ", q: "¿Qué consistencia tiene el arroz con mariscos?", corr: "Meloso — entre risotto y chaufa" },
+    { dish: "Chicharrón de Calamar", cat: "CHICHARRÓN", q: "¿Con qué se sirve el chicharrón de calamar?", corr: "Salsa tari, cancha y criolla" },
+    { dish: "Leche de Tigre", cat: "PREPARACIÓN", q: "¿Qué potenciador de sabor lleva la Leche de Tigre?", corr: "Ajinomoto" },
+  ],
+  'ingr-tanta': [
+    { dish: "Sanguche de Lomo Saltado", cat: "SANGUCHE", q: "¿Qué pan se usa?", corr: "Pan de campo tostado" },
+    { dish: "Causa Limeña", cat: "CAUSA", q: "¿Qué lleva la causa?", corr: "Pollo, palta y huevo con mayo de rocoto" },
+    { dish: "Anticucho de Corazón", cat: "PARRILLA", q: "¿Con qué se adoba el anticucho?", corr: "Ají panca, vinagre, comino y ajo" },
+    { dish: "Empanada de Ají Amarillo", cat: "ENTRADA", q: "¿Con qué se sirve la empanada?", corr: "Crema de ají amarillo y salsa criolla" },
+    { dish: "Picarones", cat: "POSTRE", q: "¿Con qué miel se sirven?", corr: "Miel de chancaca con clavo y naranja" },
+    { dish: "Café Peruano", cat: "BEBIDA", q: "¿De qué región viene el café?", corr: "Villa Rica y Chanchamayo" },
+  ],
+  'ingr-lamar': [
+    { dish: "Cebiche Clásico", cat: "CEBICHE", q: "¿Cuánto tiempo se marina la pesca?", corr: "Al momento — no más de 2 minutos" },
+    { dish: "Tiradito de Trucha", cat: "TIRADITO", q: "¿Cómo se corta la trucha?", corr: "En láminas finas al bies" },
+    { dish: "Mixto de Mariscos", cat: "CEBICHE", q: "¿Qué mariscos componen el mixto?", corr: "Pesca del día, langostinos y pulpo" },
+    { dish: "Chicharrón de Calamar", cat: "CHICHARRÓN", q: "¿Cómo se sirve?", corr: "Con salsa tari, cancha y criolla" },
+    { dish: "Parihuela La Mar", cat: "SOPA", q: "¿Qué base tiene el caldo?", corr: "Fondo de pescado y mariscos con ají panca" },
+    { dish: "Arroz con Mariscos", cat: "ARROZ", q: "¿Qué consistencia tiene?", corr: "Meloso — entre risotto y chaufa" },
+  ],
+};
+
+let _currentBancoTab = 'trivia';
+let _currentBancoSub = null; // null = all locals
+
+// Legacy function kept for compatibility
+function switchBancoTab(tab) { switchBancoTab2(tab); }
+
+function initBancoTab() {
+    switchBancoTab2(_currentBancoTab);
+}
+
+// New 3-tab banco system
+const BANCO_TYPE_CONFIG = {
+    trivia: {
+        label: '🧠 Trivia',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'trivia', label: '🏛️ BC' },
+            { key: 'trivia-tanta', label: '☕ Tanta' },
+            { key: 'trivia-lamar', label: '🦑 La Mar' },
+        ]
+    },
+    sim: {
+        label: '🎭 Simulador',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'sim', label: '🏛️ BC (hardcoded)' },
+            { key: '__firestore__', label: '☁️ Firestore' },
+        ]
+    },
+    ingr: {
+        label: '🍽️ Carta',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'ingr', label: '🏛️ BC' },
+            { key: 'ingr-tanta', label: '☕ Tanta' },
+            { key: 'ingr-lamar', label: '🦑 La Mar' },
+            { key: '__firestore__', label: '☁️ Firestore' },
+        ]
+    },
+};
+
+function switchBancoTab2(mainTab) {
+    _currentBancoTab = mainTab;
+    _currentBancoSub = null;
+    // Update main tabs
+    ['trivia','sim','ingr'].forEach(t => {
+        const btn = document.getElementById('btab2-' + t);
+        if (btn) btn.classList.toggle('active', t === mainTab);
+    });
+    // Render sub-tabs
+    const subConfig = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
+    const subtabsEl = document.getElementById('banco-subtabs');
+    if (subtabsEl) {
+        subtabsEl.innerHTML = subConfig.map(s =>
+            `<div class="admin-tab ${s.key === null ? 'active' : ''}" 
+                  id="bstab-${s.key || 'all'}" 
+                  onclick="switchBancoSub(${s.key === null ? 'null' : "'"+s.key+"'"}, '${mainTab}')">${s.label}</div>`
+        ).join('');
+    }
+    renderBancoUnified(mainTab, null);
+}
+
+function switchBancoSub(subKey, mainTab) {
+    _currentBancoSub = subKey;
+    const subs = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
+    subs.forEach(s => {
+        const id = 'bstab-' + (s.key || 'all');
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', s.key === subKey);
+    });
+    renderBancoUnified(mainTab, subKey);
+}
+
+async function renderBancoUnified(mainTab, subKey) {
+    const el = document.getElementById('banco-content');
+    el.innerHTML = '<div class="dash-loading">Cargando...</div>';
+
+    // Gather hardcoded items
+    let hardcodedKeys = [];
+    if (mainTab === 'trivia') hardcodedKeys = subKey ? [subKey] : ['trivia','trivia-tanta','trivia-lamar'];
+    else if (mainTab === 'sim') hardcodedKeys = (subKey === '__firestore__') ? [] : (subKey ? [subKey] : ['sim']);
+    else if (mainTab === 'ingr') hardcodedKeys = (subKey === '__firestore__') ? [] : (subKey ? [subKey] : ['ingr','ingr-tanta','ingr-lamar']);
+
+    // Gather Firestore items (extraData)
+    let firestoreItems = [];
+    if (subKey !== null || mainTab !== 'trivia') {
+        const showFirestore = !subKey || subKey === '__firestore__';
+        if (showFirestore && (mainTab === 'sim' || mainTab === 'ingr')) {
+            try {
+                const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+                const data = doc.exists ? doc.data() : {};
+                if (mainTab === 'sim') firestoreItems = (data.sim || []).map(i => ({...i, _source:'firestore'}));
+                else firestoreItems = (data.ingr || []).map(i => ({...i, _source:'firestore'}));
+            } catch(e) { console.warn('renderBancoUnified firestore:', e); }
+        }
+    }
+
+    let html = '';
+
+    // Render hardcoded sections
+    for (const key of hardcodedKeys) {
+        const items = BANCO[key] || [];
+        if (!items.length) continue;
+        const localLabel = key === 'trivia' ? 'BC (todas)' : key === 'trivia-tanta' ? 'Tanta' : key === 'trivia-lamar' ? 'La Mar' :
+                           key === 'sim' ? 'BC · hardcodeadas' : key === 'ingr' ? 'BC' : key === 'ingr-tanta' ? 'Tanta' : key === 'ingr-lamar' ? 'La Mar' : key;
+        html += `<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);background:var(--surface-2);border-radius:8px;padding:6px 10px;margin-bottom:8px;margin-top:12px;">
+            🏛️ ${localLabel} · ${items.length} preguntas
+        </div>`;
+        if (mainTab === 'sim') {
+            html += items.map((item, i) => `
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">#${i+1} · ${item.type || 'situación'}</div>
+                    <div style="font-size:13px;font-style:italic;color:var(--text);">"${item.client}"</div>
+                </div>`).join('');
+        } else if (mainTab === 'ingr') {
+            html += items.map((item, i) => `
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);background:var(--surface-2);padding:2px 7px;border-radius:5px;">${item.cat}</span>
+                        <span style="font-weight:700;font-size:13px;">${item.dish}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:5px;">${item.q}</div>
+                    <div style="font-size:12px;color:var(--success);font-weight:600;">✓ ${item.corr}</div>
+                </div>`).join('');
+        } else {
+            html += items.map((item, i) => `
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-muted);margin-bottom:5px;">#${i+1}</div>
+                    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${item.q}</div>
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        ${item.o.map((opt, j) => `
+                            <div style="font-size:12px;padding:4px 8px;border-radius:6px;${j === item.c ? 'background:rgba(27,138,74,0.1);color:var(--success);font-weight:600;' : 'color:var(--text-muted);'}">
+                                ${j === item.c ? '✓' : '○'} ${opt}
+                            </div>`).join('')}
+                    </div>
+                    ${item.explanation ? `<div style="font-size:11px;color:var(--text-muted);margin-top:5px;font-family:var(--font-mono);">💡 ${item.explanation}</div>` : ''}
+                </div>`).join('');
+        }
+    }
+
+    // Render Firestore items
+    if (firestoreItems.length) {
+        html += `<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);background:rgba(27,138,74,0.08);border:1px solid rgba(27,138,74,0.2);border-radius:8px;padding:6px 10px;margin-bottom:8px;margin-top:12px;">
+            ☁️ Firestore · ${firestoreItems.length} preguntas
+        </div>`;
+        if (mainTab === 'sim') {
+            html += firestoreItems.map((item, i) => `
+                <div style="background:var(--surface);border:1px solid rgba(27,138,74,0.25);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                    <div style="font-family:var(--font-mono);font-size:9px;color:var(--success);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">☁️ #${i+1}</div>
+                    <div style="font-size:13px;font-style:italic;color:var(--text);">"${item.client}"</div>
+                    ${(item.options||[]).map(o => `<div style="font-size:11px;color:var(--text-muted);padding:2px 0;">${o.pts}pts: ${o.text}</div>`).join('')}
+                </div>`).join('');
+        } else {
+            html += firestoreItems.map((item, i) => `
+                <div style="background:var(--surface);border:1px solid rgba(27,138,74,0.25);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        ${item.category ? `<span style="font-family:var(--font-mono);font-size:8px;color:var(--success);background:rgba(27,138,74,0.1);padding:2px 7px;border-radius:5px;">${item.category}</span>` : ''}
+                        <span style="font-family:var(--font-mono);font-size:8px;color:var(--success);">☁️ #${i+1}</span>
+                        ${item.dish ? `<span style="font-weight:700;font-size:13px;">${item.dish}</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">${item.dish ? item.q : (item.q || '')}</div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        ${(item.o||[]).map((opt, j) => `
+                            <div style="font-size:12px;padding:4px 8px;border-radius:6px;${j === (item.c ?? 0) ? 'background:rgba(27,138,74,0.1);color:var(--success);font-weight:600;' : 'color:var(--text-muted);'}">
+                                ${j === (item.c ?? 0) ? '✓' : '○'} ${opt}
+                            </div>`).join('')}
+                    </div>
+                    ${item.explanation ? `<div style="font-size:11px;color:var(--text-muted);margin-top:5px;font-family:var(--font-mono);">💡 ${item.explanation}</div>` : ''}
+                </div>`).join('');
+        }
+    }
+
+    if (!html) { el.innerHTML = '<div class="dash-loading">Sin preguntas en esta sección.</div>'; return; }
+    el.innerHTML = html;
+}
+
+// Legacy renderBanco for compat
+function renderBanco(tab) { renderBancoUnified(tab.startsWith('trivia') ? 'trivia' : tab === 'sim' ? 'sim' : 'ingr', tab); }
+
 
 </script>
 </div><!-- /admin-page -->

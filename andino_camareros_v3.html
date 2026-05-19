@@ -3180,13 +3180,6 @@
 </div><!-- /container -->
 
 <script>
-// ── SISTEMA DE ICONOS INLINE (sin dependencia de CDN) ──────────────────────
-            });
-        }
-        el.replaceWith(svgEl);
-    });
-}
-
 // Updated DATA with new sim scenarios and random selection
 const DATA = {
     trivia: [
@@ -3820,6 +3813,7 @@ const app = (() => {
             
             const q = triviaData[state.step];
             const textEl = document.getElementById('trivia-text');
+            const countEl = document.getElementById('trivia-count');
             
             if (countEl) {
                 countEl.textContent = `PREGUNTA ${state.step + 1} / ${totalQuestions}`;
@@ -4345,6 +4339,27 @@ const app = (() => {
 // startGameByMode: unified start handler for all modes
 function startGameByMode() {
     const mode = app.state.mode || 'sim';
+    // Validate DNI and local for all modes before proceeding
+    const dniInput   = document.getElementById('user-dni');
+    const localInput = document.getElementById('user-local');
+    const dni   = dniInput   ? dniInput.value.trim()   : '';
+    const local = localInput ? localInput.value         : '';
+    if (dni.length < 6) {
+        alert("Ingresá un DNI válido (mínimo 6 dígitos)");
+        if (dniInput) dniInput.focus();
+        return;
+    }
+    if (!local) {
+        alert("Seleccioná tu local antes de comenzar");
+        if (localInput) localInput.focus();
+        return;
+    }
+    // Sync state
+    app.state.dni   = dni;
+    app.state.local = local;
+    const nombreInput = document.getElementById('user-nombre');
+    if (nombreInput) app.state.nombre = nombreInput.value.trim();
+
     if (mode === 'ingredientes') { showCategoriasModal(); }
     else if (mode === 'repaso') { app.startRepaso(); }
     else { app.initGame(); }
@@ -4433,6 +4448,8 @@ const LEVEL_COLORS = [
     '#8B7355','#9B8365','#A09060','#C0A870','#D4A800','#D4A800',
     '#00BFFF','#00BFFF','#9B59B6','#9B59B6','#E74C3C','#FFD700'
 ];
+// Alias para compatibilidad con código que usa LEVEL_AVATAR_COLORS
+const LEVEL_AVATAR_COLORS = LEVEL_COLORS;
 const LEVEL_BORDERS = [
     '2px solid #8B7355','2px solid #9B8365','2px solid #A09060','2px solid #C0A870',
     '3px solid #D4A800','3px solid #D4A800',

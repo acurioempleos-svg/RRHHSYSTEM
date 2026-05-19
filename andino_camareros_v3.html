@@ -337,9 +337,21 @@
             z-index: 1;
         }
         
-        .mode-icon i { 
+        .mode-icon i,
+        .mode-icon svg { 
             width: 18px; 
             height: 18px; 
+        }
+        
+        /* Ensure all lucide SVG replacements are visible */
+        .mode-icon svg,
+        .btn svg,
+        .btn-secondary svg,
+        .back-btn svg,
+        [class*="icon"] svg { 
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
         }
         
         .mode-title { 
@@ -396,9 +408,11 @@
             box-shadow: none; 
         }
         
-        .btn i { 
+        .btn i,
+        .btn svg { 
             width: 18px; 
             height: 18px; 
+            flex-shrink: 0;
         }
 
         .btn:disabled {
@@ -1503,61 +1517,8 @@
 
         /* ── MODE PREVIEW TOOLTIP ── */
         .mode-card { position: relative; }
-        .mode-preview-tag {
-            position: absolute;
-            bottom: -1px; right: -1px;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 0 0 10px 0;
-            font-size: 9px;
-            font-family: var(--font-mono);
-            color: var(--text-muted);
-            padding: 2px 6px;
-            opacity: 0;
-            transition: opacity 0.2s;
-            white-space: nowrap;
-        }
-        .mode-card:hover .mode-preview-tag,
-        .mode-card.selected .mode-preview-tag {
-            opacity: 1;
-        }
 
         /* ── MODE PREVIEW PANEL ── */
-        #mode-preview-panel {
-            background: var(--surface-2);
-            border: 1px solid var(--border-hover);
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin: 10px 0 14px;
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            transition: all 0.25s ease;
-        }
-        .mode-preview-icon { font-size: 28px; flex-shrink: 0; }
-        .mode-preview-info { flex: 1; }
-        .mode-preview-name {
-            font-family: var(--font-display);
-            font-size: 16px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--accent);
-            margin-bottom: 3px;
-        }
-        .mode-preview-meta {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .mode-preview-meta span {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
 
         /* ── RESULTS OVERHAUL ── */
         .res-header {
@@ -2625,7 +2586,7 @@
     </div>
 
     <div class="sound-toggle" id="sound-toggle" title="Toggle Sound">
-        <i data-lucide="volume-2"></i>
+        🔊
     </div>
 
     <div class="app-header">
@@ -2672,25 +2633,25 @@
             <label>Tu Local</label>
             <select id="user-local" class="input" style="cursor:pointer;">
                 <option value="">— Seleccioná tu local —</option>
-                <option value="bcp">Barra Chalaca · Palermo (BCP)</option>
-                <option value="bcbl">Barra Chalaca · Belgrano (BCBL)</option>
-                <option value="bcc">Barra Chalaca · Caballito (BCC)</option>
-                <option value="bcb">Barra Chalaca · Barrancas (BCB)</option>
                 <option value="tanta">Tanta</option>
                 <option value="lamar">La Mar</option>
+                <option value="bcp">BCP · Palermo</option>
+                <option value="bcb">BCB · Belgrano</option>
+                <option value="bcbl">BCBL · Bulnes</option>
+                <option value="bcc">BCC · San Telmo</option>
             </select>
 
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
                 <div class="mode-card selected" onclick="app.setMode('sim', this)">
-                    <div class="mode-icon"><i data-lucide="users"></i></div>
+                    <div class="mode-icon">🎭</div>
                     <div>
                         <span class="mode-title">Cliente vs Camarero</span>
                         <span class="mode-desc">Simulador de servicio y reseñas.</span>
                     </div>
                 </div>
                 <div class="mode-card" onclick="app.setMode('ingredientes', this)">
-                    <div class="mode-icon"><i data-lucide="utensils"></i></div>
+                    <div class="mode-icon">🍽️</div>
                     <div>
                         <span class="mode-title">Conocé la Carta</span>
                         <span class="mode-desc">Ingredientes y preparaciones de Barra Chalaca.</span>
@@ -2698,7 +2659,7 @@
                     </div>
                 </div>
                 <div class="mode-card repaso-mode" id="repaso-mode-card" onclick="app.setMode('repaso', this)">
-                    <div class="mode-icon"><i data-lucide="brain"></i></div>
+                    <div class="mode-icon">🧠</div>
                     <div style="flex:1;">
                         <span class="mode-title">Repaso Inteligente <span class="repaso-badge" id="repaso-count-badge" style="display:none;">0</span></span>
                         <span class="mode-desc">Solo tus errores · dominás cuando la clavás 3 veces.</span>
@@ -2707,18 +2668,7 @@
             </div>
         </div>
 
-        <!-- Mode preview panel -->
-        <div id="mode-preview-panel">
-            <div class="mode-preview-icon" id="mpv-icon">🧠</div>
-            <div class="mode-preview-info">
-                <div class="mode-preview-name" id="mpv-name">Trivia Operativa</div>
-                <div class="mode-preview-meta">
-                    <span>⏱ ~4 min</span>
-                    <span>❓ 14 preguntas</span>
-                    <span>⚡ Hasta 100 XP</span>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Daily streak banner (populated by JS) -->
         <div id="daily-streak-banner" style="display:none;" class="streak-banner">
@@ -2740,23 +2690,23 @@
         </div>
 
         <button class="btn" onclick="app.state.mode === 'ingredientes' ? showCategoriasModal() : app.initGame()">
-            <i data-lucide="play"></i>
+            ▶️
             Comenzar Entrenamiento Libre
         </button>
 
         <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="btn btn-secondary" style="flex:1; font-size:13px;" onclick="app.showProfile()">
-                <i data-lucide="user"></i>
+                👤
                 Mi Perfil
             </button>
             <button class="btn btn-secondary" style="flex:1; font-size:13px;" onclick="app.showLeaderboard()">
-                <i data-lucide="trophy"></i>
+                🏆
                 Ranking
             </button>
         </div>
 
         <div style="margin-top:8px;">
-            <a href="admin.html" style="display:block; width:100%; box-sizing:border-box;">
+            <a href="admin.html" style="display:block; width:100%; box-sizing:border-box; text-decoration:none;">
                 <button class="btn btn-secondary" style="width:100%; font-size:12px; border-color:rgba(200,0,26,0.25); color:var(--text-muted);">
                     🛠️ Administración
                 </button>
@@ -2773,7 +2723,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
             <div style="font-family:var(--font-display); font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:2px;">MI PERFIL</div>
             <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="app.goHome()">
-                <i data-lucide="arrow-left"></i> Volver
+                ← Volver
             </button>
         </div>
 
@@ -2813,6 +2763,9 @@
         <div class="section-title">Logros</div>
         <div class="achievement-grid" id="achievement-grid"></div>
 
+        <div class="section-title" style="margin-top:14px;">Desbloqueos por nivel</div>
+        <div class="unlock-row" id="unlock-badges-row" style="margin-bottom:14px;"></div>
+
         <div class="section-title">Historial reciente</div>
         <div class="history-list" id="history-list">
             <div style="text-align:center; color:var(--text-muted); font-size:12px; padding:16px;">Sin partidas aún</div>
@@ -2824,7 +2777,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
             <div style="font-family:var(--font-display); font-size:22px; font-weight:900; text-transform:uppercase; letter-spacing:2px;">RANKING</div>
             <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="app.goHome()">
-                <i data-lucide="arrow-left"></i> Volver
+                ← Volver
             </button>
         </div>
 
@@ -2853,13 +2806,13 @@
     <!-- ── INGREDIENTES ── -->
     <div id="view-ingredientes" class="view">
         <div class="medals-row" id="ingr-medals">
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
-            <div class="medal"><i data-lucide="leaf"></i></div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
+            <div class="medal">🌿</div>
         </div>
 
         <div class="streak-bar">
@@ -2901,11 +2854,11 @@
     <!-- ── TRIVIA ── -->
     <div id="view-trivia" class="view">
         <div class="medals-row" id="trivia-medals">
-            <div class="medal"><i data-lucide="award"></i></div>
-            <div class="medal"><i data-lucide="award"></i></div>
-            <div class="medal"><i data-lucide="award"></i></div>
-            <div class="medal"><i data-lucide="award"></i></div>
-            <div class="medal"><i data-lucide="award"></i></div>
+            <div class="medal">🥇</div>
+            <div class="medal">🥇</div>
+            <div class="medal">🥇</div>
+            <div class="medal">🥇</div>
+            <div class="medal">🥇</div>
         </div>
 
         <div class="streak-bar">
@@ -2940,7 +2893,7 @@
             <div class="repaso-empty-title">¡Todo dominado!</div>
             <div class="repaso-empty-sub">No tenés preguntas pendientes de repaso.<br>Jugá una partida para generar nuevos errores.</div>
             <button class="btn" style="margin-top:20px;" onclick="app.goHome()">
-                <i data-lucide="arrow-left"></i> Volver al inicio
+                ← Volver al inicio
             </button>
         </div>
 
@@ -3053,22 +3006,22 @@
         </div>
 
         <button class="btn" style="margin-top: 18px;" onclick="app.goHome(); setTimeout(()=>{ var nd=document.getElementById('user-nombre'); var dd=document.getElementById('user-dni'); var ld=document.getElementById('user-local'); if(nd) nd.value=app.state.nombre; if(dd) dd.value=app.state.dni; if(ld && app.state.local) ld.value=app.state.local; onHomeInit(); }, 300);">
-            <i data-lucide="rotate-ccw"></i>
+            🔄
             Jugar de nuevo
         </button>
 
         <button class="btn btn-repaso" id="res-repaso-btn" style="margin-top: 10px; display:none;" onclick="app.startRepaso()">
-            <i data-lucide="brain"></i>
+            🧠
             Repasar mis errores ahora
         </button>
 
         <button class="btn" style="margin-top: 10px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);" onclick="app.showProfile()">
-            <i data-lucide="user"></i>
+            👤
             Ver Mi Perfil
         </button>
 
         <button class="btn" style="margin-top: 10px; background: var(--google-blue);" onclick="app.shareResults()">
-            <i data-lucide="share-2"></i>
+            📤
             Compartir Resultado
         </button>
     </div>
@@ -3078,46 +3031,6 @@
 
 <script>
 // ── SISTEMA DE ICONOS INLINE (sin dependencia de CDN) ──────────────────────
-const LUCIDE_ICONS = {
-    'play':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
-    'user':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    'users':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 1-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    'trophy':     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 21 16 21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M6 3H18l-2 9a6 6 0 0 1-12 0L2 3z"/><path d="M4 7H2"/><path d="M20 7h2"/></svg>',
-    'arrow-left': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
-    'rotate-ccw': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>',
-    'share-2':    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
-    'brain':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.88A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.88A2.5 2.5 0 0 0 14.5 2Z"/></svg>',
-    'utensils':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>',
-    'star':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-    'award':      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>',
-    'leaf':       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
-    'volume-2':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
-    'volume-x':   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
-};
-
-function safeCreateIcons() {
-    document.querySelectorAll('i[data-lucide]').forEach(el => {
-        const name = el.getAttribute('data-lucide');
-        const svgStr = LUCIDE_ICONS[name];
-        if (!svgStr) return;
-        const tmp = document.createElement('span');
-        tmp.innerHTML = svgStr;
-        const svgEl = tmp.firstElementChild;
-        // Heredar dimensiones del elemento <i>
-        const w = el.style.width || '18px';
-        const h = el.style.height || '18px';
-        svgEl.setAttribute('width',  w);
-        svgEl.setAttribute('height', h);
-        svgEl.style.display = 'inline-block';
-        svgEl.style.verticalAlign = 'middle';
-        svgEl.style.flexShrink = '0';
-        // Propagar el style original del <i> (fill, color, etc.)
-        if (el.style.cssText) {
-            el.style.cssText.split(';').forEach(rule => {
-                if (rule.trim()) {
-                    const [prop, val] = rule.split(':');
-                    if (prop && val) svgEl.style[prop.trim()] = val.trim();
-                }
             });
         }
         el.replaceWith(svgEl);
@@ -3537,7 +3450,6 @@ const app = (() => {
             if (viewElement) {
                 viewElement.classList.add('active');
             }
-            safeCreateIcons();
             hideLoading();
             if (typeof callback === 'function') callback();
         }, 300);
@@ -3664,9 +3576,8 @@ const app = (() => {
         setMode: (m, el) => {
             state.mode = m;
             document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-            if (el) {
-                el.classList.add('selected');
-            }
+            if (el) el.classList.add('selected');
+
         },
 
         initGame: () => {
@@ -3786,7 +3697,6 @@ const app = (() => {
             
             renderStreakDots();
             app.startTimer(10);
-            safeCreateIcons();
         },
 
         startTimer: (sec) => {
@@ -3944,8 +3854,6 @@ const app = (() => {
                     b.onclick = () => app.checkSim(o);
                     opts.appendChild(b);
                 });
-                
-                safeCreateIcons();
             }, 300);
         },
 
@@ -4052,7 +3960,6 @@ const app = (() => {
 
             // Timer (15s for ingredientes — a bit more time)
             app.startIngrTimer(15);
-            safeCreateIcons();
         },
 
         startIngrTimer: (sec) => {
@@ -4209,7 +4116,7 @@ const app = (() => {
                     if (resStars) {
                         let starHtml = '';
                         for (let i = 0; i < 5; i++) {
-                            starHtml += `<i data-lucide="star" style="fill:${i < clampedStars ? '#FFD700' : 'none'}; color:${i < clampedStars ? '#FFD700' : '#555'}; width:18px; height:18px;"></i>`;
+                            starHtml += `⭐`;
                         }
                         resStars.innerHTML = starHtml;
                     }
@@ -4223,8 +4130,6 @@ const app = (() => {
                     if (resComment) resComment.textContent = `"${msgs[clampedStars - 1]}. El camarero DNI ${state.dni} atendió la mesa."`;
                     if (clampedStars === 5) { createConfetti(); createConfetti(); }
                 }
-
-                safeCreateIcons();
             });
         },
 
@@ -4293,17 +4198,13 @@ document.addEventListener('DOMContentLoaded', () => {
         soundToggle.addEventListener('click', () => {
             app.state.soundEnabled = !app.state.soundEnabled;
             soundToggle.classList.toggle('muted', !app.state.soundEnabled);
-            // Reemplazar SVG actual con el ícono correcto
-            const iconName = app.state.soundEnabled ? 'volume-2' : 'volume-x';
-            soundToggle.innerHTML = `<i data-lucide="${iconName}"></i>`;
-            safeCreateIcons();
+            soundToggle.textContent = app.state.soundEnabled ? '🔊' : '🔇';
         });
     }
 
     // Inicializar íconos de la vista de login (que ya está activa al cargar)
-    safeCreateIcons();
-    setTimeout(safeCreateIcons, 300);
-    setTimeout(safeCreateIcons, 800);
+
+
     
     const dniInput = document.getElementById('user-dni');
     if (dniInput) {
@@ -4532,6 +4433,7 @@ function renderProfileView(dni) {
         const unlocked = p.unlockedAchievements && p.unlockedAchievements.includes(ach.id);
         achGrid.innerHTML += `<div class="achievement ${unlocked ? 'unlocked' : 'locked'}" title="${ach.name}"><div class="achievement-icon">${ach.icon}</div><div class="achievement-name">${ach.name}</div></div>`;
     }
+    renderUnlockBadges(p.totalXp || 0);
 
     const histList = document.getElementById('history-list');
     const modeLabel = { trivia: 'Trivia', sim: 'Sim', ingredientes: 'Carta' };
@@ -4824,7 +4726,6 @@ app.showProfile = function() {
     setTimeout(() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-profile').classList.add('active');
-        safeCreateIcons();
         hideLoading();
     }, 200);
 };
@@ -4838,7 +4739,6 @@ app.showLeaderboard = async function() {
     showLoading();
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-leaderboard').classList.add('active');
-    safeCreateIcons();
     await renderLeaderboard('quincenal', app.state.dni);
     hideLoading();
 };
@@ -4854,7 +4754,6 @@ app.goHome = function() {
     setTimeout(() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById('view-login').classList.add('active');
-        safeCreateIcons();
         hideLoading();
     }, 200);
 };
@@ -5269,8 +5168,7 @@ app.finish = async function() {
             const btn = document.getElementById('res-repaso-btn');
             if (btn && pending > 0) {
                 btn.style.display = 'flex';
-                btn.innerHTML = `<i data-lucide="brain"></i> Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
-                safeCreateIcons();
+                btn.innerHTML = `🧠 Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
             } else if (btn) {
                 btn.style.display = 'none';
             }
@@ -5309,7 +5207,6 @@ app.startRepaso = function() {
     const pending = REPASODB.getPending(dni);
 
     app.switchView('repaso', () => {
-        safeCreateIcons();
 
         if (pending.length === 0) {
             document.getElementById('repaso-empty-state').style.display = 'block';
@@ -5397,8 +5294,6 @@ function renderRepasoQuestion() {
         b.onclick = () => checkRepasoAnswer(origIdx === freshItem.c, b, freshItem, opts);
         opts.appendChild(b);
     });
-
-    safeCreateIcons();
     startRepasoTimer(12);
 }
 
@@ -5550,7 +5445,8 @@ function showOnboarding() {
     if (seen) return; // ya lo vio
     _onbStep = 0;
     renderOnbStep();
-    overlay.classList.add('active');
+    // Pequeño delay para asegurar que el DOM está listo
+    setTimeout(() => overlay.classList.add('active'), 100);
 }
 
 function renderOnbStep() {

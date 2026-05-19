@@ -532,6 +532,22 @@ body {
 .doc-blk.expired { border-color:var(--d-brd); }
 .doc-blk.expired .doc-blk-tag { background:rgba(196,50,50,.35); color:#f08585; }
 .doc-blk.missing .doc-blk-tag { color:var(--faint); }
+.doc-blk.drag-over {
+  border-color:var(--amber-brd);
+  background:var(--amber-glow);
+  transform:scale(1.04);
+  transition:all .15s ease;
+}
+.doc-blk.uploading { border-color:rgba(59,125,216,.5); }
+.doc-blk.uploading .doc-blk-tag {
+  background:rgba(59,125,216,.25); color:#7fb3f5;
+}
+.doc-blk-upload-bar {
+  position:absolute; bottom:0; left:0; height:2px;
+  background:var(--info); border-radius:0 0 var(--r) var(--r);
+  transition:width .3s ease;
+  z-index:3;
+}
 
 .doc-blk-check {
   width:14px; height:14px; border-radius:50%;
@@ -1862,7 +1878,12 @@ function renderLocal(local, q='') {
               ? `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
               : `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
             return `
-            <div class="doc-blk ${cls}" onclick="handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},${d.askRangoFechas||false},${loaded})">
+            <div class="doc-blk ${cls}"
+              onclick="handleDoc('${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},${d.askRangoFechas||false},${loaded})"
+              ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleDocDrop(event,'${c.id}','${d.key}','${esc(d.name)}',${d.askFecha||false},${d.askRangoFechas||false})"
+              id="docblk-${c.id}-${d.key}">
               ${thumb?`<div class="doc-blk-thumb" style="background-image:url('${thumb}')"></div>`:''}
               <div class="doc-blk-body">
                 <div class="doc-blk-ico">${d.emoji}</div>
@@ -1870,7 +1891,7 @@ function renderLocal(local, q='') {
                 ${estadoBadge}
               </div>
               <div class="doc-blk-tag">
-                <span>${tagTxt}</span>
+                <span class="doc-blk-tag-txt">${tagTxt}</span>
                 <div class="doc-blk-check">${chkSvg}</div>
               </div>
               ${fechaCargaHtml}
@@ -1964,6 +1985,97 @@ function confirmar(msg, btnLabel='Confirmar') {
 function abrirConfirmDelete() {
   confirmar('¿Eliminar este documento? Esta acción no se puede deshacer.','Eliminar')
     .then(ok => { if(ok) borrarDoc(); });
+}
+
+/* ══ DRAG & DROP + SUBIDA OPTIMISTA ════════════════════════════ */
+async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
+  const file = event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) { toast('⚠ Solo se aceptan imágenes'); return; }
+  const blk = document.getElementById(`docblk-${id}-${key}`);
+  activeTask = { id, type:key, label, askFecha, askRangoFechas };
+
+  // 1. Comprimir imagen
+  const dataUrl = await new Promise(res => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+        canvas.width  = Math.round(img.width*ratio);
+        canvas.height = Math.round(img.height*ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        res(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // 2. Preview optimista inmediato
+  if (blk) {
+    blk.classList.remove('missing','loaded','expired');
+    blk.classList.add('uploading');
+    let thumbEl = blk.querySelector('.doc-blk-thumb');
+    if (!thumbEl) {
+      thumbEl = document.createElement('div');
+      thumbEl.className = 'doc-blk-thumb';
+      blk.insertBefore(thumbEl, blk.firstChild);
+    }
+    thumbEl.style.backgroundImage = `url('${dataUrl}')`;
+    thumbEl.style.opacity = '.35';
+    const tagTxtEl = blk.querySelector('.doc-blk-tag-txt');
+    if (tagTxtEl) tagTxtEl.textContent = 'Subiendo…';
+    let bar = blk.querySelector('.doc-blk-upload-bar');
+    if (!bar) { bar = document.createElement('div'); bar.className='doc-blk-upload-bar'; bar.style.width='0%'; blk.appendChild(bar); }
+    setTimeout(() => { bar.style.width = '45%'; }, 50);
+    setTimeout(() => { bar.style.width = '75%'; }, 400);
+    setTimeout(() => { bar.style.width = '85%'; }, 900);
+  }
+
+  try {
+    // 3. Subir a ImgBB
+    const urlToSave = await subirDataUrlAImgBB(dataUrl);
+
+    // 4. Guardar en Firestore
+    const colab   = colabs.find(x => x.id===id);
+    const current = colab ? colab[key] : null;
+    const arr     = current ? (Array.isArray(current)?[...current]:[current]) : [];
+    const metaRaw = colab ? colab[key+'_meta'] : null;
+    const metaArr = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
+    if (arr.length >= 10) { toast('Límite de 10 fotos por documento alcanzado'); return; }
+    arr.push(urlToSave);
+    metaArr.push({ cargado_en: new Date().toISOString(), estado:'ok' });
+    const update = { [key]:arr, [key+'_meta']:metaArr };
+    const docDef = ALL_DOCS.find(d=>d.key===key);
+    if (docDef?.askRangoFechas) {
+      const rango = await pedirRangoFechas(docDef.name);
+      if (rango) { update[key+'_fecha_inicio']=rango.inicio; update[key+'_fecha_fin']=rango.fin; update[key+'_dias']=rango.dias; if(key==='salud') update['vencimiento_salud']=rango.fin; }
+    } else if (docDef?.askFecha) {
+      const f = await pedirFecha();
+      if (f) { update[key+'_fecha']=f; if(key==='salud') update['vencimiento_salud']=f; }
+    }
+    await db.collection('colaboradores').doc(id).update(update);
+
+    // 5. Confirmar visualmente
+    if (blk) {
+      const bar = blk.querySelector('.doc-blk-upload-bar');
+      if (bar) { bar.style.width='100%'; setTimeout(()=>bar.remove(),400); }
+      blk.classList.remove('uploading'); blk.classList.add('loaded');
+      const thumbEl = blk.querySelector('.doc-blk-thumb');
+      if (thumbEl) thumbEl.style.opacity = '.25';
+      const tagTxtEl = blk.querySelector('.doc-blk-tag-txt');
+      if (tagTxtEl) tagTxtEl.textContent = arr.length > 1 ? `${arr.length} fotos` : 'Cargado';
+    }
+    toast(`✓ ${label} guardado`);
+  } catch(e) {
+    if (blk) {
+      blk.classList.remove('uploading'); blk.classList.add('missing');
+      const bar = blk.querySelector('.doc-blk-upload-bar'); if(bar) bar.remove();
+      const tagTxtEl = blk.querySelector('.doc-blk-tag-txt'); if(tagTxtEl) tagTxtEl.textContent='Error — reintentar';
+    }
+    toast('Error al subir: '+(e.code||e.message));
+  }
 }
 
 /* ══ DOC MANAGEMENT ═════════════════════════════════════════════ */

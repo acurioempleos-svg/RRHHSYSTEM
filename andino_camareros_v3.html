@@ -287,6 +287,7 @@
             position: relative;
             overflow: hidden;
             background: var(--surface);
+            pointer-events: all;
         }
         
         .mode-card::before {
@@ -296,6 +297,7 @@
             background: linear-gradient(135deg, var(--accent-dim), transparent);
             opacity: 0;
             transition: opacity 0.25s;
+            pointer-events: none;
         }
         
         .mode-card:hover { 
@@ -1094,40 +1096,69 @@
         }
 
         .profile-avatar {
-            width: 52px;
-            height: 52px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--accent), #B8860B);
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: var(--font-display);
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 900;
             color: #000;
             flex-shrink: 0;
-            box-shadow: 0 0 20px var(--accent-glow);
+            box-shadow: 0 0 24px var(--accent-glow);
+            transition: border 0.4s ease, box-shadow 0.4s ease;
+            position: relative;
+        }
+        .profile-avatar::after {
+            content: attr(data-level-icon);
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 24px;
+            height: 24px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 24px;
+            text-align: center;
         }
 
         .profile-info { flex: 1; }
         .profile-dni {
             font-family: var(--font-mono);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--accent);
+            color: var(--text-muted);
         }
         .profile-level {
             font-family: var(--font-display);
-            font-size: 20px;
+            font-size: 36px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            line-height: 1;
+            margin: 6px 0 4px;
+            text-shadow: 0 2px 12px currentColor;
         }
         .profile-rank-tag {
             font-family: var(--font-mono);
             font-size: 9px;
             color: var(--text-muted);
             letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        .profile-level-num {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
             text-transform: uppercase;
         }
 
@@ -1380,14 +1411,15 @@
         }
 
         .level-up-overlay {
+            --lvl-color: #FFD700;
             position: fixed;
             inset: 0;
-            background: rgba(253,248,238,0.88);
+            background: rgba(10,8,0,0.82);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 300;
-            backdrop-filter: blur(6px);
+            backdrop-filter: blur(8px);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
@@ -1398,25 +1430,133 @@
         }
         .level-up-box {
             text-align: center;
-            animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: lvlUpPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
         }
-        .level-up-icon { font-size: 64px; margin-bottom: 12px; }
+        @keyframes lvlUpPop {
+            0% { transform: scale(0.4) rotate(-6deg); opacity: 0; }
+            60% { transform: scale(1.08) rotate(1deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .level-up-rays {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px; height: 300px;
+            background: conic-gradient(from 0deg, transparent 0deg, var(--lvl-color) 10deg, transparent 20deg, transparent 40deg, var(--lvl-color) 50deg, transparent 60deg, transparent 80deg, var(--lvl-color) 90deg, transparent 100deg, transparent 130deg, var(--lvl-color) 140deg, transparent 150deg, transparent 180deg, var(--lvl-color) 190deg, transparent 200deg, transparent 220deg, var(--lvl-color) 230deg, transparent 240deg, transparent 270deg, var(--lvl-color) 280deg, transparent 290deg, transparent 310deg, var(--lvl-color) 320deg, transparent 330deg, transparent 360deg);
+            opacity: 0.15;
+            animation: raysRotate 4s linear infinite;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        @keyframes raysRotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
+        .level-up-crown {
+            font-size: 80px;
+            line-height: 1;
+            margin-bottom: 8px;
+            display: block;
+            animation: crownFloat 1.5s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 20px var(--lvl-color));
+        }
+        @keyframes crownFloat {
+            from { transform: translateY(0) scale(1); }
+            to { transform: translateY(-8px) scale(1.05); }
+        }
+        .level-up-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--lvl-color);
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
         .level-up-title {
             font-family: var(--font-display);
-            font-size: 36px;
+            font-size: 52px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            background: linear-gradient(135deg, var(--accent), #B8860B);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            letter-spacing: 3px;
+            color: var(--lvl-color);
+            text-shadow: 0 0 40px var(--lvl-color), 0 0 80px var(--lvl-color);
+            line-height: 1;
+            margin-bottom: 6px;
         }
         .level-up-sub {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        .level-up-hint {
             font-family: var(--font-mono);
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 6px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 16px;
+        }
+
+        /* ── GAMIFICATION: Avatar Frame Ring by Level ── */
+        .profile-avatar {
+            position: relative;
+        }
+        .avatar-ring {
+            position: absolute;
+            inset: -5px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .avatar-ring.ring-0  { box-shadow: 0 0 0 3px #8B7355; }
+        .avatar-ring.ring-1  { box-shadow: 0 0 0 3px #9B8365; }
+        .avatar-ring.ring-2  { box-shadow: 0 0 0 3px #A09060; }
+        .avatar-ring.ring-3  { box-shadow: 0 0 0 3px #C0A870, 0 0 12px #C0A87044; }
+        .avatar-ring.ring-4  { box-shadow: 0 0 0 3px #D4A800, 0 0 16px #D4A80066; animation: ringGold 2s ease-in-out infinite; }
+        .avatar-ring.ring-5  { background: linear-gradient(135deg, #D4A800, #FFD700) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: destination-out; mask-composite: exclude; border: 3px solid transparent; box-shadow: 0 0 20px #D4A80088; animation: ringGold 1.5s ease-in-out infinite; }
+        .avatar-ring.ring-6  { border: 3px solid #00BFFF; box-shadow: 0 0 0 2px #00BFFF44, 0 0 20px #00BFFF66; animation: ringBlue 2s ease-in-out infinite; }
+        .avatar-ring.ring-7  { background: conic-gradient(#00BFFF, #0080FF, #00BFFF); border-radius: 50%; padding: 3px; animation: ringBlue 1.5s ease-in-out infinite; }
+        .avatar-ring.ring-8  { border: 3px solid #9B59B6; box-shadow: 0 0 0 2px #9B59B644, 0 0 24px #9B59B688; animation: ringPurple 2s ease-in-out infinite; }
+        .avatar-ring.ring-9  { background: conic-gradient(#9B59B6, #C39BD3, #9B59B6); border-radius: 50%; padding: 3px; animation: ringPurple 1.5s ease-in-out infinite; }
+        .avatar-ring.ring-10 { border: 3px solid #E74C3C; box-shadow: 0 0 0 2px #E74C3C44, 0 0 28px #E74C3C88; animation: ringRed 1.5s ease-in-out infinite; }
+        .avatar-ring.ring-11 { background: conic-gradient(#FFD700, #FFA500, #FFD700, #FF8C00, #FFD700); border-radius: 50%; padding: 4px; box-shadow: 0 0 40px #FFD70088; animation: ringLegend 1s ease-in-out infinite; }
+        @keyframes ringGold   { 0%,100%{box-shadow:0 0 0 3px #D4A800,0 0 16px #D4A80066} 50%{box-shadow:0 0 0 3px #FFD700,0 0 24px #FFD70099} }
+        @keyframes ringBlue   { 0%,100%{box-shadow:0 0 0 2px #00BFFF44,0 0 20px #00BFFF66} 50%{box-shadow:0 0 0 2px #00BFFF88,0 0 30px #00BFFF99} }
+        @keyframes ringPurple { 0%,100%{box-shadow:0 0 0 2px #9B59B644,0 0 24px #9B59B688} 50%{box-shadow:0 0 0 2px #9B59B688,0 0 32px #9B59B6aa} }
+        @keyframes ringRed    { 0%,100%{box-shadow:0 0 0 2px #E74C3C44,0 0 28px #E74C3C88} 50%{box-shadow:0 0 0 2px #E74C3C88,0 0 40px #E74C3Caa} }
+        @keyframes ringLegend { 0%,100%{box-shadow:0 0 40px #FFD70088} 50%{box-shadow:0 0 60px #FFD700cc} }
+
+        /* ── GAMIFICATION: Title Badges in Leaderboard ── */
+        .lb-title-chip {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .lb-title-chip.title-fire  { background: rgba(200,0,26,0.15); color: #C8001A; border: 1px solid rgba(200,0,26,0.3); }
+        .lb-title-chip.title-gold  { background: rgba(212,168,0,0.15); color: #D4A800; border: 1px solid rgba(212,168,0,0.3); }
+        .lb-title-chip.title-blue  { background: rgba(0,191,255,0.10); color: #00BFFF; border: 1px solid rgba(0,191,255,0.25); }
+        .lb-title-chip.title-grey  { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+
+        /* ── GAMIFICATION: Profile level number big display ── */
+        .profile-level-big-num {
+            font-family: var(--font-mono);
+            font-size: 72px;
+            font-weight: 900;
+            line-height: 1;
+            opacity: 0.12;
+            position: absolute;
+            top: -10px;
+            right: -8px;
+            pointer-events: none;
+            letter-spacing: -4px;
         }
 
 
@@ -1516,7 +1656,7 @@
         }
 
         /* ── MODE PREVIEW TOOLTIP ── */
-        .mode-card { position: relative; }
+        .mode-card { position: relative; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
         /* ── MODE PREVIEW PANEL ── */
 
@@ -2549,10 +2689,12 @@
 <div class="confetti-container" id="confetti-container"></div>
 <div class="level-up-overlay" id="level-up-overlay" onclick="this.classList.remove('show')">
     <div class="level-up-box">
-        <div class="level-up-icon">⬆️</div>
-        <div class="level-up-title" id="level-up-title">¡NIVEL 2!</div>
-        <div class="level-up-sub" id="level-up-sub">Seguís creciendo como profesional</div>
-        <div style="margin-top:16px; font-size:12px; color: var(--text-muted);">Tocá para continuar</div>
+        <div class="level-up-rays"></div>
+        <span class="level-up-crown" id="level-up-icon">⭐</span>
+        <div class="level-up-label">¡Subiste de nivel!</div>
+        <div class="level-up-title" id="level-up-title">NIVEL 2</div>
+        <div class="level-up-sub" id="level-up-sub">Runner Senior</div>
+        <div class="level-up-hint">Tocá para continuar</div>
     </div>
 </div>
 
@@ -2650,6 +2792,13 @@
                         <span class="mode-desc">Simulador de servicio y reseñas.</span>
                     </div>
                 </div>
+                <div class="mode-card" onclick="app.setMode('trivia', this)">
+                    <div class="mode-icon">🧠</div>
+                    <div>
+                        <span class="mode-title">Trivia de Protocolo</span>
+                        <span class="mode-desc">Preguntas de servicio y cultura BC.</span>
+                    </div>
+                </div>
                 <div class="mode-card" onclick="app.setMode('ingredientes', this)">
                     <div class="mode-icon">🍽️</div>
                     <div>
@@ -2659,7 +2808,7 @@
                     </div>
                 </div>
                 <div class="mode-card repaso-mode" id="repaso-mode-card" onclick="app.setMode('repaso', this)">
-                    <div class="mode-icon">🧠</div>
+                    <div class="mode-icon">🔁</div>
                     <div style="flex:1;">
                         <span class="mode-title">Repaso Inteligente <span class="repaso-badge" id="repaso-count-badge" style="display:none;">0</span></span>
                         <span class="mode-desc">Solo tus errores · dominás cuando la clavás 3 veces.</span>
@@ -2689,7 +2838,7 @@
             <div class="daily-card-sub" id="daily-card-sub">Mismas preguntas para todo el equipo · XP ×2</div>
         </div>
 
-        <button class="btn" onclick="app.state.mode === 'ingredientes' ? showCategoriasModal() : app.initGame()">
+        <button class="btn" id="btn-start-game" onclick="startGameByMode()">
             ▶️
             Comenzar Entrenamiento Libre
         </button>
@@ -2727,13 +2876,14 @@
             </button>
         </div>
 
-        <div class="profile-card" id="profile-card">
+        <div class="profile-card" id="profile-card" style="position:relative; overflow:hidden;">
+            <div class="profile-level-big-num" id="profile-level-bignum">1</div>
             <div class="profile-header">
-                <div class="profile-avatar" id="profile-avatar">?</div>
+                <div class="profile-avatar" id="profile-avatar" data-level-icon="🏃">?<div class="avatar-ring ring-0" id="profile-avatar-ring"></div></div>
                 <div class="profile-info">
-                    <div class="profile-rank-tag">CAMARERO · DNI</div>
+                    <div class="profile-rank-tag" id="profile-rank-tag">NIVEL 1 · RUNNER</div>
+                    <div class="profile-level" id="profile-level-name">Runner</div>
                     <div class="profile-dni" id="profile-dni">—</div>
-                    <div class="profile-level" id="profile-level-name">Nivel 1</div>
                 </div>
             </div>
             <div class="level-progress">
@@ -3628,7 +3778,16 @@ const app = (() => {
                 state.ingrSelected = shuffleArray(bank).slice(0, 7);
             }
 
-            if (state.mode === 'trivia') {
+            if (state.mode === 'repaso') {
+                // Repaso: redirect to startRepaso (needs prior errors)
+                const wrongData = DB.getPlayer(state.dni)._wrongFull || state._wrongFull || [];
+                if (!wrongData.length) {
+                    alert('¡Todavía no tenés errores guardados! Jugá primero en otro modo.');
+                    return;
+                }
+                app.startRepaso();
+                return;
+            } else if (state.mode === 'trivia') {
                 switchView('trivia', () => {
                     renderStreakDots();
                     updateTriviaProgress();
@@ -3638,6 +3797,9 @@ const app = (() => {
                 switchView('ingredientes', () => {
                     app.renderIngredientes();
                 });
+            } else if (state.mode === 'repaso') {
+                app.startRepaso();
+                return;
             } else {
                 switchView('sim', () => {
                     renderSimPips();
@@ -4180,6 +4342,14 @@ const app = (() => {
     };
 })();
 
+// startGameByMode: unified start handler for all modes
+function startGameByMode() {
+    const mode = app.state.mode || 'sim';
+    if (mode === 'ingredientes') { showCategoriasModal(); }
+    else if (mode === 'repaso') { app.startRepaso(); }
+    else { app.initGame(); }
+}
+
 // onHomeInit: restaura datos del usuario al volver al home
 function onHomeInit() {
     updateRepasoBadge(app.state.dni);
@@ -4244,8 +4414,9 @@ document.addEventListener('DOMContentLoaded', () => {
 const STORAGE_KEY = 'andino_players_v1';
 const LEVEL_THRESHOLDS = [0, 200, 600, 1400, 3000, 6000, 11000, 19000, 32000, 52000, 82000, 130000];
 const LEVEL_NAMES = [
+    'Runner',
+    'Runner Senior',
     'Bachero',
-    'Bachero Senior',
     'Ayudante de Salón',
     'Camarero Jr.',
     'Camarero',
@@ -4254,20 +4425,55 @@ const LEVEL_NAMES = [
     'Sommelier',
     'Maître Jr.',
     'Maître',
-    'Maître Ejecutivo',
-    'Gerente de Salón'
+    'Maître Ejecutivo'
 ];
 
+const LEVEL_ICONS = ['🏃','🏃‍♂️','🧹','🍽️','⭐','🎯','💎','👑','🍷','🎩','🥂','🌟'];
+const LEVEL_COLORS = [
+    '#8B7355','#9B8365','#A09060','#C0A870','#D4A800','#D4A800',
+    '#00BFFF','#00BFFF','#9B59B6','#9B59B6','#E74C3C','#FFD700'
+];
+const LEVEL_BORDERS = [
+    '2px solid #8B7355','2px solid #9B8365','2px solid #A09060','2px solid #C0A870',
+    '3px solid #D4A800','3px solid #D4A800',
+    '3px solid #00BFFF','3px solid #00BFFF',
+    '3px solid #9B59B6','3px solid #9B59B6',
+    '4px solid #E74C3C','4px solid #FFD700'
+];
+
+// Títulos decorativos visibles en el ranking
+const RANK_TITLES = [
+    { minXp: 0,     title: 'Novato',        emoji: '🌱' },
+    { minXp: 100,   title: 'En Rodaje',     emoji: '⚙️' },
+    { minXp: 400,   title: 'Con Ritmo',     emoji: '🎵' },
+    { minXp: 900,   title: 'Confiable',     emoji: '💪' },
+    { minXp: 2000,  title: 'Experimentado', emoji: '⭐' },
+    { minXp: 4000,  title: 'El Imparable',  emoji: '🔥' },
+    { minXp: 8000,  title: 'Leyenda',       emoji: '👑' },
+];
+function getRankTitle(xp) {
+    for (let i = RANK_TITLES.length - 1; i >= 0; i--) {
+        if (xp >= RANK_TITLES[i].minXp) return RANK_TITLES[i];
+    }
+    return RANK_TITLES[0];
+}
+
 const ACHIEVEMENTS = [
-    { id: 'first_game',   icon: '🎮', name: 'Primera partida',    check: (p) => p.totalGames >= 1 },
-    { id: 'ten_games',    icon: '🔟', name: '10 partidas',         check: (p) => p.totalGames >= 10 },
-    { id: 'perfect_tri',  icon: '🎯', name: 'Trivia perfecta',     check: (p) => p.bestTriviaScore >= 7 },
-    { id: 'perfect_sim',  icon: '⭐', name: 'Sim 5 estrellas',     check: (p) => p.bestSimScore >= 24 },
-    { id: 'perfect_ingr', icon: '🍽️', name: 'Carta perfecta',     check: (p) => p.bestIngrScore >= 7 },
-    { id: 'streak5',      icon: '🔥', name: 'Racha ×5',            check: (p) => p.bestStreak >= 5 },
-    { id: 'xp500',        icon: '⚡', name: '500 XP',              check: (p) => p.totalXp >= 500 },
-    { id: 'xp2000',       icon: '💎', name: '2000 XP',             check: (p) => p.totalXp >= 2000 },
-    { id: 'all_modes',    icon: '🎭', name: 'Triple modo',          check: (p) => p.triviaGames >= 1 && p.simGames >= 1 && p.ingrGames >= 1 },
+    { id: 'first_game',   icon: '🎮', name: 'Primera partida',     check: (p) => p.totalGames >= 1 },
+    { id: 'ten_games',    icon: '🔟', name: '10 partidas',          check: (p) => p.totalGames >= 10 },
+    { id: 'fifty_games',  icon: '💯', name: '50 partidas',          check: (p) => p.totalGames >= 50 },
+    { id: 'perfect_tri',  icon: '🎯', name: 'Trivia perfecta',      check: (p) => p.bestTriviaScore >= 7 },
+    { id: 'perfect_sim',  icon: '⭐', name: 'Sim 5 estrellas',      check: (p) => p.bestSimScore >= 24 },
+    { id: 'perfect_ingr', icon: '🍽️', name: 'Carta perfecta',      check: (p) => p.bestIngrScore >= 7 },
+    { id: 'streak5',      icon: '🔥', name: 'Racha ×5',             check: (p) => p.bestStreak >= 5 },
+    { id: 'streak10',     icon: '🌋', name: 'Racha ×10',            check: (p) => p.bestStreak >= 10 },
+    { id: 'xp500',        icon: '⚡', name: '500 XP',               check: (p) => p.totalXp >= 500 },
+    { id: 'xp2000',       icon: '💎', name: '2000 XP',              check: (p) => p.totalXp >= 2000 },
+    { id: 'xp5000',       icon: '👑', name: '5000 XP — Leyenda',    check: (p) => p.totalXp >= 5000 },
+    { id: 'all_modes',    icon: '🎭', name: 'Triple modo',           check: (p) => p.triviaGames >= 1 && p.simGames >= 1 && p.ingrGames >= 1 },
+    { id: 'daily_done',   icon: '📅', name: 'Desafío diario',        check: (p) => p.dailyDone >= 1 },
+    { id: 'camarero',     icon: '🍽️', name: 'Camarero — Nivel 5',   check: (p) => p.totalXp >= 3000 },
+    { id: 'sommelier',    icon: '🍷', name: 'Sommelier — Nivel 8',   check: (p) => p.totalXp >= 11000 },
 ];
 
 // ── FIREBASE INIT ────────────────────────────────────────────────────────────
@@ -4417,12 +4623,37 @@ function renderProfileView(dni) {
     const levelName = LEVEL_NAMES[level] || LEVEL_NAMES[LEVEL_NAMES.length - 1];
     const displayName = p.nombre || ('DNI ' + dni);
 
-    document.getElementById('profile-avatar').textContent = p.nombre ? p.nombre.slice(0,2).toUpperCase() : dni.slice(-2);
+    const levelColor  = LEVEL_COLORS[level]  || '#D4A800';
+    const levelBorder = LEVEL_BORDERS[level] || '2px solid #D4A800';
+    const levelIcon   = LEVEL_ICONS[level]   || '⭐';
+
+    const avatarEl = document.getElementById('profile-avatar');
+    avatarEl.textContent = p.nombre ? p.nombre.slice(0,2).toUpperCase() : dni.slice(-2);
+    // Re-add ring after textContent wipe
+    let ring = document.getElementById('profile-avatar-ring');
+    if (!ring) { ring = document.createElement('div'); ring.id = 'profile-avatar-ring'; avatarEl.appendChild(ring); }
+    ring.className = `avatar-ring ring-${Math.min(level, 11)}`;
+    avatarEl.setAttribute('data-level-icon', levelIcon);
+    avatarEl.style.border = 'none';
+    avatarEl.style.boxShadow = `0 0 28px ${levelColor}55`;
+    // Big level number watermark
+    const bigNum = document.getElementById('profile-level-bignum');
+    if (bigNum) { bigNum.textContent = level + 1; bigNum.style.color = levelColor; }
+
+    const rt = getRankTitle(p.totalXp);
+    const lvlEl = document.getElementById('profile-level-name');
+    lvlEl.textContent = levelName;
+    lvlEl.style.color = levelColor;
+    lvlEl.style.fontSize = '36px';
+    lvlEl.style.fontWeight = '900';
+    lvlEl.style.letterSpacing = '2px';
+    lvlEl.style.textShadow = `0 2px 12px ${levelColor}66`;
+    document.getElementById('profile-rank-tag').innerHTML = `<span style="opacity:.6;font-size:11px;">NIVEL ${level + 1}</span> &nbsp;${rt.emoji} ${rt.title}`;
     document.getElementById('profile-dni').textContent = (p.nombre ? p.nombre + ' · ' : '') + 'DNI ' + dni;
-    document.getElementById('profile-level-name').textContent = `Nivel ${level + 1} · ${levelName}`;
     document.getElementById('profile-xp-label').textContent = `${p.totalXp} XP total`;
     document.getElementById('profile-next-level').textContent = level < LEVEL_THRESHOLDS.length - 1 ? `Próx: ${prog.nextXp} XP` : '¡Nivel máximo!';
     document.getElementById('profile-xp-bar').style.width = prog.pct + '%';
+    document.getElementById('profile-xp-bar').style.background = `linear-gradient(90deg, ${levelColor}, ${levelColor}aa)`;
     document.getElementById('pstat-games').textContent = p.totalGames;
     document.getElementById('pstat-xp').textContent = p.totalXp;
     document.getElementById('pstat-streak').textContent = p.bestStreak || 0;
@@ -4600,13 +4831,35 @@ async function renderLeaderboard(tab, currentDni) {
             gamesLabel = p.totalGames + ' partidas';
         }
 
+        // Determine player title from achievements
+        const TITLE_MAP = [
+            ['all_modes','El Completo'],['xp2000','El Imparable'],['xp500','En Carrera'],
+            ['streak5','En Racha'],['perfect_sim','El Pulido'],['perfect_tri','El Triviador'],
+            ['perfect_ingr','El Gourmet'],['ten_games','El Veterano'],['first_game','El Novato']
+        ];
+        const unl = p.unlockedAchievements || [];
+        let playerTitle = '';
+        for (const [id, title] of TITLE_MAP) {
+            if (unl.includes(id)) { playerTitle = title; break; }
+        }
+        const rt = getRankTitle(p.totalXp || 0);
+        const lIcon = LEVEL_ICONS[level] || '⭐';
+        const lColor = LEVEL_COLORS[level] || '#D4A800';
+        const lBorder = LEVEL_BORDERS[level] || '2px solid #D4A800';
+
+        // Title chip style based on rank
+        let titleChipClass = 'title-grey';
+        if (rt.minXp >= 4000) titleChipClass = 'title-fire';
+        else if (rt.minXp >= 2000) titleChipClass = 'title-gold';
+        else if (rt.minXp >= 900) titleChipClass = 'title-blue';
+
         return `
         <div class="lb-item ${isMe ? 'me' : ''}">
             <div class="lb-rank ${rankClass}">${i < 3 ? rankIcons[i] : '#' + (i + 1)}</div>
-            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'};">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : (p.dni || '??').slice(-2)}</div>
+            <div class="lb-avatar" style="background:${isMe ? 'var(--accent)' : 'var(--surface)'}; color:${isMe ? '#000' : 'var(--text)'}; border: 2.5px solid ${lColor}; box-shadow:0 0 10px ${lColor}55;">${p.nombre ? p.nombre.slice(0,2).toUpperCase() : (p.dni || '??').slice(-2)}</div>
             <div class="lb-info">
                 <div class="lb-dni">${p.nombre || ('DNI ' + p.dni)}${isMe ? ' <span style="font-size:8px;color:var(--accent);">← VOS</span>' : ''}</div>
-                <div class="lb-level">Niv.${level + 1} · ${LEVEL_NAMES[level]}</div>
+                <div class="lb-level">${lIcon} Niv.${level + 1} ${LEVEL_NAMES[level]} <span class="lb-title-chip ${titleChipClass}">${rt.emoji} ${rt.title}</span></div>
             </div>
             <div style="text-align:right;">
                 <div class="lb-xp">${scoreVal}</div>
@@ -4686,11 +4939,18 @@ app.finish = async function() {
         if (leveledUp) {
             setTimeout(() => {
                 const overlay = document.getElementById('level-up-overlay');
-                document.getElementById('level-up-title').textContent = `¡NIVEL ${newLevel + 1}!`;
-                document.getElementById('level-up-sub').textContent = `Ahora sos ${LEVEL_NAMES[newLevel]}`;
+                const lvlColor = LEVEL_COLORS[Math.min(newLevel, LEVEL_COLORS.length-1)] || '#FFD700';
+                const lvlName  = LEVEL_NAMES[newLevel] || '';
+                const lvlIcon  = LEVEL_ICONS[newLevel] || '⭐';
+                overlay.style.setProperty('--lvl-color', lvlColor);
+                document.getElementById('level-up-title').textContent = `NIVEL ${newLevel + 1}`;
+                document.getElementById('level-up-title').style.color = lvlColor;
+                document.getElementById('level-up-sub').textContent = lvlName;
+                const iconEl = document.getElementById('level-up-icon');
+                if (iconEl) { iconEl.textContent = lvlIcon; iconEl.style.filter = `drop-shadow(0 0 20px ${lvlColor})`; }
                 overlay.classList.add('show');
                 app.createConfetti();
-                setTimeout(() => overlay.classList.remove('show'), 3500);
+                setTimeout(() => overlay.classList.remove('show'), 4000);
             }, 600);
         }
 

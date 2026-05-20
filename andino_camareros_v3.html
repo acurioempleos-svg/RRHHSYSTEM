@@ -4862,10 +4862,8 @@ async function getQuincenalLeaderboard() {
     try {
         const snap = await fsdb.collection(col)
             .where('period', '==', period)
-            .orderBy('xp', 'desc')
-            .limit(20)
             .get();
-        if (!snap.empty) return snap.docs.map(d => d.data());
+        if (!snap.empty) return snap.docs.map(d => d.data()).sort((a,b) => (b.xp||0)-(a.xp||0)).slice(0,20);
     } catch(e) { console.warn('Quincenal leaderboard error:', e); }
     return [];
 }

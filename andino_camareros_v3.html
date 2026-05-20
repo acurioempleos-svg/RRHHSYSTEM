@@ -3347,15 +3347,15 @@ const DATA_LAMAR_INGR = [
 let extraData = null; // banco externo — cargado async si existe
 function getLocalTrivia(local) {
     // Tanta y La Mar tienen sus propias preguntas
-    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(extraData != null ? (extraData.trivia_tanta || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(extraData != null ? (extraData.trivia_lamar || []) : [])];
+    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(extraData != null ? (extraData['trivia-tanta'] || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(extraData != null ? (extraData['trivia-lamar'] || []) : [])];
     // Barra Chalaca (todos los BC comparten)
     return [...DATA.trivia, ...(extraData != null ? (extraData.trivia || []) : [])];
 }
 
 function getLocalIngredientes(local) {
-    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(extraData != null ? (extraData.ingr_tanta || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(extraData != null ? (extraData.ingr_lamar || []) : [])];
+    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(extraData != null ? (extraData['ingr-tanta'] || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(extraData != null ? (extraData['ingr-lamar'] || []) : [])];
     return [...DATA.ingredientesBank, ...(extraData != null ? (extraData.ingr || []) : [])];
 }
 
@@ -3419,7 +3419,12 @@ function getCategoryEmoji(cat) {
 let _ingrSelectedCategory = null; // null = todas
 
 function getIngrCategories() {
-    const all = [...DATA.ingredientesBank, ...(extraData != null ? (extraData.ingr || []) : [])];
+    const extra = extraData != null ? [
+        ...(extraData.ingr || []),
+        ...(extraData['ingr-tanta'] || []),
+        ...(extraData['ingr-lamar'] || []),
+    ] : [];
+    const all = [...DATA.ingredientesBank, ...extra];
     const cats = [...new Set(all.map(q => q.category).filter(Boolean))];
     return cats.sort();
 }

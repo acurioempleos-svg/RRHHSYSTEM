@@ -2840,7 +2840,7 @@
 
         <button class="btn" id="btn-start-game" onclick="startGameByMode()">
             ▶️
-            Comenzar Entrenamiento Libre
+            Buen servicio 🍽️
         </button>
 
         <div style="display:flex; gap:8px; margin-top:10px;">
@@ -3025,14 +3025,8 @@
         <div class="q-text" id="trivia-text"></div>
         <div id="trivia-options"></div>
         
-        <!-- Progress indicator for trivia -->
-        <div style="display: flex; gap: 6px; margin-top: 16px; justify-content: center;" id="trivia-progress-pips">
-            <div class="sim-score-pip filled" style="flex: 0 0 30px;"></div>
-            <div class="sim-score-pip" style="flex: 0 0 30px;"></div>
-            <div class="sim-score-pip" style="flex: 0 0 30px;"></div>
-            <div class="sim-score-pip" style="flex: 0 0 30px;"></div>
-            <div class="sim-score-pip" style="flex: 0 0 30px;"></div>
-        </div>
+        <!-- Progress indicator for trivia (filled dynamically) -->
+        <div style="display: flex; gap: 6px; margin-top: 16px; justify-content: center; flex-wrap: wrap;" id="trivia-progress-pips"></div>
     </div>
 
     <!-- ── REPASO INTELIGENTE ── -->
@@ -3392,19 +3386,6 @@ async function trackQuestionStat(questionText, isCorrect, local, playerDni) {
         await ref.set(update, { merge: true });
     } catch(e) { /* fail silently — no bloquear el juego */ }
 }
-    trivia: [
-        { min: 6, icon: "👑", label: "MAESTRO DE SALÓN",  sub: "Protocolo impecable. El salón está en manos expertas." },
-        { min: 4, icon: "🥈", label: "PROFESIONAL DESTACADO", sub: "Excelente desempeño. Casi perfecto." },
-        { min: 2, icon: "🥉", label: "EN PROGRESO", sub: "Vas bien, pero hay áreas a reforzar." },
-        { min: 0, icon: "📚", label: "SIGUE PRACTICANDO", sub: "Repasá el manual y volvé a intentarlo." }
-    ],
-    sim: [
-        { min: 22, icon: "⭐", label: "SERVICIO 5 ESTRELLAS", sub: "El cliente salió encantado. Reseña impecable." },
-        { min: 15, icon: "👍", label: "BUENA ATENCIÓN", sub: "Servicio correcto con margen de mejora." },
-        { min: 0,  icon: "😐", label: "DEBE MEJORAR", sub: "El cliente tuvo una experiencia discreta." }
-    ]
-};
-
 // Utility function to shuffle array (Fisher-Yates)
 function shuffleArray(array) {
     const shuffled = [...array];
@@ -3703,15 +3684,23 @@ const app = (() => {
     const updateTriviaProgress = () => {
         const container = document.getElementById('trivia-progress-pips');
         if (!container) return;
-        
+        const triviaData = window._triviaOverride || window._localTrivia || DATA.trivia;
+        const total = triviaData.length;
+        // Rebuild pips if count mismatch
+        if (container.children.length !== total) {
+            container.innerHTML = '';
+            for (let i = 0; i < total; i++) {
+                const pip = document.createElement('div');
+                pip.className = 'sim-score-pip';
+                pip.style.cssText = 'flex: 0 0 22px; height: 6px; border-radius: 3px;';
+                container.appendChild(pip);
+            }
+        }
         const pips = container.querySelectorAll('.sim-score-pip');
         pips.forEach((pip, index) => {
             pip.classList.remove('filled', 'partial', 'low');
-            if (index < state.step) {
-                pip.classList.add('filled');
-            } else if (index === state.step) {
-                pip.classList.add('partial');
-            }
+            if (index < state.step) pip.classList.add('filled');
+            else if (index === state.step) pip.classList.add('partial');
         });
     };
 
@@ -3842,6 +3831,18 @@ const app = (() => {
                 return;
             }
             
+            // Rebuild medals row to match question count
+            const medalsEl = document.getElementById('trivia-medals');
+            if (medalsEl && medalsEl.children.length !== totalQuestions) {
+                medalsEl.innerHTML = '';
+                for (let i = 0; i < totalQuestions; i++) {
+                    const m = document.createElement('div');
+                    m.className = 'medal';
+                    m.textContent = '🥇';
+                    medalsEl.appendChild(m);
+                }
+            }
+
             const q = triviaData[state.step];
             const textEl = document.getElementById('trivia-text');
             const countEl = document.getElementById('trivia-count');
@@ -3917,6 +3918,7 @@ const app = (() => {
                     if (fill) fill.classList.add('urgent');
                     if (timerNum) timerNum.classList.add('urgent');
                 } else {
+                    if (fill) fill.classList.remove('urgent');
                     if (timerNum) timerNum.classList.remove('urgent');
                 }
                 
@@ -4050,7 +4052,9 @@ const app = (() => {
             
             state.score += opt.s;
             state.simScores.push(opt.s);
+            state.score += opt.s;
             state.xp += opt.s * 10;
+            updateXpBar(((state.step + 1) / DATA.sim.length) * 80);
             
             if (opt.s === 5) {
                 state.streak++;
@@ -4201,6 +4205,8 @@ const app = (() => {
                 state.streak = 0;
                 playSound('wrong');
                 shakeWrong();
+                state.wrongAnswers = state.wrongAnswers || [];
+                state.wrongAnswers.push({ q: q.q || q.dish, correct: q.o[q.c] });
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
                     state.score -= 1;
@@ -5409,7 +5415,7 @@ const REPASODB = {
 // ── Parchear checkTrivia para capturar el objeto completo ──
 const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
 app.checkTrivia = function(idx, btn) {
-    const triviaData = window._triviaOverride || DATA.trivia;
+    const triviaData = window._triviaOverride || window._localTrivia || DATA.trivia;
     const q = triviaData[app.state.step];
     if (idx !== q.c) {
         app.state._wrongFull = app.state._wrongFull || [];

@@ -3349,6 +3349,8 @@ const DATA_LAMAR_INGR = [
     { dish: "Arroz con Mariscos", emoji: "🍚", category: "ARROZ", q: "¿Qué consistencia tiene el arroz con mariscos de La Mar?", o: ["Seco como paella", "Meloso — entre risotto y chaufa", "Líquido como sopa"], c: 1, explanation: "El arroz con mariscos de La Mar es meloso, cocinado al momento con fondo de mariscos y ají amarillo." },
 ];
 
+
+let extraData = null; // banco externo — cargado async si existe
 function getLocalTrivia(local) {
     // Tanta y La Mar tienen sus propias preguntas
     if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(typeof extraData !== 'undefined' ? (extraData.trivia_tanta || []) : [])];
@@ -3478,6 +3480,38 @@ function selectRandomSimScenarios(count = 5) {
     const shuffled = shuffleArray(DATA.simBank);
     return shuffled.slice(0, Math.min(count, DATA.simBank.length));
 }
+
+// ── RANKS: definición de rangos para trivia/sim/ingredientes ─────────────────
+const RANKS = {
+    trivia: [
+        { min: 14, icon: '🏆', label: 'Maestro del Protocolo', sub: '¡Perfecto! Conocés cada detalle.' },
+        { min: 11, icon: '⭐', label: 'Camarero Experto',       sub: 'Excelente nivel. Seguí así.' },
+        { min:  8, icon: '👍', label: 'Buen Servicio',          sub: 'Sólido. Hay detalles para pulir.' },
+        { min:  5, icon: '📖', label: 'En Aprendizaje',         sub: 'Vas por buen camino. Seguí practicando.' },
+        { min:  0, icon: '💪', label: 'Principiante',           sub: 'Todo empieza con el primer paso.' },
+    ],
+    ingredientes: [
+        { min: 7, icon: '🍽️', label: 'Chef Honorario',    sub: '¡Conocés la carta de memoria!' },
+        { min: 5, icon: '⭐',  label: 'Conocedor',         sub: 'Muy bien. Pulí los detalles.' },
+        { min: 3, icon: '👍',  label: 'En progreso',       sub: 'Bien encaminado. Seguí repasando.' },
+        { min: 0, icon: '📖',  label: 'Comenzando',        sub: 'La carta es larga — practicá seguido.' },
+    ],
+    sim: [
+        { min: 22, icon: '🌟', label: 'Servicio 5 Estrellas', sub: '¡Camarero del año! Impecable.' },
+        { min: 18, icon: '⭐', label: 'Excelente Atención',   sub: 'Muy buena performance. Casi perfecto.' },
+        { min: 13, icon: '👍', label: 'Buen Camarero',        sub: 'Sólido. Hay situaciones por mejorar.' },
+        { min:  8, icon: '📖', label: 'En Formación',         sub: 'Básico correcto. Practicá los escenarios difíciles.' },
+        { min:  0, icon: '💪', label: 'Aprendiz',             sub: 'Todo empieza con práctica. ¡Seguí!' },
+    ],
+};
+
+// ── MODE_META: metadata de modos para UI ────────────────────────────────────
+const MODE_META = {
+    sim:          { icon: '🎭', name: 'Cliente vs Camarero',  time: '~5 min',   questions: '5 escenarios', xp: 'Hasta 60 XP' },
+    trivia:       { icon: '🧠', name: 'Trivia de Protocolo',  time: '~3 min',   questions: '7 preguntas',  xp: 'Hasta 70 XP' },
+    ingredientes: { icon: '🍽️', name: 'Conocé la Carta',      time: '~4 min',   questions: '7 items',      xp: 'Hasta 70 XP' },
+    daily:        { icon: '⚡', name: 'Desafío del Día',       time: '~3 min',   questions: '7 preguntas',  xp: 'XP ×2'       },
+};
 
 const app = (() => {
     let state = {
@@ -3790,9 +3824,6 @@ const app = (() => {
                 switchView('ingredientes', () => {
                     app.renderIngredientes();
                 });
-            } else if (state.mode === 'repaso') {
-                app.startRepaso();
-                return;
             } else {
                 switchView('sim', () => {
                     renderSimPips();
@@ -4235,8 +4266,11 @@ const app = (() => {
 
                 if (state.mode === 'trivia' || state.mode === 'ingredientes') {
                     const isTrivia = state.mode === 'trivia';
-                    const triviaData = window._triviaOverride || DATA.trivia;
-                    const rank = RANKS.trivia.find(r => state.score >= r.min) || RANKS.trivia[RANKS.trivia.length - 1];
+                    const triviaData = window._triviaOverride 
+                        || (isTrivia ? (window._localTrivia || DATA.trivia) : state.ingrSelected)
+                        || DATA.trivia;
+                    const rankTable = isTrivia ? RANKS.trivia : RANKS.ingredientes;
+                    const rank = rankTable.find(r => state.score >= r.min) || rankTable[rankTable.length - 1];
                     const total = isTrivia ? triviaData.length : 7;
                     if (resIcon) resIcon.textContent = rank.icon;
                     if (resRankLabel) resRankLabel.textContent = isTrivia ? 'RANGO TRIVIA' : 'RANGO CARTA';
@@ -4313,7 +4347,7 @@ const app = (() => {
                     title: 'Ultra Mega Camarero - Resultados',
                     text: shareText
                 }).catch(() => {
-                    this.copyToClipboard(shareText);
+                    app.copyToClipboard(shareText);
                 });
             } else {
                 this.copyToClipboard(shareText);
@@ -4396,7 +4430,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dniInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                app.initGame();
+                startGameByMode();
             }
         });
     }

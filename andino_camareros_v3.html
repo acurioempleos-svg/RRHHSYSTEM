@@ -4430,7 +4430,7 @@ function startGameByMode() {
         const nombreInput = document.getElementById('user-nombre');
         if (nombreInput) app.state.nombre = nombreInput.value.trim();
 
-        if (mode === 'ingredientes') { showCategoriasModal(); }
+        if (mode === 'ingredientes') { _ingrSelectedCategory = null; app.initGame(); }
         else if (mode === 'repaso') { app.startRepaso(); }
         else { app.initGame(); }
     } catch(err) {
@@ -4970,6 +4970,13 @@ app.finish = async function() {
     let newAchievements = [];
     let leveledUp = false;
     let newLevel = 0;
+    // Also capture wrong answers for repaso (merged from second patch)
+    const mode  = app.state.mode;
+    const wrongs = app.state._wrongFull || [];
+    if (dni && wrongs.length > 0) {
+        REPASODB.addWrongs(dni, mode, wrongs);
+    }
+    app.state._wrongFull = [];
 
     if (dni) {
         const prevPlayer = DB.getPlayer(dni);
@@ -5008,8 +5015,20 @@ app.finish = async function() {
     }
 
     // 3. After original finish renders results (it uses 500ms timeout internally),
-    //    patch the XP box with total stats
+    //    patch the XP box with total stats + repaso button
     setTimeout(() => {
+        // Show repaso button if pending questions
+        if (dni) {
+            const pending = REPASODB.countPending(dni);
+            const repasoBtn = document.getElementById('res-repaso-btn');
+            if (repasoBtn && pending > 0) {
+                repasoBtn.style.display = 'flex';
+                repasoBtn.innerHTML = '🧠 Repasar ' + pending + ' pregunta' + (pending !== 1 ? 's' : '') + ' pendiente' + (pending !== 1 ? 's' : '');
+            } else if (repasoBtn) {
+                repasoBtn.style.display = 'none';
+            }
+            updateRepasoBadge(dni);
+        }
         if (savedPlayer) {
             const xpGainedBox = document.querySelector('.xp-gained');
             if (xpGainedBox) {
@@ -5099,6 +5118,13 @@ app.switchLbTab = function(tab) {
 };
 
 app.goHome = function() {
+    // Reset daily override so next trivia game doesn't reuse daily questions
+    if (app.state.isDaily) {
+        window._triviaOverride = null;
+        window._localTrivia = null;
+        app.state.isDaily = false;
+        app.state.dailyXpMult = 1;
+    }
     const showLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.add('active'); };
     const hideLoading = () => { const o = document.getElementById('loading-overlay'); if(o) o.classList.remove('active'); };
     showLoading();
@@ -5451,6 +5477,7 @@ const _origCheckTriviaRepaso = app.checkTrivia.bind(app);
 app.checkTrivia = function(idx, btn) {
     const triviaData = window._triviaOverride || window._localTrivia || DATA.trivia;
     const q = triviaData[app.state.step];
+    if (!q) { _origCheckTriviaRepaso(idx, btn); return; } // guard: timer fired after game ended
     if (idx !== q.c) {
         app.state._wrongFull = app.state._wrongFull || [];
         // Avoid duplicates
@@ -5465,7 +5492,8 @@ app.checkTrivia = function(idx, btn) {
 // ── Parchear checkIngredientes ──
 const _origCheckIngrRepaso = app.checkIngredientes.bind(app);
 app.checkIngredientes = function(idx, btn) {
-    const q = app.state.ingrSelected[app.state.step];
+    const q = (app.state.ingrSelected || [])[app.state.step];
+    if (!q) { _origCheckIngrRepaso(idx, btn); return; } // guard: timer fired after game ended
     if (idx !== q.c) {
         app.state._wrongFull = app.state._wrongFull || [];
         const id = repasoQId('ingredientes', q);
@@ -5498,35 +5526,7 @@ app.initGame = function() {
     _origInitGameRepaso();
 };
 
-// ── Parchear finish para guardar wrongFull en REPASODB y mostrar botón ──
-const _origFinishRepaso = app.finish.bind(app);
-app.finish = async function() {
-    const dni   = app.state.dni;
-    const mode  = app.state.mode;
-    const wrongs = app.state._wrongFull || [];
-
-    if (dni && wrongs.length > 0) {
-        REPASODB.addWrongs(dni, mode, wrongs);
-    }
-    app.state._wrongFull = [];
-
-    await _origFinishRepaso();
-
-    // Show "Repasar ahora" button if there are pending
-    setTimeout(() => {
-        if (dni) {
-            const pending = REPASODB.countPending(dni);
-            const btn = document.getElementById('res-repaso-btn');
-            if (btn && pending > 0) {
-                btn.style.display = 'flex';
-                btn.innerHTML = `🧠 Repasar ${pending} pregunta${pending !== 1 ? 's' : ''} pendiente${pending !== 1 ? 's' : ''}`;
-            } else if (btn) {
-                btn.style.display = 'none';
-            }
-        }
-        updateRepasoBadge(dni);
-    }, 1100);
-};
+// (repaso wrongFull save merged into main app.finish patch above)
 
 function updateRepasoBadge(dni) {
     const badge = document.getElementById('repaso-count-badge');
@@ -5865,4 +5865,3 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
-            

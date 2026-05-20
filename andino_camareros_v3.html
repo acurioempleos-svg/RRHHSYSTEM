@@ -4376,33 +4376,67 @@ const app = (() => {
     };
 })();
 
+// ── ADMIN LOGIN MODAL (funciones requeridas por el modal del panel) ──────────
+function closeLogin() {
+    const overlay = document.getElementById('-login-overlay');
+    if (overlay) overlay.classList.remove('active');
+}
+function submitLogin() {
+    const user = (document.getElementById('-login-user') || {}).value || '';
+    const pass = (document.getElementById('-login-pass') || {}).value || '';
+    const errorEl = document.getElementById('-login-error');
+    // Credenciales de admin — ajustar según necesidad
+    if (user === 'admin' && pass === 'andino2024') {
+        closeLogin();
+        window.location.href = 'admin.html';
+    } else {
+        if (errorEl) { errorEl.classList.add('show'); setTimeout(() => errorEl.classList.remove('show'), 3000); }
+    }
+}
+function openAdminLogin() {
+    const overlay = document.getElementById('-login-overlay');
+    if (overlay) overlay.classList.add('active');
+}
+
 // startGameByMode: unified start handler for all modes
 function startGameByMode() {
-    const mode = app.state.mode || 'sim';
-    // Validate DNI and local for all modes before proceeding
-    const dniInput   = document.getElementById('user-dni');
-    const localInput = document.getElementById('user-local');
-    const dni   = dniInput   ? dniInput.value.trim()   : '';
-    const local = localInput ? localInput.value         : '';
-    if (dni.length < 6) {
-        alert("Ingresá un DNI válido (mínimo 6 dígitos)");
-        if (dniInput) dniInput.focus();
-        return;
-    }
-    if (!local) {
-        alert("Seleccioná tu local antes de comenzar");
-        if (localInput) localInput.focus();
-        return;
-    }
-    // Sync state
-    app.state.dni   = dni;
-    app.state.local = local;
-    const nombreInput = document.getElementById('user-nombre');
-    if (nombreInput) app.state.nombre = nombreInput.value.trim();
+    try {
+        if (typeof app === 'undefined' || !app || !app.state) {
+            alert('Error: la app no cargó bien. Recargá la página.');
+            return;
+        }
+        // Cerrar onboarding si está activo (por si cubre el botón)
+        const onbOverlay = document.getElementById('onboarding-overlay');
+        if (onbOverlay && onbOverlay.classList.contains('active')) {
+            app.onbSkip && app.onbSkip();
+        }
+        const mode = app.state.mode || 'sim';
+        const dniInput   = document.getElementById('user-dni');
+        const localInput = document.getElementById('user-local');
+        const dni   = dniInput   ? dniInput.value.trim()   : '';
+        const local = localInput ? localInput.value         : '';
+        if (dni.length < 6) {
+            alert("Ingresá un DNI válido (mínimo 6 dígitos)");
+            if (dniInput) dniInput.focus();
+            return;
+        }
+        if (!local) {
+            alert("Seleccioná tu local antes de comenzar");
+            if (localInput) localInput.focus();
+            return;
+        }
+        app.state.dni   = dni;
+        app.state.local = local;
+        const nombreInput = document.getElementById('user-nombre');
+        if (nombreInput) app.state.nombre = nombreInput.value.trim();
 
-    if (mode === 'ingredientes') { showCategoriasModal(); }
-    else if (mode === 'repaso') { app.startRepaso(); }
-    else { app.initGame(); }
+        if (mode === 'ingredientes') { showCategoriasModal(); }
+        else if (mode === 'repaso') { app.startRepaso(); }
+        else { app.initGame(); }
+    } catch(err) {
+        console.error('startGameByMode error:', err);
+        alert('Error al iniciar: ' + err.message + '\nRecargá la página e intentá de nuevo.');
+    }
 }
 
 // onHomeInit: restaura datos del usuario al volver al home
@@ -5810,7 +5844,7 @@ window.addEventListener('error', (e) => {
 
 
     <!-- ── ONBOARDING OVERLAY ── -->
-    <div id="onboarding-overlay">
+    <div id="onboarding-overlay" onclick="if(event.target===this) app.onbSkip()">
         <div class="onb-card">
             <div class="onb-step-dots">
                 <div class="onb-dot active" id="onb-dot-0"></div>
@@ -5831,3 +5865,4 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
+                                                                                                  

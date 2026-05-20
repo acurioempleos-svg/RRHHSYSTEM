@@ -3347,16 +3347,16 @@ const DATA_LAMAR_INGR = [
 let extraData = null; // banco externo — cargado async si existe
 function getLocalTrivia(local) {
     // Tanta y La Mar tienen sus propias preguntas
-    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(typeof extraData !== 'undefined' ? (extraData.trivia_tanta || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(typeof extraData !== 'undefined' ? (extraData.trivia_lamar || []) : [])];
+    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(extraData != null ? (extraData.trivia_tanta || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(extraData != null ? (extraData.trivia_lamar || []) : [])];
     // Barra Chalaca (todos los BC comparten)
-    return [...DATA.trivia, ...(typeof extraData !== 'undefined' ? (extraData.trivia || []) : [])];
+    return [...DATA.trivia, ...(extraData != null ? (extraData.trivia || []) : [])];
 }
 
 function getLocalIngredientes(local) {
-    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(typeof extraData !== 'undefined' ? (extraData.ingr_tanta || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(typeof extraData !== 'undefined' ? (extraData.ingr_lamar || []) : [])];
-    return [...DATA.ingredientesBank, ...(typeof extraData !== 'undefined' ? (extraData.ingr || []) : [])];
+    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(extraData != null ? (extraData.ingr_tanta || []) : [])];
+    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(extraData != null ? (extraData.ingr_lamar || []) : [])];
+    return [...DATA.ingredientesBank, ...(extraData != null ? (extraData.ingr || []) : [])];
 }
 
 // ── Tracking de stats por pregunta en Firestore ────────────────────
@@ -3419,7 +3419,7 @@ function getCategoryEmoji(cat) {
 let _ingrSelectedCategory = null; // null = todas
 
 function getIngrCategories() {
-    const all = [...DATA.ingredientesBank, ...(typeof extraData !== 'undefined' ? (extraData.ingr || []) : [])];
+    const all = [...DATA.ingredientesBank, ...(extraData != null ? (extraData.ingr || []) : [])];
     const cats = [...new Set(all.map(q => q.category).filter(Boolean))];
     return cats.sort();
 }
@@ -5865,4 +5865,3 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
-                                                                                                  

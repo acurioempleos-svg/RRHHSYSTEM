@@ -3746,7 +3746,12 @@ const app = (() => {
 
         },
 
-        initGame: () => {
+        initGame: async () => {
+            // Si extraData aún no cargó, esperamos antes de continuar
+            if (extraData === null) {
+                try { await loadExtraQuestions(); } catch(e) {}
+            }
+
             const dniInput    = document.getElementById('user-dni');
             const nombreInput = document.getElementById('user-nombre');
             const localInput  = document.getElementById('user-local');
@@ -4579,6 +4584,29 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const fsdb = firebase.firestore();
 const PLAYERS_COL = 'andino_players';
+
+// ── CARGAR PREGUNTAS EXTRA DESDE ADMIN ────────────────────────────
+const EXTRA_COL = 'andino_extra_questions';
+
+async function loadExtraQuestions() {
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        if (doc.exists) {
+            extraData = doc.data();
+            console.log('[Andino] Preguntas extra cargadas:', {
+                trivia: (extraData.trivia || []).length,
+                sim:    (extraData.sim    || []).length,
+                ingr:   (extraData.ingr   || []).length,
+            });
+        }
+    } catch(e) {
+        console.warn('[Andino] No se pudieron cargar preguntas extra:', e);
+    }
+}
+
+// Cargar preguntas extra al iniciar la página (sin bloquear el juego)
+loadExtraQuestions();
+// ─────────────────────────────────────────────────────────────────
 
 const DB = {
     // ── LOCAL CACHE (por dispositivo) ──

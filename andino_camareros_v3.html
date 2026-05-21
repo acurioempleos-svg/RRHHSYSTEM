@@ -3346,17 +3346,30 @@ const DATA_LAMAR_INGR = [
 
 let extraData = null; // banco externo — cargado async si existe
 function getLocalTrivia(local) {
-    // Tanta y La Mar tienen sus propias preguntas
-    if (local === 'tanta') return [...DATA_TANTA_TRIVIA, ...(extraData != null ? (extraData['trivia-tanta'] || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_TRIVIA, ...(extraData != null ? (extraData['trivia-lamar'] || []) : [])];
-    // Barra Chalaca (todos los BC comparten)
-    return [...DATA.trivia, ...(extraData != null ? (extraData.trivia || []) : [])];
+    if (local === 'tanta') {
+        const ext = extraData != null ? (extraData['trivia-tanta'] || []) : [];
+        return ext.length ? ext : [...DATA_TANTA_TRIVIA];
+    }
+    if (local === 'lamar') {
+        const ext = extraData != null ? (extraData['trivia-lamar'] || []) : [];
+        return ext.length ? ext : [...DATA_LAMAR_TRIVIA];
+    }
+    // Barra Chalaca
+    const ext = extraData != null ? (extraData.trivia || []) : [];
+    return ext.length ? ext : [...DATA.trivia];
 }
 
 function getLocalIngredientes(local) {
-    if (local === 'tanta') return [...DATA_TANTA_INGR, ...(extraData != null ? (extraData['ingr-tanta'] || []) : [])];
-    if (local === 'lamar') return [...DATA_LAMAR_INGR, ...(extraData != null ? (extraData['ingr-lamar'] || []) : [])];
-    return [...DATA.ingredientesBank, ...(extraData != null ? (extraData.ingr || []) : [])];
+    if (local === 'tanta') {
+        const ext = extraData != null ? (extraData['ingr-tanta'] || []) : [];
+        return ext.length ? ext : [...DATA_TANTA_INGR];
+    }
+    if (local === 'lamar') {
+        const ext = extraData != null ? (extraData['ingr-lamar'] || []) : [];
+        return ext.length ? ext : [...DATA_LAMAR_INGR];
+    }
+    const ext = extraData != null ? (extraData.ingr || []) : [];
+    return ext.length ? ext : [...DATA.ingredientesBank];
 }
 
 // ── Tracking de stats por pregunta en Firestore ────────────────────
@@ -5889,10 +5902,6 @@ window.addEventListener('error', (e) => {
             <span class="onb-skip" onclick="app.onbSkip()">Saltear introducción</span>
         </div>
     </div>
-
-
-
-
 
 </body>
 </html>

@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Admin · Andino</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg: #FDF8EE;
+            --surface: #FFFFFF;
+            --surface-2: #F2ECD9;
+            --accent: #D4A800;
+            --border: rgba(26,20,0,0.10);
+            --text: #1A1400;
+            --text-muted: #8A7A50;
+            --danger: #C8001A;
+            --success: #1A7A3A;
+            --font-display: 'Oswald', sans-serif;
+            --font-body: 'Lato', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+            --radius: 16px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+        .page { width: 100%; max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+        .top-bar { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+        .back-btn { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-family:var(--font-body); font-size:13px; cursor:pointer; color:var(--text); text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+        .page-title { font-family:var(--font-display); font-size:20px; font-weight:700; text-transform:uppercase; letter-spacing:2px; }
+        /* Tabs */
+        .admin-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+        .admin-tab { padding:7px 14px; border-radius:10px; font-size:12px; font-family:var(--font-mono); cursor:pointer; font-weight:600; background:var(--surface); border:1px solid var(--border); color:var(--text-muted); transition:all .15s; }
+        .admin-tab.active { background:var(--text); color:var(--bg); border-color:var(--text); }
+        /* Forms */
+        .admin-section-title { font-family:var(--font-display); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; color:var(--text-muted); }
+        .admin-add-form { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; display:flex; flex-direction:column; gap:8px; }
+        .admin-add-form input,
+        .admin-add-form textarea,
+        .admin-add-form select { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; font-family:var(--font-body); font-size:13px; color:var(--text); width:100%; }
+        .admin-add-form textarea { min-height:60px; resize:vertical; }
+        .admin-add-form select { cursor:pointer; -webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7A50' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
+        .hint-box { font-size:11px; color:var(--success); font-family:var(--font-mono); background:rgba(26,122,58,0.08); border-radius:6px; padding:6px 10px; }
+        .form-label { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); font-weight:600; }
+        /* Lista items */
+        .admin-q-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; margin-bottom:6px; font-size:12px; }
+        .admin-q-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+        .admin-q-text { flex:1; line-height:1.4; font-weight:600; }
+        .admin-q-delete { background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; flex-shrink:0; }
+        .admin-q-badge { display:inline-block; font-size:9px; font-family:var(--font-mono); background:var(--surface-2); border:1px solid var(--border); border-radius:5px; padding:2px 7px; color:var(--text-muted); text-transform:uppercase; margin-right:4px; }
+        .admin-status { font-size:11px; font-family:var(--font-mono); margin-top:2px; }
+        .admin-status.ok  { color:var(--success); }
+        .admin-status.err { color:var(--danger); }
+        /* Botón */
+        .btn { width:100%; padding:12px 16px; border-radius:12px; border:none; cursor:pointer; font-family:var(--font-display); font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; background:var(--text); color:var(--bg); display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .15s; }
+        .btn:active { opacity:.8; }
+        .btn-secondary { background:var(--surface-2); color:var(--text-muted); border:1px solid var(--border); }
+        /* Dashboard */
+        .dash-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+        .dash-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; }
+        .dash-kpi-val { font-family:var(--font-display); font-size:24px; font-weight:700; }
+        .dash-kpi-label { font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; }
+        .dash-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+        .dash-filter-btn { padding:5px 10px; border-radius:8px; font-size:11px; font-family:var(--font-mono); cursor:pointer; background:var(--surface); border:1px solid var(--border); color:var(--text-muted); }
+        .dash-filter-btn.active { background:var(--text); color:var(--bg); border-color:var(--text); }
+        .dash-search { width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:10px; }
+        .dash-table-wrap { overflow-x:auto; border-radius:12px; border:1px solid var(--border); margin-bottom:10px; }
+        .dash-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .dash-table th { padding:10px 12px; text-align:left; font-family:var(--font-mono); font-size:10px; color:var(--text-muted); border-bottom:1px solid var(--border); cursor:pointer; white-space:nowrap; background:var(--surface-2); }
+        .dash-table th:hover { color:var(--text); }
+        .dash-table td { padding:10px 12px; border-bottom:1px solid var(--border); }
+        .dash-table tr:last-child td { border-bottom:none; }
+        .dash-table tbody tr { cursor:pointer; }
+        .dash-table tbody tr:hover td { background:var(--surface-2); }
+        .activity-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:4px; flex-shrink:0; }
+        .activity-dot.green  { background:var(--success); }
+        .activity-dot.yellow { background:var(--accent); }
+        .activity-dot.red    { background:var(--danger); }
+        .activity-dot.grey   { background:var(--text-muted); }
+        .dash-export-row { display:flex; gap:8px; margin-top:8px; }
+        .dash-export-btn { flex:1; padding:9px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-size:12px; font-family:var(--font-mono); cursor:pointer; text-align:center; color:var(--text-muted); }
+        .dash-export-btn:hover { border-color:var(--accent); color:var(--accent); }
+        .dash-loading { text-align:center; color:var(--text-muted); padding:20px; font-family:var(--font-mono); font-size:11px; }
+        .dash-player-detail { display:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; margin-top:8px; }
+        .dash-player-detail.open { display:block; }
+        .dash-detail-title { font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:10px; }
+        .dash-name-cell { display:flex; align-items:center; gap:6px; }
+        /* Premio preview */
+        .prize-preview-box { background:linear-gradient(135deg,#0A1A00 0%,#142800 50%,#0A1A00 100%); border:1.5px solid rgba(27,138,74,0.50); border-radius:14px; padding:14px 16px; display:none; }
+        /* Carga masiva modal */
+        .bulk-overlay { position:fixed; inset:0; background:rgba(26,20,0,0.65); z-index:9998; display:none; align-items:flex-end; justify-content:center; backdrop-filter:blur(4px); }
+        .bulk-overlay.open { display:flex; }
+        .bulk-sheet { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-width:520px; padding:20px 16px 32px; max-height:90vh; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+        .bulk-header { display:flex; justify-content:space-between; align-items:center; }
+        .bulk-title { font-family:var(--font-display); font-size:17px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; }
+        .bulk-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted); line-height:1; padding:4px; }
+        .bulk-format-hint { font-size:11px; font-family:var(--font-mono); color:var(--text-muted); background:var(--surface-2); border-radius:8px; padding:10px 12px; line-height:1.7; }
+        .bulk-format-hint code { color:var(--accent); }
+        .bulk-textarea { background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:var(--text); width:100%; min-height:140px; max-height:200px; resize:vertical; }
+        .bulk-parse-btn { background:var(--surface-2); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; font-family:var(--font-display); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px; cursor:pointer; }
+        .bulk-preview-area { overflow-y:auto; flex:1; display:none; }
+        .bulk-preview-area.open { display:block; }
+        .bulk-preview-item { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:6px; font-size:11px; font-family:var(--font-mono); line-height:1.5; position:relative; }
+        .bulk-preview-item .bp-err { color:var(--danger); font-weight:700; }
+        .bulk-preview-item .bp-ok  { color:var(--success); }
+        .bulk-status { font-size:11px; font-family:var(--font-mono); min-height:16px; }
+        .bulk-status.ok  { color:var(--success); }
+        .bulk-status.err { color:var(--danger); }
+        /* Login overlay */
+        .login-overlay { position:fixed; inset:0; background:rgba(26,20,0,0.65); z-index:9999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+        .login-box { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:28px 24px; width:100%; max-width:340px; margin:16px; }
+        .login-box-title { font-family:var(--font-display); font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
+        .login-box-sub { font-size:12px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:20px; }
+        .login-sel { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:10px; }
+        .login-inp { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); font-family:var(--font-body); font-size:13px; color:var(--text); margin-bottom:12px; }
+        .login-err { font-size:12px; color:var(--danger); font-family:var(--font-mono); margin-bottom:10px; min-height:16px; }
+        /* Hard questions tab */
+        .hard-q-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px; }
+        .hard-q-bar-wrap { background:var(--surface-2); border-radius:4px; height:7px; margin:5px 0 3px; overflow:hidden; }
+        .hard-q-bar { height:100%; border-radius:4px; transition:width .4s; }
+        /* Pregunta stats rows */
+        .q-stat-row { display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; }
+        .q-stat-row:last-child { border-bottom:none; }
+        .q-stat-pct { font-family:var(--font-mono); font-weight:700; min-width:36px; text-align:right; }
+        /* Local filter */
+        .local-badge { display:inline-block; font-size:9px; font-family:var(--font-mono); padding:2px 7px; border-radius:5px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-muted); text-transform:uppercase; margin-left:4px; }
+    </style>
+</head>
+<body>
+
+<!-- ── CARGA MASIVA MODAL ── -->
+<div class="bulk-overlay" id="bulk-overlay" onclick="if(event.target===this)closeBulk()">
+    <div class="bulk-sheet">
+        <div class="bulk-header">
+            <div class="bulk-title" id="bulk-modal-title">📥 Carga Masiva</div>
+            <button class="bulk-close" onclick="closeBulk()">✕</button>
+        </div>
+        <div class="bulk-format-hint" id="bulk-hint">
+            Pegá las preguntas en formato JSON. Ver ejemplos abajo.
+        </div>
+        <textarea class="bulk-textarea" id="bulk-textarea" placeholder="Pegá el JSON aquí..."></textarea>
+        <button class="bulk-parse-btn" onclick="bulkParse()">🔍 Vista previa</button>
+        <div class="bulk-status" id="bulk-parse-status"></div>
+        <div class="bulk-preview-area" id="bulk-preview-area"></div>
+        <button class="btn" id="bulk-save-btn" style="display:none;" onclick="bulkSave()">💾 Guardar todo</button>
+    </div>
+</div>
+
+
+<div class="login-overlay" id="admin-login-overlay">
+    <div class="login-box">
+        <div class="login-box-title">🛠️ Admin</div>
+        <div class="login-box-sub">Ingresá tu local y contraseña</div>
+        <select class="login-sel" id="admin-local-sel">
+            <option value="">— Seleccioná local —</option>
+            <option value="tanta">Tanta</option>
+            <option value="lamar">La Mar</option>
+            <option value="bcp">BCP · Palermo</option>
+            <option value="bcb">BCB · Belgrano</option>
+            <option value="bcbl">BCBL · Bulnes</option>
+            <option value="bcc">BCC · San Telmo</option>
+        </select>
+        <input class="login-inp" id="admin-pass-inp" type="password" placeholder="Contraseña">
+        <div class="login-err" id="admin-login-err"></div>
+        <button class="btn" onclick="adminLogin()">Entrar</button>
+    </div>
+</div>
+
+<div class="page" id="admin-page" style="display:none;">
+
+    <div class="top-bar">
+        <a href="andino_camareros_v3.html" class="back-btn">← Volver al juego</a>
+        <div class="page-title">🛠️ Admin <span class="local-badge" id="admin-local-label">—</span></div>
+    </div>
+
+    <div class="admin-tabs">
+        <div class="admin-tab active" id="atab-dash"   onclick="switchTab('dash')">📊 Dashboard</div>
+        <div class="admin-tab"        id="atab-daily"  onclick="switchTab('daily')">🔥 Trivia de Hoy</div>
+        <div class="admin-tab"        id="atab-prize"  onclick="switchTab('prize')">🏆 Premio</div>
+        <div class="admin-tab"        id="atab-banco"  onclick="switchTab('banco')">📚 Banco</div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="panel-dash">
+        <div class="dash-summary">
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-total">—</div><div class="dash-kpi-label">Jugadores</div></div>
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-active">—</div><div class="dash-kpi-label">Activos 7d</div></div>
+            <div class="dash-kpi"><div class="dash-kpi-val" id="dash-kpi-games">—</div><div class="dash-kpi-label">Partidas</div></div>
+        </div>
+        <div class="dash-filters">
+            <div class="dash-filter-btn active" id="df-all"      onclick="dashFilter('all')">Todos</div>
+            <div class="dash-filter-btn"        id="df-active"   onclick="dashFilter('active')">✅ Activos</div>
+            <div class="dash-filter-btn"        id="df-inactive" onclick="dashFilter('inactive')">⚠️ Inactivos 7d</div>
+            <div class="dash-filter-btn"        id="df-new"      onclick="dashFilter('new')">🆕 Sin jugar</div>
+        </div>
+        <input class="dash-search" id="dash-search" placeholder="🔍 Buscar por nombre o DNI..." oninput="dashRender()">
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead><tr>
+                    <th onclick="dashSort('nombre')">Empleado</th>
+                    <th onclick="dashSort('totalXp')">XP ▾</th>
+                    <th onclick="dashSort('totalGames')">Partidas</th>
+                    <th onclick="dashSort('lastSeen')">Último acceso</th>
+                </tr></thead>
+                <tbody id="dash-tbody"><tr><td colspan="4" class="dash-loading">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="dash-player-detail" id="dash-player-detail">
+            <div class="dash-detail-title" id="dash-detail-name"></div>
+            <div id="dash-detail-content"></div>
+        </div>
+        <div class="dash-export-row">
+            <div class="dash-export-btn" onclick="dashExportCSV()">⬇ Exportar CSV</div>
+            <div class="dash-export-btn" onclick="dashRefresh()">↻ Actualizar</div>
+        </div>
+    </div>
+
+    <!-- PREMIO QUINCENAL -->
+    <div id="panel-prize" style="display:none;">
+        <div class="admin-section-title">🏆 Premio Quincenal</div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:14px;line-height:1.6;">
+            Este cartel aparece en la pantalla de inicio para todos los empleados.<br>
+            Mostrá qué pueden ganar si quedan primeros en el ranking quincenal.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Período actual</div>
+            <div style="font-family:var(--font-display);font-size:16px;font-weight:700;" id="admin-period-label">—</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px;" id="admin-period-days">—</div>
+        </div>
+        <div class="admin-add-form" style="gap:10px;">
+            <div class="form-label">⚙️ CONFIGURAR PREMIO</div>
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div style="flex:0 0 auto;">
+                    <div class="form-label" style="margin-bottom:4px;">EMOJI</div>
+                    <input id="prize-emoji-input" placeholder="🎁" style="width:64px;text-align:center;font-size:20px;padding:6px 8px;">
+                </div>
+                <div style="flex:1;">
+                    <div class="form-label" style="margin-bottom:4px;">TÍTULO DEL PREMIO</div>
+                    <input id="prize-title-input" placeholder="Ej: Día libre extra">
+                </div>
+            </div>
+            <div>
+                <div class="form-label" style="margin-bottom:4px;">DESCRIPCIÓN</div>
+                <textarea id="prize-desc-input" placeholder="Ej: El camarero con más XP de la quincena gana un franco extra." style="min-height:60px;"></textarea>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="form-label">VISIBLE EN EL JUEGO</div>
+                <div style="display:flex;gap:6px;">
+                    <button id="prize-active-yes" class="btn" style="flex:0 0 auto;width:auto;padding:6px 14px;font-size:12px;" onclick="setPrizeActive(true)">✓ Sí</button>
+                    <button id="prize-active-no"  class="btn btn-secondary" style="flex:0 0 auto;width:auto;padding:6px 14px;font-size:12px;" onclick="setPrizeActive(false)">✗ No</button>
+                </div>
+            </div>
+            <button class="btn" onclick="savePrize()" style="margin-top:4px;">💾 Guardar Premio</button>
+            <div class="admin-status" id="status-prize"></div>
+        </div>
+        <div style="margin-top:16px;">
+            <div class="form-label" style="margin-bottom:10px;">VISTA PREVIA</div>
+            <div id="prize-preview" class="prize-preview-box">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-family:var(--font-mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;background:rgba(27,138,74,0.25);border:1px solid rgba(27,138,74,0.4);color:#4ADE80;padding:3px 8px;border-radius:5px;">🏆 Premio Quincenal</span>
+                    <span id="preview-countdown" style="font-family:var(--font-mono);font-size:9px;color:rgba(255,255,255,0.35);margin-left:auto;"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:32px;">🎁</span>
+                    <div>
+                        <div id="preview-title" style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:900;text-transform:uppercase;color:#fff;margin-bottom:3px;">Premio</div>
+                        <div id="preview-desc"  style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,0.45);">Descripción</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRIVIA DE HOY -->
+    <div id="panel-daily" style="display:none;">
+        <div class="admin-section-title">🔥 Trivia de Hoy — Preguntas más difíciles</div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;line-height:1.6;">
+            Estas son las preguntas con <strong>mayor tasa de error</strong> del equipo.<br>
+            Se calculan en tiempo real desde el historial de partidas.
+        </div>
+        <div id="daily-local-info" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+            Cargando datos...
+        </div>
+        <div id="panel-daily-list">
+            <div class="dash-loading">Cargando preguntas...</div>
+        </div>
+    </div>
+
+    <!-- TRIVIA PANEL (eliminado — reemplazado por Trivia de Hoy) -->
+    <div id="panel-trivia" style="display:none;"></div>
+
+    <!-- BANCO DE PREGUNTAS -->
+    <div id="panel-banco" style="display:none;">
+        <div class="admin-section-title">📚 Banco de Preguntas</div>
+        <p style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:14px;line-height:1.6;">
+            Todas las preguntas del juego — integradas y agregadas por admin. Podés agregar o eliminar preguntas directamente desde acá.
+        </p>
+        <!-- 3 main tabs: Trivia / Simulador / Carta -->
+        <div class="admin-tabs" style="margin-bottom:4px;">
+            <div class="admin-tab active" id="btab2-trivia" onclick="switchBancoTab2('trivia')">🧠 Trivia</div>
+            <div class="admin-tab" id="btab2-sim" onclick="switchBancoTab2('sim')">🎭 Simulador</div>
+            <div class="admin-tab" id="btab2-ingr" onclick="switchBancoTab2('ingr')">🍽️ Carta</div>
+        </div>
+        <!-- Sub-tabs (local filter) -->
+        <div id="banco-subtabs" class="admin-tabs" style="margin-bottom:12px; padding:6px 0 2px; border-top:1px solid var(--border);"></div>
+        <div id="banco-content"></div>
+    </div>
+
+
+</div>
+<script>
+// ═══════════════════════════════════════════════════════
+// FIREBASE
+// ═══════════════════════════════════════════════════════
+const firebaseConfig = {
+    apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+    authDomain: "rrhhsystem.firebaseapp.com",
+    projectId: "rrhhsystem",
+    storageBucket: "rrhhsystem.firebasestorage.app",
+    messagingSenderId: "71511125212",
+    appId: "1:71511125212:web:03a0ad11b281e397a29819"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const fsdb = firebase.firestore();
+
+// ═══════════════════════════════════════════════════════
+// LOCALES Y CONTRASEÑAS
+// ═══════════════════════════════════════════════════════
+const LOCAL_PASSWORDS = {
+    tanta: 'tanta2025',
+    lamar: 'lamar2025',
+    bcp:  'bcp2025',
+    bcb:  'bcb2025',
+    bcbl: 'bcbl2025',
+    bcc:  'bcc2025',
+};
+const LOCAL_LABELS = {
+    tanta: 'Tanta',
+    lamar: 'La Mar',
+    bcp:  'BCP · Palermo',
+    bcb:  'BCB · Belgrano',
+    bcbl: 'BCBL · Bulnes',
+    bcc:  'BCC · San Telmo',
+};
+
+let currentLocal = null; // se setea al hacer login
+
+function adminLogin() {
+    const local = document.getElementById('admin-local-sel').value;
+    const pass  = document.getElementById('admin-pass-inp').value;
+    const err   = document.getElementById('admin-login-err');
+    if (!local) { err.textContent = 'Seleccioná un local'; return; }
+    if (LOCAL_PASSWORDS[local] !== pass) { err.textContent = 'Contraseña incorrecta'; return; }
+    currentLocal = local;
+    document.getElementById('admin-login-overlay').style.display = 'none';
+    document.getElementById('admin-page').style.display = 'block';
+    document.getElementById('admin-local-label').textContent = LOCAL_LABELS[local] || local;
+    dashRefresh();
+}
+
+// Enter key on password field
+document.getElementById('admin-pass-inp')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') adminLogin();
+});
+
+// ═══════════════════════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════════════════════
+const EXTRA_COL   = 'andino_extra_questions';
+const PLAYERS_COL = 'andino_players';
+const PRIZE_COL   = 'andino_config';
+const PRIZE_DOC   = 'prize_quincenal';
+// Colección para stats por pregunta
+const Q_STATS_COL = 'andino_question_stats';
+
+const LEVEL_THRESHOLDS = [0,200,600,1400,3000,6000,11000,19000,32000,52000,82000,130000];
+const LEVEL_NAMES = ['Runner','Runner Senior','Bachero','Ayudante de Salón','Camarero Jr.','Camarero','Camarero Senior','Jefe de Sector','Sommelier','Maître Jr.','Maître','Maître Ejecutivo'];
+
+function getLevel(xp) {
+    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+        if (xp >= LEVEL_THRESHOLDS[i]) return i;
+    }
+    return 0;
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+const ALL_TABS = ['dash','daily','prize','banco'];
+
+function switchTab(tab) {
+    ALL_TABS.forEach(t => {
+        const btn = document.getElementById('atab-' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
+        const panel = document.getElementById('panel-' + t);
+        if (panel) panel.style.display = t === tab ? 'block' : 'none';
+    });
+    if (tab === 'dash')        dashRefresh();
+    else if (tab === 'daily')  loadDailyHard();
+    else if (tab === 'prize')  loadPrizePanel();
+    else if (tab === 'banco')  initBancoTab();
+}
+
+// ═══════════════════════════════════════════════════════
+// TRIVIA DE HOY — Preguntas más difíciles
+// ═══════════════════════════════════════════════════════
+// Las stats de preguntas se guardan en Firestore bajo andino_question_stats
+// Estructura: doc_id = hash(pregunta), campos: { q, attempts, errors, local }
+
+async function loadDailyHard() {
+    const panel = document.getElementById('panel-daily-list');
+    const info  = document.getElementById('daily-local-info');
+    panel.innerHTML = '<div class="dash-loading">Cargando estadísticas...</div>';
+
+    try {
+        let query = fsdb.collection(Q_STATS_COL);
+        // Filtrar por local si no es un local compartido (BC*)
+        const isBc = currentLocal && ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
+        const localGroup = isBc ? 'bc' : currentLocal;
+
+        const snap = await query.get();
+        if (snap.empty) {
+            panel.innerHTML = '<div class="dash-loading">Aún no hay estadísticas de preguntas.<br>Los datos se acumulan a medida que el equipo juega.</div>';
+            return;
+        }
+
+        // Filtrar por local group
+        let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (localGroup) {
+            docs = docs.filter(d => !d.localGroup || d.localGroup === localGroup);
+        }
+
+        // Ordenar por tasa de error descendente, mínimo 3 intentos
+        const withErr = docs
+            .filter(d => (d.attempts || 0) >= 3)
+            .map(d => ({
+                ...d,
+                errorRate: ((d.errors || 0) / (d.attempts || 1)) * 100
+            }))
+            .sort((a, b) => b.errorRate - a.errorRate)
+            .slice(0, 10);
+
+        const totalDocs = docs.filter(d => (d.attempts || 0) >= 1).length;
+        const totalAttempts = docs.reduce((s, d) => s + (d.attempts || 0), 0);
+
+        info.innerHTML = `
+            <span style="color:var(--text);">Local: <strong>${LOCAL_LABELS[currentLocal] || currentLocal}</strong></span> ·
+            <span>${totalDocs} preguntas registradas</span> ·
+            <span>${totalAttempts} intentos totales</span>
+        `;
+
+        if (!withErr.length) {
+            panel.innerHTML = '<div class="dash-loading">Se necesitan al menos 3 intentos por pregunta para calcular dificultad.<br>El equipo necesita jugar más partidas.</div>';
+            return;
+        }
+
+        panel.innerHTML = withErr.map((d, i) => {
+            const color = d.errorRate >= 60 ? 'var(--danger)' : d.errorRate >= 40 ? 'var(--accent)' : 'var(--success)';
+            const pct   = Math.round(d.errorRate);
+            return `
+            <div class="hard-q-item">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">
+                    <div style="font-size:12px;font-weight:600;line-height:1.4;flex:1;">${i + 1}. ${d.q || '(pregunta sin texto)'}</div>
+                    <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:${color};flex-shrink:0;">${pct}%</div>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">error</div>
+                <div class="hard-q-bar-wrap">
+                    <div class="hard-q-bar" style="width:${pct}%;background:${color};"></div>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                    ${d.errors||0} errores de ${d.attempts||0} intentos
+                    ${d.localGroup ? '· ' + (d.localGroup === 'bc' ? 'Barra Chalaca' : LOCAL_LABELS[d.localGroup] || d.localGroup) : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch(e) {
+        panel.innerHTML = `<div class="dash-loading" style="color:var(--danger);">Error: ${e.message}</div>`;
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// PREGUNTAS EXTRA
+// ═══════════════════════════════════════════════════════
+let extraData = { trivia: [], sim: [], ingr: [] };
+
+async function loadExtra() {
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        if (doc.exists) extraData = { trivia: [], sim: [], ingr: [], ...doc.data() };
+    } catch(e) { console.warn('loadExtra:', e); }
+}
+
+async function saveExtra() {
+    try { await fsdb.collection(EXTRA_COL).doc('bank').set(extraData); }
+    catch(e) { console.warn('saveExtra:', e); }
+}
+
+function renderList(tab) {
+    const el = document.getElementById('q-list-' + tab);
+    if (!el) return;
+    const items = extraData[tab] || [];
+    if (!items.length) { el.innerHTML = '<div class="dash-loading">Sin preguntas extra agregadas</div>'; return; }
+    el.innerHTML = items.map((it, i) => {
+        let detail = '';
+        if (tab === 'trivia' || tab === 'ingr') {
+            detail = (it.o || []).map((o, idx) =>
+                `<div style="color:${idx === (it.c ?? 0) ? 'var(--success)' : 'var(--text-muted)'};font-size:11px;">${idx === (it.c ?? 0) ? '✓' : '○'} ${o}</div>`
+            ).join('');
+        } else if (tab === 'sim') {
+            detail = (it.options || []).map(o =>
+                `<div style="color:var(--text-muted);font-size:11px;">${o.pts}pts: ${o.text}</div>`
+            ).join('');
+        }
+        const badge = (tab === 'ingr' && it.category) ? `<span class="admin-q-badge">${it.category}</span> ` : '';
+        const title = tab === 'sim' ? it.client : (tab === 'ingr' ? `${it.dish} — ${it.q}` : it.q);
+        return `
+        <div class="admin-q-item">
+            <div class="admin-q-header">
+                <div class="admin-q-text">${badge}${title}</div>
+                <button class="admin-q-delete" onclick="adminDelete('${tab}',${i})" title="Eliminar">✕</button>
+            </div>
+            <div>${detail}</div>
+            ${it.explanation ? `<div style="font-size:11px;color:var(--text-muted);">💡 ${it.explanation}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+async function adminDelete(tab, idx) {
+    if (!confirm('¿Eliminar esta pregunta?')) return;
+    extraData[tab].splice(idx, 1);
+    await saveExtra();
+    renderList(tab);
+}
+
+async function adminAdd(tab) {
+    const status = document.getElementById('status-' + tab);
+    let item;
+
+    if (tab === 'trivia') {
+        const q   = document.getElementById('adm-trivia-q').value.trim();
+        const o0  = document.getElementById('adm-trivia-o0').value.trim();
+        const o1  = document.getElementById('adm-trivia-o1').value.trim();
+        const o2  = document.getElementById('adm-trivia-o2').value.trim();
+        const exp = document.getElementById('adm-trivia-exp').value.trim();
+        if (!q || !o0 || !o1 || !o2) { status.textContent = 'Completá la pregunta y las 3 opciones'; status.className = 'admin-status err'; return; }
+        item = { q, o: [o0,o1,o2], c: 0, explanation: exp };
+        ['adm-trivia-q','adm-trivia-o0','adm-trivia-o1','adm-trivia-o2','adm-trivia-exp'].forEach(id => document.getElementById(id).value = '');
+
+    } else if (tab === 'sim') {
+        const client = document.getElementById('adm-sim-client').value.trim();
+        const good   = document.getElementById('adm-sim-good').value.trim();
+        const mid    = document.getElementById('adm-sim-mid').value.trim();
+        const bad    = document.getElementById('adm-sim-bad').value.trim();
+        if (!client || !good || !mid || !bad) { status.textContent = 'Completá todos los campos'; status.className = 'admin-status err'; return; }
+        item = { client, options: [{text:good,pts:5},{text:mid,pts:3},{text:bad,pts:1}] };
+        ['adm-sim-client','adm-sim-good','adm-sim-mid','adm-sim-bad'].forEach(id => document.getElementById(id).value = '');
+
+    } else { // ingr
+        const dish = document.getElementById('adm-ingr-dish').value.trim();
+        const cat  = document.getElementById('adm-ingr-cat').value;
+        const q    = document.getElementById('adm-ingr-q').value.trim();
+        const o0   = document.getElementById('adm-ingr-o0').value.trim();
+        const o1   = document.getElementById('adm-ingr-o1').value.trim();
+        const o2   = document.getElementById('adm-ingr-o2').value.trim();
+        const exp  = document.getElementById('adm-ingr-exp').value.trim();
+        if (!dish || !cat || !q || !o0 || !o1 || !o2) { status.textContent = 'Completá todos los campos (incluyendo categoría)'; status.className = 'admin-status err'; return; }
+        item = { dish, category: cat, q, o: [o0,o1,o2], c: 0, explanation: exp };
+        ['adm-ingr-dish','adm-ingr-q','adm-ingr-o0','adm-ingr-o1','adm-ingr-o2','adm-ingr-exp'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('adm-ingr-cat').value = '';
+    }
+
+    if (!extraData[tab]) extraData[tab] = [];
+    extraData[tab].push(item);
+    status.textContent = 'Guardando…'; status.className = 'admin-status';
+    await saveExtra();
+    status.textContent = '✓ Guardado'; status.className = 'admin-status ok';
+    setTimeout(() => status.textContent = '', 2000);
+    renderList(tab);
+}
+
+// ═══════════════════════════════════════════════════════
+// PREMIO QUINCENAL
+// ═══════════════════════════════════════════════════════
+let prizeActive = true;
+
+function getPeriodLabel() {
+    const now = new Date(), day = now.getDate();
+    const month = now.toLocaleDateString('es-AR', { month:'long' });
+    if (day <= 15) return `1–15 de ${month}`;
+    const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    return `16–${lastDay} de ${month}`;
+}
+function getDaysUntilPeriodEnd() {
+    const now = new Date(), day = now.getDate();
+    if (day <= 15) return 15 - day;
+    return new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - day;
+}
+function getCurrentPeriodKey() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getDate()<=15?'1':'2'}`;
+}
+function setPrizeActive(active) {
+    prizeActive = active;
+    document.getElementById('prize-active-yes').className = active ? 'btn' : 'btn btn-secondary';
+    document.getElementById('prize-active-no').className  = active ? 'btn btn-secondary' : 'btn';
+}
+function updatePrizePreview() {
+    const title = document.getElementById('prize-title-input').value || 'Premio';
+    const desc  = document.getElementById('prize-desc-input').value  || 'Descripción';
+    const emoji = document.getElementById('prize-emoji-input').value || '🎁';
+    document.getElementById('preview-title').textContent = title;
+    document.getElementById('preview-desc').textContent  = desc;
+    document.getElementById('preview-countdown').textContent = `Termina en ${getDaysUntilPeriodEnd()}d`;
+    // Actualizar el emoji grande en el preview
+    const emojiEl = document.querySelector('#prize-preview span[style*="font-size:32px"]');
+    if (emojiEl) emojiEl.textContent = emoji;
+    document.getElementById('prize-preview').style.display = 'block';
+}
+async function loadPrizePanel() {
+    document.getElementById('admin-period-label').textContent = getPeriodLabel();
+    document.getElementById('admin-period-days').textContent  = `${getDaysUntilPeriodEnd()} días restantes`;
+    try {
+        const doc = await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).get();
+        if (doc.exists) {
+            const d = doc.data();
+            document.getElementById('prize-title-input').value = d.title || '';
+            document.getElementById('prize-desc-input').value  = d.description || '';
+            document.getElementById('prize-emoji-input').value = d.emoji || '🎁';
+            setPrizeActive(d.active !== false);
+            updatePrizePreview();
+        }
+    } catch(e) { console.warn('loadPrizePanel:', e); }
+}
+async function savePrize() {
+    const status = document.getElementById('status-prize');
+    const title  = document.getElementById('prize-title-input').value.trim();
+    const desc   = document.getElementById('prize-desc-input').value.trim();
+    const emoji  = document.getElementById('prize-emoji-input').value.trim() || '🎁';
+    if (!title) { status.textContent = 'Ingresá un título'; status.className = 'admin-status err'; return; }
+    status.textContent = 'Guardando…'; status.className = 'admin-status';
+    try {
+        await fsdb.collection(PRIZE_COL).doc(PRIZE_DOC).set({ title, description:desc, emoji, active:prizeActive, period:getCurrentPeriodKey(), updatedAt:Date.now() });
+        status.textContent = '✓ Premio guardado y visible en el juego'; status.className = 'admin-status ok';
+        updatePrizePreview();
+    } catch(e) { status.textContent = 'Error: ' + e.message; status.className = 'admin-status err'; }
+    setTimeout(() => status.textContent = '', 3000);
+}
+['prize-title-input','prize-desc-input','prize-emoji-input'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updatePrizePreview);
+});
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+let allPlayers  = [];
+let dashFilter_ = 'all';
+let dashSortKey = 'totalXp';
+let dashSortAsc = false;
+let selectedDni = null;
+
+async function dashRefresh() {
+    document.getElementById('dash-tbody').innerHTML = '<tr><td colspan="4" class="dash-loading">Cargando...</td></tr>';
+    try {
+        const snap = await fsdb.collection(PLAYERS_COL).get();
+        allPlayers = snap.docs.map(d => ({ dni: d.id, ...d.data() }));
+        // Filtrar por local si aplica
+        if (currentLocal) {
+            const isBc = ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
+            const localGroup = isBc ? 'bc' : currentLocal;
+            allPlayers = allPlayers.filter(p => {
+                const pLocal = p.local || '';
+                if (localGroup === 'bc') return ['bcp','bcbl','bcc','bcb','bc',''].some(l => pLocal === l || !pLocal);
+                return pLocal === currentLocal || !pLocal;
+            });
+        }
+        updateKPIs();
+        dashRender();
+    } catch(e) {
+        console.error('dashRefresh error:', e);
+        document.getElementById('dash-tbody').innerHTML =
+            `<tr><td colspan="4" class="dash-loading" style="color:var(--danger);">Error al conectar: ${e.message}</td></tr>`;
+    }
+}
+
+function updateKPIs() {
+    const now    = Date.now();
+    const active = allPlayers.filter(p => p.lastSeen && (now - p.lastSeen) < 7*24*3600*1000).length;
+    const games  = allPlayers.reduce((s,p) => s + (p.totalGames||0), 0);
+    document.getElementById('dash-kpi-total').textContent  = allPlayers.length;
+    document.getElementById('dash-kpi-active').textContent = active;
+    document.getElementById('dash-kpi-games').textContent  = games;
+}
+
+function dashFilter(f) {
+    dashFilter_ = f;
+    ['all','active','inactive','new'].forEach(x =>
+        document.getElementById('df-'+x).classList.toggle('active', x === f)
+    );
+    dashRender();
+}
+
+function dashSort(key) {
+    dashSortAsc = dashSortKey === key ? !dashSortAsc : false;
+    dashSortKey = key;
+    dashRender();
+}
+
+function dashRender() {
+    const now    = Date.now();
+    const search = (document.getElementById('dash-search').value || '').toLowerCase();
+    let list = allPlayers.filter(p => {
+        if (search && !((p.nombre||'').toLowerCase().includes(search) || (p.dni||'').includes(search))) return false;
+        if (dashFilter_ === 'active')   return p.lastSeen && (now - p.lastSeen) < 7*24*3600*1000;
+        if (dashFilter_ === 'inactive') return !p.lastSeen || (now - p.lastSeen) >= 7*24*3600*1000;
+        if (dashFilter_ === 'new')      return !p.totalGames || p.totalGames === 0;
+        return true;
+    });
+    list.sort((a,b) => {
+        const va = a[dashSortKey] ?? 0, vb = b[dashSortKey] ?? 0;
+        if (typeof va === 'string') return dashSortAsc ? va.localeCompare(vb,'es') : vb.localeCompare(va,'es');
+        return dashSortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    });
+    if (!list.length) {
+        document.getElementById('dash-tbody').innerHTML = '<tr><td colspan="4" class="dash-loading">Sin resultados</td></tr>';
+        return;
+    }
+    document.getElementById('dash-tbody').innerHTML = list.map(p => {
+        const days = p.lastSeen ? Math.floor((now - p.lastSeen) / 86400000) : 999;
+        const dot  = days <= 1 ? 'green' : days <= 7 ? 'yellow' : days <= 30 ? 'red' : 'grey';
+        const last = p.lastSeen ? new Date(p.lastSeen).toLocaleDateString('es-AR') : '—';
+        const lv   = getLevel(p.totalXp || 0);
+        return `<tr onclick="selectPlayer('${p.dni}')">
+            <td>
+                <div class="dash-name-cell">
+                    <span class="activity-dot ${dot}"></span>
+                    <div>
+                        <div>${p.nombre || p.dni}</div>
+                        <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Niv.${lv+1} · ${LEVEL_NAMES[lv]}</div>
+                    </div>
+                </div>
+            </td>
+            <td style="font-family:var(--font-mono);">${p.totalXp||0}</td>
+            <td style="font-family:var(--font-mono);">${p.totalGames||0}</td>
+            <td style="font-size:11px;color:var(--text-muted);">${last}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function selectPlayer(dni) {
+    const p = allPlayers.find(x => x.dni === dni);
+    if (!p) return;
+    const det = document.getElementById('dash-player-detail');
+    document.getElementById('dash-detail-name').textContent = p.nombre || ('DNI ' + dni);
+    const lv = getLevel(p.totalXp || 0);
+
+    const history = p.history || [];
+    const triviaH = history.filter(h => h.mode === 'trivia');
+    const ingrH   = history.filter(h => h.mode === 'ingredientes');
+    const simH    = history.filter(h => h.mode === 'sim');
+
+    const triviaPartidas = p.triviaGames || triviaH.length;
+    const ingrPartidas   = p.ingrGames   || ingrH.length;
+    const simPartidas    = p.simGames    || simH.length;
+
+    const PREGUNTAS_POR_PARTIDA = 7;
+    const triviaCorrectas   = triviaH.reduce((s,h) => s + (h.score||0), 0);
+    const triviaTotal       = triviaH.length * PREGUNTAS_POR_PARTIDA;
+    const ingrCorrectas     = ingrH.reduce((s,h) => s + (h.score||0), 0);
+    const ingrTotal         = ingrH.length * PREGUNTAS_POR_PARTIDA;
+    const totalCorrectas    = triviaCorrectas + ingrCorrectas;
+    const totalIncorrectas  = (triviaTotal - triviaCorrectas) + (ingrTotal - ingrCorrectas);
+    const totalPreguntas    = triviaTotal + ingrTotal;
+    const pctAcierto        = totalPreguntas > 0 ? Math.round((totalCorrectas / totalPreguntas) * 100) : null;
+    const barColor          = pctAcierto >= 70 ? 'var(--success)' : pctAcierto >= 40 ? 'var(--accent)' : 'var(--danger)';
+
+    const recentHistory = history.slice(0, 5).map(h => {
+        const modeLabel = { trivia: 'Trivia', ingredientes: 'Carta', sim: 'Simulador' };
+        const modeColor = h.mode === 'trivia' ? 'var(--accent)' : h.mode === 'ingredientes' ? 'var(--success)' : '#4A7AD4';
+        const scoreText = (h.mode === 'trivia' || h.mode === 'ingredientes') ? `${h.score}/${PREGUNTAS_POR_PARTIDA} ✓` : `${h.score} pts`;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
+            <span style="font-family:var(--font-mono);font-size:9px;background:${modeColor}22;color:${modeColor};border:1px solid ${modeColor}44;border-radius:4px;padding:2px 6px;white-space:nowrap;">${modeLabel[h.mode]||h.mode}</span>
+            <span style="flex:1;font-family:var(--font-mono);">${scoreText}</span>
+            <span style="color:var(--accent);font-family:var(--font-mono);">+${h.xp} XP</span>
+            <span style="color:var(--text-muted);font-size:10px;">${h.date}</span>
+        </div>`;
+    }).join('');
+
+    // ── Preguntas acertadas/falladas por persona (desde Firestore) ──
+    let qStatsHtml = '<div class="dash-loading" style="padding:8px;">Cargando estadísticas por pregunta...</div>';
+
+    document.getElementById('dash-detail-content').innerHTML = `
+        <div style="font-size:12px;font-family:var(--font-mono);margin-bottom:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+                <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;">
+                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">DNI / Legajo</div>
+                    <div style="font-weight:700;margin-top:2px;">${p.dni}</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;">
+                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Nivel</div>
+                    <div style="font-weight:700;margin-top:2px;">Niv.${lv+1} · ${LEVEL_NAMES[lv]}</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;">
+                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">XP Total</div>
+                    <div style="font-weight:700;color:var(--accent);margin-top:2px;">${p.totalXp||0} XP</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;">
+                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Racha</div>
+                    <div style="font-weight:700;margin-top:2px;">${p.currentStreak||0} días 🔥</div>
+                </div>
+            </div>
+
+            ${pctAcierto !== null ? `
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-size:10px;text-transform:uppercase;color:var(--text-muted);">Tasa de acierto (historial)</span>
+                    <span style="font-weight:700;color:${barColor};">${pctAcierto}%</span>
+                </div>
+                <div style="background:var(--surface-2);border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="width:${pctAcierto}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:var(--text-muted);">
+                    <span>✓ ${totalCorrectas} correctas</span>
+                    <span>✗ ${totalIncorrectas} incorrectas</span>
+                </div>
+            </div>` : ''}
+
+            <div style="margin-bottom:10px;">
+                <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Partidas por modo</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:80px;background:rgba(212,168,0,0.10);border:1px solid rgba(212,168,0,0.25);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:18px;font-weight:700;color:var(--accent);">${triviaPartidas}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">Trivia</div>
+                        ${triviaH.length > 0 ? `<div style="font-size:10px;color:var(--success);">mejor: ${p.bestTriviaScore||0}/7</div>` : ''}
+                    </div>
+                    <div style="flex:1;min-width:80px;background:rgba(26,122,58,0.08);border:1px solid rgba(26,122,58,0.2);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:18px;font-weight:700;color:var(--success);">${ingrPartidas}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">Carta</div>
+                        ${ingrH.length > 0 ? `<div style="font-size:10px;color:var(--success);">mejor: ${p.bestIngrScore||0}/7</div>` : ''}
+                    </div>
+                    <div style="flex:1;min-width:80px;background:rgba(74,122,212,0.08);border:1px solid rgba(74,122,212,0.2);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-size:18px;font-weight:700;color:#4A7AD4;">${simPartidas}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">Simulador</div>
+                        ${simH.length > 0 ? `<div style="font-size:10px;color:#4A7AD4;">mejor: ${p.bestSimScore||0} pts</div>` : ''}
+                    </div>
+                </div>
+            </div>
+
+            ${recentHistory ? `
+            <div style="margin-bottom:10px;">
+                <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Últimas partidas</div>
+                ${recentHistory}
+            </div>` : ''}
+
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">📊 Preguntas por persona</div>
+                <div id="player-q-stats-${dni}">${qStatsHtml}</div>
+            </div>
+        </div>`;
+
+    const isOpen = det.classList.contains('open') && selectedDni === dni;
+    det.classList.toggle('open', !isOpen);
+    selectedDni = isOpen ? null : dni;
+
+    if (!isOpen) {
+        // Cargar stats por pregunta para esta persona
+        loadPlayerQStats(dni);
+    }
+}
+
+async function loadPlayerQStats(dni) {
+    const container = document.getElementById('player-q-stats-' + dni);
+    if (!container) return;
+    try {
+        const snap = await fsdb.collection(Q_STATS_COL)
+            .where('players.' + dni + '.attempts', '>', 0)
+            .get()
+            .catch(() => null); // fallback si el índice no existe
+
+        // Alternativa: cargar todo y filtrar client-side (sin índice compuesto)
+        let allQ;
+        if (!snap || snap.empty) {
+            const snap2 = await fsdb.collection(Q_STATS_COL).get();
+            allQ = snap2.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => d.players && d.players[dni] && (d.players[dni].attempts || 0) > 0);
+        } else {
+            allQ = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        if (!allQ.length) {
+            container.innerHTML = '<div style="font-size:11px;color:var(--text-muted);">Sin datos individuales aún. Los datos se acumulan a medida que juega.</div>';
+            return;
+        }
+
+        // Separar en acertadas y falladas
+        const withStats = allQ.map(d => {
+            const pd = d.players[dni] || {};
+            const att = pd.attempts || 0;
+            const err = pd.errors   || 0;
+            const pct = att > 0 ? Math.round(((att - err) / att) * 100) : 0;
+            return { q: d.q || d.id, att, err, pct };
+        }).sort((a, b) => a.pct - b.pct); // peores primero
+
+        const worst = withStats.filter(d => d.pct < 70).slice(0, 5);
+        const best  = withStats.filter(d => d.pct >= 70).reverse().slice(0, 5);
+
+        const renderRow = (d) => {
+            const color = d.pct >= 70 ? 'var(--success)' : d.pct >= 40 ? 'var(--accent)' : 'var(--danger)';
+            return `<div class="q-stat-row">
+                <div style="flex:1;line-height:1.4;">${d.q.length > 60 ? d.q.slice(0,57) + '…' : d.q}</div>
+                <div class="q-stat-pct" style="color:${color};">${d.pct}%</div>
+                <div style="font-size:10px;color:var(--text-muted);">${d.att - d.err}/${d.att}</div>
+            </div>`;
+        };
+
+        container.innerHTML = `
+            ${worst.length ? `
+            <div style="margin-bottom:8px;">
+                <div style="font-size:9px;color:var(--danger);font-weight:700;text-transform:uppercase;margin-bottom:4px;">⚠ Más falladas</div>
+                ${worst.map(renderRow).join('')}
+            </div>` : ''}
+            ${best.length ? `
+            <div>
+                <div style="font-size:9px;color:var(--success);font-weight:700;text-transform:uppercase;margin-bottom:4px;">✓ Mejor dominio</div>
+                ${best.map(renderRow).join('')}
+            </div>` : ''}
+        `;
+    } catch(e) {
+        if (container) container.innerHTML = `<div style="font-size:11px;color:var(--text-muted);">No se pudieron cargar stats: ${e.message}</div>`;
+    }
+}
+
+function dashExportCSV() {
+    const rows = [['DNI','Nombre','Local','XP','Partidas','Trivia','Carta','Simulador','Mejor Trivia','Mejor Carta','Mejor Sim','Racha','Ultimo acceso']];
+    allPlayers.forEach(p => rows.push([
+        p.dni, p.nombre||'', p.local||'', p.totalXp||0, p.totalGames||0,
+        p.triviaGames||0, p.ingrGames||0, p.simGames||0,
+        p.bestTriviaScore||0, p.bestIngrScore||0, p.bestSimScore||0,
+        p.currentStreak||0,
+        p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR') : ''
+    ]));
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const a   = document.createElement('a');
+    a.href    = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = 'andino_jugadores.csv';
+    a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT — mostrar login overlay, no dashRefresh directo
+// ═══════════════════════════════════════════════════════
+// dashRefresh se llama solo después del login exitoso
+
+// ═══════════════════════════════════════════════════════
+// BANCO DE PREGUNTAS — datos hardcodeados del juego
+// ═══════════════════════════════════════════════════════
+
+const BANCO = {
+  trivia: [
+    { q: "¿Por qué lado se retiran los platos usados?", o: ["Por la derecha","Por la izquierda","Por donde sea más cómodo"], c: 0 },
+    { q: "Si un cliente es Celíaco, ¿cuál es el protocolo correcto?", o: ["Traerle pan integral","Avisar a cocina para evitar contaminación cruzada","Decirle que no hay opciones"], c: 1 },
+    { q: "¿Cuál es el tiempo ideal para llevar la bebida tras el pedido?", o: ["10 minutos","20 minutos","Menos de 5 minutos"], c: 2 },
+    { q: "¿Qué debe hacer si se rompe una copa en el salón?", o: ["Limpiar con la mano","Señalizar, juntar con pala y pasar trapo húmedo","Esperar al fin del turno"], c: 1 },
+    { q: "¿Cuál es el orden de prioridad para servir en la mesa?", o: ["Niños, Mujeres, Hombres","El que pidió primero","Hombres, Mujeres, Niños"], c: 0 },
+    { q: "¿Qué hacer si un cliente derrama vino tinto en el mantel?", o: ["Ignorarlo","Cubrir con sal y cambiar el mantel discretamente","Decirle al cliente que tenga cuidado"], c: 1 },
+    { q: "¿Cuándo se debe presentar la cuenta?", o: ["Cuando el cliente la pide","Automáticamente al terminar el plato principal","Al final del servicio sin que lo pida"], c: 0 },
+    { q: "¿Cómo se recomienda comer los tiraditos y cebiches?", o: ["Con tenedor y cuchillo","Con cuchara para combinar todos los sabores","Con palillos"], c: 1 },
+    { q: "¿Cuánto tarda en salir una pesca entera?", o: ["10 a 15 minutos","30 a 35 minutos","20 a 25 minutos"], c: 1 },
+  ],
+  'trivia-tanta': [
+    { q: "¿Cuál es el horario de apertura de Tanta?", o: ["9:00","10:00","8:00"], c: 0 },
+    { q: "¿Qué tipo de cocina identifica a Tanta?", o: ["Fusión peruana-italiana","Cocina peruana de autor y café","Comida rápida peruana"], c: 1 },
+    { q: "¿Cuál de estos platos es emblemático de Tanta?", o: ["Cebiche Del Puerto","Sanguche de lomo saltado","Jalea Chalaca"], c: 1 },
+    { q: "¿Tanta sirve desayunos?", o: ["No, solo almuerzo y cena","Sí, desde la apertura","Solo los fines de semana"], c: 1 },
+    { q: "¿Qué marca el tono del servicio en Tanta?", o: ["Formal y silencioso","Cálido, ágil y casual","Solo por encargo"], c: 1 },
+    { q: "¿Cuál es la propuesta de bebidas de Tanta?", o: ["Solo vinos importados","Cócteles peruanos, café de especialidad y zumos","Solo cerveza"], c: 1 },
+    { q: "¿Tanta tiene propuesta para llevar?", o: ["No","Sí, delivery y take away","Solo para grupos"], c: 1 },
+  ],
+  'trivia-lamar': [
+    { q: "¿Quién es el chef creador del concepto La Mar?", o: ["Virgilio Martínez","Gastón Acurio","Mitsuharu Tsumura"], c: 1 },
+    { q: "¿En qué tipo de cocina se especializa La Mar?", o: ["Cocina nikkei","Cebichería marina","Parrilla criolla"], c: 1 },
+    { q: "¿Cuál es el plato estrella de La Mar?", o: ["Tacu Tacu","Cebiche clásico con leche de tigre","Chaufa de mariscos"], c: 1 },
+    { q: "¿La Mar acepta reservas?", o: ["No, es solo orden de llegada","Sí, tiene sistema de reservas","Solo para grupos de más de 10"], c: 1 },
+    { q: "¿Qué diferencia a la leche de tigre de La Mar?", o: ["Es importada de Perú","Se hace en casa con ingredientes frescos del día","Es en polvo"], c: 1 },
+    { q: "¿Cuándo se suele llenar La Mar a capacidad?", o: ["Solo en invierno","Almuerzos de fin de semana","Solo martes y miércoles"], c: 1 },
+    { q: "¿Qué protocolo se sigue con el cebiche en La Mar?", o: ["Se sirve caliente","Se sirve frío, recién preparado al momento","Se prepara con 2 horas de anticipación"], c: 1 },
+  ],
+  sim: [
+    { client: "La mesa 5 me dice que lleva 40 minutos esperando el plato principal y nadie les avisó nada.", type: "demora" },
+    { client: "Tengo una intolerancia severa al gluten. ¿Pueden confirmarme qué platos son seguros?", type: "alergia" },
+    { client: "Le pedí al mozo que cambiara mi pesca por pollo y me dijo que no se puede. ¿Es eso cierto?", type: "cambio" },
+    { client: "La cuenta no cierra — pagué con tarjeta y me están cobrando de más.", type: "cuenta" },
+    { client: "El vino que pedí estaba a temperatura ambiente, no frío como pedí.", type: "temperatura" },
+    { client: "¿Me pueden explicar qué es la leche de tigre? No entiendo si es para tomar o para comer.", type: "descripcion" },
+    { client: "Hay un error en el menú — el precio dice $X pero me están cobrando $Y.", type: "precio" },
+    { client: "Me trajeron el plato equivocado. Yo había pedido el cebiche mixto, no el clásico.", type: "error_plato" },
+    { client: "¿Tienen opciones veganas? No veo nada en el menú.", type: "vegano" },
+    { client: "La mesa de al lado hace mucho ruido. ¿Pueden hacer algo?", type: "ambiente" },
+    { client: "Quiero recomendar este restaurante a mis jefes para una cena corporativa. ¿Tienen menú ejecutivo?", type: "grupo" },
+    { client: "El baño está muy sucio. Alguien debería revisarlo.", type: "limpieza" },
+  ],
+  ingr: [
+    { dish: "Cebiche Del Puerto", cat: "CEBICHE", q: "¿Con qué leche de tigre se prepara el Cebiche Del Puerto?", corr: "Leche de tigre clásica de limón y ají limo" },
+    { dish: "Tiradito Chalaco", cat: "TIRADITO", q: "¿Cómo va cortada la pesca en el Tiradito Chalaco?", corr: "En láminas finas al bies" },
+    { dish: "Causa Chalaca", cat: "CAUSA", q: "¿Qué tipo de papa se usa en la Causa Chalaca?", corr: "Papa amarilla" },
+    { dish: "Langostinos al Ajillo", cat: "PRINCIPAL", q: "¿Qué base lleva la salsa ajillo?", corr: "Manteca, ajo, vino blanco y perejil" },
+    { dish: "Arroz con Mariscos", cat: "ARROZ", q: "¿Qué consistencia tiene el arroz con mariscos?", corr: "Meloso — entre risotto y chaufa" },
+    { dish: "Chicharrón de Calamar", cat: "CHICHARRÓN", q: "¿Con qué se sirve el chicharrón de calamar?", corr: "Salsa tari, cancha y criolla" },
+    { dish: "Leche de Tigre", cat: "PREPARACIÓN", q: "¿Qué potenciador de sabor lleva la Leche de Tigre?", corr: "Ajinomoto" },
+  ],
+  'ingr-tanta': [
+    { dish: "Sanguche de Lomo Saltado", cat: "SANGUCHE", q: "¿Qué pan se usa?", corr: "Pan de campo tostado" },
+    { dish: "Causa Limeña", cat: "CAUSA", q: "¿Qué lleva la causa?", corr: "Pollo, palta y huevo con mayo de rocoto" },
+    { dish: "Anticucho de Corazón", cat: "PARRILLA", q: "¿Con qué se adoba el anticucho?", corr: "Ají panca, vinagre, comino y ajo" },
+    { dish: "Empanada de Ají Amarillo", cat: "ENTRADA", q: "¿Con qué se sirve la empanada?", corr: "Crema de ají amarillo y salsa criolla" },
+    { dish: "Picarones", cat: "POSTRE", q: "¿Con qué miel se sirven?", corr: "Miel de chancaca con clavo y naranja" },
+    { dish: "Café Peruano", cat: "BEBIDA", q: "¿De qué región viene el café?", corr: "Villa Rica y Chanchamayo" },
+  ],
+  'ingr-lamar': [
+    { dish: "Cebiche Clásico", cat: "CEBICHE", q: "¿Cuánto tiempo se marina la pesca?", corr: "Al momento — no más de 2 minutos" },
+    { dish: "Tiradito de Trucha", cat: "TIRADITO", q: "¿Cómo se corta la trucha?", corr: "En láminas finas al bies" },
+    { dish: "Mixto de Mariscos", cat: "CEBICHE", q: "¿Qué mariscos componen el mixto?", corr: "Pesca del día, langostinos y pulpo" },
+    { dish: "Chicharrón de Calamar", cat: "CHICHARRÓN", q: "¿Cómo se sirve?", corr: "Con salsa tari, cancha y criolla" },
+    { dish: "Parihuela La Mar", cat: "SOPA", q: "¿Qué base tiene el caldo?", corr: "Fondo de pescado y mariscos con ají panca" },
+    { dish: "Arroz con Mariscos", cat: "ARROZ", q: "¿Qué consistencia tiene?", corr: "Meloso — entre risotto y chaufa" },
+  ],
+};
+
+let _currentBancoTab = 'trivia';
+let _currentBancoSub = null; // null = all locals
+
+// Legacy function kept for compatibility
+function switchBancoTab(tab) { switchBancoTab2(tab); }
+
+function initBancoTab() {
+    switchBancoTab2(_currentBancoTab);
+}
+
+// New 3-tab banco system — sub-tabs are local filters only (Firestore shown inline)
+const BANCO_TYPE_CONFIG = {
+    trivia: { label: '🧠 Trivia', subs: [
+        { key: 'trivia-bcp',   label: '🍽️ BCP' },
+        { key: 'trivia-bcb',   label: '🍽️ BCB' },
+        { key: 'trivia-bcbl',  label: '🍽️ BCBL' },
+        { key: 'trivia-bcc',   label: '🍽️ BCC' },
+        { key: 'trivia-tanta', label: '☕ Tanta' },
+        { key: 'trivia-lamar', label: '🦑 La Mar' },
+    ]},
+    sim: { label: '🎭 Simulador', subs: [
+        { key: 'sim-bcp',   label: '🍽️ BCP' },
+        { key: 'sim-bcb',   label: '🍽️ BCB' },
+        { key: 'sim-bcbl',  label: '🍽️ BCBL' },
+        { key: 'sim-bcc',   label: '🍽️ BCC' },
+        { key: 'sim-tanta', label: '☕ Tanta' },
+        { key: 'sim-lamar', label: '🦑 La Mar' },
+    ]},
+    ingr: { label: '🍽️ Carta', subs: [
+        { key: 'ingr-bcp',   label: '🍽️ BCP' },
+        { key: 'ingr-bcb',   label: '🍽️ BCB' },
+        { key: 'ingr-bcbl',  label: '🍽️ BCBL' },
+        { key: 'ingr-bcc',   label: '🍽️ BCC' },
+        { key: 'ingr-tanta', label: '☕ Tanta' },
+        { key: 'ingr-lamar', label: '🦑 La Mar' },
+    ]},
+};
+
+function switchBancoTab2(mainTab) {
+    _currentBancoTab = mainTab;
+    const allSubs = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
+    // Each local sees only their sub; no-local (superadmin) sees all
+    const localKey = currentLocal ? mainTab + '-' + currentLocal : null;
+    const visibleSubs = localKey ? allSubs.filter(s => s.key === localKey) : allSubs;
+    const defaultSub = visibleSubs[0]?.key || null;
+    _currentBancoSub = defaultSub;
+    ['trivia','sim','ingr'].forEach(t => {
+        const btn = document.getElementById('btab2-' + t);
+        if (btn) btn.classList.toggle('active', t === mainTab);
+    });
+    const subtabsEl = document.getElementById('banco-subtabs');
+    if (subtabsEl) {
+        subtabsEl.innerHTML = visibleSubs.map(s =>
+            `<div class="admin-tab ${s.key === defaultSub ? 'active' : ''}"
+                  id="bstab-${s.key}"
+                  onclick="switchBancoSub('${s.key}', '${mainTab}')">${s.label}</div>`
+        ).join('');
+    }
+    renderBancoUnified(mainTab, defaultSub);
+}
+
+function switchBancoSub(subKey, mainTab) {
+    _currentBancoSub = subKey;
+    const subs = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
+    subs.forEach(s => {
+        const el = document.getElementById('bstab-' + s.key);
+        if (el) el.classList.toggle('active', s.key === subKey);
+    });
+    renderBancoUnified(mainTab, subKey);
+}
+
+async function renderBancoUnified(mainTab, subKey) {
+    const el = document.getElementById('banco-content');
+    el.innerHTML = '<div class="dash-loading">Cargando...</div>';
+
+    // Only Firestore — no hardcoded
+    const fsKey = subKey || (mainTab + '-' + (currentLocal || 'bcp'));
+    let firestoreItems = [];
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        const data = doc.exists ? doc.data() : {};
+        firestoreItems = (data[fsKey] || []).map((item, idx) => ({...item, _fsKey: fsKey, _idx: idx}));
+    } catch(e) { console.warn('renderBancoUnified:', e); }
+
+    function renderCard(item) {
+        const type = mainTab;
+        const label = type === 'sim'
+            ? (item.client || '')
+            : type === 'ingr'
+                ? `${item.dish || ''} · ${item.q || ''}`
+                : (item.q || '');
+        const opts = type === 'sim'
+            ? (item.options || []).map(o => `<div style="font-size:11px;color:${o.pts===5?'var(--success)':o.pts>=3?'var(--accent)':'var(--danger)'};">${o.pts}pts: ${o.text}</div>`).join('')
+            : (item.o || []).map((o, j) => `<div style="font-size:11px;${j===(item.c??0)?'color:var(--success);font-weight:600;':'color:var(--text-muted);'}">${j===(item.c??0)?'✓':'○'} ${o}</div>`).join('');
+        return `<div class="bcard" data-fskey="${item._fsKey}" data-idx="${item._idx}" data-text="${label.toLowerCase()}" style="display:flex;align-items:flex-start;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:5px;">
+            <input type="checkbox" onchange="bancoSelChange()" style="margin-top:3px;width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div>
+                ${opts}
+                ${item.explanation ? `<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">💡 ${item.explanation}</div>` : ''}
+            </div>
+            <button onclick="bancoDelOne('${item._fsKey}',${item._idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:22px;font-weight:700;flex-shrink:0;padding:0 2px;line-height:1;" title="Eliminar">×</button>
+        </div>`;
+    }
+
+    const total = firestoreItems.length;
+    const cardsHtml = total
+        ? firestoreItems.map(item => renderCard(item)).join('')
+        : `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:24px;">Sin preguntas todavía. Usá el formulario de arriba.</div>`;
+
+    el.innerHTML = `
+        ${buildBancoAddForm(mainTab, fsKey)}
+        <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <input id="banco-search" oninput="bancoSearch()" placeholder="🔍 Buscar..." style="flex:1;min-width:120px;font-size:13px;padding:7px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);">
+                <span id="banco-count" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);white-space:nowrap;">${total} preguntas</span>
+                <button id="banco-del-sel" onclick="bancoDelSelected()" style="display:none;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar seleccionadas</button>
+                <button onclick="bancoDelAll('${fsKey}')" style="background:var(--surface-2);color:var(--danger);border:1.5px solid var(--danger);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar todo</button>
+            </div>
+            <div id="banco-cards-list" style="max-height:460px;overflow-y:auto;padding-right:2px;">${cardsHtml}</div>
+        </div>`;
+}
+
+function bancoSelChange() {
+    const any = document.querySelectorAll('.bcard input[type=checkbox]:checked').length > 0;
+    const btn = document.getElementById('banco-del-sel');
+    if (btn) btn.style.display = any ? 'inline-block' : 'none';
+}
+
+function bancoSearch() {
+    const q = (document.getElementById('banco-search')?.value || '').toLowerCase();
+    let v = 0;
+    document.querySelectorAll('.bcard').forEach(c => {
+        const match = !q || c.dataset.text.includes(q);
+        c.style.display = match ? 'flex' : 'none';
+        if (match) v++;
+    });
+    const ce = document.getElementById('banco-count');
+    if (ce) ce.textContent = v + ' preguntas';
+}
+
+async function bancoDelOne(fsKey, idx) {
+    await loadExtra();
+    if (!extraData[fsKey]) return;
+    extraData[fsKey].splice(idx, 1);
+    await saveExtra();
+    renderBancoUnified(_currentBancoTab, _currentBancoSub);
+}
+
+async function bancoDelSelected() {
+    const checked = [...document.querySelectorAll('.bcard input[type=checkbox]:checked')];
+    if (!checked.length) return;
+    if (!confirm(`¿Eliminar ${checked.length} pregunta(s)?`)) return;
+    await loadExtra();
+    const groups = {};
+    checked.forEach(cb => {
+        const card = cb.closest('.bcard');
+        const k = card.dataset.fskey, i = parseInt(card.dataset.idx);
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(i);
+    });
+    for (const [k, idxs] of Object.entries(groups)) {
+        idxs.sort((a, b) => b - a).forEach(i => { if (extraData[k]) extraData[k].splice(i, 1); });
+    }
+    await saveExtra();
+    renderBancoUnified(_currentBancoTab, _currentBancoSub);
+}
+
+async function bancoDelAll(fsKey) {
+    if (!confirm('¿Eliminar TODAS las preguntas de esta sección?')) return;
+    await loadExtra();
+    extraData[fsKey] = [];
+    await saveExtra();
+    renderBancoUnified(_currentBancoTab, _currentBancoSub);
+}
+
+async function bancoBorrarFirestore(fsKey, idx) {
+    await bancoDelOne(fsKey, idx);
+}
+
+function buildBancoAddForm(mainTab, fsKey) {
+    const sk = fsKey || _currentBancoSub || mainTab;
+    if (mainTab === 'trivia') {
+        return `<div style="margin-top:16px;padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);line-height:1.6;">
+            📊 <strong style="color:var(--text);">Trivia de Protocolo</strong> es solo lectura.<br>
+            Las preguntas son fijas y están integradas en el código del juego.<br>
+            El modo <strong style="color:var(--accent);">🔥 Trivia de Hoy</strong> se arma automáticamente con las preguntas de Carta que el equipo más falla.
+        </div>`;
+    } else if (mainTab === 'sim') {
+        return `<div id="banco-inline-form" style="margin-top:20px;padding-top:16px;border-top:2px dashed var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div class="admin-section-title" style="margin-bottom:0;">✏️ Agregar situación de Simulador</div>
+                <button onclick="openBulk('${sk}','sim')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
+            </div>
+            <div class="admin-add-form">
+                <textarea id="banco-sim-client" placeholder="Frase del cliente *"></textarea>
+                <input id="banco-sim-good" placeholder="Respuesta buena (5 pts) *">
+                <input id="banco-sim-mid"  placeholder="Respuesta media (3 pts) *">
+                <input id="banco-sim-bad"  placeholder="Respuesta mala (1 pt) *">
+                <button class="btn" onclick="bancoAdd('${sk}','sim')">+ Agregar</button>
+                <div class="admin-status" id="banco-add-status"></div>
+            </div>
+        </div>`;
+    } else {
+        return `<div id="banco-inline-form" style="margin-top:20px;padding-top:16px;border-top:2px dashed var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div class="admin-section-title" style="margin-bottom:0;">✏️ Agregar pregunta de Carta</div>
+                <button onclick="openBulk('${sk}','ingr')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
+            </div>
+            <div class="admin-add-form">
+                <div class="hint-box">✅ La primera opción es siempre la CORRECTA. Las otras dos son incorrectas.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <input id="banco-ingr-dish" placeholder="Nombre del plato *">
+                    <select id="banco-ingr-cat">
+                        <option value="">— Categoría * —</option>
+                        <option value="CEBICHE">CEBICHE</option>
+                        <option value="TIRADITO">TIRADITO</option>
+                        <option value="CAUSA">CAUSA</option>
+                        <option value="ENTRANTE">ENTRANTE</option>
+                        <option value="PRINCIPAL">PRINCIPAL</option>
+                        <option value="GUARNICION">GUARNICIÓN</option>
+                        <option value="POSTRE">POSTRE</option>
+                        <option value="BEBIDA">BEBIDA</option>
+                        <option value="COCTEL">CÓCTEL</option>
+                        <option value="VINO">VINO</option>
+                        <option value="PROTOCOLO">PROTOCOLO</option>
+                        <option value="ALERGIA">ALERGIA / INTOLERANCIA</option>
+                    </select>
+                </div>
+                <textarea id="banco-ingr-q" placeholder="Pregunta *"></textarea>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">✅</span><input id="banco-ingr-o0" placeholder="Respuesta CORRECTA *" style="flex:1;border-color:var(--success);"></div>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">❌</span><input id="banco-ingr-o1" placeholder="Opción incorrecta *" style="flex:1;"></div>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">❌</span><input id="banco-ingr-o2" placeholder="Otra opción incorrecta *" style="flex:1;"></div>
+                <textarea id="banco-ingr-exp2" placeholder="Explicación (opcional)" style="min-height:44px;"></textarea>
+                <button class="btn" onclick="bancoAdd('${sk}','ingr')" style="padding:12px;font-size:14px;">💾 Guardar pregunta</button>
+                <div class="admin-status" id="banco-add-status"></div>
+            </div>
+        </div>`;
+    }
+}
+
+async function bancoAdd(fsKey, type) {
+    const status = document.getElementById('banco-add-status');
+    await loadExtra();
+    let item;
+    if (type === 'sim') {
+        const client = document.getElementById('banco-sim-client').value.trim();
+        const good   = document.getElementById('banco-sim-good').value.trim();
+        const mid    = document.getElementById('banco-sim-mid').value.trim();
+        const bad    = document.getElementById('banco-sim-bad').value.trim();
+        if (!client || !good || !mid || !bad) { if(status){status.textContent='Completá todos los campos';status.className='admin-status err';} return; }
+        item = { client, options: [{text:good,pts:5},{text:mid,pts:3},{text:bad,pts:1}] };
+        ['banco-sim-client','banco-sim-good','banco-sim-mid','banco-sim-bad'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    } else {
+        const dish = document.getElementById('banco-ingr-dish').value.trim();
+        const cat  = document.getElementById('banco-ingr-cat').value;
+        const q    = document.getElementById('banco-ingr-q').value.trim();
+        const o0   = document.getElementById('banco-ingr-o0').value.trim();
+        const o1   = document.getElementById('banco-ingr-o1').value.trim();
+        const o2   = document.getElementById('banco-ingr-o2').value.trim();
+        const exp  = document.getElementById('banco-ingr-exp2').value.trim();
+        if (!dish || !cat || !q || !o0 || !o1 || !o2) { if(status){status.textContent='Completá todos los campos obligatorios (*)';status.className='admin-status err';} return; }
+        item = { dish, category: cat, q, o: [o0,o1,o2], c: 0, explanation: exp };
+        ['banco-ingr-dish','banco-ingr-q','banco-ingr-o0','banco-ingr-o1','banco-ingr-o2','banco-ingr-exp2'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+        const catEl = document.getElementById('banco-ingr-cat'); if(catEl) catEl.value='';
+    }
+    if (!extraData[fsKey]) extraData[fsKey] = [];
+    extraData[fsKey].push(item);
+    if (status) { status.textContent = 'Guardando…'; status.className = 'admin-status'; }
+    await saveExtra();
+    if (status) { status.textContent = '✓ Guardado'; status.className = 'admin-status ok'; }
+    setTimeout(() => { if(status) status.textContent=''; }, 2000);
+    renderBancoUnified(_currentBancoTab, _currentBancoSub);
+}
+
+// ═══════════════════════════════════════════════════════
+// CARGA MASIVA
+// ═══════════════════════════════════════════════════════
+let _bulkType = null;
+let _bulkMainType = null;
+let _bulkParsed = [];
+
+const BULK_HINTS = {
+    sim: `Formato JSON — array de situaciones de Simulador:
+<code>[
+  {
+    "client": "Frase del cliente que inicia la situación",
+    "options": [
+      { "text": "Respuesta excelente", "pts": 5 },
+      { "text": "Respuesta aceptable",  "pts": 3 },
+      { "text": "Respuesta mala",        "pts": 1 }
+    ]
+  }
+]</code>
+
+Cada objeto necesita <code>client</code> (string) y <code>options</code> (array con exactamente 3 elementos con <code>text</code> y <code>pts</code>).`,
+    ingr: `Formato JSON — array de preguntas de Carta:
+<code>[
+  {
+    "dish": "Nombre del plato",
+    "category": "CEBICHE",
+    "q": "Pregunta sobre el plato",
+    "o": ["Opción correcta", "Opción B", "Opción C"],
+    "c": 0,
+    "explanation": "Explicación opcional"
+  }
+]</code>
+
+<code>c</code> es el índice de la opción correcta (0 = primera). Categorías: CEBICHE, TIRADITO, CAUSA, ENTRANTE, PRINCIPAL, GUARNICION, POSTRE, BEBIDA, COCTEL, VINO, PROTOCOLO, ALERGIA.`,
+};
+
+function openBulk(subKey, mainType) {
+    _bulkType = subKey;
+    _bulkMainType = mainType || (subKey.startsWith('sim') ? 'sim' : 'ingr');
+    _bulkParsed = [];
+    document.getElementById('bulk-modal-title').textContent = _bulkMainType === 'sim' ? '📥 Carga Masiva · Simulador' : '📥 Carga Masiva · Carta';
+    document.getElementById('bulk-hint').innerHTML = BULK_HINTS[_bulkMainType] || '';
+    document.getElementById('bulk-textarea').value = '';
+    document.getElementById('bulk-parse-status').textContent = '';
+    document.getElementById('bulk-parse-status').className = 'bulk-status';
+    document.getElementById('bulk-preview-area').innerHTML = '';
+    document.getElementById('bulk-preview-area').classList.remove('open');
+    document.getElementById('bulk-save-btn').style.display = 'none';
+    document.getElementById('bulk-overlay').classList.add('open');
+}
+
+function closeBulk() {
+    document.getElementById('bulk-overlay').classList.remove('open');
+    _bulkType = null;
+    _bulkParsed = [];
+}
+
+function bulkParse() {
+    const raw = document.getElementById('bulk-textarea').value.trim();
+    const status = document.getElementById('bulk-parse-status');
+    const preview = document.getElementById('bulk-preview-area');
+    const saveBtn = document.getElementById('bulk-save-btn');
+    _bulkParsed = [];
+    preview.innerHTML = '';
+    preview.classList.remove('open');
+    saveBtn.style.display = 'none';
+
+    if (!raw) { status.textContent = 'Pegá algo primero.'; status.className = 'bulk-status err'; return; }
+
+    let arr;
+    try {
+        // Tolerar JSON con o sin corchetes externos
+        const cleaned = raw.startsWith('[') ? raw : '[' + raw + ']';
+        arr = JSON.parse(cleaned);
+        if (!Array.isArray(arr)) throw new Error('Se esperaba un array JSON.');
+    } catch(e) {
+        status.textContent = 'JSON inválido: ' + e.message;
+        status.className = 'bulk-status err';
+        return;
+    }
+
+    const errors = [];
+    const valid = [];
+
+    arr.forEach((item, i) => {
+        const num = i + 1;
+        if (_bulkMainType === 'sim') {
+            const hasClient = typeof item.client === 'string' && item.client.trim();
+            const opts = item.options;
+            const hasOpts = Array.isArray(opts) && opts.length === 3 && opts.every(o => typeof o.text === 'string' && o.text.trim() && typeof o.pts === 'number');
+            if (!hasClient || !hasOpts) {
+                errors.push({ num, msg: !hasClient ? 'Falta "client"' : 'Faltan "options" válidas (necesita 3 con text y pts)', raw: JSON.stringify(item).slice(0,80) });
+            } else {
+                valid.push({ item: { client: item.client.trim(), options: opts.map(o => ({text: o.text.trim(), pts: o.pts})) }, num });
+            }
+        } else { // ingr
+            const hasDish = typeof item.dish === 'string' && item.dish.trim();
+            const hasCat  = typeof item.category === 'string' && item.category.trim();
+            const hasQ    = typeof item.q === 'string' && item.q.trim();
+            const hasO    = Array.isArray(item.o) && item.o.length >= 2 && item.o.every(o => typeof o === 'string' && o.trim());
+            const hasC    = typeof item.c === 'number' && item.c >= 0 && item.c < (item.o||[]).length;
+            const errs = [];
+            if (!hasDish) errs.push('"dish"');
+            if (!hasCat)  errs.push('"category"');
+            if (!hasQ)    errs.push('"q"');
+            if (!hasO)    errs.push('"o" (array de 2+ strings)');
+            if (!hasC)    errs.push('"c" (índice correcto válido)');
+            if (errs.length) {
+                errors.push({ num, msg: 'Faltan/incorrectos: ' + errs.join(', '), raw: JSON.stringify(item).slice(0,80) });
+            } else {
+                valid.push({ item: { dish: item.dish.trim(), category: item.category.trim(), q: item.q.trim(), o: item.o.map(o => o.trim()), c: item.c, explanation: (item.explanation || '').trim() }, num });
+            }
+        }
+    });
+
+    _bulkParsed = valid.map(v => v.item);
+
+    // Build preview HTML
+    let html = '';
+    if (errors.length) {
+        html += errors.map(e => `<div class="bulk-preview-item"><span class="bp-err">⚠ Item ${e.num}: ${e.msg}</span><br><span style="opacity:.6;">${e.raw}…</span></div>`).join('');
+    }
+    if (valid.length) {
+        html += valid.map(v => {
+            if (_bulkMainType === 'sim') {
+                const o = v.item.options;
+                return `<div class="bulk-preview-item"><span class="bp-ok">✓ Item ${v.num}</span><br><strong>${v.item.client}</strong><br>` +
+                    o.map(opt => `<span style="color:${opt.pts===5?'var(--success)':opt.pts>=3?'var(--accent)':'var(--danger)'};">${opt.pts}pts: ${opt.text}</span>`).join('<br>') + '</div>';
+            } else {
+                const opts = v.item.o;
+                return `<div class="bulk-preview-item"><span class="bp-ok">✓ Item ${v.num}</span> <span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;">${v.item.category}</span><br><strong>${v.item.dish}</strong> — ${v.item.q}<br>` +
+                    opts.map((opt, j) => `<span style="color:${j===v.item.c?'var(--success)':'var(--text-muted)'};">${j===v.item.c?'✓':'○'} ${opt}</span>`).join('<br>') +
+                    (v.item.explanation ? `<br><span style="color:var(--text-muted);">💡 ${v.item.explanation}</span>` : '') + '</div>';
+            }
+        }).join('');
+    }
+
+    preview.innerHTML = html;
+    preview.classList.add('open');
+
+    if (valid.length === 0) {
+        status.textContent = `${errors.length} errores — ningún item válido.`;
+        status.className = 'bulk-status err';
+    } else if (errors.length === 0) {
+        status.textContent = `✓ ${valid.length} item${valid.length>1?'s':''} listos para guardar.`;
+        status.className = 'bulk-status ok';
+        saveBtn.style.display = 'block';
+    } else {
+        status.textContent = `${valid.length} válidos · ${errors.length} con error (se guardarán solo los válidos).`;
+        status.className = 'bulk-status';
+        saveBtn.style.display = 'block';
+    }
+}
+
+async function bulkSave() {
+    if (!_bulkParsed.length) return;
+    const saveBtn = document.getElementById('bulk-save-btn');
+    const status  = document.getElementById('bulk-parse-status');
+    saveBtn.textContent = 'Guardando…';
+    saveBtn.disabled = true;
+
+    try {
+        await loadExtra();
+        if (!extraData[_bulkType]) extraData[_bulkType] = [];
+        extraData[_bulkType].push(..._bulkParsed);
+        await saveExtra();
+        status.textContent = `✓ ${_bulkParsed.length} pregunta${_bulkParsed.length>1?'s':''} guardada${_bulkParsed.length>1?'s':''} correctamente.`;
+        status.className = 'bulk-status ok';
+        saveBtn.style.display = 'none';
+        _bulkParsed = [];
+        setTimeout(() => {
+            closeBulk();
+            renderBancoUnified(_currentBancoTab, _currentBancoSub);
+        }, 1200);
+    } catch(e) {
+        status.textContent = 'Error al guardar: ' + e.message;
+        status.className = 'bulk-status err';
+        saveBtn.textContent = '💾 Guardar todo';
+        saveBtn.disabled = false;
+    }
+}
+
+// Legacy renderBanco for compat
+function renderBanco(tab) { renderBancoUnified(tab.startsWith('trivia') ? 'trivia' : tab === 'sim' ? 'sim' : 'ingr', tab === 'trivia' || tab === 'sim' || tab === 'ingr' ? null : tab); }
+
+
+</script>
+</div><!-- /admin-page -->
+</body>
+</html>

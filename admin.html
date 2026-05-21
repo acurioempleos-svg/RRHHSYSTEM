@@ -1041,52 +1041,53 @@ function initBancoTab() {
 
 // New 3-tab banco system — sub-tabs are local filters only (Firestore shown inline)
 const BANCO_TYPE_CONFIG = {
-    trivia: {
-        label: '🧠 Trivia',
-        subs: [
-            { key: null, label: '📋 Todas' },
-            { key: 'trivia', label: '🏛️ BC' },
-            { key: 'trivia-tanta', label: '☕ Tanta' },
-            { key: 'trivia-lamar', label: '🦑 La Mar' },
-        ]
-    },
-    sim: {
-        label: '🎭 Simulador',
-        subs: [
-            { key: null, label: '📋 Todas' },
-            { key: 'sim', label: '🏛️ BC' },
-        ]
-    },
-    ingr: {
-        label: '🍽️ Carta',
-        subs: [
-            { key: null, label: '📋 Todas' },
-            { key: 'ingr', label: '🏛️ BC' },
-            { key: 'ingr-tanta', label: '☕ Tanta' },
-            { key: 'ingr-lamar', label: '🦑 La Mar' },
-        ]
-    },
+    trivia: { label: '🧠 Trivia', subs: [
+        { key: 'trivia-bcp',   label: '🍽️ BCP' },
+        { key: 'trivia-bcb',   label: '🍽️ BCB' },
+        { key: 'trivia-bcbl',  label: '🍽️ BCBL' },
+        { key: 'trivia-bcc',   label: '🍽️ BCC' },
+        { key: 'trivia-tanta', label: '☕ Tanta' },
+        { key: 'trivia-lamar', label: '🦑 La Mar' },
+    ]},
+    sim: { label: '🎭 Simulador', subs: [
+        { key: 'sim-bcp',   label: '🍽️ BCP' },
+        { key: 'sim-bcb',   label: '🍽️ BCB' },
+        { key: 'sim-bcbl',  label: '🍽️ BCBL' },
+        { key: 'sim-bcc',   label: '🍽️ BCC' },
+        { key: 'sim-tanta', label: '☕ Tanta' },
+        { key: 'sim-lamar', label: '🦑 La Mar' },
+    ]},
+    ingr: { label: '🍽️ Carta', subs: [
+        { key: 'ingr-bcp',   label: '🍽️ BCP' },
+        { key: 'ingr-bcb',   label: '🍽️ BCB' },
+        { key: 'ingr-bcbl',  label: '🍽️ BCBL' },
+        { key: 'ingr-bcc',   label: '🍽️ BCC' },
+        { key: 'ingr-tanta', label: '☕ Tanta' },
+        { key: 'ingr-lamar', label: '🦑 La Mar' },
+    ]},
 };
 
 function switchBancoTab2(mainTab) {
     _currentBancoTab = mainTab;
-    _currentBancoSub = null;
-    // Update main tabs
+    const allSubs = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
+    // Show only the sub matching currentLocal; superadmin (no local) sees all
+    const localKey = currentLocal ? mainTab + '-' + currentLocal : null;
+    const visibleSubs = localKey ? allSubs.filter(s => s.key === localKey) : allSubs;
+    const defaultSub = visibleSubs[0]?.key || null;
+    _currentBancoSub = defaultSub;
     ['trivia','sim','ingr'].forEach(t => {
         const btn = document.getElementById('btab2-' + t);
         if (btn) btn.classList.toggle('active', t === mainTab);
     });
-    // Render sub-tabs
-    const subConfig = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
     const subtabsEl = document.getElementById('banco-subtabs');
     if (subtabsEl) {
-        subtabsEl.innerHTML = subConfig.map(s =>
-            `<div class="admin-tab ${s.key === null ? 'active' : ''}" 
-                  id="bstab-${s.key || 'all'}" 
-                  onclick="switchBancoSub(${s.key === null ? 'null' : "'"+s.key+"'"}, '${mainTab}')">${s.label}</div>`
+        subtabsEl.innerHTML = visibleSubs.map(s =>
+            `<div class="admin-tab ${s.key === defaultSub ? 'active' : ''}"
+                  id="bstab-${s.key || 'all'}"
+                  onclick="switchBancoSub('${s.key}', '${mainTab}')">${s.label}</div>`
         ).join('');
     }
-    renderBancoUnified(mainTab, null);
+    renderBancoUnified(mainTab, defaultSub);
 }
 
 function switchBancoSub(subKey, mainTab) {
@@ -1104,110 +1105,126 @@ async function renderBancoUnified(mainTab, subKey) {
     const el = document.getElementById('banco-content');
     el.innerHTML = '<div class="dash-loading">Cargando...</div>';
 
-    // Only Firestore items — no hardcoded
-    let fsKey = subKey || mainTab;
+    // Gather hardcoded items
+    let hardcodedKeys = [];
+    if (mainTab === 'trivia') hardcodedKeys = subKey && subKey !== '__firestore__' ? [subKey] : ['trivia','trivia-tanta','trivia-lamar'];
+    else if (mainTab === 'sim')  hardcodedKeys = (subKey === '__firestore__') ? [] : (subKey ? [subKey] : ['sim']);
+    else if (mainTab === 'ingr') hardcodedKeys = (subKey === '__firestore__') ? [] : (subKey ? [subKey] : ['ingr','ingr-tanta','ingr-lamar']);
+
+    // Always load Firestore items for sim and ingr (and trivia too)
     let firestoreItems = [];
-    try {
-        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
-        const data = doc.exists ? doc.data() : {};
-        if (subKey) {
-            firestoreItems = (data[fsKey] || []).map((i, idx) => ({...i, _fsKey:fsKey, _idx:idx}));
-        } else {
-            Object.keys(data).filter(k => k === mainTab || k.startsWith(mainTab+'-')).forEach(k => {
-                (data[k]||[]).forEach((i,idx) => firestoreItems.push({...i, _fsKey:k, _idx:idx}));
-            });
+    const showFirestore = !subKey || subKey === '__firestore__' || subKey === null;
+    if (showFirestore) {
+        try {
+            const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+            const data = doc.exists ? doc.data() : {};
+            if (mainTab === 'sim')   firestoreItems = (data.sim   || []).map((i, idx) => ({...i, _source:'firestore', _idx:idx}));
+            else if (mainTab === 'ingr') firestoreItems = (data.ingr || []).map((i, idx) => ({...i, _source:'firestore', _idx:idx}));
+            else if (mainTab === 'trivia') firestoreItems = (data.trivia || []).map((i, idx) => ({...i, _source:'firestore', _idx:idx}));
+        } catch(e) { console.warn('renderBancoUnified firestore:', e); }
+    }
+
+    // Helper: render one card in unified style
+    function renderCard(item, idx, isFirestore, type) {
+        const deleteBtn = isFirestore
+            ? `<button onclick="bancoBorrarFirestore('${type}',${item._idx})" title="Eliminar" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;flex-shrink:0;padding:2px 4px;">✕</button>`
+            : `<span style="font-family:var(--font-mono);font-size:8px;background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;padding:2px 6px;">integrada</span>`;
+
+        if (type === 'sim') {
+            const opts = item.options || [];
+            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+                    <div style="font-size:13px;font-style:italic;color:var(--text);flex:1;">"${item.client}"</div>
+                    ${deleteBtn}
+                </div>
+                ${opts.map(o => `<div style="font-size:11px;color:${o.pts===5?'var(--success)':o.pts>=3?'var(--accent)':'var(--danger)'};padding:2px 0;">${o.pts}pts: ${o.text}</div>`).join('')}
+            </div>`;
+        } else if (type === 'ingr') {
+            const cat = item.category || item.cat || '';
+            const dish = item.dish || '';
+            const q = item.q || '';
+            const opts = item.o || (item.corr ? [item.corr] : []);
+            const corr = item.c ?? 0;
+            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px;">
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                            ${cat ? `<span style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);background:var(--surface-2);padding:2px 7px;border-radius:5px;">${cat}</span>` : ''}
+                            ${dish ? `<span style="font-weight:700;font-size:13px;">${dish}</span>` : ''}
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:5px;">${q}</div>
+                    </div>
+                    ${deleteBtn}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                    ${opts.map((opt, j) => `<div style="font-size:12px;padding:4px 8px;border-radius:6px;${j === corr ? 'background:rgba(27,138,74,0.1);color:var(--success);font-weight:600;' : 'color:var(--text-muted);'}">
+                        ${j === corr ? '✓' : '○'} ${opt}
+                    </div>`).join('')}
+                    ${item.corr && !item.o ? `<div style="font-size:12px;padding:4px 8px;border-radius:6px;background:rgba(27,138,74,0.1);color:var(--success);font-weight:600;">✓ ${item.corr}</div>` : ''}
+                </div>
+                ${item.explanation ? `<div style="font-size:11px;color:var(--text-muted);margin-top:5px;font-family:var(--font-mono);">💡 ${item.explanation}</div>` : ''}
+            </div>`;
+        } else { // trivia
+            return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+                    <div style="font-size:13px;font-weight:600;flex:1;">${item.q || ''}</div>
+                    ${deleteBtn}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    ${(item.o||[]).map((opt, j) => `<div style="font-size:12px;padding:4px 8px;border-radius:6px;${j === (item.c ?? 0) ? 'background:rgba(27,138,74,0.1);color:var(--success);font-weight:600;' : 'color:var(--text-muted);'}">
+                        ${j === (item.c ?? 0) ? '✓' : '○'} ${opt}
+                    </div>`).join('')}
+                </div>
+                ${item.explanation ? `<div style="font-size:11px;color:var(--text-muted);margin-top:5px;font-family:var(--font-mono);">💡 ${item.explanation}</div>` : ''}
+            </div>`;
         }
-    } catch(e) { console.warn('renderBancoUnified:', e); }
-
-    function renderCard(item, type) {
-        const label = type==='sim' ? item.client||'' : type==='ingr' ? `${item.dish||''} · ${item.q||''}` : item.q||'';
-        const opts = type==='sim' ? (item.options||[]).map(o=>`<div style="font-size:11px;color:${o.pts===5?'var(--success)':o.pts>=3?'var(--accent)':'var(--danger)'};">${o.pts}pts: ${o.text}</div>`).join('')
-            : type==='ingr' ? (item.o||[]).map((o,j)=>`<div style="font-size:11px;${j===(item.c??0)?'color:var(--success);font-weight:600;':'color:var(--text-muted);'}">${j===(item.c??0)?'✓':'○'} ${o}</div>`).join('')
-            : (item.o||[]).map((o,j)=>`<div style="font-size:11px;${j===(item.c??0)?'color:var(--success);font-weight:600;':'color:var(--text-muted);'}">${j===(item.c??0)?'✓':'○'} ${o}</div>`).join('');
-        return `<div class="bcard" data-fskey="${item._fsKey}" data-idx="${item._idx}" style="display:flex;align-items:flex-start;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:5px;">
-            <input type="checkbox" onchange="bancoSelChange()" style="margin-top:3px;width:16px;height:16px;cursor:pointer;flex-shrink:0;">
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
-                ${opts}
-                ${item.explanation?`<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">💡 ${item.explanation}</div>`:''}
-            </div>
-            <button onclick="bancoDelOne('${item._fsKey}',${item._idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:18px;font-weight:700;flex-shrink:0;padding:0 2px;line-height:1;" title="Eliminar">×</button>
-        </div>`;
     }
 
-    const total = firestoreItems.length;
-    const cardsHtml = total
-        ? firestoreItems.map(item => renderCard(item, mainTab)).join('')
-        : `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:24px;">Sin preguntas. Usá el formulario de arriba para agregar.</div>`;
+    let html = '';
+    let totalCount = 0;
 
-    el.innerHTML = `
-        ${buildBancoAddForm(mainTab)}
-        <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                <input id="banco-search" oninput="bancoSearch()" placeholder="🔍 Buscar..." style="flex:1;min-width:140px;font-size:13px;padding:7px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);">
-                <span id="banco-count" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">${total} preguntas</span>
-                <button id="banco-del-sel" onclick="bancoDelSelected()" style="display:none;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar seleccionadas</button>
-                <button onclick="bancoDelAll('${fsKey}')" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--danger);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar todo</button>
-            </div>
-            <div id="banco-cards-list" style="max-height:460px;overflow-y:auto;padding-right:2px;">${cardsHtml}</div>
+    // Render hardcoded sections
+    for (const key of hardcodedKeys) {
+        const items = BANCO[key] || [];
+        if (!items.length) continue;
+        const localLabel = { trivia:'BC (todas)', 'trivia-tanta':'Tanta', 'trivia-lamar':'La Mar',
+                             sim:'BC · hardcodeadas', ingr:'BC', 'ingr-tanta':'Tanta', 'ingr-lamar':'La Mar' }[key] || key;
+        html += `<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);background:var(--surface-2);border-radius:8px;padding:6px 10px;margin-bottom:8px;margin-top:12px;">
+            🏛️ ${localLabel} · ${items.length} preguntas integradas
         </div>`;
-}
-
-function bancoSelChange() {
-    const anyChecked = document.querySelectorAll('.bcard input[type=checkbox]:checked').length > 0;
-    const btn = document.getElementById('banco-del-sel');
-    if (btn) btn.style.display = anyChecked ? 'inline-block' : 'none';
-}
-
-function bancoSearch() {
-    const q = (document.getElementById('banco-search')?.value||'').toLowerCase();
-    let v = 0;
-    document.querySelectorAll('.bcard').forEach(c => {
-        const match = !q || c.textContent.toLowerCase().includes(q);
-        c.style.display = match ? 'flex' : 'none';
-        if (match) v++;
-    });
-    const ce = document.getElementById('banco-count'); if(ce) ce.textContent = v + ' preguntas';
-}
-
-async function bancoDelOne(fsKey, idx) {
-    await loadExtra();
-    if (!extraData[fsKey]) return;
-    extraData[fsKey].splice(idx, 1);
-    await saveExtra();
-    renderBancoUnified(_currentBancoTab, _currentBancoSub);
-}
-
-async function bancoDelSelected() {
-    const checked = [...document.querySelectorAll('.bcard input[type=checkbox]:checked')];
-    if (!checked.length) return;
-    if (!confirm(`¿Eliminar ${checked.length} pregunta(s)?`)) return;
-    await loadExtra();
-    // Group by fsKey, sort indices desc to splice safely
-    const groups = {};
-    checked.forEach(cb => {
-        const card = cb.closest('.bcard');
-        const k = card.dataset.fskey, i = parseInt(card.dataset.idx);
-        if (!groups[k]) groups[k] = [];
-        groups[k].push(i);
-    });
-    for (const [k, idxs] of Object.entries(groups)) {
-        idxs.sort((a,b)=>b-a).forEach(i => { if(extraData[k]) extraData[k].splice(i,1); });
+        const typeKey = mainTab;
+        html += items.map((item, i) => renderCard(item, i, false, typeKey)).join('');
+        totalCount += items.length;
     }
-    await saveExtra();
-    renderBancoUnified(_currentBancoTab, _currentBancoSub);
-}
 
-async function bancoDelAll(fsKey) {
-    if (!confirm('¿Eliminar TODAS las preguntas de esta sección?')) return;
-    await loadExtra();
-    extraData[fsKey] = [];
-    await saveExtra();
-    renderBancoUnified(_currentBancoTab, _currentBancoSub);
+    // Render Firestore items seamlessly
+    if (firestoreItems.length) {
+        html += `<div style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);background:rgba(27,138,74,0.06);border:1px solid rgba(27,138,74,0.15);border-radius:8px;padding:6px 10px;margin-bottom:8px;margin-top:12px;">
+            ✏️ Agregadas por admin · ${firestoreItems.length} preguntas <span style="color:var(--success);margin-left:4px;">· guardadas en la nube</span>
+        </div>`;
+        html += firestoreItems.map((item, i) => renderCard(item, i, true, mainTab)).join('');
+        totalCount += firestoreItems.length;
+    }
+
+    // Add question form inline at the bottom of Banco
+    html += buildBancoAddForm(mainTab);
+
+    if (!totalCount && !html.includes('banco-inline-form')) {
+        el.innerHTML = '<div class="dash-loading">Sin preguntas en esta sección.</div>';
+        return;
+    }
+    el.innerHTML = html;
 }
 
 async function bancoBorrarFirestore(tab, idx) {
-    await bancoDelOne(tab, idx);
+    if (!confirm('¿Eliminar esta pregunta del banco?')) return;
+    await loadExtra();
+    if (!extraData[tab] || !extraData[tab][idx]) { alert('No se encontró la pregunta.'); return; }
+    extraData[tab].splice(idx, 1);
+    await saveExtra();
+    const status = document.getElementById('banco-add-status');
+    if (status) { status.textContent = '✓ Pregunta eliminada'; status.className = 'admin-status ok'; setTimeout(() => status.textContent = '', 2000); }
+    renderBancoUnified(_currentBancoTab, _currentBancoSub);
 }
 
 function buildBancoAddForm(mainTab) {

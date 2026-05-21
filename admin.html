@@ -1041,53 +1041,52 @@ function initBancoTab() {
 
 // New 3-tab banco system — sub-tabs are local filters only (Firestore shown inline)
 const BANCO_TYPE_CONFIG = {
-    trivia: { label: '🧠 Trivia', subs: [
-        { key: 'trivia-bcp',   label: '🍽️ BCP' },
-        { key: 'trivia-bcb',   label: '🍽️ BCB' },
-        { key: 'trivia-bcbl',  label: '🍽️ BCBL' },
-        { key: 'trivia-bcc',   label: '🍽️ BCC' },
-        { key: 'trivia-tanta', label: '☕ Tanta' },
-        { key: 'trivia-lamar', label: '🦑 La Mar' },
-    ]},
-    sim: { label: '🎭 Simulador', subs: [
-        { key: 'sim-bcp',   label: '🍽️ BCP' },
-        { key: 'sim-bcb',   label: '🍽️ BCB' },
-        { key: 'sim-bcbl',  label: '🍽️ BCBL' },
-        { key: 'sim-bcc',   label: '🍽️ BCC' },
-        { key: 'sim-tanta', label: '☕ Tanta' },
-        { key: 'sim-lamar', label: '🦑 La Mar' },
-    ]},
-    ingr: { label: '🍽️ Carta', subs: [
-        { key: 'ingr-bcp',   label: '🍽️ BCP' },
-        { key: 'ingr-bcb',   label: '🍽️ BCB' },
-        { key: 'ingr-bcbl',  label: '🍽️ BCBL' },
-        { key: 'ingr-bcc',   label: '🍽️ BCC' },
-        { key: 'ingr-tanta', label: '☕ Tanta' },
-        { key: 'ingr-lamar', label: '🦑 La Mar' },
-    ]},
+    trivia: {
+        label: '🧠 Trivia',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'trivia', label: '🏛️ BC' },
+            { key: 'trivia-tanta', label: '☕ Tanta' },
+            { key: 'trivia-lamar', label: '🦑 La Mar' },
+        ]
+    },
+    sim: {
+        label: '🎭 Simulador',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'sim', label: '🏛️ BC' },
+        ]
+    },
+    ingr: {
+        label: '🍽️ Carta',
+        subs: [
+            { key: null, label: '📋 Todas' },
+            { key: 'ingr', label: '🏛️ BC' },
+            { key: 'ingr-tanta', label: '☕ Tanta' },
+            { key: 'ingr-lamar', label: '🦑 La Mar' },
+        ]
+    },
 };
 
 function switchBancoTab2(mainTab) {
     _currentBancoTab = mainTab;
-    const allSubs = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
-    // Show only the sub matching currentLocal; superadmin (no local) sees all
-    const localKey = currentLocal ? mainTab + '-' + currentLocal : null;
-    const visibleSubs = localKey ? allSubs.filter(s => s.key === localKey) : allSubs;
-    const defaultSub = visibleSubs[0]?.key || null;
-    _currentBancoSub = defaultSub;
+    _currentBancoSub = null;
+    // Update main tabs
     ['trivia','sim','ingr'].forEach(t => {
         const btn = document.getElementById('btab2-' + t);
         if (btn) btn.classList.toggle('active', t === mainTab);
     });
+    // Render sub-tabs
+    const subConfig = BANCO_TYPE_CONFIG[mainTab]?.subs || [];
     const subtabsEl = document.getElementById('banco-subtabs');
     if (subtabsEl) {
-        subtabsEl.innerHTML = visibleSubs.map(s =>
-            `<div class="admin-tab ${s.key === defaultSub ? 'active' : ''}"
-                  id="bstab-${s.key || 'all'}"
-                  onclick="switchBancoSub('${s.key}', '${mainTab}')">${s.label}</div>`
+        subtabsEl.innerHTML = subConfig.map(s =>
+            `<div class="admin-tab ${s.key === null ? 'active' : ''}" 
+                  id="bstab-${s.key || 'all'}" 
+                  onclick="switchBancoSub(${s.key === null ? 'null' : "'"+s.key+"'"}, '${mainTab}')">${s.label}</div>`
         ).join('');
     }
-    renderBancoUnified(mainTab, defaultSub);
+    renderBancoUnified(mainTab, null);
 }
 
 function switchBancoSub(subKey, mainTab) {
@@ -1239,7 +1238,7 @@ function buildBancoAddForm(mainTab) {
         return `<div id="banco-inline-form" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                 <div class="admin-section-title" style="margin-bottom:0;">+ Agregar situación de Simulador</div>
-                <button onclick="openBulk('sim')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
+                <button onclick="openBulk(_currentBancoSub || 'sim', 'sim')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
             </div>
             <div class="admin-add-form">
                 <div class="form-label">+ NUEVA SITUACIÓN</div>
@@ -1255,7 +1254,7 @@ function buildBancoAddForm(mainTab) {
         return `<div id="banco-inline-form" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                 <div class="admin-section-title" style="margin-bottom:0;">+ Agregar pregunta de Carta</div>
-                <button onclick="openBulk('ingr')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
+                <button onclick="openBulk(_currentBancoSub || 'ingr', 'ingr')" style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;text-transform:uppercase;letter-spacing:1px;">📥 Carga masiva</button>
             </div>
             <div class="admin-add-form">
                 <div class="form-label">+ NUEVA PREGUNTA DE CARTA</div>
@@ -1328,6 +1327,7 @@ async function bancoAdd(tab) {
 // CARGA MASIVA
 // ═══════════════════════════════════════════════════════
 let _bulkType = null;
+let _bulkMainType = null;
 let _bulkParsed = [];
 
 const BULK_HINTS = {
@@ -1359,11 +1359,13 @@ Cada objeto necesita <code>client</code> (string) y <code>options</code> (array 
 <code>c</code> es el índice de la opción correcta (0 = primera). Categorías: CEBICHE, TIRADITO, CAUSA, ENTRANTE, PRINCIPAL, GUARNICION, POSTRE, BEBIDA, COCTEL, VINO, PROTOCOLO, ALERGIA.`,
 };
 
-function openBulk(type) {
-    _bulkType = type;
+function openBulk(subKey, mainType) {
+    // subKey = exact firestore key (e.g. 'ingr-bcp'), mainType = 'sim'|'ingr' for validation
+    _bulkType = subKey;
+    _bulkMainType = mainType || (subKey.startsWith('sim') ? 'sim' : 'ingr');
     _bulkParsed = [];
-    document.getElementById('bulk-modal-title').textContent = type === 'sim' ? '📥 Carga Masiva · Simulador' : '📥 Carga Masiva · Carta';
-    document.getElementById('bulk-hint').innerHTML = BULK_HINTS[type] || '';
+    document.getElementById('bulk-modal-title').textContent = _bulkMainType === 'sim' ? '📥 Carga Masiva · Simulador' : '📥 Carga Masiva · Carta';
+    document.getElementById('bulk-hint').innerHTML = BULK_HINTS[_bulkMainType] || '';
     document.getElementById('bulk-textarea').value = '';
     document.getElementById('bulk-parse-status').textContent = '';
     document.getElementById('bulk-parse-status').className = 'bulk-status';
@@ -1408,7 +1410,7 @@ function bulkParse() {
 
     arr.forEach((item, i) => {
         const num = i + 1;
-        if (_bulkType === 'sim') {
+        if (_bulkMainType === 'sim') {
             const hasClient = typeof item.client === 'string' && item.client.trim();
             const opts = item.options;
             const hasOpts = Array.isArray(opts) && opts.length === 3 && opts.every(o => typeof o.text === 'string' && o.text.trim() && typeof o.pts === 'number');
@@ -1446,7 +1448,7 @@ function bulkParse() {
     }
     if (valid.length) {
         html += valid.map(v => {
-            if (_bulkType === 'sim') {
+            if (_bulkMainType === 'sim') {
                 const o = v.item.options;
                 return `<div class="bulk-preview-item"><span class="bp-ok">✓ Item ${v.num}</span><br><strong>${v.item.client}</strong><br>` +
                     o.map(opt => `<span style="color:${opt.pts===5?'var(--success)':opt.pts>=3?'var(--accent)':'var(--danger)'};">${opt.pts}pts: ${opt.text}</span>`).join('<br>') + '</div>';

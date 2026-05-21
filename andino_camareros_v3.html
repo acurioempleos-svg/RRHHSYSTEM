@@ -2792,13 +2792,6 @@
                         <span class="mode-desc">Simulador de servicio y reseñas.</span>
                     </div>
                 </div>
-                <div class="mode-card" onclick="app.setMode('trivia', this)">
-                    <div class="mode-icon">🧠</div>
-                    <div>
-                        <span class="mode-title">Trivia de Protocolo</span>
-                        <span class="mode-desc">Preguntas de servicio y cultura BC.</span>
-                    </div>
-                </div>
                 <div class="mode-card" onclick="app.setMode('ingredientes', this)">
                     <div class="mode-icon">🍽️</div>
                     <div>
@@ -2944,7 +2937,6 @@
         <div class="nav-tabs">
             <div class="nav-tab active" id="lb-tab-quincenal" onclick="app.switchLbTab('quincenal')">🏆 Quincenal</div>
             <div class="nav-tab" id="lb-tab-global" onclick="app.switchLbTab('global')">Global XP</div>
-            <div class="nav-tab" id="lb-tab-trivia" onclick="app.switchLbTab('trivia')">Trivia</div>
             <div class="nav-tab" id="lb-tab-sim" onclick="app.switchLbTab('sim')">Simulador</div>
         </div>
 
@@ -2999,34 +2991,6 @@
         <div id="ingr-options"></div>
 
         <div style="display: flex; gap: 5px; margin-top: 16px; justify-content: center;" id="ingr-progress-pips"></div>
-    </div>
-
-    <!-- ── TRIVIA ── -->
-    <div id="view-trivia" class="view">
-        <div class="medals-row" id="trivia-medals">
-            <div class="medal">🥇</div>
-            <div class="medal">🥇</div>
-            <div class="medal">🥇</div>
-            <div class="medal">🥇</div>
-            <div class="medal">🥇</div>
-        </div>
-
-        <div class="streak-bar">
-            <span class="streak-label">RACHA</span>
-            <div class="streak-dots" id="streak-dots"></div>
-            <span class="streak-value" id="streak-val">×1</span>
-        </div>
-
-        <div class="q-meta">
-            <span id="trivia-count">PREGUNTA 1/5</span>
-            <span class="timer-num" id="trivia-timer">10s</span>
-        </div>
-        <div class="timer-bar"><div id="trivia-fill" class="timer-fill"></div></div>
-        <div class="q-text" id="trivia-text"></div>
-        <div id="trivia-options"></div>
-        
-        <!-- Progress indicator for trivia (filled dynamically) -->
-        <div style="display: flex; gap: 6px; margin-top: 16px; justify-content: center; flex-wrap: wrap;" id="trivia-progress-pips"></div>
     </div>
 
     <!-- ── REPASO INTELIGENTE ── -->
@@ -3374,15 +3338,22 @@ function getLocalIngredientes(local) {
 
 // ── Tracking de stats por pregunta en Firestore ────────────────────
 // Se llama cada vez que alguien responde una pregunta
-const Q_STATS_COL = 'andino_question_stats';
+const Q_STATS_COL        = 'andino_question_stats';
+const PLAYER_ANSWERS_COL = 'andino_player_answers'; // historial detallado por usuario
+
+// Genera un ID estable y corto a partir del texto de una pregunta
+function makeQid(text) {
+    return (text || '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ]/g, '').slice(0, 60);
+}
 
 async function trackQuestionStat(questionText, isCorrect, local, playerDni) {
     if (!questionText) return;
-    // ID = hash simple del texto de la pregunta
-    const qid = questionText.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ]/g, '').slice(0, 60);
+    const qid = makeQid(questionText);
     if (!qid) return;
     const isBc = local && ['bcp','bcbl','bcc','bcb'].includes(local);
     const localGroup = isBc ? 'bc' : (local || 'bc');
+
+    // 1. Stats globales de la pregunta (para admin: qué preguntas fallan más)
     try {
         const ref = fsdb.collection(Q_STATS_COL).doc(qid);
         const update = {
@@ -3391,13 +3362,23 @@ async function trackQuestionStat(questionText, isCorrect, local, playerDni) {
             attempts: firebase.firestore.FieldValue.increment(1),
         };
         if (!isCorrect) update.errors = firebase.firestore.FieldValue.increment(1);
-        // Stats individuales por jugador
         if (playerDni) {
             update[`players.${playerDni}.attempts`] = firebase.firestore.FieldValue.increment(1);
             if (!isCorrect) update[`players.${playerDni}.errors`] = firebase.firestore.FieldValue.increment(1);
         }
         await ref.set(update, { merge: true });
-    } catch(e) { /* fail silently — no bloquear el juego */ }
+    } catch(e) { /* fail silently */ }
+
+    // 2. Historial detallado por usuario (para admin: ver cada respuesta de cada jugador)
+    if (!playerDni) return;
+    try {
+        const record = { qid, q: questionText, isCorrect, local: local || '', ts: Date.now() };
+        await fsdb.collection(PLAYER_ANSWERS_COL).doc(playerDni).set({
+            dni: playerDni,
+            lastUpdate: Date.now(),
+            answers: firebase.firestore.FieldValue.arrayUnion(record),
+        }, { merge: true });
+    } catch(e) { /* fail silently */ }
 }
 // Utility function to shuffle array (Fisher-Yates)
 function shuffleArray(array) {
@@ -3407,6 +3388,81 @@ function shuffleArray(array) {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SISTEMA ANTI-REPETICIÓN DE PREGUNTAS
+// ══════════════════════════════════════════════════════════════════
+// Garantiza que el usuario vea preguntas no respondidas antes de
+// repetir. Cuando agota todo el banco, el historial se reinicia.
+//
+// Clave de localStorage: "andino_seen_v1_<dni>_<modo>_<local>"
+// Valor: array de qids ya vistos en sesiones previas.
+
+const SEEN_KEY_PREFIX = 'andino_seen_v1';
+
+function _seenKey(dni, mode, local) {
+    return `${SEEN_KEY_PREFIX}_${dni}_${mode}_${local}`;
+}
+
+function _loadSeen(dni, mode, local) {
+    try { return JSON.parse(localStorage.getItem(_seenKey(dni, mode, local))) || []; }
+    catch { return []; }
+}
+
+function _saveSeen(dni, mode, local, seenIds) {
+    try { localStorage.setItem(_seenKey(dni, mode, local), JSON.stringify(seenIds)); }
+    catch {}
+}
+
+// Genera un ID estable para una pregunta del banco (usa makeQid)
+function _qidFromItem(item) {
+    const text = item.q || item.client || item.dish || '';
+    return makeQid(text) || ('item_' + JSON.stringify(item).slice(0, 40));
+}
+
+/**
+ * Selecciona `count` preguntas del banco priorizando las no vistas.
+ * Si no hay suficientes no vistas, completa con vistas y reinicia el historial.
+ *
+ * @param {string} dni
+ * @param {string} mode   'ingredientes' | 'trivia' | 'sim'
+ * @param {string} local
+ * @param {Array}  bank   banco completo de preguntas
+ * @param {number} count  cuántas preguntas seleccionar
+ * @returns {Array}       preguntas seleccionadas (mezcladas)
+ */
+function pickQuestionsAntiRepeat(dni, mode, local, bank, count) {
+    if (!bank || bank.length === 0) return [];
+    count = Math.min(count, bank.length);
+
+    const seen     = _loadSeen(dni, mode, local);
+    const seenSet  = new Set(seen);
+
+    const unseen = bank.filter(q => !seenSet.has(_qidFromItem(q)));
+    const viewed = bank.filter(q =>  seenSet.has(_qidFromItem(q)));
+
+    let selected = [];
+
+    if (unseen.length >= count) {
+        // Caso normal: hay suficientes preguntas nuevas
+        selected = shuffleArray(unseen).slice(0, count);
+    } else {
+        // Tomamos todas las no vistas + completamos con vistas
+        const extra = shuffleArray(viewed).slice(0, count - unseen.length);
+        selected    = shuffleArray([...unseen, ...extra]);
+
+        // Si agotamos el banco completo, resetear para el próximo ciclo
+        if (unseen.length === 0) {
+            _saveSeen(dni, mode, local, []);
+        }
+    }
+
+    // Registrar las seleccionadas como "vistas" para la próxima sesión
+    const newSeen = [...new Set([...seen, ...selected.map(_qidFromItem)])];
+    _saveSeen(dni, mode, local, newSeen);
+
+    return selected;
 }
 
 // ── Emojis por categoría de carta ──────────────────────────
@@ -3507,7 +3563,6 @@ const RANKS = {
 // ── MODE_META: metadata de modos para UI ────────────────────────────────────
 const MODE_META = {
     sim:          { icon: '🎭', name: 'Cliente vs Camarero',  time: '~5 min',   questions: '5 escenarios', xp: 'Hasta 60 XP' },
-    trivia:       { icon: '🧠', name: 'Trivia de Protocolo',  time: '~3 min',   questions: '7 preguntas',  xp: 'Hasta 70 XP' },
     ingredientes: { icon: '🍽️', name: 'Conocé la Carta',      time: '~4 min',   questions: '7 items',      xp: 'Hasta 70 XP' },
     daily:        { icon: '⚡', name: 'Desafío del Día',       time: '~3 min',   questions: '7 preguntas',  xp: 'XP ×2'       },
 };
@@ -3801,10 +3856,16 @@ const app = (() => {
             
             // Seleccionar banco de preguntas según local
             const localTrivia = getLocalTrivia(state.local);
-            window._localTrivia = localTrivia;
+            // Aplicar anti-repetición a la trivia (el Daily Override la sobreescribe más abajo si aplica)
+            window._localTrivia = pickQuestionsAntiRepeat(
+                state.dni, 'trivia', state.local, localTrivia, 7
+            );
 
             if (state.mode === 'sim') {
-                DATA.sim = selectRandomSimScenarios(5);
+                // Anti-repetición para el simulador
+                DATA.sim = pickQuestionsAntiRepeat(
+                    state.dni, 'sim', state.local, DATA.simBank, 5
+                );
             }
             if (state.mode === 'ingredientes') {
                 // Carta: Tanta y La Mar tienen su propio banco, BC comparte
@@ -3814,7 +3875,10 @@ const app = (() => {
                     const filtered = bank.filter(q => q.category === _ingrSelectedCategory);
                     if (filtered.length > 0) bank = filtered;
                 }
-                state.ingrSelected = shuffleArray(bank).slice(0, 7);
+                // Anti-repetición para ingredientes
+                state.ingrSelected = pickQuestionsAntiRepeat(
+                    state.dni, 'ingredientes' + (_ingrSelectedCategory || ''), state.local, bank, 7
+                );
             }
 
             if (state.mode === 'repaso') {
@@ -3963,6 +4027,9 @@ const app = (() => {
             const medals = document.querySelectorAll('#trivia-medals .medal');
             const isCorrect = idx === q.c;
 
+            // Siempre marcar la opción correcta (visible tanto en error como en timeout)
+            if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
+
             // Registrar stat de esta pregunta en Firestore
             trackQuestionStat(q.q, isCorrect, state.local, state.dni);
 
@@ -3991,8 +4058,6 @@ const app = (() => {
             } else {
                 if (btn) btn.classList.add('wrong');
                 
-                if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
-                
                 if (q.explanation) {
                     const explanationDiv = document.createElement('div');
                     explanationDiv.style.cssText = `
@@ -4013,6 +4078,8 @@ const app = (() => {
                 playSound('wrong');
                 state.wrongAnswers = state.wrongAnswers || [];
                 state.wrongAnswers.push({ q: q.q, correct: q.o[q.c] });
+                state._wrongFull = state._wrongFull || [];
+                state._wrongFull.push(q);
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
                     state.score -= 1;
@@ -4075,7 +4142,6 @@ const app = (() => {
             
             state.score += opt.s;
             state.simScores.push(opt.s);
-            state.score += opt.s;
             state.xp += opt.s * 10;
             updateXpBar(((state.step + 1) / DATA.sim.length) * 80);
             
@@ -4086,6 +4152,10 @@ const app = (() => {
             } else {
                 state.streak = 0;
                 if (opt.s <= 2) shakeWrong();
+                // Guardar en banco de repaso (igual que trivia/ingredientes)
+                state._wrongFull = state._wrongFull || [];
+                const stepData = DATA.sim[state.step];
+                state._wrongFull.push({ q: stepData.client, o: stepData.options.map(o => o.t), c: stepData.options.findIndex(o => o.s === 5), explanation: '' });
             }
             
             const optionsContainer = document.getElementById('sim-options');
@@ -4205,6 +4275,9 @@ const app = (() => {
             const allOptions = document.querySelectorAll('#ingr-options .option');
             allOptions.forEach(b => b.disabled = true);
 
+            // Siempre marcar la opción correcta (visible tanto en error como en timeout)
+            if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
+
             const isCorrect = idx === q.c;
 
             // Registrar stat de esta pregunta en Firestore
@@ -4224,12 +4297,13 @@ const app = (() => {
                 updateXpBar(Math.min(((state.step + 1) / state.ingrSelected.length) * 80 + 5, 85));
             } else {
                 if (btn) btn.classList.add('wrong');
-                if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
                 state.streak = 0;
                 playSound('wrong');
                 shakeWrong();
                 state.wrongAnswers = state.wrongAnswers || [];
                 state.wrongAnswers.push({ q: q.q || q.dish, correct: q.o[q.c] });
+                state._wrongFull = state._wrongFull || [];
+                state._wrongFull.push(q);
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
                     state.score -= 1;
@@ -4334,7 +4408,7 @@ const app = (() => {
                     if (resGoogleCard) resGoogleCard.style.display = 'block';
                     if (resStars) {
                         let starHtml = '';
-                        for (let i = 0; i < 5; i++) {
+                        for (let i = 0; i < clampedStars; i++) {
                             starHtml += `⭐`;
                         }
                         resStars.innerHTML = starHtml;
@@ -4904,7 +4978,7 @@ let currentLbTab = 'quincenal';
 
 async function renderLeaderboard(tab, currentDni) {
     currentLbTab = tab;
-    const tabs = ['quincenal', 'global','trivia','sim'];
+    const tabs = ['quincenal', 'global','sim'];
     tabs.forEach(t => {
         const el = document.getElementById('lb-tab-' + t);
         if (el) el.classList.toggle('active', t === tab);
@@ -4930,9 +5004,7 @@ async function renderLeaderboard(tab, currentDni) {
         })).sort((a, b) => (b.xp || 0) - (a.xp || 0));
     } else {
         const players = await DB.getAllPlayersAsync();
-        if (tab === 'trivia') {
-            sorted = [...players].sort((a, b) => (b.bestTriviaScore || 0) - (a.bestTriviaScore || 0));
-        } else if (tab === 'sim') {
+        if (tab === 'sim') {
             sorted = [...players].sort((a, b) => (b.bestSimScore || 0) - (a.bestSimScore || 0));
         } else {
             sorted = [...players].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
@@ -4955,9 +5027,6 @@ async function renderLeaderboard(tab, currentDni) {
         if (tab === 'quincenal') {
             scoreVal = (p.xp || 0) + ' XP';
             gamesLabel = 'esta quincena';
-        } else if (tab === 'trivia') {
-            scoreVal = (p.bestTriviaScore || 0) + '/' + DATA.trivia.length + ' ✓';
-            gamesLabel = p.totalGames + ' partidas';
         } else if (tab === 'sim') {
             scoreVal = (p.bestSimScore || 0) + ' pts';
             gamesLabel = p.totalGames + ' partidas';
@@ -5026,18 +5095,23 @@ app.finish = async function() {
         const prevPlayer = DB.getPlayer(dni);
         const prevLevel = getLevel(prevPlayer.totalXp);
 
+        // Aplicar multiplicador de racha diaria si corresponde
+        const mult = app.state.dailyXpMult || 1;
+        const finalXp = Math.round(app.state.xp * mult);
+        if (mult > 1) app.state.xp = finalXp; // actualizar state para que la UI muestre el XP correcto
+
         const result = await DB.updatePlayer(dni, {
             mode: app.state.mode,
             nombre: app.state.nombre,
             local: app.state.local,
             score: app.state.score,
-            xp: app.state.xp,
+            xp: finalXp,
             maxStreak: app.state.maxStreak
         });
 
         // Save to quincenal ranking
-        if (app.state.xp > 0) {
-            addQuincenalXP(dni, app.state.xp).catch(() => {});
+        if (finalXp > 0) {
+            addQuincenalXP(dni, finalXp).catch(() => {});
         }
 
         savedPlayer = result.player;

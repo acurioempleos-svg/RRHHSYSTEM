@@ -180,6 +180,7 @@
         <div class="admin-tab"        id="atab-daily"  onclick="switchTab('daily')">🔥 Trivia de Hoy</div>
         <div class="admin-tab"        id="atab-prize"  onclick="switchTab('prize')">🏆 Premio</div>
         <div class="admin-tab"        id="atab-banco"  onclick="switchTab('banco')">📚 Banco</div>
+        <div class="admin-tab" id="atab-tracking" onclick="switchTab('tracking')">👤 Tracking</div>
     </div>
 
     <!-- DASHBOARD -->
@@ -406,7 +407,7 @@ function getLevel(xp) {
 // ═══════════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════════
-const ALL_TABS = ['dash','daily','prize','banco'];
+const ALL_TABS = ['dash','daily','prize','banco','tracking'];
 
 function switchTab(tab) {
     ALL_TABS.forEach(t => {
@@ -419,6 +420,7 @@ function switchTab(tab) {
     else if (tab === 'daily')  loadDailyHard();
     else if (tab === 'prize')  loadPrizePanel();
     else if (tab === 'banco')  initBancoTab();
+    else if (tab === 'tracking') initTrackingTab();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1501,6 +1503,502 @@ async function bulkSave() {
 function renderBanco(tab) { renderBancoUnified(tab.startsWith('trivia') ? 'trivia' : tab === 'sim' ? 'sim' : 'ingr', tab === 'trivia' || tab === 'sim' || tab === 'ingr' ? null : tab); }
 
 
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TRACKING PANEL                                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="panel-tracking" style="display:none;">
+    <div class="admin-section-title">👤 Tracking Detallado por Usuario</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input id="tracking-search" class="dash-search" style="flex:1;min-width:200px;margin-bottom:0;"
+            placeholder="🔍 Buscar jugador por nombre o DNI..."
+            oninput="trackingSearch()">
+        <select id="tracking-local-filter" onchange="trackingSearch()"
+            style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:13px;font-family:var(--font-body);">
+            <option value="">Todos los locales</option>
+            <option value="tanta">Tanta</option>
+            <option value="lamar">La Mar</option>
+            <option value="bcp">BCP · Palermo</option>
+            <option value="bcb">BCB · Belgrano</option>
+            <option value="bcbl">BCBL · Bulnes</option>
+            <option value="bcc">BCC · San Telmo</option>
+        </select>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="dash-filter-btn active" id="trk-f-all"      onclick="trackingFilter('all')">Todos</div>
+        <div class="dash-filter-btn"        id="trk-f-active"   onclick="trackingFilter('active')">✅ Activos 7d</div>
+        <div class="dash-filter-btn"        id="trk-f-inactive" onclick="trackingFilter('inactive')">⚠ Inactivos</div>
+        <div class="dash-filter-btn"        id="trk-f-new"      onclick="trackingFilter('new')">🆕 Sin jugar</div>
+    </div>
+
+    <div id="tracking-list" style="margin-bottom:12px;"></div>
+
+    <!-- DETALLE DEL JUGADOR SELECCIONADO -->
+    <div id="tracking-detail" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div>
+                <div id="trk-detail-name" style="font-family:var(--font-display);font-size:18px;font-weight:700;"></div>
+                <div id="trk-detail-sub" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;"></div>
+            </div>
+            <div onclick="closeTrackingDetail()" style="cursor:pointer;font-size:20px;padding:4px 8px;">✕</div>
+        </div>
+        <div id="trk-detail-body"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <div class="dash-export-btn" onclick="trackingExportCSV()">⬇ Exportar CSV completo</div>
+        <div class="dash-export-btn" onclick="initTrackingTab()">↻ Actualizar</div>
+    </div>
+</div>
+
+<script>
+
+// ════════════════════════════════════════════════════════════════
+// TRACKING TAB — Tracking detallado por usuario
+// ════════════════════════════════════════════════════════════════
+
+const STREAK_COL_ADMIN       = 'andino_streaks';
+const PLAYER_ANSWERS_COL_ADM = 'andino_player_answers';
+const REPASO_COL_ADM         = 'andino_repaso';
+const QUINCENAL_COL_ADM      = 'andino_quincenal';
+
+let trkPlayers = [];
+let trkFilter_ = 'all';
+
+async function initTrackingTab() {
+    const list = document.getElementById('tracking-list');
+    list.innerHTML = '<div class="dash-loading">Cargando jugadores...</div>';
+    document.getElementById('tracking-detail').style.display = 'none';
+
+    try {
+        const snap = await fsdb.collection(PLAYERS_COL).get();
+        trkPlayers = snap.docs.map(d => ({ dni: d.id, ...d.data() }));
+
+        // Filtrar por local igual que el dashboard
+        if (currentLocal) {
+            const isBc = ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
+            const localGroup = isBc ? 'bc' : currentLocal;
+            trkPlayers = trkPlayers.filter(p => {
+                const pl = p.local || '';
+                if (localGroup === 'bc') return ['bcp','bcbl','bcc','bcb','bc',''].some(l => pl === l || !pl);
+                return pl === currentLocal || !pl;
+            });
+        }
+
+        renderTrackingList();
+    } catch(e) {
+        list.innerHTML = `<div class="dash-loading" style="color:var(--danger);">Error: ${e.message}</div>`;
+    }
+}
+
+function trackingFilter(f) {
+    trkFilter_ = f;
+    ['all','active','inactive','new'].forEach(x =>
+        document.getElementById('trk-f-' + x)?.classList.toggle('active', x === f)
+    );
+    renderTrackingList();
+}
+
+function trackingSearch() { renderTrackingList(); }
+
+function renderTrackingList() {
+    const now     = Date.now();
+    const search  = (document.getElementById('tracking-search')?.value || '').toLowerCase();
+    const locFilt = document.getElementById('tracking-local-filter')?.value || '';
+
+    let list = trkPlayers.filter(p => {
+        if (search && !((p.nombre||'').toLowerCase().includes(search) || (p.dni||'').includes(search))) return false;
+        if (locFilt && (p.local || '') !== locFilt) return false;
+        if (trkFilter_ === 'active')   return p.lastSeen && (now - p.lastSeen) < 7*24*3600*1000;
+        if (trkFilter_ === 'inactive') return !p.lastSeen || (now - p.lastSeen) >= 7*24*3600*1000;
+        if (trkFilter_ === 'new')      return !p.totalGames || p.totalGames === 0;
+        return true;
+    });
+
+    // Sort by lastSeen desc
+    list.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+
+    const container = document.getElementById('tracking-list');
+    if (!list.length) {
+        container.innerHTML = '<div class="dash-loading">Sin jugadores que coincidan.</div>';
+        return;
+    }
+
+    container.innerHTML = list.map(p => {
+        const days  = p.lastSeen ? Math.floor((now - p.lastSeen) / 86400000) : 999;
+        const dot   = days <= 1 ? 'green' : days <= 7 ? 'yellow' : days <= 30 ? 'red' : 'grey';
+        const last  = p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+        const lv    = getLevel(p.totalXp || 0);
+        const local = p.local ? (LOCAL_LABELS[p.local] || p.local) : '—';
+        return `<div onclick="openTrackingDetail('${p.dni}')"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                   background:var(--surface);border:1px solid var(--border);
+                   border-radius:10px;margin-bottom:6px;cursor:pointer;
+                   transition:border-color .2s;"
+            onmouseover="this.style.borderColor='var(--accent)'"
+            onmouseout="this.style.borderColor='var(--border)'">
+            <span class="activity-dot ${dot}" style="flex-shrink:0;width:10px;height:10px;"></span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    ${p.nombre || p.dni}
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+                    DNI ${p.dni} · ${local} · Niv.${lv+1} ${LEVEL_NAMES[lv]}
+                </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-family:var(--font-mono);font-size:13px;color:var(--accent);font-weight:700;">${p.totalXp||0} XP</div>
+                <div style="font-size:10px;color:var(--text-muted);">${p.totalGames||0} partidas</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;min-width:80px;">
+                <div style="font-size:10px;color:var(--text-muted);">${last}</div>
+                <div style="font-size:10px;color:var(--text-muted);">último acceso</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function closeTrackingDetail() {
+    document.getElementById('tracking-detail').style.display = 'none';
+}
+
+async function openTrackingDetail(dni) {
+    const p = trkPlayers.find(x => x.dni === dni);
+    if (!p) return;
+
+    const det = document.getElementById('tracking-detail');
+    det.style.display = 'block';
+    det.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const lv    = getLevel(p.totalXp || 0);
+    const local = p.local ? (LOCAL_LABELS[p.local] || p.local) : '—';
+
+    document.getElementById('trk-detail-name').textContent = p.nombre || ('DNI ' + dni);
+    document.getElementById('trk-detail-sub').textContent =
+        `DNI ${dni} · ${local} · Nivel ${lv+1} (${LEVEL_NAMES[lv]})`;
+
+    document.getElementById('trk-detail-body').innerHTML =
+        '<div class="dash-loading">Cargando datos completos...</div>';
+
+    // Fetch all sub-collections in parallel
+    const [streakDoc, answersDoc, repasoDoc] = await Promise.all([
+        fsdb.collection(STREAK_COL_ADMIN).doc(dni).get().catch(() => null),
+        fsdb.collection(PLAYER_ANSWERS_COL_ADM).doc(dni).get().catch(() => null),
+        fsdb.collection(REPASO_COL_ADM).doc(dni).get().catch(() => null),
+    ]);
+
+    const streak    = streakDoc?.exists    ? streakDoc.data()    : null;
+    const answers   = answersDoc?.exists   ? answersDoc.data()   : null;
+    const repaso    = repasoDoc?.exists    ? repasoDoc.data()    : null;
+
+    // ── Fetch question stats for this player ──
+    let qStats = [];
+    try {
+        const snap2 = await fsdb.collection(Q_STATS_COL).get();
+        qStats = snap2.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(d => d.players && d.players[dni] && (d.players[dni].attempts || 0) > 0)
+            .map(d => {
+                const pd = d.players[dni] || {};
+                const att = pd.attempts || 0;
+                const err = pd.errors || 0;
+                return { q: d.q || d.id, att, err, pct: att > 0 ? Math.round(((att-err)/att)*100) : 0 };
+            })
+            .sort((a,b) => a.pct - b.pct);
+    } catch(e) {}
+
+    renderTrackingDetail(p, streak, answers, repaso, qStats);
+}
+
+function renderTrackingDetail(p, streak, answers, repaso, qStats) {
+    const now   = Date.now();
+    const lv    = getLevel(p.totalXp || 0);
+    const xpNext = LEVEL_THRESHOLDS[lv+1] || LEVEL_THRESHOLDS[lv];
+    const xpCurr = LEVEL_THRESHOLDS[lv] || 0;
+    const xpPct = xpNext > xpCurr ? Math.round(((p.totalXp - xpCurr) / (xpNext - xpCurr)) * 100) : 100;
+
+    const history = p.history || [];
+    const triviaH = history.filter(h => h.mode === 'trivia');
+    const ingrH   = history.filter(h => h.mode === 'ingredientes');
+    const simH    = history.filter(h => h.mode === 'sim');
+    const dailyH  = history.filter(h => h.mode === 'daily');
+
+    const PXPART = 7;
+    const triviaCorr  = triviaH.reduce((s,h) => s + (h.score||0), 0);
+    const ingrCorr    = ingrH.reduce((s,h) => s + (h.score||0), 0);
+    const totalCorr   = triviaCorr + ingrCorr;
+    const totalQuest  = (triviaH.length + ingrH.length) * PXPART;
+    const pctGlobal   = totalQuest > 0 ? Math.round((totalCorr/totalQuest)*100) : null;
+    const barColor    = pctGlobal >= 70 ? 'var(--success)' : pctGlobal >= 40 ? 'var(--accent)' : 'var(--danger)';
+
+    // ── Streak section ──
+    const streakHtml = streak ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
+            <div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;color:var(--accent);">${streak.currentStreak||0}</div>
+                <div style="font-size:10px;color:var(--text-muted);">Racha actual</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;">${streak.longestStreak||0}</div>
+                <div style="font-size:10px;color:var(--text-muted);">Racha máx</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center;">
+                <div style="font-size:12px;font-weight:700;margin-top:4px;">${streak.lastPlayDate||'—'}</div>
+                <div style="font-size:10px;color:var(--text-muted);">Último día jugado</div>
+            </div>
+        </div>` : '<div style="font-size:11px;color:var(--text-muted);">Sin datos de racha diaria aún.</div>';
+
+    // ── History table (full 20 entries) ──
+    const histHtml = history.length > 0 ? history.map(h => {
+        const modeLabel = { trivia: '⚡ Trivia', ingredientes: '🍽 Carta', sim: '🎭 Sim', daily: '⚡ Daily' };
+        const modeColor = h.mode === 'trivia' ? 'var(--accent)' : h.mode === 'ingredientes' ? 'var(--success)' : h.mode === 'daily' ? '#C8001A' : '#4A7AD4';
+        const scoreText = (h.mode === 'trivia' || h.mode === 'ingredientes' || h.mode === 'daily')
+            ? `${h.score||0}/${PXPART} ✓`
+            : `${h.score||0} pts`;
+        const mult = h.mult ? `<span style="color:#C8001A;font-size:9px;">×${h.mult}</span>` : '';
+        return `<tr>
+            <td style="padding:5px 6px;font-size:11px;">
+                <span style="background:${modeColor}22;color:${modeColor};border:1px solid ${modeColor}44;border-radius:4px;padding:2px 5px;font-size:9px;white-space:nowrap;">${modeLabel[h.mode]||h.mode}</span>
+            </td>
+            <td style="padding:5px 6px;font-family:var(--font-mono);font-size:11px;text-align:center;">${scoreText}</td>
+            <td style="padding:5px 6px;font-family:var(--font-mono);font-size:11px;text-align:center;color:var(--accent);">+${h.xp||0} XP ${mult}</td>
+            <td style="padding:5px 6px;font-family:var(--font-mono);font-size:10px;text-align:center;">${h.streak||0} 🔥</td>
+            <td style="padding:5px 6px;font-size:10px;color:var(--text-muted);white-space:nowrap;">${h.date||''}</td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="5" style="padding:8px;text-align:center;color:var(--text-muted);font-size:11px;">Sin partidas registradas.</td></tr>';
+
+    // ── Answers timeline (from andino_player_answers) ──
+    let answersHtml = '<div style="font-size:11px;color:var(--text-muted);">Sin datos de respuestas individuales aún.</div>';
+    if (answers && answers.answers && answers.answers.length > 0) {
+        const sorted = [...answers.answers].sort((a,b) => (b.ts||0)-(a.ts||0)).slice(0,50);
+        const correct  = answers.answers.filter(a => a.isCorrect).length;
+        const total    = answers.answers.length;
+        const pctA     = Math.round((correct/total)*100);
+        const barC     = pctA >= 70 ? 'var(--success)' : pctA >= 40 ? 'var(--accent)' : 'var(--danger)';
+        answersHtml = `
+            <div style="margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+                    <span style="color:var(--text-muted);">Respuestas registradas: <strong>${total}</strong></span>
+                    <span style="color:${barC};font-weight:700;">${pctA}% acierto</span>
+                </div>
+                <div style="background:var(--surface-2);border-radius:4px;height:5px;overflow:hidden;margin-bottom:8px;">
+                    <div style="width:${pctA}%;height:100%;background:${barC};border-radius:4px;"></div>
+                </div>
+                <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+                ${sorted.map(a => `
+                    <div style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;">
+                        <span style="font-size:14px;flex-shrink:0;">${a.isCorrect ? '✅' : '❌'}</span>
+                        <div style="flex:1;line-height:1.4;color:var(--text);">${(a.q||'').length > 80 ? (a.q||'').slice(0,77)+'…' : (a.q||'—')}</div>
+                        <div style="flex-shrink:0;text-align:right;color:var(--text-muted);font-family:var(--font-mono);">
+                            ${a.ts ? new Date(a.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—'}
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+    }
+
+    // ── Q-Stats: worst and best ──
+    let qWorstHtml = '', qBestHtml = '';
+    if (qStats.length > 0) {
+        const worst = qStats.filter(d => d.pct < 70).slice(0, 8);
+        const best  = [...qStats].sort((a,b) => b.pct-a.pct).filter(d => d.pct >= 70).slice(0, 8);
+        const renderQRow = d => {
+            const c = d.pct >= 70 ? 'var(--success)' : d.pct >= 40 ? 'var(--accent)' : 'var(--danger)';
+            return `<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
+                <div style="flex:1;line-height:1.4;">${d.q.length > 65 ? d.q.slice(0,62)+'…' : d.q}</div>
+                <div style="font-weight:700;color:${c};flex-shrink:0;font-family:var(--font-mono);">${d.pct}%</div>
+                <div style="font-size:10px;color:var(--text-muted);flex-shrink:0;">${d.att-d.err}/${d.att}</div>
+            </div>`;
+        };
+        qWorstHtml = worst.length ? worst.map(renderQRow).join('') : '<div style="font-size:11px;color:var(--text-muted);">Ninguna por debajo del 70%.</div>';
+        qBestHtml  = best.length  ? best.map(renderQRow).join('')  : '<div style="font-size:11px;color:var(--text-muted);">Sin preguntas con 70%+ aún.</div>';
+    }
+
+    // ── Repaso (wrong answers to review) ──
+    let repasoHtml = '<div style="font-size:11px;color:var(--text-muted);">Sin preguntas para repasar.</div>';
+    if (repaso && repaso.wrongs && repaso.wrongs.length > 0) {
+        const modes = [...new Set(repaso.wrongs.map(w => w.mode || 'trivia'))];
+        repasoHtml = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${repaso.wrongs.length} preguntas pendientes de repaso · Modos: ${modes.join(', ')}</div>
+        <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+        ${repaso.wrongs.slice(0,20).map(w => `
+            <div style="padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px;line-height:1.5;">
+                <div style="color:var(--text);">${(w.q||w.dish||'').length > 80 ? (w.q||w.dish||'').slice(0,77)+'…' : (w.q||w.dish||'—')}</div>
+                <div style="color:var(--success);margin-top:2px;">✓ Respuesta correcta: ${w.correct||'—'}</div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    // ── Achievements ──
+    const achievements = p.unlockedAchievements || [];
+
+    // ── Last seen formatted ──
+    const lastSeen = p.lastSeen
+        ? new Date(p.lastSeen).toLocaleString('es-AR', {weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        : 'Nunca';
+
+    document.getElementById('trk-detail-body').innerHTML = `
+    <div style="font-size:12px;font-family:var(--font-mono);">
+
+        <!-- ── KPIs PRINCIPALES ── -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">
+            <div style="background:var(--surface-2);border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;color:var(--accent);">${p.totalXp||0}</div>
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">XP Total</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;">${p.totalGames||0}</div>
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Partidas</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:10px;text-align:center;">
+                <div style="font-size:22px;font-weight:700;">${p.bestStreak||0} 🔥</div>
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Mejor racha</div>
+            </div>
+        </div>
+
+        <!-- ── PROGRESO DE NIVEL ── -->
+        <div style="margin-bottom:14px;background:var(--surface-2);border-radius:10px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-weight:700;font-size:13px;">Nivel ${lv+1} · ${LEVEL_NAMES[lv]}</span>
+                <span style="color:var(--accent);">${p.totalXp||0} / ${xpNext} XP</span>
+            </div>
+            <div style="background:var(--surface);border-radius:4px;height:7px;overflow:hidden;">
+                <div style="width:${Math.min(xpPct,100)}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--success));border-radius:4px;transition:width .5s;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
+                Próximo nivel: ${LEVEL_NAMES[lv+1]||'Máximo'} — faltan ${Math.max(0,(xpNext||0)-(p.totalXp||0))} XP
+            </div>
+        </div>
+
+        <!-- ── TASA DE ACIERTO GLOBAL ── -->
+        ${pctGlobal !== null ? `
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;">📈 Tasa de acierto global (historial de partidas)</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                <span style="font-size:11px;color:var(--text-muted);">✓ ${totalCorr} correctas · ✗ ${totalQuest-totalCorr} incorrectas</span>
+                <span style="font-weight:700;color:${barColor};">${pctGlobal}%</span>
+            </div>
+            <div style="background:var(--surface-2);border-radius:4px;height:6px;overflow:hidden;">
+                <div style="width:${pctGlobal}%;height:100%;background:${barColor};border-radius:4px;"></div>
+            </div>
+        </div>` : ''}
+
+        <!-- ── PARTIDAS POR MODO ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">🎮 Rendimiento por modo</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                <div style="background:rgba(212,168,0,0.10);border:1px solid rgba(212,168,0,0.25);border-radius:8px;padding:8px;text-align:center;">
+                    <div style="font-size:20px;font-weight:700;color:var(--accent);">${p.triviaGames||0}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">Trivia ⚡</div>
+                    <div style="font-size:10px;color:var(--success);margin-top:2px;">mejor: ${p.bestTriviaScore||0}/7</div>
+                    ${triviaH.length > 0 ? `<div style="font-size:10px;color:var(--text-muted);">prom: ${Math.round(triviaCorr/triviaH.length*10)/10}/7</div>` : ''}
+                </div>
+                <div style="background:rgba(26,122,58,0.08);border:1px solid rgba(26,122,58,0.2);border-radius:8px;padding:8px;text-align:center;">
+                    <div style="font-size:20px;font-weight:700;color:var(--success);">${p.ingrGames||0}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">Carta 🍽</div>
+                    <div style="font-size:10px;color:var(--success);margin-top:2px;">mejor: ${p.bestIngrScore||0}/7</div>
+                    ${ingrH.length > 0 ? `<div style="font-size:10px;color:var(--text-muted);">prom: ${Math.round(ingrCorr/ingrH.length*10)/10}/7</div>` : ''}
+                </div>
+                <div style="background:rgba(74,122,212,0.08);border:1px solid rgba(74,122,212,0.2);border-radius:8px;padding:8px;text-align:center;">
+                    <div style="font-size:20px;font-weight:700;color:#4A7AD4;">${p.simGames||0}</div>
+                    <div style="font-size:9px;color:var(--text-muted);">Sim 🎭</div>
+                    <div style="font-size:10px;color:#4A7AD4;margin-top:2px;">mejor: ${p.bestSimScore||0} pts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RACHA DIARIA ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">🔥 Racha diaria</div>
+            ${streakHtml}
+        </div>
+
+        <!-- ── HISTORIAL COMPLETO DE PARTIDAS ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">📋 Historial completo de partidas (últimas 20)</div>
+            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead>
+                        <tr style="background:var(--surface-2);font-size:10px;color:var(--text-muted);text-transform:uppercase;">
+                            <th style="padding:6px 8px;text-align:left;">Modo</th>
+                            <th style="padding:6px 8px;text-align:center;">Score</th>
+                            <th style="padding:6px 8px;text-align:center;">XP</th>
+                            <th style="padding:6px 8px;text-align:center;">Racha</th>
+                            <th style="padding:6px 8px;text-align:center;">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>${histHtml}</tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── PREGUNTAS MÁS FALLADAS ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--danger);margin-bottom:5px;">⚠ Preguntas con más errores</div>
+            ${qStats.length ? qWorstHtml : '<div style="font-size:11px;color:var(--text-muted);">Sin datos individuales aún.</div>'}
+        </div>
+
+        <!-- ── PREGUNTAS QUE DOMINA ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--success);margin-bottom:5px;">✓ Preguntas que domina mejor</div>
+            ${qStats.length ? qBestHtml : '<div style="font-size:11px;color:var(--text-muted);">Sin datos individuales aún.</div>'}
+        </div>
+
+        <!-- ── HISTORIAL DE RESPUESTAS (andino_player_answers) ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">🔍 Respuestas pregunta a pregunta (últimas 50)</div>
+            ${answersHtml}
+        </div>
+
+        <!-- ── PREGUNTAS PARA REPASAR ── -->
+        <div style="margin-bottom:14px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">📖 Preguntas pendientes de repaso</div>
+            ${repasoHtml}
+        </div>
+
+        <!-- ── LOGROS ── -->
+        <div style="margin-bottom:10px;">
+            <div style="font-size:10px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">🏅 Logros desbloqueados (${achievements.length})</div>
+            ${achievements.length > 0
+                ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${achievements.map(id => `<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;">${id}</span>`).join('')}</div>`
+                : '<div style="font-size:11px;color:var(--text-muted);">Ningún logro desbloqueado aún.</div>'}
+        </div>
+
+        <!-- ── META DATA ── -->
+        <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+            <div style="font-size:10px;color:var(--text-muted);">
+                📅 Último acceso: <strong>${lastSeen}</strong>
+                ${p.local ? ` · Local: <strong>${LOCAL_LABELS[p.local]||p.local}</strong>` : ''}
+            </div>
+        </div>
+    </div>`;
+}
+
+function trackingExportCSV() {
+    const rows = [['DNI','Nombre','Local','XP','Nivel','Partidas totales','Trivia','Carta','Sim',
+        'Mejor Trivia','Mejor Carta','Mejor Sim','Racha actual','Racha máx','Logros','Último acceso']];
+    trkPlayers.forEach(p => {
+        const lv = getLevel(p.totalXp || 0);
+        rows.push([
+            p.dni, p.nombre||'', LOCAL_LABELS[p.local]||p.local||'',
+            p.totalXp||0, `${lv+1} - ${LEVEL_NAMES[lv]}`,
+            p.totalGames||0, p.triviaGames||0, p.ingrGames||0, p.simGames||0,
+            p.bestTriviaScore||0, p.bestIngrScore||0, p.bestSimScore||0,
+            p.currentStreak||0, p.bestStreak||0,
+            (p.unlockedAchievements||[]).join('; '),
+            p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR') : ''
+        ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const a   = document.createElement('a');
+    a.href    = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = 'andino_tracking_completo.csv';
+    a.click();
+}
+
+</script>
 </script>
 </div><!-- /admin-page -->
 </body>

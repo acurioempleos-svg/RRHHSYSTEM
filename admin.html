@@ -275,10 +275,28 @@
 
     <!-- TRIVIA DE HOY -->
     <div id="panel-daily" style="display:none;">
-        <div class="admin-section-title">🔥 Trivia de Hoy — Preguntas más difíciles</div>
+        <div class="admin-section-title">📊 Estadísticas de Preguntas</div>
         <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:12px;line-height:1.6;">
-            Estas son las preguntas con <strong>mayor tasa de error</strong> del equipo.<br>
-            Se calculan en tiempo real desde el historial de partidas.
+            Tasas de error y acierto calculadas en tiempo real desde el historial de partidas.
+        </div>
+        <!-- Controls -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+            <select id="daily-mode" onchange="loadDailyHard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font-mono);">
+                <option value="worst">❌ Peor respondidas</option>
+                <option value="best">✅ Mejor respondidas</option>
+                <option value="both">📊 Ambas (comparar)</option>
+            </select>
+            <select id="daily-limit" onchange="loadDailyHard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font-mono);">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+                <option value="20">Top 20</option>
+            </select>
+            <select id="daily-min" onchange="loadDailyHard()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font-mono);">
+                <option value="1">Mín 1 intento</option>
+                <option value="3" selected>Mín 3 intentos</option>
+                <option value="5">Mín 5 intentos</option>
+                <option value="10">Mín 10 intentos</option>
+            </select>
         </div>
         <div id="daily-local-info" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
             Cargando datos...
@@ -414,67 +432,60 @@ async function loadDailyHard() {
     const info  = document.getElementById('daily-local-info');
     panel.innerHTML = '<div class="dash-loading">Cargando estadísticas...</div>';
 
+    const mode  = document.getElementById('daily-mode')?.value || 'worst';
+    const limit = parseInt(document.getElementById('daily-limit')?.value || '10');
+    const minAt = parseInt(document.getElementById('daily-min')?.value || '3');
+
     try {
-        let query = fsdb.collection(Q_STATS_COL);
-        // Filtrar por local si no es un local compartido (BC*)
         const isBc = currentLocal && ['bcp','bcbl','bcc','bcb'].includes(currentLocal);
         const localGroup = isBc ? 'bc' : currentLocal;
+        const snap = await fsdb.collection(Q_STATS_COL).get();
+        if (snap.empty) { panel.innerHTML = '<div class="dash-loading">Aún no hay estadísticas.</div>'; return; }
 
-        const snap = await query.get();
-        if (snap.empty) {
-            panel.innerHTML = '<div class="dash-loading">Aún no hay estadísticas de preguntas.<br>Los datos se acumulan a medida que el equipo juega.</div>';
-            return;
-        }
-
-        // Filtrar por local group
         let docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (localGroup) {
-            docs = docs.filter(d => !d.localGroup || d.localGroup === localGroup);
-        }
+        if (localGroup) docs = docs.filter(d => !d.localGroup || d.localGroup === localGroup);
 
-        // Ordenar por tasa de error descendente, mínimo 3 intentos
-        const withErr = docs
-            .filter(d => (d.attempts || 0) >= 3)
-            .map(d => ({
-                ...d,
-                errorRate: ((d.errors || 0) / (d.attempts || 1)) * 100
-            }))
-            .sort((a, b) => b.errorRate - a.errorRate)
-            .slice(0, 10);
+        const totalDocs = docs.filter(d => (d.attempts||0) >= 1).length;
+        const totalAttempts = docs.reduce((s, d) => s + (d.attempts||0), 0);
+        info.innerHTML = `<span style="color:var(--text);">Local: <strong>${LOCAL_LABELS[currentLocal] || currentLocal}</strong></span> · <span>${totalDocs} preguntas · ${totalAttempts} intentos</span>`;
 
-        const totalDocs = docs.filter(d => (d.attempts || 0) >= 1).length;
-        const totalAttempts = docs.reduce((s, d) => s + (d.attempts || 0), 0);
+        const withRate = docs
+            .filter(d => (d.attempts||0) >= minAt)
+            .map(d => ({ ...d, errorRate: ((d.errors||0) / (d.attempts||1)) * 100 }));
 
-        info.innerHTML = `
-            <span style="color:var(--text);">Local: <strong>${LOCAL_LABELS[currentLocal] || currentLocal}</strong></span> ·
-            <span>${totalDocs} preguntas registradas</span> ·
-            <span>${totalAttempts} intentos totales</span>
-        `;
+        if (!withRate.length) { panel.innerHTML = `<div class="dash-loading">Se necesitan al menos ${minAt} intentos por pregunta.</div>`; return; }
 
-        if (!withErr.length) {
-            panel.innerHTML = '<div class="dash-loading">Se necesitan al menos 3 intentos por pregunta para calcular dificultad.<br>El equipo necesita jugar más partidas.</div>';
-            return;
-        }
-
-        panel.innerHTML = withErr.map((d, i) => {
-            const color = d.errorRate >= 60 ? 'var(--danger)' : d.errorRate >= 40 ? 'var(--accent)' : 'var(--success)';
-            const pct   = Math.round(d.errorRate);
-            return `
-            <div class="hard-q-item">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">
-                    <div style="font-size:12px;font-weight:600;line-height:1.4;flex:1;">${i + 1}. ${d.q || '(pregunta sin texto)'}</div>
-                    <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:${color};flex-shrink:0;">${pct}%</div>
-                </div>
-                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">error</div>
-                <div class="hard-q-bar-wrap">
-                    <div class="hard-q-bar" style="width:${pct}%;background:${color};"></div>
-                </div>
-                <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
-                    ${d.errors||0} errores de ${d.attempts||0} intentos
-                    ${d.localGroup ? '· ' + (d.localGroup === 'bc' ? 'Barra Chalaca' : LOCAL_LABELS[d.localGroup] || d.localGroup) : ''}
-                </div>
+        function renderChart(items, title, colorFn) {
+            const max = Math.max(...items.map(d => d.errorRate), 1);
+            return `<div style="margin-bottom:24px;">
+                <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">${title}</div>
+                ${items.map((d, i) => {
+                    const pct = Math.round(d.errorRate);
+                    const barW = Math.round((d.errorRate / max) * 100);
+                    const color = colorFn(d.errorRate);
+                    return `<div style="margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                            <div style="font-size:11px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">${i+1}. ${d.q||'—'}</div>
+                            <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${color};flex-shrink:0;">${pct}%</div>
+                        </div>
+                        <div style="background:var(--surface-2);border-radius:4px;height:10px;overflow:hidden;">
+                            <div style="height:10px;width:${barW}%;background:${color};border-radius:4px;"></div>
+                        </div>
+                        <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;">${d.errors||0} errores · ${d.attempts||0} intentos</div>
+                    </div>`;
+                }).join('')}
             </div>`;
-        }).join('');
+        }
+
+        const dangerColor  = r => r >= 60 ? 'var(--danger)' : r >= 40 ? 'var(--accent)' : 'var(--success)';
+        const successColor = r => r <= 20 ? 'var(--success)' : r <= 50 ? 'var(--accent)' : 'var(--danger)';
+
+        const worst = [...withRate].sort((a,b) => b.errorRate - a.errorRate).slice(0, limit);
+        const best  = [...withRate].sort((a,b) => a.errorRate - b.errorRate).slice(0, limit);
+
+        if (mode === 'worst')      panel.innerHTML = renderChart(worst, '❌ Peor respondidas — mayor tasa de error', dangerColor);
+        else if (mode === 'best')  panel.innerHTML = renderChart(best,  '✅ Mejor respondidas — menor tasa de error', successColor);
+        else                       panel.innerHTML = renderChart(worst, '❌ Peor respondidas', dangerColor) + renderChart(best, '✅ Mejor respondidas', successColor);
 
     } catch(e) {
         panel.innerHTML = `<div class="dash-loading" style="color:var(--danger);">Error: ${e.message}</div>`;

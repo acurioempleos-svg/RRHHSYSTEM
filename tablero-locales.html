@@ -1954,6 +1954,22 @@ function renderLocal(local, q='') {
     (c.puesto||'').toLowerCase().includes(lq)
   );
   const fk   = DOC_FILTER_DEFS.find(f=>f.key===_docFilter)?.keys || null;
+  // Si hay filtro activo, mostrar solo personas que tengan al menos una carpeta
+  // cuyo nombre coincida con los docs de ese grupo (mapeo inverso por CARPETA_LEGACY_KEY)
+  if (fk) {
+    const legacyNombres = new Set(
+      Object.entries(CARPETA_LEGACY_KEY)
+        .filter(([, v]) => fk.includes(v))
+        .map(([k]) => k)
+    );
+    list = list.filter(c => {
+      const carpetas = Array.isArray(c.carpetas) && c.carpetas.length
+        ? c.carpetas : migrarCarpetasLegacy(c);
+      return carpetas.some(f =>
+        legacyNombres.has(f.nombre) && f.urls && f.urls.length > 0
+      );
+    });
+  }
   document.getElementById('lv-count').textContent = `${list.length} persona${list.length!==1?'s':''}`;
   const hoy  = new Date();
 
@@ -2209,8 +2225,10 @@ function migrarCarpetasLegacy(c) {
              : (metaRaw && typeof metaRaw === 'object') ? [metaRaw]
              : urls.map(() => ({ estado: 'ok' }));
     while (meta.length < urls.length) meta.push({ estado: 'ok' });
+    // ID determinístico: colab.id + nombre normalizado → no cambia entre renders
+    const stableId = (c.id||'x') + '_' + d.nombre.replace(/\s+/g,'_').toLowerCase();
     return {
-      id:     uidCarpeta(),
+      id:     stableId,
       nombre: d.nombre,
       emoji:  d.emoji,
       urls,
@@ -2583,21 +2601,86 @@ function renderCarousel() {
 }
 function prevGoto(i) {
   _prevIdx = i;
-  // Animate the track
+
+  // 1. Deslizar el track (animación CSS, sin re-render)
   const track = document.getElementById('car-slide-inner');
   if (track) track.style.transform = `translateX(-${i*100}%)`;
-  // Update dots and meta without full re-render
+
+  // 2. Actualizar onclick del swipe-zone (URL activa para verFotoFull)
+  const swipeZone = document.getElementById('car-swipe-zone');
+  if (swipeZone) swipeZone.setAttribute('onclick', `verFotoFull('${_prevUrls[i]}')`);
+
+  // 3. Actualizar flechas (cambian su destino según el índice)
+  const carousel = document.getElementById('prev-carousel');
+  const hasMulti = _prevUrls.length > 1;
+  if (hasMulti && carousel) {
+    const btns = carousel.querySelectorAll(':scope > div > button');
+    btns.forEach(b => {
+      if (b.textContent.trim() === '‹') b.setAttribute('onclick', `prevGoto(${(i-1+_prevUrls.length)%_prevUrls.length})`);
+      if (b.textContent.trim() === '›') b.setAttribute('onclick', `prevGoto(${(i+1)%_prevUrls.length})`);
+    });
+  }
+
+  // 4. Actualizar estado badge in-place
+  const meta   = _prevMeta[i] || {};
+  const estado = meta.estado || 'ok';
+  const slideWrap = track ? track.closest('div[style*="position:relative"]') : null;
+  if (slideWrap) {
+    let badge = slideWrap.querySelector('.car-estado-badge');
+    if (estado !== 'ok') {
+      const txt = estado==='revision' ? '⚠ Requiere revisión' : '✕ Rechazado';
+      const bg  = estado==='revision' ? 'background:rgba(201,122,26,.85);color:#fff' : 'background:rgba(196,50,50,.85);color:#fff';
+      if (badge) {
+        badge.className = `car-estado-badge car-estado-${estado}`;
+        badge.style.cssText = `position:absolute;top:10px;left:10px;z-index:3;font-family:'DM Mono',monospace;font-size:9px;font-weight:600;padding:3px 8px;border-radius:6px;pointer-events:none;${bg}`;
+        badge.textContent = txt;
+      } else {
+        badge = document.createElement('div');
+        badge.className = `car-estado-badge car-estado-${estado}`;
+        badge.style.cssText = `position:absolute;top:10px;left:10px;z-index:3;font-family:'DM Mono',monospace;font-size:9px;font-weight:600;padding:3px 8px;border-radius:6px;pointer-events:none;${bg}`;
+        badge.textContent = txt;
+        slideWrap.appendChild(badge);
+      }
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // 5. Actualizar meta (fecha y número de foto)
+  const metaDiv = carousel ? carousel.querySelector('.car-meta') : null;
+  if (metaDiv) {
+    const fechaCarga = meta.cargado_en
+      ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}</span></div>`
+      : '';
+    const fotoNum = hasMulti
+      ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${i+1} de ${_prevUrls.length}</span></div>`
+      : '';
+    metaDiv.innerHTML = fechaCarga + fotoNum;
+  }
+
+  // 6. Actualizar botón de estado y descarga
+  const actionsDiv = carousel ? carousel.querySelector('.car-actions') : null;
+  if (actionsDiv) {
+    const btnDownload = actionsDiv.querySelector('button[title="Descargar"]');
+    if (btnDownload) btnDownload.setAttribute('onclick', `descargarFoto('${_prevUrls[i]}','${activeTask?.label||'doc'}',${i+1})`);
+    const btnEstado = actionsDiv.querySelector('button[title="Cambiar estado"]');
+    if (btnEstado) {
+      btnEstado.className = `car-btn car-btn-${estado==='revision'?'warn':estado==='rechazado'?'err':'muted'}`;
+      const svgHtml = btnEstado.querySelector('svg').outerHTML;
+      btnEstado.innerHTML = svgHtml + (estado==='ok'?' Marcar revisión':estado==='revision'?' Rechazar':' OK');
+    }
+  }
+
+  // 7. Actualizar dots
   const nav = document.getElementById('prev-nav');
   if (nav && nav.children.length) {
     Array.from(nav.children).forEach((dot, di) => {
-      const m = _prevMeta[di] || {};
+      const m2 = _prevMeta[di] || {};
       const active = di === i;
       dot.style.width = active ? '24px' : '8px';
-      dot.style.background = m.estado==='rechazado' ? 'var(--danger)' : m.estado==='revision' ? 'var(--amber-hi)' : active ? 'var(--amber-hi)' : 'var(--b2)';
+      dot.style.background = m2.estado==='rechazado' ? 'var(--danger)' : m2.estado==='revision' ? 'var(--amber-hi)' : active ? 'var(--amber-hi)' : 'var(--b2)';
     });
   }
-  // Full re-render to update meta, estado badge, button states
-  renderCarousel();
 }
 
 function fmtDateTime(iso) {

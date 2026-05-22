@@ -2182,16 +2182,41 @@ function uidCarpeta() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 }
 
-// Si el colaborador no tiene carpetas[] aún, crear estructura vacía con defaults
+// Mapeo nombre de carpeta default → key legacy en Firestore
+const CARPETA_LEGACY_KEY = {
+  'DNI Frente':        'dni_frente',
+  'DNI Dorso':         'dni_dorso',
+  'CUIL':              'cuil',
+  'Datos personales':  'datos_personales',
+  'DJ Vivienda':       'dj_vivienda',
+  'Salud':             'salud',
+  'Política Interna':  'politica_interna',
+  'Vacaciones':        'vacaciones',
+  'Apercibimiento':    'apercibimiento',
+  'Suspensión':        'suspension',
+  'Distinción':        'nota_buena',
+  'Sanciones':         'sanciones',
+};
+
+// Si el colaborador no tiene carpetas[] aún, construir desde campos legacy
 function migrarCarpetasLegacy(c) {
-  // Si ya existe carpetas guardado devolver vacío para que se creen defaults
-  return CARPETAS_DEFAULT.map(d => ({
-    id:    uidCarpeta(),
-    nombre: d.nombre,
-    emoji:  d.emoji,
-    urls:  [],
-    meta:  [],
-  }));
+  return CARPETAS_DEFAULT.map(d => {
+    const legacyKey = CARPETA_LEGACY_KEY[d.nombre];
+    const raw  = legacyKey ? c[legacyKey] : null;
+    const urls = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
+    const metaRaw = legacyKey ? c[legacyKey + '_meta'] : null;
+    let meta = Array.isArray(metaRaw) ? metaRaw
+             : (metaRaw && typeof metaRaw === 'object') ? [metaRaw]
+             : urls.map(() => ({ estado: 'ok' }));
+    while (meta.length < urls.length) meta.push({ estado: 'ok' });
+    return {
+      id:     uidCarpeta(),
+      nombre: d.nombre,
+      emoji:  d.emoji,
+      urls,
+      meta,
+    };
+  });
 }
 
 // Renderiza el grid de carpetas para un colaborador dado su array de carpetas

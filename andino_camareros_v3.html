@@ -4764,8 +4764,15 @@ const DB = {
         const now = new Date();
         const label = now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }) + ' ' + now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
         p.history = p.history || [];
-        p.history.unshift({ mode: gameData.mode, score: gameData.score, xp: gameData.xp, streak: gameData.maxStreak, date: label });
-        if (p.history.length > 20) p.history.pop();
+        const histEntry = { mode: gameData.mode, score: gameData.score, xp: gameData.xp, streak: gameData.maxStreak, date: label, ts: Date.now() };
+        p.history.unshift(histEntry);
+        if (p.history.length > 100) p.history.pop();
+
+        // Guardar también en subcolección para historial completo sin límite
+        try {
+            fsdb.collection('andino_game_history').doc(dni)
+                .collection('games').add(histEntry);
+        } catch(e) {}
 
         const newAchievements = [];
         for (const ach of ACHIEVEMENTS) {

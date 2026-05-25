@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Lato:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --bg: #FDF8EE;
@@ -1160,6 +1161,7 @@ async function renderBancoUnified(mainTab, subKey) {
                 <span id="banco-count" style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);white-space:nowrap;">${total} preguntas</span>
                 <button id="banco-del-sel" onclick="bancoDelSelected()" style="display:none;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar seleccionadas</button>
                 <button onclick="bancoDelAll('${fsKey}')" style="background:var(--surface-2);color:var(--danger);border:1.5px solid var(--danger);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑 Eliminar todo</button>
+                <button onclick="exportBancoPDF('${fsKey}','${mainTab}')" style="background:var(--text);color:var(--bg);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-display);letter-spacing:.5px;">⬇ PDF</button>
             </div>
             <div id="banco-cards-list" style="max-height:460px;overflow-y:auto;padding-right:2px;">${cardsHtml}</div>
         </div>`;
@@ -1973,6 +1975,208 @@ function renderTrackingDetail(p, streak, answers, repaso, qStats) {
             </div>
         </div>
     </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORTAR BANCO A PDF
+// ═══════════════════════════════════════════════════════
+async function exportBancoPDF(fsKey, mainTab) {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) { alert('Error: jsPDF no disponible'); return; }
+
+    // Leer preguntas actuales de Firestore
+    let items = [];
+    try {
+        const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
+        const data = doc.exists ? doc.data() : {};
+        items = data[fsKey] || [];
+    } catch(e) {
+        alert('Error al leer las preguntas: ' + e.message);
+        return;
+    }
+
+    if (!items.length) { alert('No hay preguntas para exportar en esta sección.'); return; }
+
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const W = 210, marginL = 14, marginR = 196, maxW = marginR - marginL;
+    const LOCAL_LABEL = LOCAL_LABELS[currentLocal] || currentLocal || 'Admin';
+    const TYPE_LABELS = { trivia: 'Trivia de Protocolo', sim: 'Simulador de Clientes', ingr: 'Carta / Ingredientes' };
+    const typeLabel = TYPE_LABELS[mainTab] || mainTab;
+
+    // Paleta
+    const C_DARK  = [26, 20, 0];
+    const C_GOLD  = [212, 168, 0];
+    const C_MUTED = [138, 122, 80];
+    const C_GREEN = [26, 122, 58];
+    const C_RED   = [200, 0, 26];
+    const C_BG    = [253, 248, 238];
+
+    let y = 0;
+
+    function newPage() {
+        pdf.addPage();
+        y = 14;
+        // Mini header en páginas subsiguientes
+        pdf.setFontSize(8);
+        pdf.setTextColor(...C_MUTED);
+        pdf.text(`Andino · ${LOCAL_LABEL} · ${typeLabel}`, marginL, y);
+        pdf.setDrawColor(...C_MUTED);
+        pdf.setLineWidth(0.2);
+        pdf.line(marginL, y + 2, marginR, y + 2);
+        y += 8;
+    }
+
+    function checkY(needed) {
+        if (y + needed > 280) newPage();
+    }
+
+    function wrapText(text, fontSize, maxWidth) {
+        pdf.setFontSize(fontSize);
+        return pdf.splitTextToSize(String(text || ''), maxWidth);
+    }
+
+    // ── ENCABEZADO PORTADA ──
+    pdf.setFillColor(...C_DARK);
+    pdf.rect(0, 0, W, 34, 'F');
+    pdf.setFontSize(20);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('ANDINO · BANCO DE PREGUNTAS', marginL, 14);
+    pdf.setFontSize(11);
+    pdf.setTextColor(...C_GOLD);
+    pdf.text(`${typeLabel.toUpperCase()}  ·  ${LOCAL_LABEL.toUpperCase()}`, marginL, 22);
+    pdf.setFontSize(9);
+    pdf.setTextColor(200, 200, 200);
+    const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
+    pdf.text(`Generado el ${fecha}  ·  ${items.length} preguntas`, marginL, 30);
+
+    y = 44;
+
+    items.forEach((item, idx) => {
+        const num = idx + 1;
+
+        if (mainTab === 'trivia' || mainTab === 'ingr') {
+            const questionText = mainTab === 'ingr'
+                ? `${item.dish ? item.dish + ' · ' : ''}${item.q || ''}`
+                : (item.q || '');
+            const opts = item.o || [];
+            const correct = item.c ?? 0;
+
+            const qLines = wrapText(`${num}. ${questionText}`, 11, maxW);
+            const optLines = opts.map(o => wrapText(o, 9.5, maxW - 8));
+            const expLines = item.explanation ? wrapText(item.explanation, 8.5, maxW - 4) : [];
+
+            const blockH = (qLines.length * 5.5) +
+                opts.reduce((s, _, i) => s + optLines[i].length * 4.8, 0) + 4 +
+                (expLines.length ? expLines.length * 4.2 + 3 : 0) +
+                (mainTab === 'ingr' && item.category ? 5 : 0) +
+                10;
+
+            checkY(blockH);
+
+            // Fondo de la tarjeta
+            pdf.setFillColor(...C_BG);
+            pdf.setDrawColor(220, 210, 185);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(marginL, y, maxW, blockH, 3, 3, 'FD');
+
+            let cy = y + 5;
+
+            // Badge de categoría (ingr)
+            if (mainTab === 'ingr' && item.category) {
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(...C_MUTED);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(item.category, marginL + 4, cy);
+                cy += 4.5;
+            }
+
+            // Pregunta
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.setTextColor(...C_DARK);
+            pdf.text(qLines, marginL + 4, cy);
+            cy += qLines.length * 5.5 + 2;
+
+            // Opciones
+            opts.forEach((o, i) => {
+                const isCorrect = i === correct;
+                const lines = optLines[i];
+                pdf.setFont('helvetica', isCorrect ? 'bold' : 'normal');
+                pdf.setFontSize(9.5);
+                pdf.setTextColor(...(isCorrect ? C_GREEN : C_MUTED));
+                const prefix = isCorrect ? '✓ ' : '○ ';
+                pdf.text(prefix + lines[0], marginL + 8, cy);
+                if (lines.length > 1) {
+                    lines.slice(1).forEach(l => { cy += 4.8; pdf.text('   ' + l, marginL + 8, cy); });
+                }
+                cy += 4.8;
+            });
+
+            // Explicación
+            if (expLines.length) {
+                cy += 1;
+                pdf.setFont('helvetica', 'italic');
+                pdf.setFontSize(8.5);
+                pdf.setTextColor(...C_MUTED);
+                pdf.text('💡 ' + expLines[0], marginL + 4, cy);
+                expLines.slice(1).forEach(l => { cy += 4.2; pdf.text('   ' + l, marginL + 4, cy); });
+            }
+
+            y += blockH + 4;
+
+        } else if (mainTab === 'sim') {
+            // Situación de cliente
+            const clientLines = wrapText(`${num}. ${item.client || ''}`, 11, maxW);
+            const optObjs = item.options || [];
+            const optLines2 = optObjs.map(o => wrapText(`${o.pts}pts: ${o.text}`, 9.5, maxW - 8));
+
+            const blockH = (clientLines.length * 5.5) +
+                optObjs.reduce((s, _, i) => s + optLines2[i].length * 4.8, 0) +
+                14;
+
+            checkY(blockH);
+
+            pdf.setFillColor(...C_BG);
+            pdf.setDrawColor(220, 210, 185);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(marginL, y, maxW, blockH, 3, 3, 'FD');
+
+            let cy = y + 5;
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(11);
+            pdf.setTextColor(...C_DARK);
+            pdf.text(clientLines, marginL + 4, cy);
+            cy += clientLines.length * 5.5 + 2;
+
+            const ptColors = { 5: C_GREEN, 3: [200, 140, 0], 1: C_RED };
+            optObjs.forEach((o, i) => {
+                const lines = optLines2[i];
+                const col = ptColors[o.pts] || C_MUTED;
+                pdf.setFont('helvetica', o.pts === 5 ? 'bold' : 'normal');
+                pdf.setFontSize(9.5);
+                pdf.setTextColor(...col);
+                pdf.text(lines[0], marginL + 8, cy);
+                lines.slice(1).forEach(l => { cy += 4.8; pdf.text('    ' + l, marginL + 8, cy); });
+                cy += 4.8;
+            });
+
+            y += blockH + 4;
+        }
+    });
+
+    // Pie de página en todas las páginas
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+        pdf.setPage(p);
+        pdf.setFontSize(8);
+        pdf.setTextColor(...C_MUTED);
+        pdf.text(`Página ${p} / ${totalPages}`, marginR, 292, { align: 'right' });
+    }
+
+    const safeName = fsKey.replace(/[^a-z0-9_-]/gi, '_');
+    pdf.save(`andino_preguntas_${safeName}.pdf`);
 }
 
 function trackingExportCSV() {

@@ -1,17 +1,20 @@
 
+ Joaco v5.0 — Groq + Firestore + DOM reader + chat + láser + function calling + TTS + STT (Whisper)
+ 
+ Configuración requerida (antes de cargar este script):
  
     window.__joacoConfig = {
       groqKey: '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',
-      firebase: {
+     firebase: {
         apiKey: '...',
         authDomain: '...',
         projectId: '...',
-      }
+     }
     };
  
-
+  Opcional por página:
     window.__joacoContext = { page: 'empleados', extra: 'info adicional' };
-
+ 
 (function () {
   'use strict';
 
@@ -225,8 +228,9 @@
 
   function buildSystemPrompt(domData, dbData) {
     const ctx = window.__joacoContext || {};
-    const domStr = JSON.stringify(domData, null, 2);
-    const dbStr  = dbData ? JSON.stringify(dbData, null, 2) : 'No disponible';
+    // Limitar tamaño para no exceder el payload de Groq
+    const domStr = JSON.stringify(domData).slice(0, 6000);
+    const dbStr  = dbData ? JSON.stringify(dbData).slice(0, 8000) : 'No disponible';
 
     // Contexto de memoria y preferencias
     const prefs = getUserPrefs();
@@ -262,16 +266,17 @@ ${dbStr}
 Usá estos datos para responder preguntas sobre empleados, estadísticas, resultados de juegos, preguntas del quiz, horarios, o lo que te pidan. Si algo no está en los datos, decilo sin vueltas. No inventes información.
 
 HERRAMIENTAS DISPONIBLES (usálas cuando sea relevante):
-- fireLaser(target, duration, message): disparar el láser de tu ojo hacia un elemento CSS.
-- stopLaser(): apagar el láser.
-- wiggle(): sacudirte para enfatizar algo o celebrar.
-- moveTo(target): moverte físicamente cerca de un elemento de la página.
-- clickElement(selector, confirm_msg): hacé click en un botón o elemento. Usalo cuando el usuario pide ejecutar una acción.
-- fillField(selector, value, confirm_msg): completar un campo de formulario con un valor.
-- clickTab(tabText, confirm_msg): navegar a un tab por su texto visible.
-- setMood(mood): cambiá tu propio estado de ánimo visual ('urgente', 'tranquilo', 'celebrando', 'neutral').
+- fireLaser(target, duration, message): apunta el láser hacia un selector CSS para señalar algo.
+- moveTo(target): movete físicamente cerca de un elemento.
+- uiAction(action, selector?, value?): ejecuta acciones en la página.
+  - action="wiggle": sacudirte.
+  - action="stopLaser": apagar el láser.
+  - action="click" + selector: hacer click en un elemento.
+  - action="fill" + selector + value: escribir en un campo.
+  - action="tab" + value: navegar a un tab por su texto.
+  - action="mood" + value: cambiar tu estado de ánimo (urgente/tranquilo/celebrando/neutral).
 
-Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el usuario te pide que hagas algo en la página (clickear, llenar un campo, ir a una sección), ejecutalo con la herramienta apropiada.`;
+Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el usuario pide ejecutar algo en la página, hacelo con uiAction.`;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -317,27 +322,30 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
 
   // Registro de visitas por sección
   function trackVisit() {
-    const visits = memGet('visits', {});
-    const now = Date.now();
-    const hour = new Date().getHours();
-    if (!visits[PAGE_KEY]) visits[PAGE_KEY] = { count: 0, totalTime: 0, lastVisit: 0, hours: {} };
-    visits[PAGE_KEY].count++;
-    visits[PAGE_KEY].lastVisit = now;
-    visits[PAGE_KEY].hours[hour] = (visits[PAGE_KEY].hours[hour] || 0) + 1;
-    memSet('visits', visits);
-    // Guardar tiempo de entrada para calcular duración al salir
-    memSet('visit_start', now);
+    try {
+      const visits = memGet('visits', {});
+      const now = Date.now();
+      const hour = new Date().getHours();
+      if (!visits[PAGE_KEY]) visits[PAGE_KEY] = { count: 0, totalTime: 0, lastVisit: 0, hours: {} };
+      visits[PAGE_KEY].count++;
+      visits[PAGE_KEY].lastVisit = now;
+      visits[PAGE_KEY].hours[hour] = (visits[PAGE_KEY].hours[hour] || 0) + 1;
+      memSet('visits', visits);
+      memSet('visit_start', now);
+    } catch {}
   }
   function trackLeave() {
-    const start = memGet('visit_start', 0);
-    if (!start) return;
-    const elapsed = Date.now() - start;
-    const visits = memGet('visits', {});
-    if (visits[PAGE_KEY]) {
-      visits[PAGE_KEY].totalTime = (visits[PAGE_KEY].totalTime || 0) + elapsed;
-      memSet('visits', visits);
-    }
-    memSet('visit_start', 0);
+    try {
+      const start = memGet('visit_start', 0);
+      if (!start) return;
+      const elapsed = Date.now() - start;
+      const visits = memGet('visits', {});
+      if (visits[PAGE_KEY]) {
+        visits[PAGE_KEY].totalTime = (visits[PAGE_KEY].totalTime || 0) + elapsed;
+        memSet('visits', visits);
+      }
+      memSet('visit_start', 0);
+    } catch {}
   }
   window.addEventListener('beforeunload', trackLeave);
   window.addEventListener('pagehide', trackLeave);
@@ -405,16 +413,22 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       // Ejecutar tool calls si los hay
       if (msg?.tool_calls?.length) {
         for (const tc of msg.tool_calls) {
-          const fn   = tc.function?.name;
-          const args = JSON.parse(tc.function?.arguments || '{}');
-          if      (fn === 'fireLaser')    fireLaser(args.target, args.duration ?? 4, args.message ?? '');
-          else if (fn === 'stopLaser')    stopLaser();
-          else if (fn === 'wiggle')       { if (joacoWiggleFn) joacoWiggleFn(); }
-          else if (fn === 'moveTo')       { if (joacoMoveFn)   joacoMoveFn(args.target); }
-          else if (fn === 'clickElement') { domClick(args.selector); if (joacoWiggleFn) joacoWiggleFn(); }
-          else if (fn === 'fillField')    { domFill(args.selector, args.value); }
-          else if (fn === 'clickTab')     { domClickTab(args.tabText); }
-          else if (fn === 'setMood')      { applyMood(args.mood); }
+          let args = {};
+          try { args = JSON.parse(tc.function?.arguments || '{}'); } catch { continue; }
+          const fn = tc.function?.name;
+          if (fn === 'fireLaser') {
+            fireLaser(args.target, args.duration ?? 4, args.message ?? '');
+          } else if (fn === 'moveTo') {
+            if (joacoMoveFn) joacoMoveFn(args.target);
+          } else if (fn === 'uiAction') {
+            const { action, selector, value } = args;
+            if      (action === 'wiggle')    { if (joacoWiggleFn) joacoWiggleFn(); }
+            else if (action === 'stopLaser') { stopLaser(); }
+            else if (action === 'click')     { domClick(selector); if (joacoWiggleFn) joacoWiggleFn(); }
+            else if (action === 'fill')      { domFill(selector, value); }
+            else if (action === 'tab')       { domClickTab(value); }
+            else if (action === 'mood')      { applyMood(value); }
+          }
         }
       }
 
@@ -475,13 +489,13 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       type: 'function',
       function: {
         name: 'fireLaser',
-        description: 'Dispara el láser del ojo de Joaco hacia un elemento de la página. Usalo para señalar cosas, destacar errores, o guiar al usuario.',
+        description: 'Dispara el láser hacia un elemento CSS de la página para señalarlo. Usalo para guiar al usuario hacia algo visible.',
         parameters: {
           type: 'object',
           properties: {
-            target: { type: 'string', description: 'Selector CSS del elemento (ej: "#btn-guardar", ".tabla")' },
-            duration: { type: 'number', description: 'Duración en segundos. Default 4.' },
-            message: { type: 'string', description: 'Texto que aparece en el punto de impacto.' },
+            target:   { type: 'string', description: 'Selector CSS del elemento destino.' },
+            duration: { type: 'number', description: 'Segundos que dura el láser. Default 4.' },
+            message:  { type: 'string', description: 'Texto corto que aparece en el punto de impacto.' },
           },
           required: ['target'],
         },
@@ -490,24 +504,8 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     {
       type: 'function',
       function: {
-        name: 'stopLaser',
-        description: 'Apaga el láser.',
-        parameters: { type: 'object', properties: {} },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'wiggle',
-        description: 'Hace que Joaco se sacuda para llamar la atención.',
-        parameters: { type: 'object', properties: {} },
-      },
-    },
-    {
-      type: 'function',
-      function: {
         name: 'moveTo',
-        description: 'Mueve a Joaco cerca de un elemento de la página.',
+        description: 'Mueve el cuerpo de Joaco cerca de un elemento de la página.',
         parameters: {
           type: 'object',
           properties: {
@@ -520,60 +518,25 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     {
       type: 'function',
       function: {
-        name: 'clickElement',
-        description: 'Hace click en un elemento de la página. Usalo cuando el usuario pide hacer algo como "guardá", "borrá", "abrí esta sección", "hacé click en...".',
+        name: 'uiAction',
+        description: 'Ejecuta una acción visual o de interacción en la página. Usalo para: sacudirte (wiggle), apagar el láser (stopLaser), hacer click en un botón (click), llenar un campo (fill), navegar a un tab (tab), o cambiar tu estado de ánimo (mood).',
         parameters: {
           type: 'object',
           properties: {
-            selector: { type: 'string', description: 'Selector CSS del elemento a clickear.' },
-            confirm_msg: { type: 'string', description: 'Mensaje confirmando la acción al usuario.' },
+            action: {
+              type: 'string',
+              description: 'Tipo de acción: "wiggle", "stopLaser", "click", "fill", "tab", "mood".',
+            },
+            selector: {
+              type: 'string',
+              description: 'Selector CSS. Requerido para action=click y action=fill.',
+            },
+            value: {
+              type: 'string',
+              description: 'Para action=fill: texto a escribir. Para action=tab: texto visible del tab. Para action=mood: uno de urgente, tranquilo, celebrando, neutral.',
+            },
           },
-          required: ['selector'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'fillField',
-        description: 'Llena un campo de texto o input con un valor. Usalo cuando el usuario dice "escribí X en el campo Y", "completá el formulario", etc.',
-        parameters: {
-          type: 'object',
-          properties: {
-            selector: { type: 'string', description: 'Selector CSS del input/textarea.' },
-            value: { type: 'string', description: 'Valor a escribir en el campo.' },
-            confirm_msg: { type: 'string', description: 'Mensaje confirmando la acción.' },
-          },
-          required: ['selector', 'value'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'clickTab',
-        description: 'Navega a una pestaña o tab de la página por su texto. Usalo cuando el usuario pide ir a una sección que aparece como tab.',
-        parameters: {
-          type: 'object',
-          properties: {
-            tabText: { type: 'string', description: 'Texto visible del tab a activar.' },
-            confirm_msg: { type: 'string', description: 'Mensaje confirmando la navegación.' },
-          },
-          required: ['tabText'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'setMood',
-        description: 'Cambia el estado de ánimo visual de Joaco según el contexto. Usalo para reflejar urgencia, celebración o calma.',
-        parameters: {
-          type: 'object',
-          properties: {
-            mood: { type: 'string', enum: ['urgente', 'tranquilo', 'celebrando', 'neutral'], description: 'Estado de ánimo a aplicar.' },
-          },
-          required: ['mood'],
+          required: ['action'],
         },
       },
     },
@@ -1616,14 +1579,18 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     }, 10000);
 
     // MutationObserver: detectar errores que aparecen dinámicamente
+    let mutDebounce = null;
     const observer = new MutationObserver((mutations) => {
       // Ignorar cambios originados por el propio Joaco (dentro de #_aw)
       const fromJoaco = mutations.every(m => wrap && wrap.contains(m.target));
       if (fromJoaco) return;
-
-      errorAlertFired = false; // resetear para re-chequear con nuevos nodos
-      setDomData(readPage()); // actualizar la var del módulo, no un param local
-      checkVisibleErrors();
+      // Debounce: esperar 500ms de calma antes de procesar
+      clearTimeout(mutDebounce);
+      mutDebounce = setTimeout(() => {
+        errorAlertFired = false;
+        setDomData(readPage());
+        checkVisibleErrors();
+      }, 500);
     });
     observer.observe(document.body, { childList: true, subtree: true, attributes: false });
   }

@@ -1,7 +1,4 @@
 
-  Joaco v5.0 — Groq + Firestore + DOM reader + chat + láser + function calling + TTS + STT (Whisper)
- 
-  Configuración requerida (antes de cargar este script):
  
     window.__joacoConfig = {
       groqKey: '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',
@@ -12,7 +9,7 @@
       }
     };
  
-  Opcional por página:
+
     window.__joacoContext = { page: 'empleados', extra: 'info adicional' };
 
 (function () {

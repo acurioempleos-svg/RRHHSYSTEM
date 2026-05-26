@@ -1,7 +1,7 @@
 /*!
- * Andino Assistant v3.0 — DOM-only, free roaming
- * Sin contexto hardcodeado. Todo lo que dice viene de leer la página.
- * Uso: <script src="andino-assistant.js"></script>
+ * Joaco v1.0 — DOM-only, free roaming, irónico, con voz
+ * Lee la página, detecta errores HTML/CSS/JS, y se queja de ellos.
+ * Uso: <script src="joaco-assistant.js"></script>
  */
 (function () {
   'use strict';
@@ -63,7 +63,57 @@
     const listItems = [...document.querySelectorAll('li')]
       .map(li => safe(li)).filter(t => t.length > 2 && t.length < 60).slice(0, 8);
 
-    return { pageTitle, headings, navLinks, buttons, tabs, inputs, tableHeaders, statCards, alerts, listItems };
+    /* ── Detección de errores / code smells ── */
+    const errors = [];
+
+    // Imágenes sin alt
+    const imgsSinAlt = [...document.querySelectorAll('img')].filter(i => !i.getAttribute('alt'));
+    if (imgsSinAlt.length) errors.push(`${imgsSinAlt.length} imagen(s) sin atributo alt — accesibilidad brillando por su ausencia`);
+
+    // Inputs sin label ni aria-label
+    const inputsSinLabel = [...document.querySelectorAll('input:not([type="hidden"]):not([type="submit"])')].filter(i =>
+      !i.labels?.length && !i.getAttribute('aria-label') && !i.getAttribute('aria-labelledby') && !i.getAttribute('placeholder')
+    );
+    if (inputsSinLabel.length) errors.push(`${inputsSinLabel.length} input(s) sin label ni placeholder — telepático el usuario, ¿no?`);
+
+    // IDs duplicados
+    const allIds = [...document.querySelectorAll('[id]')].map(el => el.id);
+    const dupIds = allIds.filter((id, i) => allIds.indexOf(id) !== i);
+    if (dupIds.length) errors.push(`IDs duplicados: ${[...new Set(dupIds)].slice(0,3).join(', ')} — el HTML spec llorando`);
+
+    // Botones sin texto ni aria-label
+    const btnsSinTexto = [...document.querySelectorAll('button')].filter(b =>
+      !b.innerText.trim() && !b.getAttribute('aria-label')
+    );
+    if (btnsSinTexto.length) errors.push(`${btnsSinTexto.length} botón(es) vacíos sin aria-label — ¿botones fantasma?`);
+
+    // Links sin href o con href="#" vacío
+    const linksMalos = [...document.querySelectorAll('a')].filter(a =>
+      !a.getAttribute('href') || a.getAttribute('href') === '#'
+    );
+    if (linksMalos.length) errors.push(`${linksMalos.length} enlace(s) con href vacío o "#" — ¡que lleven a algún lado!`);
+
+    // Inline styles excesivos
+    const inlineStyles = [...document.querySelectorAll('[style]')].length;
+    if (inlineStyles > 10) errors.push(`${inlineStyles} elementos con style inline — bienvenido al 2003`);
+
+    // Errores en consola (solo los que quedaron en window.__errors si el host los captura)
+    if (window.__jqErrors?.length) errors.push(`Errores JS capturados: ${window.__jqErrors[0]}`);
+
+    // Scripts sin defer/async bloqueando el head
+    const scriptsBloqueantes = [...document.querySelectorAll('head script:not([defer]):not([async])[src]')].length;
+    if (scriptsBloqueantes) errors.push(`${scriptsBloqueantes} script(s) bloqueante(s) en <head> — render blocking, clásico`);
+
+    // Título vacío
+    if (!document.title.trim()) errors.push('La página no tiene <title> — ¿incógnito permanente?');
+
+    // Meta description ausente
+    if (!document.querySelector('meta[name="description"]')) errors.push('Sin meta description — el SEO ya se fue');
+
+    // Viewport ausente (posible problema mobile)
+    if (!document.querySelector('meta[name="viewport"]')) errors.push('Sin meta viewport — ¿diseñando solo para desktop en 2025?');
+
+    return { pageTitle, headings, navLinks, buttons, tabs, inputs, tableHeaders, statCards, alerts, listItems, errors };
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -71,71 +121,81 @@
   ══════════════════════════════════════════════════════════ */
 
   function buildMessages(data) {
-    const { pageTitle, headings, navLinks, buttons, tabs, inputs, tableHeaders, statCards, alerts, listItems } = data;
+    const { pageTitle, headings, navLinks, buttons, tabs, inputs, tableHeaders, statCards, alerts, listItems, errors } = data;
     const msgs = [];
 
-    // Saludo basado en el título real
+    // Saludo irónico
     const mainTitle = headings[0] || pageTitle;
-    msgs.push(`Hola, estoy en "${mainTitle}". Puedo guiarte por lo que hay acá.`);
+    const saludos = [
+      `Buenas. Soy Joaco. Estoy en "${mainTitle}", escaneando el desastre… digo, la interfaz.`,
+      `Joaco presente. Aparecí en "${mainTitle}". Leí todo. Tengo opiniones.`,
+      `"${mainTitle}". Interesante. Veamos qué encontré.`,
+    ];
+    msgs.push(saludos[Math.floor(Math.random() * saludos.length)]);
 
-    // Sección principal detectada
+    // Errores primero — son lo más importante
+    if (errors.length > 0) {
+      msgs.push(`Encontré ${errors.length} problema(s). Empezamos bien: ${errors[0]}`);
+      errors.slice(1).forEach(e => msgs.push(`Otro regalito: ${e}`));
+      msgs.push(`${errors.length === 1 ? 'Solo uno' : `Los ${errors.length}`}, podría ser peor. O no.`);
+    } else {
+      msgs.push(`Revisé accesibilidad, IDs, labels, scripts… nada roto. Hoy es un buen día.`);
+    }
+
+    // Estructura
     if (headings.length > 1) {
-      msgs.push(`Las secciones que veo son: ${headings.slice(0, 4).join(', ')}.`);
+      msgs.push(`Las secciones son: ${headings.slice(0, 4).join(', ')}. Al menos están ordenadas.`);
     }
 
-    // Navegación disponible
+    // Nav
     if (navLinks.length >= 2) {
-      msgs.push(`Desde el menú podés ir a: ${navLinks.slice(0, 5).join(', ')}.`);
+      msgs.push(`Menú detectado. Opciones: ${navLinks.slice(0, 5).join(', ')}. Elegí una y hacé algo.`);
     }
 
-    // Tabs activos
+    // Tabs
     if (tabs.length >= 2) {
-      msgs.push(`Hay pestañas disponibles: ${tabs.join(', ')}.`);
+      msgs.push(`Pestañas disponibles: ${tabs.join(', ')}. Sí, hay que hacer clic para que funcionen.`);
     }
 
-    // Botones de acción
+    // Botones
     if (buttons.length >= 2) {
-      const actionBtns = buttons.filter(b => b.length < 35).slice(0, 4);
-      if (actionBtns.length) msgs.push(`Las acciones disponibles incluyen: ${actionBtns.join(', ')}.`);
+      const ab = buttons.filter(b => b.length < 35).slice(0, 4);
+      if (ab.length) msgs.push(`Botones visibles: ${ab.join(', ')}. Alguno tiene que hacer algo útil.`);
     }
 
     // Formulario
     if (inputs.length >= 1) {
-      if (inputs.length === 1) {
-        msgs.push(`Hay un campo de entrada: "${inputs[0]}". Completalo antes de continuar.`);
-      } else {
-        msgs.push(`El formulario tiene ${inputs.length} campos: ${inputs.slice(0, 4).join(', ')}.`);
-      }
+      msgs.push(inputs.length === 1
+        ? `Un solo campo: "${inputs[0]}". Simple. A veces menos es más. A veces es pereza.`
+        : `Formulario con ${inputs.length} campos: ${inputs.slice(0, 4).join(', ')}. Completalos todos, no seas vago.`
+      );
     }
 
-    // Tabla de datos
+    // Tabla
     if (tableHeaders.length >= 2) {
-      msgs.push(`La tabla muestra columnas: ${tableHeaders.slice(0, 5).join(', ')}.`);
+      msgs.push(`Tabla con columnas: ${tableHeaders.slice(0, 5).join(', ')}. Los datos son datos.`);
     }
 
-    // Datos numéricos (stat cards)
+    // Stats
     if (statCards.length >= 1) {
-      msgs.push(`Veo datos destacados: ${statCards.slice(0, 3).join(' — ')}.`);
+      msgs.push(`Números que veo: ${statCards.slice(0, 3).join(' — ')}. Espero que sean los correctos.`);
     }
 
-    // Alertas visibles
+    // Alertas
     if (alerts.length >= 1) {
-      msgs.push(`Atención: "${alerts[0]}".`);
+      msgs.push(`Alerta visible: "${alerts[0]}". Sí, leé eso.`);
     }
 
-    // Lista de items
+    // Lista
     if (listItems.length >= 3 && !tableHeaders.length) {
-      msgs.push(`Los items listados son: ${listItems.slice(0, 4).join(', ')}.`);
+      msgs.push(`Lista con: ${listItems.slice(0, 4).join(', ')}. Fascinante. Para alguien.`);
     }
 
-    // Cierre genérico si hay poco contenido
     if (msgs.length < 3) {
-      msgs.push(`Podés arrastrarme a donde quieras en la pantalla.`);
-      msgs.push(`Hacé clic de nuevo para ver el próximo dato de esta página.`);
+      msgs.push(`Podés arrastrarme a donde quieras. O dejarme acá, también me da.`);
     }
 
-    // Siempre agregar un tip de interacción
-    msgs.push(`Hacé clic en mí cuando quieras saber qué hacer acá.`);
+    msgs.push(`Eso es todo lo que encontré. Podés arrastrarme, o hacer clic para repasar.`);
 
     return msgs;
   }
@@ -473,6 +533,21 @@
     const pbtn  = wrap.querySelector('#_aprev');
     const nbtn  = wrap.querySelector('#_anext');
 
+    /* ── Voz ── */
+    function speak(msg) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(msg);
+      u.lang = 'es-AR';
+      u.rate = 1.05;
+      u.pitch = 1.0;
+      // Preferir voz española si hay
+      const voices = window.speechSynthesis.getVoices();
+      const es = voices.find(v => v.lang.startsWith('es')) || null;
+      if (es) u.voice = es;
+      window.speechSynthesis.speak(u);
+    }
+
     /* ── Escritura animada ── */
     let typeTimer = null;
     function typeText(msg) {
@@ -490,6 +565,7 @@
       if (!messages.length) return;
       msgIndex = ((idx % messages.length) + messages.length) % messages.length;
       typeText(messages[msgIndex]);
+      speak(messages[msgIndex]);
       cnt.textContent = isGreet ? '' : `${msgIndex + 1} / ${messages.length}`;
       bub.classList.add('open');
       isOpen = true;
@@ -498,6 +574,7 @@
     }
 
     function closeBub() {
+      window.speechSynthesis?.cancel();
       bub.classList.remove('open');
       isOpen = false;
       roamPaused = false;
@@ -537,8 +614,21 @@
     nbtn.addEventListener('click', e => { e.stopPropagation(); showMsg(msgIndex + 1, false); });
     pbtn.addEventListener('click', e => { e.stopPropagation(); showMsg(msgIndex - 1, false); });
 
-    /* ── Auto-saludo ── */
-    setTimeout(() => { if (!hasGreeted) loadAndGreet(); }, 1400);
+    /* ── Auto-saludo: carga inmediata al montar ── */
+    function tryGreet() {
+      if (!hasGreeted) loadAndGreet();
+    }
+    // Voces pueden no estar listas en el primer render
+    if (window.speechSynthesis) {
+      if (window.speechSynthesis.getVoices().length) {
+        setTimeout(tryGreet, 1400);
+      } else {
+        window.speechSynthesis.addEventListener('voiceschanged', () => setTimeout(tryGreet, 200), { once: true });
+        setTimeout(tryGreet, 1400); // fallback si voiceschanged no llega
+      }
+    } else {
+      setTimeout(tryGreet, 1400);
+    }
 
     /* ── Dot periódico ── */
     setInterval(() => {

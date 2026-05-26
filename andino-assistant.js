@@ -316,13 +316,7 @@
       transform: scale(1.06);
     }
     #_abtn.wiggle { animation: _aw-wig 0.55s ease; }
-    #_abtn.pulse::after {
-      content: '';
-      position: absolute; inset: -6px;
-      border-radius: 50%;
-      border: 2px solid ${ACCENT};
-      animation: _aw-pulse 1.3s ease-out forwards;
-    }
+    #_abtn.pulse::after { content: none; }
 
     #_adot {
       position: absolute; top: 2px; right: 2px;
@@ -379,7 +373,7 @@
     #_af1   { transform-origin: 27px 50px; animation: _aw-flame .21s ease-in-out infinite; }
     #_af2   { transform-origin: 27px 52px; animation: _aw-flame .27s ease-in-out infinite .05s; }
     #_af3   { transform-origin: 27px 49px; animation: _aw-flame .18s ease-in-out infinite .12s; }
-    .scan-ring { animation: _aw-scan 2.8s ease-out infinite; }
+
   `;
 
   /* ══════════════════════════════════════════════════════════
@@ -468,16 +462,6 @@
     <circle cx="30.5" cy="29.5" r=".9" fill="#fff" opacity=".18"/>
   </g>
 
-  <!-- scan rings animados -->
-  <circle cx="27" cy="26" r="8.5" fill="none" stroke="#e87a10" stroke-width=".7" class="scan-ring"
-    style="animation-duration:2.8s;">
-    <animate attributeName="r" from="8.5" to="16" dur="2.8s" repeatCount="indefinite"/>
-  </circle>
-  <circle cx="27" cy="26" r="8.5" fill="none" stroke="#ffcc44" stroke-width=".4" class="scan-ring"
-    style="animation-duration:2.8s;animation-delay:1.4s;">
-    <animate attributeName="r" from="8.5" to="16" dur="2.8s" begin="1.4s" repeatCount="indefinite"/>
-  </circle>
-
   <!-- cap superior -->
   <ellipse cx="27" cy="11" rx="11.5" ry="4.4" fill="#d2cfc9" stroke="#888480" stroke-width=".8"/>
   <ellipse cx="27" cy="10.5" rx="9.5" ry="2.8" fill="none" stroke="#b8b5ae" stroke-width=".4" opacity=".5"/>
@@ -533,18 +517,23 @@
     const pbtn  = wrap.querySelector('#_aprev');
     const nbtn  = wrap.querySelector('#_anext');
 
-    /* ── Voz ── */
+    /* ── Voz estilo JARVIS ── */
     function speak(msg) {
       if (!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(msg);
-      u.lang = 'es-AR';
-      u.rate = 1.05;
-      u.pitch = 1.0;
-      // Preferir voz española si hay
+      // Limpiar puntos suspensivos y signos irónicos para que suene más limpio
+      const clean = msg.replace(/[¡¿…]/g, '').replace(/—/g, ',');
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = 'es-ES'; // es-ES suena más grave que es-AR en la mayoría de motores
+      u.rate = 0.88;    // lento, deliberado
+      u.pitch = 0.7;    // grave — lo más JARVIS posible
+      u.volume = 1;
       const voices = window.speechSynthesis.getVoices();
-      const es = voices.find(v => v.lang.startsWith('es')) || null;
-      if (es) u.voice = es;
+      // Prioridad: voz masculina española de Google/Microsoft
+      const preferred = voices.find(v =>
+        v.lang.startsWith('es') && /google|microsoft|jorge|pablo|diego/i.test(v.name)
+      ) || voices.find(v => v.lang.startsWith('es')) || null;
+      if (preferred) u.voice = preferred;
       window.speechSynthesis.speak(u);
     }
 

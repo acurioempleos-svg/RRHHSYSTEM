@@ -4,7 +4,7 @@
  * Configuración requerida (antes de cargar este script):
  *
  *   window.__joacoConfig = {
- *     groqKey: 'gsk_...',
+ *     groqKey: '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',
  *     firebase: {
  *       apiKey: '...',
  *       authDomain: '...',

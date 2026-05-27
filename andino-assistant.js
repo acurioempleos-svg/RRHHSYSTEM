@@ -1,5 +1,3 @@
-
- 
     window.__joacoConfig = {
       groqKey: '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',
      firebase: {
@@ -265,8 +263,8 @@ ${dbStr}
 Usá estos datos para responder preguntas sobre empleados, estadísticas, resultados de juegos, preguntas del quiz, horarios, o lo que te pidan. Si algo no está en los datos, decilo sin vueltas. No inventes información.
 
 HERRAMIENTAS DISPONIBLES (usálas cuando sea relevante):
-- fireLaser(target, duration, message): apunta el láser hacia un selector CSS para señalar algo.
-- moveTo(target): movete físicamente cerca de un elemento.
+- fireLaser(target, duration, message): apunta el láser hacia un elemento de la página. El parámetro "target" puede ser: un selector CSS válido (#id, .clase, [data-x="y"]), o el texto visible exacto del elemento (ej: "Módulo 10", "Guardar", "Empleados"). Preferí el texto visible si no conocés el selector exacto. NO uses selectores inventados.
+- moveTo(target): movete físicamente cerca de un elemento. Igual que fireLaser, "target" puede ser selector CSS o texto visible del elemento.
 - uiAction(action, selector?, value?): ejecuta acciones en la página.
   - action="wiggle": sacudirte.
   - action="stopLaser": apagar el láser.
@@ -573,12 +571,56 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
   }
 
   function resolveTarget(selector) {
-    try {
-      const el = document.querySelector(selector);
+    function toRect(el) {
       if (!el) return null;
       const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return null;
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    } catch { return null; }
+    }
+
+    // 1. Selector CSS directo
+    try {
+      const el = document.querySelector(selector);
+      if (el) { const p = toRect(el); if (p) return p; }
+    } catch {}
+
+    // 2. Búsqueda por texto visible (innerText contiene el selector, case-insensitive)
+    try {
+      const needle = selector.replace(/^[#.\[\]"']/g, '').toLowerCase().trim();
+      const candidates = [...document.querySelectorAll(
+        'button, a, [role="tab"], [role="button"], th, td, label, h1, h2, h3, h4, span, li, p, div'
+      )];
+      const byText = candidates.find(el => {
+        const t = (el.innerText || el.textContent || '').trim().toLowerCase();
+        return t === needle || t.includes(needle);
+      });
+      if (byText) { const p = toRect(byText); if (p) return p; }
+    } catch {}
+
+    // 3. Búsqueda por id/name/data-* fuzzy (normalizar guiones, espacios, mayúsculas)
+    try {
+      const needle = selector.replace(/\s+/g, '[-_\\s]?').replace(/[#.]/g, '');
+      const re = new RegExp(needle, 'i');
+      const byAttr = [...document.querySelectorAll('[id],[name],[data-section],[data-tab],[data-modulo]')]
+        .find(el => re.test(el.id) || re.test(el.getAttribute('name') || '')
+                 || re.test(el.getAttribute('data-section') || '')
+                 || re.test(el.getAttribute('data-tab') || '')
+                 || re.test(el.getAttribute('data-modulo') || ''));
+      if (byAttr) { const p = toRect(byAttr); if (p) return p; }
+    } catch {}
+
+    // 4. Número en el selector → buscar elemento cuyo texto contenga ese número
+    try {
+      const numMatch = selector.match(/\d+/);
+      if (numMatch) {
+        const num = numMatch[0];
+        const byNum = [...document.querySelectorAll('button, [role="tab"], th, h2, h3, h4, li')]
+          .find(el => (el.innerText || '').includes(num));
+        if (byNum) { const p = toRect(byNum); if (p) return p; }
+      }
+    } catch {}
+
+    return null;
   }
 
   function drawLaser() {
@@ -1215,18 +1257,23 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     /* ── moveTo: mueve Joaco cerca de un elemento ── */
     function moveTo(selector) {
       try {
-        const el = document.querySelector(selector);
-        if (!el) return;
-        const r = el.getBoundingClientRect();
+        // Reusar resolveTarget para encontrar el elemento con búsqueda inteligente
+        const pos = resolveTarget(selector);
+        if (!pos) { console.warn('[Joaco] moveTo: selector no encontrado:', selector); return; }
         const SIZE = 74, MARGIN = 14;
         const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-        posX = clamp(r.left + r.width / 2 - SIZE / 2, MARGIN, window.innerWidth  - SIZE - MARGIN);
-        posY = clamp(r.top  - SIZE - 10,               MARGIN, window.innerHeight - SIZE - MARGIN);
+        posX = clamp(pos.x - SIZE / 2,  MARGIN, window.innerWidth  - SIZE - MARGIN);
+        posY = clamp(pos.y - SIZE - 10, MARGIN, window.innerHeight - SIZE - MARGIN);
         wrap.style.left = posX + 'px';
         wrap.style.top  = posY + 'px';
         roamVelX = 0; roamVelY = 0;
+        // Pausa el roam 5s para que no se vaya inmediatamente
+        roamPaused = true;
+        clearTimeout(moveToPauseTimer);
+        moveToPauseTimer = setTimeout(() => { roamPaused = false; scheduleNextRoam(); }, 5000);
       } catch (_) {}
     }
+    let moveToPauseTimer = null;
 
     /* ── Enviar pregunta ── */
     async function sendQuestion() {

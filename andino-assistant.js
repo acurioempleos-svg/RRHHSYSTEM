@@ -3,9 +3,12 @@
     window.__joacoConfig = {
       groqKey: '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',
      firebase: {
-        apiKey: '...',
-        authDomain: '...',
-        projectId: '...',
+        apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+  authDomain: "rrhhsystem.firebaseapp.com",
+  projectId: "rrhhsystem",
+  storageBucket: "rrhhsystem.firebasestorage.app",
+  messagingSenderId: "71511125212",
+  appId: "1:71511125212:web:03a0ad11b281e397a29819"
      }
     };
  

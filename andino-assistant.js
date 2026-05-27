@@ -273,7 +273,9 @@ HERRAMIENTAS DISPONIBLES (usálas cuando sea relevante):
   - action="tab" + value: navegar a un tab por su texto.
   - action="mood" + value: cambiar tu estado de ánimo (urgente/tranquilo/celebrando/neutral).
 
-Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el usuario pide ejecutar algo en la página, hacelo con uiAction.`;
+Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el usuario pide ejecutar algo en la página, hacelo con uiAction.
+
+REGLA IMPORTANTE: Ante saludos, preguntas casuales o cualquier mensaje que no requiera señalar algo en pantalla, SIEMPRE respondé con texto. Nunca uses herramientas como única respuesta a un saludo o pregunta simple. Las herramientas son complemento del texto, no reemplazo.`;
   }
 
   /* ══════════════════════════════════════════════════════════

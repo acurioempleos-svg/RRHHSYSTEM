@@ -390,6 +390,9 @@ REGLA IMPORTANTE: Ante saludos, preguntas casuales o cualquier mensaje que no re
     // ── Una sola llamada streameada con tool_calls + texto ──
     // Texto aparece en tiempo real. Tool_call deltas se acumulan y
     // se ejecutan al final del stream, cuando los argumentos JSON están completos.
+    // Activar tools solo si el mensaje sugiere una acción en pantalla
+    const needsTools = /mostr|señal|apunt|dónde|donde|click|hace|ejecut|abr|ir a|naveg|buscá|encontr|láser|laser/i.test(userMessage);
+
     try {
       const res = await fetch(GROQ_URL, {
         method: 'POST',
@@ -397,8 +400,7 @@ REGLA IMPORTANTE: Ante saludos, preguntas casuales o cualquier mensaje que no re
         body: JSON.stringify({
           model: GROQ_MODEL,
           messages: [{ role: 'system', content: systemPrompt }, ...trimmed],
-          tools: GROQ_TOOLS,
-          tool_choice: 'auto',
+          ...(needsTools ? { tools: GROQ_TOOLS, tool_choice: 'auto' } : {}),
           max_tokens: 500,
           temperature: 0.7,
           stream: true,
@@ -474,6 +476,7 @@ REGLA IMPORTANTE: Ante saludos, preguntas casuales o cualquier mensaje que no re
       }
 
       const reply = fullReply.trim() || (toolCalls.length ? '(acción ejecutada)' : 'Sin respuesta.');
+
       chatHistory.push({ role: 'assistant', content: reply });
       saveChatHistory(chatHistory);
       return reply;

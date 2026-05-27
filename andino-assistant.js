@@ -428,7 +428,36 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
         }
       }
 
-      const reply = msg?.content?.trim() || (msg?.tool_calls?.length ? '(acción ejecutada)' : 'Sin respuesta.');
+      // Si Groq solo respondió con tool_calls, hacer segunda llamada para obtener texto
+      let reply = msg?.content?.trim();
+      if (!reply && msg?.tool_calls?.length) {
+        try {
+          const res2 = await fetch(GROQ_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: GROQ_MODEL,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...trimmed,
+                { role: 'assistant', content: null, tool_calls: msg.tool_calls },
+                ...msg.tool_calls.map(tc => ({
+                  role: 'tool',
+                  tool_call_id: tc.id,
+                  content: 'ok',
+                })),
+              ],
+              max_tokens: 500,
+              temperature: 0.7,
+            }),
+          });
+          const data2 = await res2.json();
+          reply = data2.choices?.[0]?.message?.content?.trim() || '(acción ejecutada)';
+        } catch {
+          reply = '(acción ejecutada)';
+        }
+      }
+      reply = reply || 'Sin respuesta.';
       chatHistory.push({ role: 'assistant', content: reply });
       saveChatHistory(chatHistory); // persistir
       return reply;

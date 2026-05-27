@@ -373,16 +373,21 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
 
   let chatHistory = loadChatHistory(); // historial de la conversación (persistido)
 
+  // Callback de streaming: se llama con cada chunk de texto mientras llega
+  let _streamCallback = null;
+
   async function askGroq(userMessage, domData, joacoWiggleFn, joacoMoveFn) {
 
     // Extraer y guardar datos personales del mensaje
-    const prefs = getUserPrefs();
-    extractUserData(userMessage, prefs);
+    extractUserData(userMessage, getUserPrefs());
 
     const systemPrompt = buildSystemPrompt(domData, firestoreSnapshot);
     chatHistory.push({ role: 'user', content: userMessage });
     const trimmed = chatHistory.slice(-20);
 
+    // ── Una sola llamada streameada con tool_calls + texto ──
+    // Texto aparece en tiempo real. Tool_call deltas se acumulan y
+    // se ejecutan al final del stream, cuando los argumentos JSON están completos.
     try {
       const res = await fetch(GROQ_URL, {
         method: 'POST',
@@ -394,6 +399,7 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
           tool_choice: 'auto',
           max_tokens: 500,
           temperature: 0.7,
+          stream: true,
         }),
       });
 
@@ -402,65 +408,74 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
         return `Error ${res.status}: ${err.error?.message || 'algo falló en Groq'}`;
       }
 
-      const data = await res.json();
-      const choice = data.choices?.[0];
-      const msg = choice?.message;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = '';
+      let buffer = '';
+      // Acumulador de tool_calls: { [index]: { id, name, argsRaw } }
+      const tcAcc = {};
 
-      // Ejecutar tool calls si los hay
-      if (msg?.tool_calls?.length) {
-        for (const tc of msg.tool_calls) {
-          let args = {};
-          try { args = JSON.parse(tc.function?.arguments || '{}'); } catch { continue; }
-          const fn = tc.function?.name;
-          if (fn === 'fireLaser') {
-            fireLaser(args.target, args.duration ?? 4, args.message ?? '');
-          } else if (fn === 'moveTo') {
-            if (joacoMoveFn) joacoMoveFn(args.target);
-          } else if (fn === 'uiAction') {
-            const { action, selector, value } = args;
-            if      (action === 'wiggle')    { if (joacoWiggleFn) joacoWiggleFn(); }
-            else if (action === 'stopLaser') { stopLaser(); }
-            else if (action === 'click')     { domClick(selector); if (joacoWiggleFn) joacoWiggleFn(); }
-            else if (action === 'fill')      { domFill(selector, value); }
-            else if (action === 'tab')       { domClickTab(value); }
-            else if (action === 'mood')      { applyMood(value); }
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimLine = line.trim();
+          if (!trimLine || trimLine === 'data: [DONE]') continue;
+          if (!trimLine.startsWith('data: ')) continue;
+          let json;
+          try { json = JSON.parse(trimLine.slice(6)); } catch { continue; }
+
+          const delta = json.choices?.[0]?.delta;
+          if (!delta) continue;
+
+          // Texto: mostrar en tiempo real
+          if (delta.content) {
+            fullReply += delta.content;
+            if (_streamCallback) _streamCallback(delta.content, fullReply);
+          }
+
+          // Tool call deltas: acumular por índice
+          if (delta.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              const idx = tc.index ?? 0;
+              if (!tcAcc[idx]) tcAcc[idx] = { id: '', name: '', argsRaw: '' };
+              if (tc.id)                      tcAcc[idx].id       += tc.id;
+              if (tc.function?.name)          tcAcc[idx].name     += tc.function.name;
+              if (tc.function?.arguments)     tcAcc[idx].argsRaw  += tc.function.arguments;
+            }
           }
         }
       }
 
-      // Si Groq solo respondió con tool_calls, hacer segunda llamada para obtener texto
-      let reply = msg?.content?.trim();
-      if (!reply && msg?.tool_calls?.length) {
-        try {
-          const res2 = await fetch(GROQ_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: GROQ_MODEL,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                ...trimmed,
-                { role: 'assistant', content: null, tool_calls: msg.tool_calls },
-                ...msg.tool_calls.map(tc => ({
-                  role: 'tool',
-                  tool_call_id: tc.id,
-                  content: 'ok',
-                })),
-              ],
-              max_tokens: 500,
-              temperature: 0.7,
-            }),
-          });
-          const data2 = await res2.json();
-          reply = data2.choices?.[0]?.message?.content?.trim() || '(acción ejecutada)';
-        } catch {
-          reply = '(acción ejecutada)';
+      // Stream terminado — ejecutar tool_calls con JSON completo
+      const toolCalls = Object.values(tcAcc);
+      for (const tc of toolCalls) {
+        let args = {};
+        try { args = JSON.parse(tc.argsRaw || '{}'); } catch { continue; }
+        if (tc.name === 'fireLaser') {
+          fireLaser(args.target, args.duration ?? 4, args.message ?? '');
+        } else if (tc.name === 'moveTo') {
+          if (joacoMoveFn) joacoMoveFn(args.target);
+        } else if (tc.name === 'uiAction') {
+          const { action, selector, value } = args;
+          if      (action === 'wiggle')    { if (joacoWiggleFn) joacoWiggleFn(); }
+          else if (action === 'stopLaser') { stopLaser(); }
+          else if (action === 'click')     { domClick(selector); if (joacoWiggleFn) joacoWiggleFn(); }
+          else if (action === 'fill')      { domFill(selector, value); }
+          else if (action === 'tab')       { domClickTab(value); }
+          else if (action === 'mood')      { applyMood(value); }
         }
       }
-      reply = reply || 'Sin respuesta.';
+
+      const reply = fullReply.trim() || (toolCalls.length ? '(acción ejecutada)' : 'Sin respuesta.');
       chatHistory.push({ role: 'assistant', content: reply });
-      saveChatHistory(chatHistory); // persistir
+      saveChatHistory(chatHistory);
       return reply;
+
     } catch (e) {
       return `No pude conectarme a Groq: ${e.message}`;
     }
@@ -821,16 +836,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
   let posX = window.innerWidth  - 96;
   let posY = window.innerHeight - 96;
 
-  let roamTarget = { x: posX, y: posY };
-  let roamVelX = 0, roamVelY = 0;
-  let roamPaused = false;
-  let lastRoamTime = 0;
-  let nextRoamIn = 0;
-
-  /* ══════════════════════════════════════════════════════════
-     6. ESTILOS
-  ══════════════════════════════════════════════════════════ */
-
   const ACCENT  = '#e87a10';
   const ACCENT2 = '#ffcc44';
 
@@ -970,27 +975,9 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       0%,100% { box-shadow: 0 0 0 0 #ff224488; }
       50%      { box-shadow: 0 0 0 5px #ff224400; }
     }
-    @keyframes _aw-float {
-      0%,100% { transform: translateY(0px); }
-      50%      { transform: translateY(-5px); }
-    }
-    @keyframes _aw-flame {
-      0%,100% { transform: scaleY(1) scaleX(1); opacity: .9; }
-      25%      { transform: scaleY(1.2) scaleX(0.88); opacity: 1; }
-      50%      { transform: scaleY(0.86) scaleX(1.1); opacity: .85; }
-      75%      { transform: scaleY(1.14) scaleX(0.91); opacity: 1; }
-    }
-    @keyframes _aw-iris { 0%,100% { transform: scale(1); } 50% { transform: scale(1.13); } }
-    @keyframes _aw-blink {
-      0%,85%,100% { transform: scaleY(1); }
-      92%          { transform: scaleY(0.05); }
-    }
-    #_asvg  { animation: _aw-float 3.8s ease-in-out infinite; }
-    #_airis { transform-origin: 27px 26px; animation: _aw-iris 3.2s ease-in-out infinite; }
-    #_aeye  { transform-origin: 27px 26px; animation: _aw-blink 6.5s ease-in-out infinite; }
-    #_af1   { transform-origin: 27px 50px; animation: _aw-flame .21s ease-in-out infinite; }
-    #_af2   { transform-origin: 27px 52px; animation: _aw-flame .27s ease-in-out infinite .05s; }
-    #_af3   { transform-origin: 27px 49px; animation: _aw-flame .18s ease-in-out infinite .12s; }
+    #_asvg  { overflow: visible; }
+    #_airis { transform-origin: 27px 26px; }
+    #_aeye  { transform-origin: 27px 26px; }
   `;
 
   /* ══════════════════════════════════════════════════════════
@@ -998,7 +985,7 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
   ══════════════════════════════════════════════════════════ */
 
   const SVG = `
-<svg id="_asvg" width="54" height="62" viewBox="0 0 54 62" xmlns="http://www.w3.org/2000/svg">
+<svg id="_asvg" width="54" height="62" viewBox="0 0 54 62" xmlns="http://www.w3.org/2000/svg" overflow="visible">
   <defs>
     <radialGradient id="_ag-body" cx="36%" cy="28%" r="66%">
       <stop offset="0%"  stop-color="#f2efe8"/>
@@ -1183,7 +1170,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     /* ── Abrir / cerrar ── */
     function openBub() {
       bub.classList.add('open');
-      isOpen = true; roamPaused = true;
       dot.classList.remove('on');
       setTimeout(() => input.focus(), 250);
     }
@@ -1192,7 +1178,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       window.speechSynthesis?.cancel();
       bub.classList.remove('open');
-      isOpen = false; roamPaused = false;
     }
 
     function wiggle() {
@@ -1294,14 +1279,9 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
         posY = clamp(pos.y - SIZE - 10, MARGIN, window.innerHeight - SIZE - MARGIN);
         wrap.style.left = posX + 'px';
         wrap.style.top  = posY + 'px';
-        roamVelX = 0; roamVelY = 0;
         // Pausa el roam 5s para que no se vaya inmediatamente
-        roamPaused = true;
-        clearTimeout(moveToPauseTimer);
-        moveToPauseTimer = setTimeout(() => { roamPaused = false; scheduleNextRoam(); }, 5000);
       } catch (_) {}
     }
-    let moveToPauseTimer = null;
 
     /* ── Enviar pregunta ── */
     async function sendQuestion() {
@@ -1316,10 +1296,42 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       send.disabled = true;
       status.textContent = 'pensando…';
 
-      const reply = await askGroq(q, domData, wiggle, moveTo);
+      // Crear burbuja bot vacía para ir llenando en tiempo real
+      chat.classList.add('visible');
+      const botDiv = document.createElement('div');
+      botDiv.className = 'j-msg bot';
+      botDiv.textContent = '';
+      chat.appendChild(botDiv);
+      chat.scrollTop = chat.scrollHeight;
 
-      status.textContent = '';
-      if (reply !== '(acción ejecutada)') addChatMsg(reply, 'bot');
+      let streamStarted = false;
+
+      // Callback de streaming: cada chunk de texto llega aquí
+      _streamCallback = (delta, full) => {
+        if (!streamStarted) {
+          streamStarted = true;
+          status.textContent = '';
+        }
+        botDiv.textContent = full;
+        chat.scrollTop = chat.scrollHeight;
+      };
+
+      const reply = await askGroq(q, domData, wiggle, moveTo);
+      _streamCallback = null;
+
+      // Si el streaming no llegó a dispararse (tool_call only o error), mostrar el reply final
+      if (!streamStarted) {
+        status.textContent = '';
+        if (reply !== '(acción ejecutada)') {
+          botDiv.textContent = reply;
+        } else {
+          botDiv.remove(); // quitar burbuja vacía si solo fue acción
+        }
+      } else {
+        // Asegurarse de que el texto final esté completo
+        if (reply && reply !== '(acción ejecutada)') botDiv.textContent = reply;
+      }
+
       if (reply && reply !== '(acción ejecutada)') speak(reply);
 
       isLoading = false;
@@ -1371,7 +1383,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       wiggle();
 
       // Monitoreo de red
-      initNetworkMonitor(txt, typeText, wiggle, openBub, () => isOpen);
 
       // Cargar Firestore en background
       if (FB_CFG) {
@@ -1394,13 +1405,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
         prevHistory.forEach(m => addChatMsg(m.content, m.role === 'user' ? 'user' : 'bot'));
       }
 
-      // Iniciar detectores de comportamiento
-      initBehaviorDetectors(txt, typeText, wiggle, openBub,
-        () => domData,
-        (d) => { domData = d; },
-        wrap,
-        () => isOpen
-      );
     }
 
     /* ── Eventos ── */
@@ -1434,50 +1438,7 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     }
 
     /* ── Dot periódico ── */
-    setInterval(() => { if (!isOpen) { dot.classList.add('on'); wiggle(); } }, 40000);
 
-    /* ══════════════════════════════════════════════════════
-       MOVIMIENTO LIBRE
-    ══════════════════════════════════════════════════════ */
-
-    const SIZE = 74, MARGIN = 14;
-    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-    function randomTarget() {
-      return {
-        x: MARGIN + Math.random() * (window.innerWidth  - SIZE - MARGIN * 2),
-        y: MARGIN + Math.random() * (window.innerHeight - SIZE - MARGIN * 2),
-      };
-    }
-    function scheduleNextRoam() {
-      nextRoamIn = 4000 + Math.random() * 10000;
-      lastRoamTime = performance.now();
-      roamTarget = randomTarget();
-    }
-    scheduleNextRoam();
-
-    const SPRING = 0.04, DAMP = 0.82, THRESH = 2;
-    let lastFrame = performance.now();
-
-    function roamFrame(now) {
-      requestAnimationFrame(roamFrame);
-      const dt = Math.min(now - lastFrame, 50);
-      lastFrame = now;
-      if (!roamPaused && !isDragging) {
-        if (now - lastRoamTime < nextRoamIn) {
-          roamVelX *= DAMP; roamVelY *= DAMP;
-        } else {
-          const dx = roamTarget.x - posX, dy = roamTarget.y - posY;
-          roamVelX = roamVelX * DAMP + dx * SPRING;
-          roamVelY = roamVelY * DAMP + dy * SPRING;
-          if (Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) scheduleNextRoam();
-        }
-        posX = clamp(posX + roamVelX * (dt / 16), MARGIN, window.innerWidth  - SIZE - MARGIN);
-        posY = clamp(posY + roamVelY * (dt / 16), MARGIN, window.innerHeight - SIZE - MARGIN);
-        wrap.style.left = posX + 'px';
-        wrap.style.top  = posY + 'px';
-      }
-    }
-    requestAnimationFrame(roamFrame);
 
     /* ══════════════════════════════════════════════════════
        DRAG
@@ -1489,7 +1450,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       isDragging = false;
       dragStartX = cx; dragStartY = cy;
       dragOriginX = posX; dragOriginY = posY;
-      roamPaused = true;
     }
     function onDragMove(cx, cy) {
       const dx = cx - dragStartX, dy = cy - dragStartY;
@@ -1499,13 +1459,10 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
       posY = clamp(dragOriginY + dy, MARGIN, window.innerHeight - SIZE - MARGIN);
       wrap.style.left = posX + 'px';
       wrap.style.top  = posY + 'px';
-      roamVelX = 0; roamVelY = 0;
     }
     function onDragEnd() {
       setTimeout(() => {
         isDragging = false;
-        if (!isOpen) roamPaused = false;
-        scheduleNextRoam();
       }, 60);
     }
 
@@ -1528,146 +1485,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     }, { passive: true });
   }
 
-  /* ══════════════════════════════════════════════════════════
-     DETECTORES DE COMPORTAMIENTO
-  ══════════════════════════════════════════════════════════ */
-
-  // Monitor de red
-  function initNetworkMonitor(txtEl, typeTextFn, wiggleFn, openBubFn, isOpenFn) {
-    let wasOffline = !navigator.onLine;
-
-    function onOffline() {
-      wasOffline = true;
-      typeTextFn(txtEl, 'Sin conexión. Algunas funciones no van a andar.');
-      applyMood('urgente');
-      wiggleFn();
-      if (!isOpenFn()) openBubFn();
-    }
-    function onOnline() {
-      if (wasOffline) {
-        wasOffline = false;
-        typeTextFn(txtEl, 'Volvió la conexión. Todo en orden.');
-        applyMood('celebrando');
-        wiggleFn();
-        setTimeout(() => applyMood('neutral'), 4000);
-      }
-    }
-    window.addEventListener('offline', onOffline);
-    window.addEventListener('online', onOnline);
-    if (!navigator.onLine) onOffline();
-  }
-
-  // Detectores de inactividad, scroll y errores visibles
-  function initBehaviorDetectors(txtEl, typeTextFn, wiggleFn, openBubFn, getDomData, setDomData, wrap, isOpenFn) {
-    let lastActivity = Date.now();
-    let inactivityFired = false;
-    let scrollBottomFired = false;
-    let errorAlertFired = false;
-    const INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
-
-    // Actualizar actividad en cualquier interacción
-    const resetActivity = () => {
-      lastActivity = Date.now();
-      inactivityFired = false;
-    };
-    ['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
-      document.addEventListener(ev, resetActivity, { passive: true })
-    );
-
-    // Inactividad: reaparecer con algo útil
-    function buildInactivityHint() {
-      const domData = getDomData();
-      const visits = memGet('visits', {});
-      const topPages = Object.entries(visits)
-        .filter(([p]) => p !== PAGE_KEY)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 1);
-
-      if (domData.buttons.length > 0) {
-        return `¿Seguís ahí? Hay ${domData.buttons.length} acciones disponibles en esta pantalla, como "${domData.buttons[0]}".`;
-      }
-      if (topPages.length) {
-        const pageName = topPages[0][0].replace(/_/g, '/');
-        return `¿Seguís ahí? Tu sección más visitada es "${pageName}". ¿Querés ir para allá?`;
-      }
-      return '¿Seguís ahí? Puedo ayudarte con algo de esta página.';
-    }
-
-    // Scroll hasta el fondo sin acción
-    function onScroll() {
-      if (scrollBottomFired) return;
-      const scrolled = window.scrollY + window.innerHeight;
-      const total = document.documentElement.scrollHeight;
-      if (total > window.innerHeight + 200 && scrolled >= total - 40) {
-        scrollBottomFired = true;
-        setTimeout(() => {
-          typeTextFn(txtEl, '¿Encontraste lo que buscabas? Si no, contame y lo buscamos juntos.');
-          wiggleFn();
-          if (!isOpenFn()) openBubFn();
-        }, 800);
-      }
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-
-    // Detección de errores visibles en pantalla
-    function checkVisibleErrors() {
-      if (errorAlertFired) return;
-      const errorSelectors = [
-        '[class*="error"]:not([style*="display:none"])',
-        '[class*="alert-danger"]:not([style*="display:none"])',
-        '[class*="alert-error"]:not([style*="display:none"])',
-        '[role="alert"]:not([style*="display:none"])',
-      ];
-      for (const sel of errorSelectors) {
-        const els = [...document.querySelectorAll(sel)].filter(el => {
-          const t = el.innerText?.trim();
-          const r = el.getBoundingClientRect();
-          return t && t.length > 3 && r.height > 0 && r.width > 0;
-        });
-        if (els.length) {
-          errorAlertFired = true;
-          const errText = els[0].innerText.trim().slice(0, 80);
-          setTimeout(() => {
-            applyMood('urgente');
-            typeTextFn(txtEl, `Hay un error visible en pantalla: "${errText}". ¿Querés que te ayude?`);
-            wiggleFn();
-            if (!isOpenFn()) openBubFn();
-          }, 1200);
-          return;
-        }
-      }
-    }
-
-    // Check periódico
-    setInterval(() => {
-      // Inactividad
-      if (!inactivityFired && Date.now() - lastActivity > INACTIVITY_MS) {
-        inactivityFired = true;
-        applyMood('tranquilo');
-        typeTextFn(txtEl, buildInactivityHint());
-        wiggleFn();
-        if (!isOpenFn()) openBubFn();
-      }
-      // Errores visibles (check cada 10s)
-      checkVisibleErrors();
-    }, 10000);
-
-    // MutationObserver: detectar errores que aparecen dinámicamente
-    let mutDebounce = null;
-    const observer = new MutationObserver((mutations) => {
-      // Ignorar cambios originados por el propio Joaco (dentro de #_aw)
-      const fromJoaco = mutations.every(m => wrap && wrap.contains(m.target));
-      if (fromJoaco) return;
-      // Debounce: esperar 500ms de calma antes de procesar
-      clearTimeout(mutDebounce);
-      mutDebounce = setTimeout(() => {
-        errorAlertFired = false;
-        setDomData(readPage());
-        checkVisibleErrors();
-      }, 500);
-    });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: false });
-  }
 
   /* ══════════════════════════════════════════════════════════
      INIT

@@ -1,5 +1,5 @@
     window.__joacoConfig = {
-      groqKey: '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',
+      groqKey: '', // key movida a Cloudflare Worker
      firebase: {
         apiKey: "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
   authDomain: "rrhhsystem.firebaseapp.com",
@@ -18,7 +18,7 @@
   const CFG = window.__joacoConfig || {};
   const GROQ_KEY = CFG.groqKey || '';
   const FB_CFG   = CFG.firebase || null;
-  const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+  const GROQ_URL = 'https://groq-proxy.giolito-lisandro98.workers.dev';
   const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
   /* ══════════════════════════════════════════════════════════
@@ -374,7 +374,6 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
   let chatHistory = loadChatHistory(); // historial de la conversación (persistido)
 
   async function askGroq(userMessage, domData, joacoWiggleFn, joacoMoveFn) {
-    if (!GROQ_KEY) return 'No tengo API key de Groq configurada. Revisá window.__joacoConfig.groqKey';
 
     // Extraer y guardar datos personales del mensaje
     const prefs = getUserPrefs();
@@ -387,7 +386,7 @@ Usá estas herramientas con criterio y personalidad, no en cada respuesta. Si el
     try {
       const res = await fetch(GROQ_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: GROQ_MODEL,
           messages: [{ role: 'system', content: systemPrompt }, ...trimmed],

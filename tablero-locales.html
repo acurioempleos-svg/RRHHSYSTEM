@@ -1760,7 +1760,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title" id="rango-title">Período</div>
-      <div class="sheet-x" onclick="closeSheet('rango-modal');if(_rangoResolve){_rangoResolve(null);_rangoResolve=null}"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('rango-modal');resolveRango(null)"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
     </div>
     <div class="sheet-body">
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -1777,7 +1777,7 @@ body {
         Total: <span id="rango-dias-lbl" style="font-weight:500">—</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('rango-modal');if(_rangoResolve){_rangoResolve(null);_rangoResolve=null}">Cancelar</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('rango-modal');resolveRango(null)">Cancelar</button>
         <button class="btn btn-amber" style="flex:1" onclick="confirmarRango()">Confirmar</button>
       </div>
     </div>
@@ -1795,7 +1795,7 @@ body {
     <div class="sheet-body">
       <div class="f-field" style="margin-bottom:14px"><label class="f-label">Fecha</label><input class="f-input" id="doc-fecha-input" type="date"></div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('doc-fecha-modal');if(_fechaResolve){_fechaResolve(null);_fechaResolve=null}">Omitir</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('doc-fecha-modal');resolveFecha(null)">Omitir</button>
         <button class="btn btn-amber" style="flex:1" onclick="confirmarFecha()">Confirmar</button>
       </div>
     </div>
@@ -1813,8 +1813,8 @@ body {
     <div class="sheet-body">
       <p id="confirm-msg" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px"></p>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('confirm-modal');if(_confirmResolve){_confirmResolve(false);_confirmResolve=null}">Cancelar</button>
-        <button class="btn btn-danger" style="flex:1" onclick="closeSheet('confirm-modal');if(_confirmResolve){_confirmResolve(true);_confirmResolve=null}" id="confirm-ok-btn">Eliminar</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="closeSheet('confirm-modal');resolveConfirm(false)">Cancelar</button>
+        <button class="btn btn-danger" style="flex:1" onclick="closeSheet('confirm-modal');resolveConfirm(true)" id="confirm-ok-btn">Eliminar</button>
       </div>
     </div>
   </div>
@@ -2090,12 +2090,12 @@ function renderBoard(q = '') {
   let locs = Object.keys(mapa);
   if (lq) locs = locs.filter(l => l.toLowerCase().includes(lq));
   if (!locs.length) {
-    grid.innerHTML = '';
-    grid.appendChild(empty);
-    empty.style.display = 'block';
+    if (empty) empty.style.display = 'block';
+    // Limpiar solo las tarjetas, no el empty
+    Array.from(grid.children).forEach(el => { if (el.id !== 'board-empty') el.remove(); });
     return;
   }
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
   grid.innerHTML = locs.map((loc, li) => {
     const list  = mapa[loc];
     const count = list.length;
@@ -2197,6 +2197,13 @@ function renderLocal(local, q='') {
   document.getElementById('lv-count').textContent = `${list.length} persona${list.length!==1?'s':''}`;
   const hoy  = new Date();
 
+  // Preservar estado expandido y scroll antes de re-renderizar
+  const scroll = document.getElementById('persons-scroll');
+  const scrollTop = scroll.scrollTop;
+  const expanded = new Set(
+    Array.from(scroll.querySelectorAll('.person-block.expanded')).map(el => el.id.replace('pb-',''))
+  );
+
   document.getElementById('persons-scroll').innerHTML = list.map((c,ci) => {
     const init = (c.nombre||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
     let stCls='st-ok', stLbl='Al día';
@@ -2284,6 +2291,14 @@ function renderLocal(local, q='') {
       </div>
     </div>`;
   }).join('') || `<div class="lv-empty">Sin resultados para tu búsqueda.</div>`;
+
+  // Restaurar estado expandido
+  expanded.forEach(id => {
+    const pb   = document.getElementById(`pb-${id}`);
+    const docs = document.getElementById(`pbdocs-${id}`);
+    if (pb && docs) { pb.classList.add('expanded'); docs.style.display = 'block'; }
+  });
+  scroll.scrollTop = scrollTop;
 }
 
 function togglePerson(id, event) {
@@ -2304,6 +2319,9 @@ function confirmar(msg, btnLabel='Confirmar') {
     openSheet('confirm-modal');
   });
 }
+function resolveConfirm(v) { if(_confirmResolve){_confirmResolve(v);_confirmResolve=null;} }
+function resolveFecha(v)   { if(_fechaResolve){_fechaResolve(v);_fechaResolve=null;} }
+function resolveRango(v)   { if(_rangoResolve){_rangoResolve(v);_rangoResolve=null;} }
 function abrirConfirmDelete() {
   confirmar('¿Eliminar este documento? Esta acción no se puede deshacer.','Eliminar')
     .then(ok => { if(ok) borrarDoc(); });
@@ -4063,6 +4081,7 @@ Object.assign(window, {
   plSetLocal, plSetSort, prevGoto, reemplazarEstaFoto, rotarPreview,
   seleccionarTipoDoc, setDocFilter, setTip, setVgDoc, setVgFilter,
   stopCamera, toggleColPanel, togglePerson, verFotoFull,
+  resolveConfirm, resolveFecha, resolveRango,
 });
 
 </script>

@@ -691,12 +691,6 @@ body {
 .pba-btn.danger:hover { border-color:var(--d-brd); color:var(--danger); background:var(--d-dim); }
 .pba-btn svg { width:11px; height:11px; }
 
-/* overlay bg for local view on desktop */
-#lv-backdrop {
-  display:none;
-  position:fixed; inset:0; z-index:99;
-  background:rgba(4,5,8,.4); backdrop-filter:blur(2px);
-}
 /* empty local */
 .lv-empty {
   text-align:center; padding:40px 16px;
@@ -2591,20 +2585,6 @@ function renderCarousel() {
 }
 function prevGoto(i) {
   _prevIdx = i;
-  // Animate the track
-  const track = document.getElementById('car-slide-inner');
-  if (track) track.style.transform = `translateX(-${i*100}%)`;
-  // Update dots and meta without full re-render
-  const nav = document.getElementById('prev-nav');
-  if (nav && nav.children.length) {
-    Array.from(nav.children).forEach((dot, di) => {
-      const m = _prevMeta[di] || {};
-      const active = di === i;
-      dot.style.width = active ? '24px' : '8px';
-      dot.style.background = m.estado==='rechazado' ? 'var(--danger)' : m.estado==='revision' ? 'var(--amber-hi)' : active ? 'var(--amber-hi)' : 'var(--b2)';
-    });
-  }
-  // Full re-render to update meta, estado badge, button states
   renderCarousel();
 }
 
@@ -2618,7 +2598,8 @@ function fmtDateTime(iso) {
 function descargarFoto(url, label, idx) {
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${label.replace(/\s+/g,'_')}_${idx}.jpg`;
+  const ext = (url.includes('.pdf') || url.includes('application%2Fpdf')) ? 'pdf' : 'jpg';
+  a.download = `${label.replace(/\s+/g,'_')}_${idx}.${ext}`;
   a.click();
 }
 
@@ -2958,13 +2939,13 @@ function procesarArchivo(e) {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
       _pendingDataUrl = dataUrl;
       _pendingSource  = 'direct';
+      closeSheet('choice-modal');
       mostrarFotoPrevia(dataUrl);
     };
     img.src = ev.target.result;
   };
-  reader.readAsDataURL(file);
   document.getElementById('file-input').value = '';
-  closeSheet('choice-modal');
+  reader.readAsDataURL(file);
 }
 function mostrarFotoPrevia(dataUrl) {
   _previewRotation = 0;
@@ -3003,7 +2984,11 @@ async function subirFotoConfirmada(dataUrl) {
       const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
         ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       const folder = carpetas[activeTask.folderIdx];
-      if (!folder) return;
+      if (!folder) {
+        document.getElementById('loading').style.display='none';
+        toast('Error: carpeta no encontrada');
+        return;
+      }
       const replaceIdx = activeTask._reemplazarIdx;
       const newEntry = { cargado_en: new Date().toISOString(), estado:'ok' };
       if (replaceIdx !== undefined && replaceIdx !== null && replaceIdx >= 0) {

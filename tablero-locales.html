@@ -4,11 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>BC Gestión</title>
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-window._fb = { initializeApp, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch };
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1933,11 +1928,10 @@ body {
   <div id="planilla-scroll"><table id="planilla-table"><thead id="pl-thead"></thead><tbody id="pl-tbody"></tbody></table></div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 /* ══ FIREBASE ═══════════════════════════════════════════════════ */
-// Espera a que el módulo ES exponga las funciones
-window.addEventListener('load', () => {
-const { initializeApp, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } = window._fb;
 const firebaseConfig = {
   apiKey:"AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
   authDomain:"rrhhsystem.firebaseapp.com",
@@ -4051,7 +4045,25 @@ function irAColab(id) {
     }, 400);
   }
 }
-}); // end window.addEventListener load
+
+
+// Exponer funciones globales para onclick handlers del HTML
+Object.assign(window, {
+  abrirAlertas, abrirConfirmDelete, abrirEdicionColab, abrirLocal,
+  abrirNuevoColabDesdeOCR, abrirPlanilla, abrirReemplazo, abrirRenombrarLocal,
+  abrirVistaGlobal, borrarEstaFoto, capturePhoto, cerrarAlertas, cerrarLocal,
+  cerrarPlanilla, cerrarSearch, cerrarVistaGlobal, ciclarEstadoDoc, closeSheet,
+  confirmar, confirmarFecha, confirmarFotoPrevia, confirmarRango, descargarFoto,
+  descartarFotoPrevia, exportarPDF, fabAbrirDoc, fabAbrirNuevo, fabAbrirNuevoLocal,
+  fabToggle, filtrarAlertas, guardarEdicionColab, guardarNuevaCarpeta, guardarNuevo,
+  guardarNuevoColabOCR, guardarNuevoLocal, guardarRenombrarLocal, handleFolder,
+  irAColab, irAPersona, lanzarCamara, lanzarCamaraOCR, ocrConfirmar, ocrSelectCand,
+  plSetLocal, plSetSort, prevGoto, reemplazarEstaFoto, rotarPreview,
+  seleccionarTipoDoc, setDocFilter, setTip, setVgDoc, setVgFilter,
+  stopCamera, toggleColPanel, togglePerson, verFotoFull, actualizarDiasRango,
+  eliminarCarpeta, filtrarLocal, fabClose, handleDoc, handleDocDrop,
+});
+
 </script>
 </body>
 </html>

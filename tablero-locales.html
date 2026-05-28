@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>BC Gestión</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1940,8 +1941,8 @@ const firebaseConfig = {
   messagingSenderId:"71511125212",
   appId:"1:71511125212:web:03a0ad11b281e397a29819"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
 /* ── Sube un dataUrl a ImgBB y devuelve la URL pública ── */
 const IMGBB_KEY = '123d273a2cb8ffb8cd9861eff0c33f9b';
@@ -2043,12 +2044,12 @@ const DOC_FILTER_DEFS = [
 
 /* ══ INIT ════════════════════════════════════════════════════════ */
 // Listener de locales
-db.collection('locales').orderBy('nombre','asc').onSnapshot(snap => {
+onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')),(snap => {
   locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarSelectsLocales();
 });
 
-db.collection('colaboradores').orderBy('at','desc').onSnapshot(snap => {
+onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')),(snap => {
   colabs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarDatalist();
   renderStats();
@@ -2377,7 +2378,7 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
       const f = await pedirFecha();
       if (f) { update[key+'_fecha']=f; if(key==='salud') update['vencimiento_salud']=f; }
     }
-    await db.collection('colaboradores').doc(id).update(update);
+    await updateDoc(doc(db,'colaboradores',id),update);
 
     // 5. Confirmar visualmente
     if (blk) {
@@ -2628,7 +2629,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
   folder.urls = [...(folder.urls||[]), url];
   folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok' }];
 
-  await db.collection('colaboradores').doc(colabId).update({ carpetas });
+  await updateDoc(doc(db,'colaboradores',colabId),{ carpetas });
 
   if (blkEl) {
     const bar = blkEl.querySelector('.folder-upload-bar');
@@ -2660,7 +2661,7 @@ async function guardarNuevaCarpeta() {
   if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas };
   closeSheet('nueva-carpeta-modal');
   if (currentLocal) renderLocal(currentLocal, localQ);
-  db.collection('colaboradores').doc(_nuevaCarpetaColabId).update({ carpetas })
+  updateDoc(doc(db,'colaboradores',_nuevaCarpetaColabId),{ carpetas })
     .catch(e => toast('Error al guardar: ' + (e.code || e.message)));
 }
 
@@ -2676,7 +2677,7 @@ async function eliminarCarpeta(colabId, folderIdx) {
   const idx = colabs.findIndex(x => x.id === colabId);
   if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas: newCarpetas };
   if (currentLocal) renderLocal(currentLocal, localQ);
-  db.collection('colaboradores').doc(colabId).update({ carpetas: newCarpetas })
+  updateDoc(doc(db,'colaboradores',colabId),{ carpetas: newCarpetas })
     .catch(e => toast('Error al eliminar: ' + (e.code || e.message)));
 }
 
@@ -2872,9 +2873,9 @@ async function borrarEstaFoto() {
         ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].urls = newUrls;
       carpetas[activeTask.folderIdx].meta = newMeta;
-      await db.collection('colaboradores').doc(activeTask.id).update({ carpetas });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
     } else {
-      await db.collection('colaboradores').doc(activeTask.id).update({ [activeTask.type]: newUrls, [activeTask.type+'_meta']: newMeta });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ [activeTask.type]: newUrls, [activeTask.type+'_meta']: newMeta });
     }
     _prevUrls = newUrls; _prevMeta = newMeta;
     _prevIdx  = Math.min(_prevIdx, Math.max(0, newUrls.length-1));
@@ -2896,9 +2897,9 @@ async function ciclarEstadoDoc() {
       const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
         ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].meta = newMeta;
-      await db.collection('colaboradores').doc(activeTask.id).update({ carpetas });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
     } else {
-      await db.collection('colaboradores').doc(activeTask.id).update({ [activeTask.type+'_meta']: newMeta });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ [activeTask.type+'_meta']: newMeta });
     }
     _prevMeta = newMeta;
     renderCarousel();
@@ -2924,9 +2925,9 @@ async function borrarDoc() {
         ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].urls = [];
       carpetas[activeTask.folderIdx].meta = [];
-      await db.collection('colaboradores').doc(activeTask.id).update({ carpetas });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
     } else {
-      const del = firebase.firestore.FieldValue.delete();
+      const del = deleteField();
       const upd = { [activeTask.type]: del, [activeTask.type+'_meta']: del };
       if (activeTask.type==='salud') upd.vencimiento_salud = del;
       const docDef = ALL_DOCS.find(d=>d.key===activeTask.type);
@@ -2935,7 +2936,7 @@ async function borrarDoc() {
         upd[activeTask.type+'_fecha_fin']    = del;
         upd[activeTask.type+'_dias']         = del;
       }
-      await db.collection('colaboradores').doc(activeTask.id).update(upd);
+      await updateDoc(doc(db,'colaboradores',activeTask.id),upd);
     }
     closeSheet('preview-modal');
     toast('Contenido eliminado');
@@ -3136,7 +3137,7 @@ async function ocrConfirmar() {
     if (f) { update[docKey+'_fecha']=f; if(docKey==='salud') update['vencimiento_salud']=f; }
   }
   try {
-    await db.collection('colaboradores').doc(ocrSelectedId).update(update);
+    await updateDoc(doc(db,'colaboradores',ocrSelectedId),update);
     toast(`✓ Guardado en legajo de ${colab?.nombre||'colaborador'}`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
   finally { document.getElementById('loading').style.display='none'; ocrDataUrl=null; ocrDocKey=null; closeSheet('ocr-modal'); }
@@ -3245,7 +3246,7 @@ async function subirFotoConfirmada(dataUrl) {
         folder.urls.push(urlToSave);
         folder.meta.push(newEntry);
       }
-      await db.collection('colaboradores').doc(activeTask.id).update({ carpetas });
+      await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
       toast(`✓ Guardado (${folder.urls.length} foto${folder.urls.length>1?'s':''})`);
     } catch(e) { console.error(e); toast('Error: '+(e.code||e.message)); }
     finally { document.getElementById('loading').style.display='none'; }
@@ -3301,7 +3302,7 @@ async function subirFotoConfirmada(dataUrl) {
       if (f) { update[activeTask.type+'_fecha']=f; if(activeTask.type==='salud') update['vencimiento_salud']=f; }
     }
 
-    await db.collection('colaboradores').doc(activeTask.id).update(update);
+    await updateDoc(doc(db,'colaboradores',activeTask.id),update);
     toast(`✓ Guardado (${arr.length} foto${arr.length>1?'s':''})`);
   } catch(e) {
     console.error(e);
@@ -3342,7 +3343,7 @@ async function guardarNuevoLocal() {
   const btn = document.getElementById('nl-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   try {
-    await db.collection('locales').add({ nombre, at: Date.now() });
+    await addDoc(collection(db,'locales'),{ nombre, at: Date.now() });
     closeSheet('nuevo-local-modal');
     toast(`✓ Local "${nombre}" creado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
@@ -3374,13 +3375,13 @@ async function guardarRenombrarLocal() {
     // 1. Renombrar en colección locales
     const localDoc = locales.find(l => l.nombre === original);
     if (localDoc) {
-      await db.collection('locales').doc(localDoc.id).update({ nombre: nuevo });
+      await updateDoc(doc(db,'locales',localDoc.id),{ nombre: nuevo });
     }
     // 2. Actualizar todos los colaboradores de ese local
-    const batch = db.batch();
+    const batch = writeBatch(db);
     const afectados = colabs.filter(c => c.local === original);
     afectados.forEach(c => {
-      batch.update(db.collection('colaboradores').doc(c.id), { local: nuevo });
+      batch.update(doc(db,'colaboradores',c.id), { local: nuevo });
     });
     if (afectados.length) await batch.commit();
     closeSheet('renombrar-local-modal');
@@ -3407,7 +3408,7 @@ async function guardarNuevo() {
   const btn = document.querySelector('#nuevo-modal .btn-amber');
   if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
-    await db.collection('colaboradores').add({ nombre, dni_nro:dni, local, puesto, at: Date.now() });
+    await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now() });
     closeSheet('nuevo-modal');
     toast(`✓ ${nombre} agregado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
@@ -3432,7 +3433,7 @@ async function guardarNuevoColabOCR() {
   const btn = document.getElementById('nco-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   try {
-    const ref = await db.collection('colaboradores').add({ nombre, dni_nro:dni, local, puesto, at: Date.now() });
+    const ref = await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now() });
     closeSheet('nuevo-colab-ocr-modal');
     toast(`✓ ${nombre} agregado`);
     // Volver al selector OCR con el nuevo colab ya seleccionado
@@ -3447,7 +3448,7 @@ async function guardarNuevoColabOCR() {
 
 async function eliminarColab(id, nombre) {
   try {
-    await db.collection('colaboradores').doc(id).delete();
+    await deleteDoc(doc(db,'colaboradores',id));
     toast(`${nombre} eliminado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
 }
@@ -3480,7 +3481,7 @@ async function guardarEdicionColab() {
   const btn = document.getElementById('edit-colab-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await db.collection('colaboradores').doc(id).update({ nombre, dni_nro:dni, local, puesto });
+    await updateDoc(doc(db,'colaboradores',id),{ nombre, dni_nro:dni, local, puesto });
     // Si el local cambió y estamos viendo ese local, actualizar currentLocal
     const c = colabs.find(x => x.id === id);
     if (c && c.local !== local && currentLocal === c.local) {
@@ -3873,6 +3874,7 @@ function toast(msg) {
 }
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 /* ══ PLANILLA ════════════════════════════════════════════════════ */
 let _plLocal = '';
 let _plSort  = { col:'nombre', dir:1 };

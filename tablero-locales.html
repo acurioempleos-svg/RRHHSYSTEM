@@ -7,6 +7,8 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+window._fb = { initializeApp, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1933,6 +1935,9 @@ body {
 
 <script>
 /* ══ FIREBASE ═══════════════════════════════════════════════════ */
+// Espera a que el módulo ES exponga las funciones
+window.addEventListener('load', () => {
+const { initializeApp, getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } = window._fb;
 const firebaseConfig = {
   apiKey:"AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
   authDomain:"rrhhsystem.firebaseapp.com",
@@ -2044,12 +2049,12 @@ const DOC_FILTER_DEFS = [
 
 /* ══ INIT ════════════════════════════════════════════════════════ */
 // Listener de locales
-onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')),(snap => {
+onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
   locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarSelectsLocales();
 });
 
-onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')),(snap => {
+onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
   colabs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarDatalist();
   renderStats();
@@ -4046,6 +4051,7 @@ function irAColab(id) {
     }, 400);
   }
 }
+}); // end window.addEventListener load
 </script>
 </body>
 </html>

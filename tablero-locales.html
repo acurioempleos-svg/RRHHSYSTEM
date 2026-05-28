@@ -2421,8 +2421,12 @@ async function guardarNuevaCarpeta() {
   carpetas.push({ id: uidCarpeta(), nombre, emoji: '📁', urls: [], meta: [] });
   try {
     await db.collection('colaboradores').doc(_nuevaCarpetaColabId).update({ carpetas });
+    // Actualizar colabs local para no esperar el snapshot
+    const idx = colabs.findIndex(x => x.id === _nuevaCarpetaColabId);
+    if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas };
     closeSheet('nueva-carpeta-modal');
     toast(`✓ Carpeta "${nombre}" creada`);
+    if (currentLocal) renderLocal(currentLocal, localQ);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
   finally { btn.disabled=false; btn.textContent='Crear carpeta'; }
 }
@@ -2438,7 +2442,11 @@ async function eliminarCarpeta(colabId, folderIdx) {
   const newCarpetas = carpetas.filter((_,i) => i !== folderIdx);
   try {
     await db.collection('colaboradores').doc(colabId).update({ carpetas: newCarpetas });
+    // Actualizar colabs local para no esperar el snapshot
+    const idx = colabs.findIndex(x => x.id === colabId);
+    if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas: newCarpetas };
     toast(`Carpeta eliminada`);
+    if (currentLocal) renderLocal(currentLocal, localQ);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
 }
 

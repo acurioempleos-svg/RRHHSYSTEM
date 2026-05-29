@@ -3961,12 +3961,13 @@ const app = (() => {
             opts.innerHTML = "";
             const letters = ['A', 'B', 'C', 'D'];
             
-            q.o.forEach((text, i) => {
+            const triviaOrder = shuffleArray(q.o.map((_, i) => i));
+            triviaOrder.forEach((origIdx, displayIdx) => {
                 const b = document.createElement('button');
                 b.className = 'option';
-                b.innerHTML = `<span class="option-letter">${letters[i]}</span>${text}`;
-                b.onclick = () => app.checkTrivia(i, b);
-                b.setAttribute('data-index', i);
+                b.innerHTML = `<span class="option-letter">${letters[displayIdx]}</span>${q.o[origIdx]}`;
+                b.onclick = () => app.checkTrivia(origIdx, b);
+                b.setAttribute('data-index', origIdx);
                 opts.appendChild(b);
             });
             
@@ -4028,7 +4029,7 @@ const app = (() => {
             const isCorrect = idx === q.c;
 
             // Siempre marcar la opción correcta (visible tanto en error como en timeout)
-            if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
+            allOptions.forEach(b => { if (parseInt(b.getAttribute('data-index')) === q.c) b.classList.add('correct'); });
 
             // Registrar stat de esta pregunta en Firestore
             trackQuestionStat(q.q, isCorrect, state.local, state.dni);
@@ -4234,11 +4235,13 @@ const app = (() => {
             const opts = document.getElementById('ingr-options');
             opts.innerHTML = '';
             const letters = ['A','B','C'];
-            q.o.forEach((text, i) => {
+            const ingrOrder = shuffleArray(q.o.map((_, i) => i));
+            ingrOrder.forEach((origIdx, displayIdx) => {
                 const b = document.createElement('button');
                 b.className = 'option';
-                b.innerHTML = `<span class="option-letter">${letters[i]}</span>${text}`;
-                b.onclick = () => app.checkIngredientes(i, b);
+                b.innerHTML = `<span class="option-letter">${letters[displayIdx]}</span>${q.o[origIdx]}`;
+                b.onclick = () => app.checkIngredientes(origIdx, b);
+                b.setAttribute('data-index', origIdx);
                 opts.appendChild(b);
             });
 
@@ -4276,7 +4279,7 @@ const app = (() => {
             allOptions.forEach(b => b.disabled = true);
 
             // Siempre marcar la opción correcta (visible tanto en error como en timeout)
-            if (allOptions[q.c]) allOptions[q.c].classList.add('correct');
+            allOptions.forEach(b => { if (parseInt(b.getAttribute('data-index')) === q.c) b.classList.add('correct'); });
 
             const isCorrect = idx === q.c;
 

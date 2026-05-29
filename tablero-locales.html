@@ -1409,21 +1409,55 @@ body {
 .pl-col-item input[type=checkbox] { accent-color:var(--amber-hi); width:12px; height:12px; cursor:pointer; }
 .pl-col-item.checked { color:var(--text); }
 
-/* Tabla vacía */
-.pl-empty {
-  text-align:center; padding:60px 20px;
-  font-family:'DM Mono',monospace; font-size:10px; color:var(--faint);
+/* Celdas editables planilla */
+.pl-cell-edit {
+  background: none; border: none; outline: none;
+  font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text);
+  width: 100%; min-width: 60px; padding: 0;
+  cursor: pointer;
 }
+.pl-cell-edit:focus {
+  background: var(--s3); border-radius: 4px;
+  padding: 2px 5px; margin: -2px -5px; cursor: text;
+  box-shadow: 0 0 0 1px var(--amber-brd);
+}
+.pl-cell-edit[list]:focus { cursor: text; }
+.pl-add-row td {
+  border-top: 2px dashed var(--b1) !important;
+}
+.pl-add-row .td-inner {
+  justify-content: center;
+}
+.pl-add-btn {
+  background: none; border: 1px dashed var(--b2);
+  border-radius: 7px; padding: 5px 14px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--muted); cursor: pointer; letter-spacing: .06em;
+  transition: all var(--t); display: flex; align-items: center; gap: 6px;
+}
+.pl-add-btn:hover { border-color: var(--amber-brd); color: var(--amber-hi); }
 </style>
 </head>
 <body>
+<!-- ══ SVG SPRITE ════════════════════════════════════════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-x"      viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></symbol>
+  <symbol id="ic-x24"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
+  <symbol id="ic-plus"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-back"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></symbol>
+  <symbol id="ic-edit"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-trash"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="ic-check"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-table"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"   stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
+</svg>
 
 <!-- ══ TOPBAR ═══════════════════════════════════════════════════ -->
 <div id="topbar">
   <div class="logo">BC</div>
   <div class="topbar-brand">BC <em>Gestión</em></div>
   <div id="gs-wrap">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
     <input id="gs-input" placeholder="Buscar persona, local, DNI…" onfocus="abrirSearch()" readonly>
     <span class="gs-kbd">⌘K</span>
   </div>
@@ -1455,7 +1489,7 @@ body {
 <div id="view-local">
   <div id="lv-bar">
     <div class="btn-back" onclick="cerrarLocal()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-back"/></svg>
     </div>
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px">
@@ -1467,7 +1501,7 @@ body {
       <div class="lv-count" id="lv-count"></div>
     </div>
     <div class="lv-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
       <input placeholder="Buscar…" oninput="filtrarLocal(this.value)">
     </div>
   </div>
@@ -1490,7 +1524,7 @@ body {
     <button class="fab-ico" style="background:var(--i-dim);border:1px solid rgba(59,125,216,.28)" onclick="fabAbrirNuevoLocal()">🏠</button>
   </div>
   <button id="fab" onclick="fabToggle()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
   </button>
 </div>
 
@@ -1501,7 +1535,7 @@ body {
     <div class="alerts-bar">
       <div class="alerts-bar-title">Alertas</div>
       <div class="alerts-close" onclick="cerrarAlertas()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <svg viewBox="0 0 24 24"><use href="#ic-x24"/></svg>
       </div>
     </div>
     <div class="alerts-filt">
@@ -1518,7 +1552,7 @@ body {
 <div id="search-overlay" onclick="cerrarSearch()">
   <div class="search-modal" onclick="event.stopPropagation()">
     <div class="sm-input-row">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
       <input id="gs-modal-input" placeholder="Buscar persona, local, DNI, estado…" oninput="buscarGlobal(this.value)">
       <span class="sm-esc" onclick="cerrarSearch()">ESC</span>
     </div>
@@ -1542,7 +1576,7 @@ body {
         <div class="sheet-title">Vista global de archivo</div>
         <div id="vg-subtitle" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)"></div>
       </div>
-      <div class="sheet-x" onclick="cerrarVistaGlobal()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="cerrarVistaGlobal()"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <!-- Selector de tipo -->
     <div id="vg-tipo-tabs" style="display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 12px;border-bottom:1px solid var(--b0)"></div>
@@ -1564,7 +1598,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title" id="choice-title">Cargar documento</div>
-      <div class="sheet-x" onclick="closeSheet('choice-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('choice-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="choice-list">
@@ -1588,7 +1622,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Cargar documento</div>
-      <div class="sheet-x" onclick="closeSheet('choice-ocr-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('choice-ocr-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="choice-list">
@@ -1612,7 +1646,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title" id="preview-title">Documento</div>
-      <div class="sheet-x" onclick="closeSheet('preview-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('preview-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div id="prev-carousel" style="margin-bottom:8px"></div>
@@ -1630,7 +1664,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Nueva carpeta</div>
-      <div class="sheet-x" onclick="closeSheet('nueva-carpeta-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('nueva-carpeta-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="f-field"><label class="f-label">Nombre de la carpeta</label><input class="f-input" id="nc-nombre" placeholder="Ej: DNI Frente, Contrato, Libreta2026" maxlength="60" onkeydown="if(event.key==='Enter')guardarNuevaCarpeta()"></div>
@@ -1649,7 +1683,7 @@ body {
         <div class="sheet-title">Confirmar foto</div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">Revisá antes de guardar</div>
       </div>
-      <div class="sheet-x" onclick="descartarFotoPrevia()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="descartarFotoPrevia()"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="prev-img-wrap" style="margin-bottom:10px">
@@ -1666,11 +1700,11 @@ body {
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" style="flex:1" onclick="descartarFotoPrevia()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          <svg width="13" height="13" width="2.5" viewBox="0 0 24 24"><use href="#ic-x24"/></svg>
           Descartar
         </button>
         <button class="btn btn-amber" style="flex:1" id="foto-confirm-btn" onclick="confirmarFotoPrevia()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="13" height="13" width="2.5" viewBox="0 0 24 24"><use href="#ic-check"/></svg>
           Guardar
         </button>
       </div>
@@ -1684,7 +1718,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Editar datos</div>
-      <div class="sheet-x" onclick="closeSheet('edit-colab-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('edit-colab-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <input type="hidden" id="edit-colab-id">
@@ -1706,7 +1740,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Nuevo colaborador</div>
-      <div class="sheet-x" onclick="closeSheet('nuevo-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('nuevo-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="n-nombre" placeholder="Ej: Juan Pérez" onkeydown="if(event.key==='Enter')document.getElementById('n-dni').focus()"></div>
@@ -1726,7 +1760,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">¿A quién pertenece?</div>
-      <div class="sheet-x" onclick="closeSheet('ocr-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('ocr-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div style="margin-bottom:10px"><input class="f-input" id="ocr-search" placeholder="Buscar…" oninput="filtrarSelectorColab(this.value)" style="width:100%"></div>
@@ -1748,7 +1782,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Tipo de documento</div>
-      <div class="sheet-x" onclick="closeSheet('doc-tipo-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('doc-tipo-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body"><div class="choice-list" id="doc-tipo-list"></div></div>
   </div>
@@ -1760,7 +1794,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title" id="rango-title">Período</div>
-      <div class="sheet-x" onclick="closeSheet('rango-modal');resolveRango(null)"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('rango-modal');resolveRango(null)"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -1790,7 +1824,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Fecha del documento</div>
-      <div class="sheet-x" onclick="closeSheet('doc-fecha-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('doc-fecha-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="f-field" style="margin-bottom:14px"><label class="f-label">Fecha</label><input class="f-input" id="doc-fecha-input" type="date"></div>
@@ -1808,7 +1842,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title" id="confirm-title">Confirmar</div>
-      <div class="sheet-x" onclick="closeSheet('confirm-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('confirm-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <p id="confirm-msg" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px"></p>
@@ -1826,7 +1860,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Nuevo local</div>
-      <div class="sheet-x" onclick="closeSheet('nuevo-local-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('nuevo-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="f-field" style="margin-bottom:14px">
@@ -1847,7 +1881,7 @@ body {
         <div class="sheet-title">Renombrar local</div>
         <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)" id="rl-subtitle">Se actualizan todos los colaboradores</div>
       </div>
-      <div class="sheet-x" onclick="closeSheet('renombrar-local-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('renombrar-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <input type="hidden" id="rl-original">
@@ -1867,7 +1901,7 @@ body {
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div class="sheet-title">Agregar colaborador</div>
-      <div class="sheet-x" onclick="closeSheet('nuevo-colab-ocr-modal')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l10 10M11 1L1 11"/></svg></div>
+      <div class="sheet-x" onclick="closeSheet('nuevo-colab-ocr-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="nco-nombre" placeholder="Ej: Juan Pérez" onkeydown="if(event.key==='Enter')document.getElementById('nco-dni').focus()"></div>
@@ -1899,18 +1933,20 @@ body {
 <div id="loading"><div class="spinner"></div></div>
 <div id="toast"></div>
 
+<datalist id="pl-puestos-list"></datalist>
+
 <!-- ══ VISTA PLANILLA ════════════════════════════════════════════ -->
 <div id="planilla-view">
   <div id="planilla-bar">
     <div class="btn-back" onclick="cerrarPlanilla()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24"><use href="#ic-back"/></svg>
     </div>
     <div class="pl-title">Planilla de colaboradores</div>
     <div class="pl-count" id="pl-count"></div>
   </div>
   <div class="pl-toolbar">
     <div class="pl-search-wrap">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
       <input id="pl-search" placeholder="Buscar…" oninput="renderPlanilla()">
     </div>
     <div class="pl-sep"></div>
@@ -1943,43 +1979,98 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-/* ── Sube un dataUrl a ImgBB y devuelve la URL pública ── */
+/* ── Helpers UI ── */
+const $     = id => document.getElementById(id);
+const showL = ()  => { const l=$('loading'); if(l) l.style.display='flex'; };
+const hideL = ()  => { const l=$('loading'); if(l) l.style.display='none'; };
+
+/* ── Sube a ImgBB con retry automático (1 reintento) ── */
 const IMGBB_KEY = '123d273a2cb8ffb8cd9861eff0c33f9b';
-async function subirDataUrlAImgBB(dataUrl) {
-  // Extraer solo el base64 sin el prefijo "data:...;base64,"
+async function subirDataUrlAImgBB(dataUrl, intento = 0) {
   const base64 = dataUrl.split(',')[1];
-  const form   = new FormData();
-  form.append('key',    IMGBB_KEY);
-  form.append('image',  base64);
-  const res  = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body:form });
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error?.message || 'ImgBB upload failed');
-  return json.data.url; // URL directa a la imagen
+  if (!base64) throw new Error('Imagen inválida');
+  const form = new FormData();
+  form.append('key', IMGBB_KEY);
+  form.append('image', base64);
+  try {
+    const res  = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body:form });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error?.message || 'ImgBB falló');
+    return json.data.url;
+  } catch(e) {
+    if (intento === 0) return subirDataUrlAImgBB(dataUrl, 1); // 1 reintento
+    throw e;
+  }
 }
 
-/* ══ ESTADO ═════════════════════════════════════════════════════ */
-let colabs       = [];
-let locales      = []; // lista de locales desde Firestore
-let activeTask   = null;
-let currentLocal = null;
-let stream       = null;
-let boardQ       = '';
-let localQ       = '';
-let ocrDataUrl   = null;
-let ocrSelectedId = null;
-let ocrDocKey    = null;
-let _alertFilter = 'all';
-let _docFilter   = 'all';
-let _confirmResolve = null;
-let _tipoResolve    = null;
-let _fechaResolve   = null;
-let _rangoResolve   = null;
-let _prevUrls       = [];
-let _prevMeta       = []; // [{cargado_en, estado}] parallel to _prevUrls
-let _prevIdx        = 0;
-let _globalDocKey   = null; // for vista global por tipo
-let _pendingDataUrl = null; // foto pendiente de confirmación
-let _previewRotation = 0;
+/* ══ STORE — estado centralizado ════════════════════════════════
+   Un objeto con getters/setters.  Toda mutación pasa por aquí, lo
+   que hace que sea fácil rastrear quién cambia qué y agregar lógica
+   reactiva (scheduling, logging) en un solo lugar.
+   Las variables sueltas siguen existiendo como referencias al store
+   para no tener que tocar ninguna función de negocio. ═══════════ */
+const Store = (() => {
+  const _s = {
+    colabs:          [],
+    locales:         [],
+    activeTask:      null,
+    currentLocal:    null,
+    stream:          null,
+    boardQ:          '',
+    localQ:          '',
+    ocrDataUrl:      null,
+    ocrSelectedId:   null,
+    ocrDocKey:       null,
+    _alertFilter:    'all',
+    _docFilter:      'all',
+    _confirmResolve: null,
+    _tipoResolve:    null,
+    _fechaResolve:   null,
+    _rangoResolve:   null,
+    _prevUrls:       [],
+    _prevMeta:       [],
+    _prevIdx:        0,
+    _globalDocKey:   null,
+    _pendingDataUrl: null,
+    _previewRotation:0,
+    _expandedPersons: new Set(), // IDs de personas expandidas — fuera del DOM
+  };
+  return {
+    get(k)    { return _s[k]; },
+    set(k, v) { _s[k] = v; },
+    // Expone el objeto interno solo para lectura rápida por índice
+    raw: _s,
+  };
+})();
+
+// ── Alias de compatibilidad — todo el código existente sigue funcionando ──
+// Las asignaciones directas (colabs = [...]) actualizan el store vía Proxy.
+const _storeProxy = new Proxy(Store.raw, {
+  set(target, key, value) {
+    target[key] = value;
+    return true;
+  }
+});
+
+// Declaramos las variables que el código usa, apuntando al proxy.
+// Usamos Object.defineProperty para que lecturas y escrituras vayan al store.
+(function bindStoreVars() {
+  const keys = [
+    'colabs','locales','activeTask','currentLocal','stream',
+    'boardQ','localQ','ocrDataUrl','ocrSelectedId','ocrDocKey',
+    '_alertFilter','_docFilter','_confirmResolve','_tipoResolve',
+    '_fechaResolve','_rangoResolve','_prevUrls','_prevMeta',
+    '_prevIdx','_globalDocKey','_pendingDataUrl','_previewRotation','_expandedPersons',
+  ];
+  keys.forEach(k => {
+    Object.defineProperty(window, k, {
+      get()    { return Store.raw[k]; },
+      set(v)   { Store.raw[k] = v; },
+      configurable: true,
+    });
+  });
+})();
 
 function rotarPreview(deg) {
   _previewRotation = (_previewRotation + deg + 360) % 360;
@@ -2042,6 +2133,39 @@ const DOC_FILTER_DEFS = [
 ];
 
 /* ══ INIT ════════════════════════════════════════════════════════ */
+/* ══ RENDER SCHEDULER ════════════════════════════════════════════
+   Agrupa todos los renders del mismo "tick" de Firestore en un solo
+   requestAnimationFrame. Si llegan dos snapshots casi simultáneos
+   (edición concurrente de locales + colaboradores), el DOM se toca
+   una sola vez. También evita parpadeos en colecciones grandes.  ══ */
+const _renderScheduler = (() => {
+  let _rafId  = null;
+  let _dirty  = new Set(); // qué secciones necesitan update
+
+  function _flush() {
+    _rafId = null;
+    // Siempre en este orden para evitar lecturas de DOM obsoleto
+    if (_dirty.has('stats'))   renderStats();
+    if (_dirty.has('board'))   renderBoard();
+    if (_dirty.has('alertas')) renderAlertas();
+    if (_dirty.has('local') && currentLocal) renderLocal(currentLocal, localQ);
+    _dirty.clear();
+  }
+
+  return {
+    schedule(...sections) {
+      sections.forEach(s => _dirty.add(s));
+      if (!_rafId) _rafId = requestAnimationFrame(_flush);
+    },
+    // Render inmediato (para updates optimistas que necesitan feedback instantáneo)
+    now(...sections) {
+      if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+      sections.forEach(s => _dirty.add(s));
+      _flush();
+    },
+  };
+})();
+
 // Listener de locales
 onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
   locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -2051,10 +2175,7 @@ onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
 onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
   colabs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarDatalist();
-  renderStats();
-  renderBoard();
-  renderAlertas();
-  if (currentLocal) renderLocal(currentLocal, localQ);
+  _renderScheduler.schedule('stats', 'board', 'alertas', 'local');
 });
 
 /* ══ STATS ══════════════════════════════════════════════════════ */
@@ -2075,12 +2196,65 @@ function renderStats() {
   `;
 }
 
-/* ══ BOARD ══════════════════════════════════════════════════════ */
+/* ══ BOARD ══════════════════════════════════════════════════════
+   Render parcial: genera el HTML de cada tarjeta y solo toca el DOM
+   si el contenido cambió (comparación de string). Evita reemplazar
+   el grid completo en cada snapshot de Firestore. ════════════════ */
+
+/** Genera el HTML interno de una tarjeta de local (sin el wrapper .local-block) */
+function _buildLocalCardInner(loc, li, mapa, hoy) {
+  const list  = mapa[loc];
+  const count = list.length;
+  let warn=0, err=0;
+  list.forEach(c => {
+    if (!c.vencimiento_salud) return;
+    const d = (new Date(c.vencimiento_salud+'T00:00:00') - hoy)/86400000;
+    if (d<0) err++; else if (d<30) warn++;
+  });
+  let totalDocs = 0, cargDocs = 0;
+  list.forEach(colab => {
+    const carp = getCarpetas(colab);
+    totalDocs += carp.length;
+    cargDocs  += carp.filter(f=>f.urls&&f.urls.length).length;
+  });
+  const pct   = totalDocs ? Math.round((cargDocs/totalDocs)*100) : 0;
+  const fill  = pct===100?'var(--success)':pct>60?'var(--amber-hi)':'var(--danger)';
+  const code  = loc.split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
+  const enVac  = list.filter(c => estadoActivo(c)?.key==='vacaciones').length;
+  const enSusp = list.filter(c => estadoActivo(c)?.key==='suspension').length;
+  const estadoHTML = [
+    enVac  ? `<span class="lb-estado-pill" style="background:rgba(13,150,114,.13);color:#5ddab4">🌴 ${enVac}</span>` : '',
+    enSusp ? `<span class="lb-estado-pill" style="background:rgba(196,50,50,.12);color:#f08585">🚫 ${enSusp}</span>` : '',
+  ].filter(Boolean).join('');
+  const alerts = [
+    err  ? `<span class="lb-alert-dot dot-err">⚠ ${err}</span>` : '',
+    warn ? `<span class="lb-alert-dot dot-warn">${warn} próx.</span>` : '',
+  ].filter(Boolean).join('');
+  return `<div class="lb-face">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0">
+      <div class="lb-code">${code}</div>
+      <button class="lb-edit-btn" onclick="event.stopPropagation();abrirRenombrarLocal('${esc(loc)}')" title="Renombrar local">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+    </div>
+    <div class="lb-name">${esc(loc)}</div>
+    <div class="lb-count">${count} colaborador${count!==1?'es':''}</div>
+    ${estadoHTML ? `<div class="lb-estados">${estadoHTML}</div>` : ''}
+    <div class="lb-prog-bar"><div class="lb-prog-fill" style="width:${pct}%;background:${fill}"></div></div>
+    <div class="lb-bottom">
+      <div class="lb-pct">${pct}% docs</div>
+      <div class="lb-alerts">${alerts}</div>
+    </div>
+  </div>`;
+}
+
 function renderBoard(q = '') {
   const grid  = document.getElementById('locals-grid');
   const empty = document.getElementById('board-empty');
   const lq    = q.toLowerCase();
   const hoy   = new Date();
+
+  // Construir mapa local → colaboradores
   const mapa  = {};
   colabs.forEach(c => {
     const loc = c.local||'Sin Local';
@@ -2089,69 +2263,49 @@ function renderBoard(q = '') {
   });
   let locs = Object.keys(mapa);
   if (lq) locs = locs.filter(l => l.toLowerCase().includes(lq));
+
   if (!locs.length) {
     if (empty) empty.style.display = 'block';
-    // Limpiar solo las tarjetas, no el empty
     Array.from(grid.children).forEach(el => { if (el.id !== 'board-empty') el.remove(); });
     return;
   }
   if (empty) empty.style.display = 'none';
-  grid.innerHTML = locs.map((loc, li) => {
-    const list  = mapa[loc];
-    const count = list.length;
-    let warn=0, err=0;
-    list.forEach(c => {
-      if (!c.vencimiento_salud) return;
-      const d = (new Date(c.vencimiento_salud+'T00:00:00') - hoy)/86400000;
-      if (d<0) err++; else if (d<30) warn++;
-    });
-    // Progreso: basado en carpetas si existen, sino legacy
-    let totalDocs = 0, cargDocs = 0;
-    list.forEach(colab => {
-      if (Array.isArray(colab.carpetas) && colab.carpetas.length) {
-        totalDocs += colab.carpetas.length;
-        cargDocs  += colab.carpetas.filter(f=>f.urls&&f.urls.length).length;
-      } else {
-        totalDocs += ALL_DOCS.length;
-        cargDocs  += ALL_DOCS.filter(d=>colab[d.key]).length;
-      }
-    });
-    const total = totalDocs;
-    const carg  = cargDocs;
-    const pct   = total ? Math.round((carg/total)*100) : 0;
-    const fill  = pct===100?'var(--success)':pct>60?'var(--amber-hi)':'var(--danger)';
-    const code  = loc.split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
-    // Estado activo
-    const enVac  = list.filter(c => estadoActivo(c)?.key==='vacaciones').length;
-    const enSusp = list.filter(c => estadoActivo(c)?.key==='suspension').length;
-    const estadoHTML = [
-      enVac  ? `<span class="lb-estado-pill" style="background:rgba(13,150,114,.13);color:#5ddab4">🌴 ${enVac}</span>` : '',
-      enSusp ? `<span class="lb-estado-pill" style="background:rgba(196,50,50,.12);color:#f08585">🚫 ${enSusp}</span>` : '',
-    ].filter(Boolean).join('');
-    const alerts = [
-      err  ? `<span class="lb-alert-dot dot-err">⚠ ${err}</span>` : '',
-      warn ? `<span class="lb-alert-dot dot-warn">${warn} próx.</span>` : '',
-    ].filter(Boolean).join('');
-    return `
-    <div class="local-block" style="animation-delay:${li*60}ms" onclick="abrirLocal('${esc(loc)}')">
-      <div class="lb-face">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0">
-          <div class="lb-code">${code}</div>
-          <button class="lb-edit-btn" onclick="event.stopPropagation();abrirRenombrarLocal('${esc(loc)}')" title="Renombrar local">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-        </div>
-        <div class="lb-name">${esc(loc)}</div>
-        <div class="lb-count">${count} colaborador${count!==1?'es':''}</div>
-        ${estadoHTML ? `<div class="lb-estados">${estadoHTML}</div>` : ''}
-        <div class="lb-prog-bar"><div class="lb-prog-fill" style="width:${pct}%;background:${fill}"></div></div>
-        <div class="lb-bottom">
-          <div class="lb-pct">${pct}% docs</div>
-          <div class="lb-alerts">${alerts}</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+
+  // ── Patch parcial: reconciliar nodos existentes con la nueva lista ──
+  const existingCards = new Map(
+    Array.from(grid.querySelectorAll('.local-block[data-loc]'))
+      .map(el => [el.dataset.loc, el])
+  );
+
+  // Nodos a mantener/actualizar (en orden)
+  const orderedNodes = locs.map((loc, li) => {
+    const newInner = _buildLocalCardInner(loc, li, mapa, hoy);
+    let card = existingCards.get(loc);
+
+    if (!card) {
+      // Nueva tarjeta — crear nodo
+      card = document.createElement('div');
+      card.className = 'local-block';
+      card.dataset.loc = loc;
+      card.style.animationDelay = `${li * 60}ms`;
+      card.setAttribute('onclick', `abrirLocal('${esc(loc)}')`);
+      card.innerHTML = newInner;
+    } else {
+      existingCards.delete(loc); // marcada como usada
+      // Actualizar solo si el contenido cambió
+      if (card.innerHTML !== newInner) card.innerHTML = newInner;
+    }
+    return card;
+  });
+
+  // Eliminar tarjetas de locales que ya no existen
+  existingCards.forEach(card => card.remove());
+
+  // Reordenar nodos en el grid sin tocar los que ya están en posición
+  orderedNodes.forEach((node, i) => {
+    const current = grid.children[i];
+    if (current !== node) grid.insertBefore(node, current || null);
+  });
 }
 
 /* ══ LOCAL VIEW ═════════════════════════════════════════════════ */
@@ -2185,129 +2339,194 @@ function renderLvFilters() {
 }
 function setDocFilter(k) { _docFilter=k; renderLvFilters(); if(currentLocal) renderLocal(currentLocal,localQ); }
 
+/* ── Helpers para generar HTML de cada zona de persona ──────── */
+
+/** @param {object} c colaborador @param {Date} hoy @returns {string} HTML de .pb-face */
+function _buildPersonFace(c, hoy) {
+  const init = (c.nombre||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
+  let stCls='st-ok', stLbl='Al día';
+  if (c.vencimiento_salud) {
+    const d = (new Date(c.vencimiento_salud+'T00:00:00')-hoy)/86400000;
+    if (d<0)       { stCls='st-err';  stLbl='Vencido'; }
+    else if (d<30) { stCls='st-warn'; stLbl=`${Math.ceil(d)}d`; }
+  }
+  const ea = estadoActivo(c);
+  const eaBadgeHTML = ea
+    ? `<div class="pb-estado" style="background:${ea.bg};color:${ea.color}">${ea.emoji} ${ea.label}</div>`
+    : '';
+  const chips = [];
+  const fmtFecha = s => s ? s.split('-').reverse().slice(0,2).join('/') : '';
+  if (c.vacaciones_dias)
+    chips.push(`<span class="pb-chip pb-chip-vac">🌴 ${c.vacaciones_dias}d${c.vacaciones_fecha_inicio?` · ${fmtFecha(c.vacaciones_fecha_inicio)}→${fmtFecha(c.vacaciones_fecha_fin)}`:''}`);
+  if (c.suspension_dias)
+    chips.push(`<span class="pb-chip pb-chip-susp">🚫 ${c.suspension_dias}d${c.suspension_fecha_inicio?` · ${fmtFecha(c.suspension_fecha_inicio)}→${fmtFecha(c.suspension_fecha_fin)}`:''}`);
+  const apCount = Array.isArray(c.apercibimiento) ? c.apercibimiento.length : (c.apercibimiento ? 1 : 0);
+  if (apCount > 0)
+    chips.push(`<span class="pb-chip pb-chip-aper">⚠️ ${apCount} apercibimiento${apCount!==1?'s':''}`);
+  const chipsHTML = chips.length ? `<div class="pb-chips">${chips.join('')}</div>` : '';
+  const carpetas = getCarpetas(c);
+  const carpCount = carpetas.filter(f=>f.urls&&f.urls.length).length;
+  const carpTotal = carpetas.length;
+  const carpPct   = carpTotal ? Math.round(carpCount/carpTotal*100) : 0;
+  const carpFill  = carpCount===carpTotal&&carpTotal>0?'var(--success)':carpPct>60?'var(--amber-hi)':'var(--danger)';
+  return `<div class="pb-header">
+    <div class="pb-avatar">${init}</div>
+    <div class="pb-info">
+      <div class="pb-name">${esc(c.nombre)}</div>
+      <div class="pb-sub">${esc(c.puesto||'Sin puesto')} · DNI ${esc(c.dni_nro||'—')}</div>
+      ${chipsHTML}
+    </div>
+    <div class="pb-right">
+      <div class="pb-status ${stCls}">${stLbl}</div>
+      <svg class="pb-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+  </div>
+  ${eaBadgeHTML}
+  <div class="pb-prog">
+    <div class="pb-prog-bar"><div class="pb-prog-fill" style="width:${carpPct}%;background:${carpFill}"></div></div>
+    <div class="pb-prog-lbl">${carpCount}/${carpTotal}</div>
+  </div>`;
+}
+
+/** @param {object} c colaborador @returns {string} HTML de .pb-docs */
+function _buildPersonDocs(c) {
+  const carpetas   = getCarpetas(c);
+  const foldersHTML = renderFolders(c.id, carpetas);
+  return `${foldersHTML}
+  <div class="pb-actions">
+    <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Editar datos
+    </button>
+    <button class="pba-btn amber" onclick="exportarPDF('${c.id}');event.stopPropagation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Legajo PDF
+    </button>
+    <button class="pba-btn danger" onclick="confirmar('¿Eliminar a ${esc(c.nombre)}? Esta acción no se puede deshacer.','Eliminar').then(ok=>{if(ok)eliminarColab('${c.id}','${esc(c.nombre)}')});event.stopPropagation()">
+      <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-trash"/></svg>
+      Eliminar
+    </button>
+  </div>`;
+}
+
+/* ══ renderLocal — patch parcial ════════════════════════════════
+   Estado expandido vive en _expandedPersons (Store), no en el DOM.
+   Por tarjeta:
+   • .pb-face  → se patchea si el HTML cambió (datos del empleado)
+   • .pb-docs  → se patchea solo si la persona está expandida
+   Personas que no cambiaron y están colapsadas → cero trabajo DOM. ══ */
 function renderLocal(local, q='') {
-  const lq   = q.toLowerCase();
-  let list   = colabs.filter(c => (c.local||'Sin Local')===local);
+  const lq  = q.toLowerCase();
+  let list  = colabs.filter(c => (c.local||'Sin Local')===local);
   if (lq) list = list.filter(c =>
     (c.nombre||'').toLowerCase().includes(lq) ||
     (c.dni_nro||'').includes(lq) ||
     (c.puesto||'').toLowerCase().includes(lq)
   );
-  const fk   = DOC_FILTER_DEFS.find(f=>f.key===_docFilter)?.keys || null;
-  document.getElementById('lv-count').textContent = `${list.length} persona${list.length!==1?'s':''}`;
-  const hoy  = new Date();
 
-  // Preservar estado expandido y scroll antes de re-renderizar
+  document.getElementById('lv-count').textContent = `${list.length} persona${list.length!==1?'s':''}`;
+  const hoy    = new Date();
   const scroll = document.getElementById('persons-scroll');
   const scrollTop = scroll.scrollTop;
-  const expanded = new Set(
-    Array.from(scroll.querySelectorAll('.person-block.expanded')).map(el => el.id.replace('pb-',''))
-  );
 
-  document.getElementById('persons-scroll').innerHTML = list.map((c,ci) => {
-    const init = (c.nombre||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
-    let stCls='st-ok', stLbl='Al día';
-    if (c.vencimiento_salud) {
-      const d = (new Date(c.vencimiento_salud+'T00:00:00')-hoy)/86400000;
-      if (d<0)       { stCls='st-err';  stLbl='Vencido'; }
-      else if (d<30) { stCls='st-warn'; stLbl=`${Math.ceil(d)}d`; }
-    }
-    const carg  = ALL_DOCS.filter(d=>c[d.key]).length;
-    const total = ALL_DOCS.length;
-    const pct   = Math.round((carg/total)*100);
-    const fill  = pct===100?'var(--success)':pct>60?'var(--amber-hi)':'var(--danger)';
+  // IDs visibles en esta pasada
+  const visibleIds = new Set(list.map(c => c.id));
 
-    // ── Carpetas flexibles del colaborador ──────────────────────
-    const carpetasRaw = c.carpetas;
-    let carpetas = Array.isArray(carpetasRaw) && carpetasRaw.length > 0
-      ? carpetasRaw
-      : migrarCarpetasLegacy(c);
-
-    const foldersHTML = renderFolders(c.id, carpetas);
-
-    // ── Estado activo hoy ─────────────────────────────────────────
-    const ea = estadoActivo(c);
-    const eaBadgeHTML = ea
-      ? `<div class="pb-estado" style="background:${ea.bg};color:${ea.color}">${ea.emoji} ${ea.label}</div>`
-      : '';
-
-    // ── Info chips debajo del nombre ──────────────────────────────
-    const chips = [];
-    const fmtFecha = s => s ? s.split('-').reverse().slice(0,2).join('/') : '';
-    if (c.vacaciones_dias) {
-      chips.push(`<span class="pb-chip pb-chip-vac">🌴 ${c.vacaciones_dias}d${c.vacaciones_fecha_inicio?` · ${fmtFecha(c.vacaciones_fecha_inicio)}→${fmtFecha(c.vacaciones_fecha_fin)}`:''}`)
-    }
-    if (c.suspension_dias) {
-      chips.push(`<span class="pb-chip pb-chip-susp">🚫 ${c.suspension_dias}d${c.suspension_fecha_inicio?` · ${fmtFecha(c.suspension_fecha_inicio)}→${fmtFecha(c.suspension_fecha_fin)}`:''}`)
-    }
-    const apCount = Array.isArray(c.apercibimiento) ? c.apercibimiento.length : (c.apercibimiento ? 1 : 0);
-    if (apCount > 0) {
-      chips.push(`<span class="pb-chip pb-chip-aper">⚠️ ${apCount} apercibimiento${apCount!==1?'s':''}`)
-    }
-    const chipsHTML = chips.length ? `<div class="pb-chips">${chips.join('')}</div>` : '';
-
-    const carpCount = carpetas.filter(f=>f.urls&&f.urls.length).length;
-    const carpTotal = carpetas.length;
-    const carpPct   = carpTotal ? Math.round(carpCount/carpTotal*100) : 0;
-    const carpFill  = carpCount===carpTotal&&carpTotal>0?'var(--success)':carpPct>60?'var(--amber-hi)':'var(--danger)';
-
-    return `
-    <div class="person-block" id="pb-${c.id}" style="animation:blockIn .3s ease ${ci*50}ms both">
-      <div class="pb-face" onclick="togglePerson('${c.id}',event)">
-        <div class="pb-header">
-          <div class="pb-avatar">${init}</div>
-          <div class="pb-info">
-            <div class="pb-name">${esc(c.nombre)}</div>
-            <div class="pb-sub">${esc(c.puesto||'Sin puesto')} · DNI ${esc(c.dni_nro||'—')}</div>
-            ${chipsHTML}
-          </div>
-          <div class="pb-right">
-            <div class="pb-status ${stCls}">${stLbl}</div>
-            <svg class="pb-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-        </div>
-        ${eaBadgeHTML}
-        <div class="pb-prog">
-          <div class="pb-prog-bar"><div class="pb-prog-fill" style="width:${carpPct}%;background:${carpFill}"></div></div>
-          <div class="pb-prog-lbl">${carpCount}/${carpTotal}</div>
-        </div>
-      </div>
-      <div class="pb-docs" id="pbdocs-${c.id}">
-        ${foldersHTML}
-        <div class="pb-actions">
-          <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar datos
-          </button>
-          <button class="pba-btn amber" onclick="exportarPDF('${c.id}');event.stopPropagation()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Legajo PDF
-          </button>
-          <button class="pba-btn danger" onclick="confirmar('¿Eliminar a ${esc(c.nombre)}? Esta acción no se puede deshacer.','Eliminar').then(ok=>{if(ok)eliminarColab('${c.id}','${esc(c.nombre)}')});event.stopPropagation()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-            Eliminar
-          </button>
-        </div>
-      </div>
-    </div>`;
-  }).join('') || `<div class="lv-empty">Sin resultados para tu búsqueda.</div>`;
-
-  // Restaurar estado expandido
-  expanded.forEach(id => {
-    const pb   = document.getElementById(`pb-${id}`);
-    const docs = document.getElementById(`pbdocs-${id}`);
-    if (pb && docs) { pb.classList.add('expanded'); docs.style.display = 'block'; }
+  // Eliminar tarjetas que ya no están en la lista filtrada
+  Array.from(scroll.querySelectorAll('.person-block[data-pid]')).forEach(el => {
+    if (!visibleIds.has(el.dataset.pid)) el.remove();
   });
+
+  // Caso vacío
+  if (!list.length) {
+    if (!scroll.querySelector('.lv-empty'))
+      scroll.innerHTML = `<div class="lv-empty">Sin resultados para tu búsqueda.</div>`;
+    return;
+  }
+  scroll.querySelector('.lv-empty')?.remove();
+
+  // Patch / insertar cada persona en orden
+  list.forEach((c, ci) => {
+    const isExpanded = _expandedPersons.has(c.id);
+    const newFace    = _buildPersonFace(c, hoy);
+
+    let block = document.getElementById(`pb-${c.id}`);
+
+    if (!block) {
+      // Persona nueva en la lista — crear nodo completo
+      block = document.createElement('div');
+      block.className = 'person-block';
+      block.id        = `pb-${c.id}`;
+      block.dataset.pid = c.id;
+      block.style.animation = `blockIn .3s ease ${ci*50}ms both`;
+
+      const face = document.createElement('div');
+      face.className = 'pb-face';
+      face.setAttribute('onclick', `togglePerson('${c.id}',event)`);
+      face.innerHTML = newFace;
+
+      const docsEl = document.createElement('div');
+      docsEl.className = 'pb-docs';
+      docsEl.id = `pbdocs-${c.id}`;
+      docsEl.style.display = 'none';
+
+      block.appendChild(face);
+      block.appendChild(docsEl);
+      scroll.appendChild(block);
+    } else {
+      // Persona existente — patch selectivo
+      block.dataset.pid = c.id; // asegurar atributo si venía de render anterior
+
+      // Face: actualizar solo si cambió
+      const faceEl = block.querySelector('.pb-face');
+      if (faceEl && faceEl.innerHTML !== newFace) faceEl.innerHTML = newFace;
+
+      // Docs: actualizar solo si está expandida (el usuario la está viendo)
+      if (isExpanded) {
+        const docsEl = document.getElementById(`pbdocs-${c.id}`);
+        if (docsEl) {
+          const newDocs = _buildPersonDocs(c);
+          if (docsEl.innerHTML !== newDocs) docsEl.innerHTML = newDocs;
+        }
+      }
+    }
+
+    // Sincronizar estado visual con el Store
+    block.classList.toggle('expanded', isExpanded);
+    const docsEl = document.getElementById(`pbdocs-${c.id}`);
+    if (docsEl) docsEl.style.display = isExpanded ? 'block' : 'none';
+
+    // Reordenar si el nodo no está en la posición correcta
+    const currentAtPos = scroll.children[ci];
+    if (currentAtPos !== block) scroll.insertBefore(block, currentAtPos || null);
+  });
+
   scroll.scrollTop = scrollTop;
 }
 
 function togglePerson(id, event) {
-  if (event.target.closest('.doc-blk') || event.target.closest('.folder-blk') || event.target.closest('.folder-add-btn') || event.target.closest('.pba-btn')) return;
+  if (event.target.closest('.doc-blk') || event.target.closest('.folder-blk') ||
+      event.target.closest('.folder-add-btn') || event.target.closest('.pba-btn')) return;
+
+  const isExpanded = _expandedPersons.has(id);
+
+  if (isExpanded) {
+    _expandedPersons.delete(id);
+  } else {
+    _expandedPersons.add(id);
+    // Renderizar docs al abrir (lazy — solo si no tienen contenido aún)
+    const docsEl = document.getElementById(`pbdocs-${id}`);
+    if (docsEl && !docsEl.innerHTML.trim()) {
+      const c = colabs.find(x => x.id === id);
+      if (c) docsEl.innerHTML = _buildPersonDocs(c);
+    }
+  }
+
   const pb   = document.getElementById(`pb-${id}`);
   const docs = document.getElementById(`pbdocs-${id}`);
-  const open = pb.classList.contains('expanded');
-  pb.classList.toggle('expanded', !open);
-  docs.style.display = open ? 'none' : 'block';
+  if (!pb || !docs) return;
+  pb.classList.toggle('expanded', !isExpanded);
+  docs.style.display = isExpanded ? 'none' : 'block';
 }
 
 /* ══ CONFIRM SHEET (reemplaza confirm() nativo) ══════════════════ */
@@ -2378,7 +2597,7 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
     const urlToSave = await subirDataUrlAImgBB(dataUrl);
 
     // 4. Guardar en Firestore
-    const colab   = colabs.find(x => x.id===id);
+    const colab   = getColab(id);
     const current = colab ? colab[key] : null;
     const arr     = current ? (Array.isArray(current)?[...current]:[current]) : [];
     const metaRaw = colab ? colab[key+'_meta'] : null;
@@ -2477,6 +2696,15 @@ function migrarCarpetasLegacy(c) {
   });
 }
 
+// ── Helpers ──────────────────────────────────────────────────────
+function getColab(id) { return colabs.find(x => x.id === id) || null; }
+function getCarpetas(c) {
+  return (Array.isArray(c?.carpetas) && c.carpetas.length) ? c.carpetas : migrarCarpetasLegacy(c);
+}
+function deepCarpetas(c) {
+  return getCarpetas(c).map(f => ({ ...f, urls: [...(f.urls||[])], meta: [...(f.meta||[])] }));
+}
+
 // Renderiza el grid de carpetas para un colaborador dado su array de carpetas
 function renderFolders(colabId, carpetas) {
   const foldersHTML = carpetas.map((f, fi) => {
@@ -2503,8 +2731,8 @@ function renderFolders(colabId, carpetas) {
     }
 
     const chkSvg = loaded
-      ? `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
-      : `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+      ? `<svg width="8" height="8" width="3" viewBox="0 0 24 24"><use href="#ic-check"/></svg>`
+      : `<svg width="8" height="8" width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>`;
 
     const emoji = f.emoji || '📁';
 
@@ -2527,7 +2755,7 @@ function renderFolders(colabId, carpetas) {
       </div>
       ${fechaHtml}
       <div class="folder-del-btn" onclick="event.stopPropagation();eliminarCarpeta('${colabId}',${fi})" title="Eliminar carpeta">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-x24"/></svg>
       </div>
     </div>`;
   }).join('');
@@ -2537,7 +2765,7 @@ function renderFolders(colabId, carpetas) {
     <div class="folders-header">
       <div class="folders-label">📂 Carpetas</div>
       <button class="folder-add-btn" onclick="event.stopPropagation();abrirNuevaCarpeta('${colabId}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
         Nueva carpeta
       </button>
     </div>
@@ -2549,9 +2777,9 @@ function renderFolders(colabId, carpetas) {
 
 // Abre la carpeta: si tiene fotos → preview, si no → picker
 function handleFolder(colabId, folderIdx, loaded) {
-  const c = colabs.find(x => x.id === colabId);
+  const c = getColab(colabId);
   if (!c) return;
-  const carpetas = Array.isArray(c.carpetas) && c.carpetas.length ? c.carpetas : migrarCarpetasLegacy(c);
+  const carpetas = getCarpetas(c);
   const f = carpetas[folderIdx];
   if (!f) return;
 
@@ -2632,30 +2860,42 @@ async function handleFolderDrop(event, colabId, folderIdx) {
   }
 }
 
-// Guardar foto en una carpeta dentro del array carpetas del colaborador
 async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
-  const colab    = colabs.find(x => x.id === colabId);
-  const carpetas = Array.isArray(colab?.carpetas) && colab.carpetas.length
-    ? colab.carpetas.map(f => ({...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])]}))
-    : migrarCarpetasLegacy(colab);
-
-  const folder = carpetas[folderIdx];
+  const colab    = getColab(colabId);
+  if (!colab) return;
+  const carpetas = deepCarpetas(colab);
+  const folder   = carpetas[folderIdx];
   if (!folder) return;
   if ((folder.urls||[]).length >= 10) { toast('Límite de 10 fotos por carpeta'); return; }
 
   folder.urls = [...(folder.urls||[]), url];
   folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok' }];
 
-  await updateDoc(doc(db,'colaboradores',colabId),{ carpetas });
+  // Optimistic local
+  const idx = colabs.findIndex(x => x.id === colabId);
+  const prev = idx !== -1 ? { ...colabs[idx] } : null;
+  if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas };
 
-  if (blkEl) {
-    const bar = blkEl.querySelector('.folder-upload-bar');
-    if (bar) { bar.style.width='100%'; setTimeout(()=>bar.remove(),400); }
-    blkEl.classList.remove('uploading'); blkEl.classList.add('loaded');
-    const thumbEl = blkEl.querySelector('.folder-blk-thumb');
-    if (thumbEl) thumbEl.style.opacity = '.25';
-    const tagTxtEl = blkEl.querySelector('.folder-blk-tag-txt');
-    if (tagTxtEl) tagTxtEl.textContent = folder.urls.length > 1 ? `${folder.urls.length} fotos` : 'Cargado';
+  try {
+    await updateDoc(doc(db,'colaboradores',colabId), { carpetas });
+    if (blkEl) {
+      const bar = blkEl.querySelector('.folder-upload-bar');
+      if (bar) { bar.style.width='100%'; setTimeout(()=>bar.remove(),400); }
+      blkEl.classList.remove('uploading'); blkEl.classList.add('loaded');
+      const thumbEl = blkEl.querySelector('.folder-blk-thumb');
+      if (thumbEl) thumbEl.style.opacity = '.25';
+      const tagTxtEl = blkEl.querySelector('.folder-blk-tag-txt');
+      if (tagTxtEl) tagTxtEl.textContent = folder.urls.length > 1 ? `${folder.urls.length} fotos` : 'Cargado';
+    }
+  } catch(e) {
+    // Rollback
+    if (idx !== -1 && prev) colabs[idx] = prev;
+    if (blkEl) {
+      blkEl.classList.remove('uploading'); blkEl.classList.add('missing');
+      const bar = blkEl.querySelector('.folder-upload-bar'); if (bar) bar.remove();
+      const tagTxtEl = blkEl.querySelector('.folder-blk-tag-txt'); if (tagTxtEl) tagTxtEl.textContent = 'Error — reintentar';
+    }
+    toast('Error al guardar: ' + (e.code||e.message));
   }
 }
 
@@ -2663,46 +2903,52 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
 let _nuevaCarpetaColabId = null;
 function abrirNuevaCarpeta(colabId) {
   _nuevaCarpetaColabId = colabId;
-  document.getElementById('nc-nombre').value = '';
+  $('nc-nombre').value = '';
   openSheet('nueva-carpeta-modal');
-  setTimeout(() => document.getElementById('nc-nombre').focus(), 300);
+  requestAnimationFrame(() => $('nc-nombre')?.focus());
 }
 async function guardarNuevaCarpeta() {
   const nombre = document.getElementById('nc-nombre').value.trim();
   if (!nombre) { document.getElementById('nc-nombre').focus(); return; }
-  const colab = colabs.find(x => x.id === _nuevaCarpetaColabId);
-  const carpetas = Array.isArray(colab?.carpetas) && colab.carpetas.length
-    ? [...colab.carpetas] : migrarCarpetasLegacy(colab);
+  const colab = getColab(_nuevaCarpetaColabId);
+  const carpetas = [...getCarpetas(colab)];
   carpetas.push({ id: uidCarpeta(), nombre, emoji: '📁', urls: [], meta: [] });
   const idx = colabs.findIndex(x => x.id === _nuevaCarpetaColabId);
+  const prev = idx !== -1 ? { ...colabs[idx] } : null;
   if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas };
   closeSheet('nueva-carpeta-modal');
   if (currentLocal) renderLocal(currentLocal, localQ);
-  updateDoc(doc(db,'colaboradores',_nuevaCarpetaColabId),{ carpetas })
-    .catch(e => toast('Error al guardar: ' + (e.code || e.message)));
+  updateDoc(doc(db,'colaboradores',_nuevaCarpetaColabId), { carpetas })
+    .catch(e => {
+      if (idx !== -1 && prev) { colabs[idx] = prev; if (currentLocal) renderLocal(currentLocal, localQ); }
+      toast('Error al guardar: ' + (e.code || e.message));
+    });
 }
 
 async function eliminarCarpeta(colabId, folderIdx) {
-  const colab = colabs.find(x => x.id === colabId);
-  const carpetas = Array.isArray(colab?.carpetas) && colab.carpetas.length
-    ? colab.carpetas : migrarCarpetasLegacy(colab);
+  const colab = getColab(colabId);
+  const carpetas = getCarpetas(colab);
   const folder = carpetas[folderIdx];
   if (!folder) return;
   const ok = await confirmar(`¿Eliminar la carpeta "${folder.nombre}"? Se perderán las ${folder.urls?.length||0} fotos cargadas.`, 'Eliminar');
   if (!ok) return;
   const newCarpetas = carpetas.filter((_,i) => i !== folderIdx);
   const idx = colabs.findIndex(x => x.id === colabId);
+  const prev = idx !== -1 ? { ...colabs[idx] } : null;
   if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas: newCarpetas };
   if (currentLocal) renderLocal(currentLocal, localQ);
-  updateDoc(doc(db,'colaboradores',colabId),{ carpetas: newCarpetas })
-    .catch(e => toast('Error al eliminar: ' + (e.code || e.message)));
+  updateDoc(doc(db,'colaboradores',colabId), { carpetas: newCarpetas })
+    .catch(e => {
+      if (idx !== -1 && prev) { colabs[idx] = prev; if (currentLocal) renderLocal(currentLocal, localQ); }
+      toast('Error al eliminar: ' + (e.code || e.message));
+    });
 }
 
 /* ══ DOC MANAGEMENT ═════════════════════════════════════════════ */
 function handleDoc(id, key, label, askFecha, askRangoFechas, loaded) {
   activeTask = { id, type:key, label, askFecha, askRangoFechas };
   if (loaded) {
-    const c   = colabs.find(x => x.id===id);
+    const c   = getColab(id);
     const raw = c[key];
     _prevUrls = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     // Load parallel meta: cargado_en and estado per photo
@@ -2789,7 +3035,7 @@ function renderCarousel() {
         ${estado==='ok'?'Marcar revisión':estado==='revision'?'Rechazar':'OK'}
       </button>
       ${hasMulti ? `<button class="car-btn car-btn-err" onclick="borrarEstaFoto()" title="Eliminar esta foto">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        <svg width="14" height="14" width="2.5" viewBox="0 0 24 24"><use href="#ic-trash"/></svg>
         Eliminar foto
       </button>` : ''}
     </div>`;
@@ -2885,9 +3131,8 @@ async function borrarEstaFoto() {
   const newMeta = _prevMeta.filter((_,i) => i!==_prevIdx);
   try {
     if (activeTask.type === '__folder__') {
-      const colab = colabs.find(x => x.id === activeTask.id);
-      const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
-        ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
+      const colab = getColab(activeTask.id);
+      const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].urls = newUrls;
       carpetas[activeTask.folderIdx].meta = newMeta;
       await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
@@ -2910,9 +3155,8 @@ async function ciclarEstadoDoc() {
   newMeta[_prevIdx] = { ...meta, estado: next };
   try {
     if (activeTask.type === '__folder__') {
-      const colab = colabs.find(x => x.id === activeTask.id);
-      const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
-        ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
+      const colab = getColab(activeTask.id);
+      const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].meta = newMeta;
       await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
     } else {
@@ -2937,9 +3181,8 @@ async function borrarDoc() {
   try {
     if (activeTask.type === '__folder__') {
       // Vaciar fotos de la carpeta (no eliminar la carpeta)
-      const colab = colabs.find(x => x.id === activeTask.id);
-      const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
-        ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
+      const colab = getColab(activeTask.id);
+      const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       carpetas[activeTask.folderIdx].urls = [];
       carpetas[activeTask.folderIdx].meta = [];
       await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
@@ -3122,15 +3365,15 @@ async function ocrConfirmar() {
     if (!docKey) return;
     await new Promise(r=>setTimeout(r,260));
   }
-  document.getElementById('loading').style.display='flex';
-  const colab    = colabs.find(x=>x.id===ocrSelectedId);
+  showL();
+  const colab    = getColab(ocrSelectedId);
   const current  = colab ? colab[docKey] : null;
   const arr      = current ? (Array.isArray(current)?[...current]:[current]) : [];
   const metaRaw  = colab ? colab[docKey+'_meta'] : null;
   const metaArr  = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
   while (metaArr.length < arr.length) metaArr.push({});
   if (arr.length >= 10) {
-    document.getElementById('loading').style.display='none';
+    hideL();
     toast('Límite de 10 fotos por documento alcanzado');
     return;
   }
@@ -3139,25 +3382,25 @@ async function ocrConfirmar() {
   const update  = { [docKey]:arr, [docKey+'_meta']:metaArr };
   const docDef  = ALL_DOCS.find(d=>d.key===docKey);
   if (docDef?.askRangoFechas) {
-    document.getElementById('loading').style.display='none';
+    hideL();
     const rango = await pedirRangoFechas(docDef.name);
-    document.getElementById('loading').style.display='flex';
+    showL();
     if (rango) {
       update[docKey+'_fecha_inicio'] = rango.inicio;
       update[docKey+'_fecha_fin']    = rango.fin;
       update[docKey+'_dias']         = rango.dias;
     }
   } else if (docDef?.askFecha) {
-    document.getElementById('loading').style.display='none';
+    hideL();
     const f = await pedirFecha();
-    document.getElementById('loading').style.display='flex';
+    showL();
     if (f) { update[docKey+'_fecha']=f; if(docKey==='salud') update['vencimiento_salud']=f; }
   }
   try {
     await updateDoc(doc(db,'colaboradores',ocrSelectedId),update);
     toast(`✓ Guardado en legajo de ${colab?.nombre||'colaborador'}`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
-  finally { document.getElementById('loading').style.display='none'; ocrDataUrl=null; ocrDocKey=null; closeSheet('ocr-modal'); }
+  finally { hideL(); ocrDataUrl=null; ocrDocKey=null; closeSheet('ocr-modal'); }
 }
 
 /* ══ CAMERA ═════════════════════════════════════════════════════ */
@@ -3240,16 +3483,15 @@ async function confirmarFotoPrevia() {
   });
 }
 async function subirFotoConfirmada(dataUrl) {
-  document.getElementById('loading').style.display='flex';
+  showL();
 
   // ── RUTA CARPETA FLEXIBLE ────────────────────────────────────────
   if (activeTask?.type === '__folder__') {
     try {
       let urlToSave = dataUrl;
       if (dataUrl.startsWith('data:')) urlToSave = await subirDataUrlAImgBB(dataUrl);
-      const colab = colabs.find(x=>x.id===activeTask.id);
-      const carpetas = (Array.isArray(colab?.carpetas) && colab.carpetas.length
-        ? colab.carpetas : migrarCarpetasLegacy(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
+      const colab = getColab(activeTask.id);
+      const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
       const folder = carpetas[activeTask.folderIdx];
       if (!folder) return;
       const replaceIdx = activeTask._reemplazarIdx;
@@ -3266,12 +3508,12 @@ async function subirFotoConfirmada(dataUrl) {
       await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
       toast(`✓ Guardado (${folder.urls.length} foto${folder.urls.length>1?'s':''})`);
     } catch(e) { console.error(e); toast('Error: '+(e.code||e.message)); }
-    finally { document.getElementById('loading').style.display='none'; }
+    finally { hideL(); }
     return;
   }
 
   // ── RUTA LEGACY (campos sueltos) ────────────────────────────────
-  const colab    = colabs.find(x=>x.id===activeTask?.id);
+  const colab    = getColab(activeTask?.id);
   const current  = colab ? colab[activeTask.type] : null;
   const arr      = current ? (Array.isArray(current)?[...current]:[current]) : [];
   const metaRaw  = colab ? colab[activeTask.type+'_meta'] : null;
@@ -3303,9 +3545,9 @@ async function subirFotoConfirmada(dataUrl) {
     const update = { [activeTask.type]:arr, [activeTask.type+'_meta']:metaArr };
     const docDef = ALL_DOCS.find(d=>d.key===activeTask.type);
     if (docDef?.askRangoFechas) {
-      document.getElementById('loading').style.display='none';
+      hideL();
       const rango = await pedirRangoFechas(docDef.name);
-      document.getElementById('loading').style.display='flex';
+      showL();
       if (rango) {
         update[activeTask.type+'_fecha_inicio'] = rango.inicio;
         update[activeTask.type+'_fecha_fin']    = rango.fin;
@@ -3313,9 +3555,9 @@ async function subirFotoConfirmada(dataUrl) {
         if (activeTask.type==='salud') update['vencimiento_salud'] = rango.fin;
       }
     } else if (docDef?.askFecha) {
-      document.getElementById('loading').style.display='none';
+      hideL();
       const f = await pedirFecha();
-      document.getElementById('loading').style.display='flex';
+      showL();
       if (f) { update[activeTask.type+'_fecha']=f; if(activeTask.type==='salud') update['vencimiento_salud']=f; }
     }
 
@@ -3325,7 +3567,7 @@ async function subirFotoConfirmada(dataUrl) {
     console.error(e);
     toast('Error: '+(e.code||e.message));
   } finally {
-    document.getElementById('loading').style.display='none';
+    hideL();
   }
 }
 
@@ -3472,39 +3714,32 @@ async function eliminarColab(id, nombre) {
 
 /* ══ EDICIÓN DE COLABORADOR ════════════════════════════════════════ */
 function abrirEdicionColab(id) {
-  const c = colabs.find(x => x.id === id);
+  const c = getColab(id);
   if (!c) return;
-  document.getElementById('edit-colab-id').value = id;
-  document.getElementById('edit-nombre').value   = c.nombre || '';
-  document.getElementById('edit-dni').value      = c.dni_nro || '';
-  document.getElementById('edit-puesto').value   = c.puesto || '';
+  $('edit-colab-id').value = id;
+  $('edit-nombre').value   = c.nombre || '';
+  $('edit-dni').value      = c.dni_nro || '';
+  $('edit-puesto').value   = c.puesto || '';
   actualizarSelectsLocales();
-  // Wait for select to render, then set value
-  setTimeout(() => {
-    const sel = document.getElementById('edit-local');
-    if (sel) sel.value = c.local || '';
-  }, 50);
+  const sel = $('edit-local');
+  if (sel) sel.value = c.local || '';
   openSheet('edit-colab-modal');
-  setTimeout(() => document.getElementById('edit-nombre').focus(), 350);
+  requestAnimationFrame(() => $('edit-nombre')?.focus());
 }
 async function guardarEdicionColab() {
-  const id     = document.getElementById('edit-colab-id').value;
-  const nombre = document.getElementById('edit-nombre').value.trim();
-  const dni    = document.getElementById('edit-dni').value.trim();
-  const local  = document.getElementById('edit-local').value.trim();
-  const puesto = document.getElementById('edit-puesto').value.trim();
-  if (!nombre) { document.getElementById('edit-nombre').focus(); return; }
+  const id     = $('edit-colab-id').value;
+  const nombre = $('edit-nombre').value.trim();
+  const dni    = $('edit-dni').value.trim();
+  const local  = $('edit-local').value.trim();
+  const puesto = $('edit-puesto').value.trim();
+  if (!nombre) { $('edit-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
-  const btn = document.getElementById('edit-colab-btn');
+  const btn = $('edit-colab-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     await updateDoc(doc(db,'colaboradores',id),{ nombre, dni_nro:dni, local, puesto });
-    // Si el local cambió y estamos viendo ese local, actualizar currentLocal
-    const c = colabs.find(x => x.id === id);
-    if (c && c.local !== local && currentLocal === c.local) {
-      // Persona se movió a otro local — volver al tablero
-      cerrarLocal();
-    }
+    const c = getColab(id);
+    if (c && c.local !== local && currentLocal === c.local) cerrarLocal();
     closeSheet('edit-colab-modal');
     toast(`✓ ${nombre} actualizado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
@@ -3742,7 +3977,7 @@ function renderVgResults() {
   `).join('');
 }
 async function exportarPDF(id) {
-  const c=colabs.find(x=>x.id===id); if(!c) return;
+  const c=getColab(id); if(!c) return;
   const { jsPDF }=window.jspdf;
   const pdf=new jsPDF({ unit:'mm', format:'a4' });
   const W=210,H=297;
@@ -3965,7 +4200,6 @@ function renderPlanilla() {
   const q = (document.getElementById('pl-search')?.value || '').toLowerCase();
   const vis = PL_COLS.filter(c => c.always || c.on);
 
-  // Filtrar
   let rows = colabs.filter(c => {
     if (_plLocal && c.local !== _plLocal) return false;
     if (q) {
@@ -3975,7 +4209,6 @@ function renderPlanilla() {
     return true;
   });
 
-  // Ordenar
   rows.sort((a, b) => {
     let va = a[_plSort.col] || '', vb = b[_plSort.col] || '';
     if (_plSort.col === 'ingreso') { va = a.at || ''; vb = b.at || ''; }
@@ -3984,9 +4217,12 @@ function renderPlanilla() {
     return va > vb ? _plSort.dir : va < vb ? -_plSort.dir : 0;
   });
 
+  // Actualizar datalist de puestos
+  const puestos = [...new Set(colabs.map(c => c.puesto).filter(Boolean))].sort();
+  document.getElementById('pl-puestos-list').innerHTML = puestos.map(p => `<option value="${esc(p)}">`).join('');
+
   document.getElementById('pl-count').textContent = `${rows.length} colaborador${rows.length!==1?'es':''}`;
 
-  // Header
   document.getElementById('pl-thead').innerHTML = `<tr>${vis.map(c => {
     const sorted = _plSort.col === c.key;
     return `<th><div class="th-inner ${sorted?'sorted':''}" onclick="plSetSort('${c.key}')">
@@ -3994,35 +4230,114 @@ function renderPlanilla() {
     </div></th>`;
   }).join('')}</tr>`;
 
-  // Body
   if (!rows.length) {
-    document.getElementById('pl-tbody').innerHTML = `<tr><td colspan="${vis.length}"><div class="pl-empty">Sin resultados</div></td></tr>`;
+    document.getElementById('pl-tbody').innerHTML = `<tr><td colspan="${vis.length}"><div class="pl-empty">Sin resultados</div></td></tr>` + plAddRow(vis.length);
     return;
   }
+
   document.getElementById('pl-tbody').innerHTML = rows.map(c => {
-    const init = (c.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const pct  = calcLegajoPct(c);
-    const fill = pct===100?'var(--success)':pct>60?'var(--amber-hi)':'var(--danger)';
+    const init    = (c.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const pct     = calcLegajoPct(c);
     const ingreso = c.at ? new Date(c.at.seconds?c.at.seconds*1000:c.at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
     const salud   = c.vencimiento_salud ? fmtFechaPl(c.vencimiento_salud) : '—';
     const saludCls= saludEstado(c.vencimiento_salud);
+    const id = c.id;
 
-    return `<tr onclick="irAColab('${c.id}')">${vis.map(col => {
-      if (col.key==='nombre') return `<td><div class="td-inner"><div class="pl-avatar">${init}</div><div><div class="pl-name">${esc(c.nombre)}</div><div class="pl-sub">${esc(c.local||'—')}</div></div></div></td>`;
-      if (col.key==='local')  return `<td><div class="td-inner">${esc(c.local||'—')}</div></td>`;
-      if (col.key==='puesto') return `<td><div class="td-inner">${esc(c.puesto||'—')}</div></td>`;
-      if (col.key==='dni_nro')return `<td><div class="td-inner">${esc(c.dni_nro||'—')}</div></td>`;
-      if (col.key==='ingreso')return `<td><div class="td-inner">${ingreso}</div></td>`;
-      if (col.key==='salud')  return `<td><div class="td-inner"><span class="pl-badge ${saludCls}">${salud}</span></div></td>`;
+    return `<tr data-id="${id}">${vis.map(col => {
+      if (col.key==='nombre') return `<td><div class="td-inner">
+        <div class="pl-avatar">${init}</div>
+        <div style="flex:1;min-width:0">
+          <input class="pl-cell-edit pl-name" value="${esc(c.nombre)}" data-id="${id}" data-field="nombre"
+            onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
+          <div class="pl-sub">${esc(c.local||'—')}</div>
+        </div></div></td>`;
+      if (col.key==='local') return `<td><div class="td-inner">
+        <input class="pl-cell-edit" value="${esc(c.local||'')}" data-id="${id}" data-field="local"
+          list="pl-locales-list" onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
+      </div></td>`;
+      if (col.key==='puesto') return `<td><div class="td-inner">
+        <input class="pl-cell-edit" value="${esc(c.puesto||'')}" data-id="${id}" data-field="puesto"
+          list="pl-puestos-list" onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
+      </div></td>`;
+      if (col.key==='dni_nro') return `<td><div class="td-inner">
+        <input class="pl-cell-edit" value="${esc(c.dni_nro||'')}" data-id="${id}" data-field="dni_nro"
+          inputmode="numeric" onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
+      </div></td>`;
+      if (col.key==='ingreso') return `<td><div class="td-inner" style="color:var(--muted)">${ingreso}</div></td>`;
+      if (col.key==='salud')   return `<td><div class="td-inner">
+        <input class="pl-cell-edit" type="date" value="${c.vencimiento_salud||''}" data-id="${id}" data-field="vencimiento_salud"
+          style="color-scheme:dark" onblur="plSaveCell(this)" onchange="plSaveCell(this)">
+      </div></td>`;
       if (col.key==='legajo') return `<td><div class="td-inner"><span class="pl-badge ${pct===100?'pl-ok':pct>60?'pl-warn':'pl-err'}">${pct}%</span></div></td>`;
       if (col.key==='docs')   return `<td><div class="td-inner">${renderDocsCell(c)}</div></td>`;
       return `<td><div class="td-inner">—</div></td>`;
     }).join('')}</tr>`;
-  }).join('');
+  }).join('') + plAddRow(vis.length);
+
+  // Datalist locales
+  if (!document.getElementById('pl-locales-list')) {
+    const dl = document.createElement('datalist');
+    dl.id = 'pl-locales-list';
+    document.body.appendChild(dl);
+  }
+  document.getElementById('pl-locales-list').innerHTML = locales.map(l => `<option value="${esc(l.nombre)}">`).join('');
+}
+
+function plAddRow(cols) {
+  return `<tr class="pl-add-row"><td colspan="${cols}"><div class="td-inner">
+    <button class="pl-add-btn" onclick="plAgregarColab()">
+      <svg width="10" height="10" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
+      Agregar colaborador
+    </button>
+  </div></td></tr>`;
+}
+
+function plSaveCell(input) {
+  const id    = input.dataset.id;
+  const field = input.dataset.field;
+  const val   = input.value.trim();
+  const c     = getColab(id);
+  if (!c || c[field] === val) return;
+
+  const idx  = colabs.findIndex(x => x.id === id);
+  const prev = idx !== -1 ? { ...colabs[idx] } : null;
+  if (idx !== -1) colabs[idx] = { ...colabs[idx], [field]: val };
+
+  // Actualizar sub-texto local en la misma fila si cambió nombre o local
+  if (field === 'local') {
+    const sub = input.closest('tr')?.querySelector('.pl-sub');
+    if (sub) sub.textContent = val || '—';
+  }
+  if (field === 'puesto') {
+    // Actualizar datalist por si es un puesto nuevo
+    const dl = document.getElementById('pl-puestos-list');
+    const vals = Array.from(dl.options).map(o => o.value);
+    if (val && !vals.includes(val)) {
+      dl.innerHTML += `<option value="${esc(val)}">`;
+    }
+  }
+
+  updateDoc(doc(db,'colaboradores',id), { [field]: val })
+    .catch(e => {
+      if (idx !== -1 && prev) { colabs[idx] = prev; input.value = prev[field] || ''; }
+      toast('Error: ' + (e.code||e.message));
+    });
+}
+
+function plAgregarColab() {
+  cerrarPlanilla();
+  // Reusar el modal de nuevo colaborador
+  setTimeout(() => {
+    if (_plLocal) {
+      const sel = document.getElementById('n-local');
+      if (sel) sel.value = _plLocal;
+    }
+    openSheet('nuevo-modal');
+  }, 250);
 }
 
 function calcLegajoPct(c) {
-  const carpetas = Array.isArray(c.carpetas) && c.carpetas.length ? c.carpetas : migrarCarpetasLegacy(c);
+  const carpetas = getCarpetas(c);
   if (!carpetas.length) return 0;
   return Math.round(carpetas.filter(f => f.urls && f.urls.length).length / carpetas.length * 100);
 }
@@ -4042,7 +4357,7 @@ function saludEstado(fecha) {
 }
 
 function renderDocsCell(c) {
-  const carpetas = Array.isArray(c.carpetas) && c.carpetas.length ? c.carpetas : migrarCarpetasLegacy(c);
+  const carpetas = getCarpetas(c);
   return carpetas.slice(0,6).map(f => {
     const ok = f.urls && f.urls.length;
     return `<span title="${esc(f.nombre)}" style="font-size:11px;opacity:${ok?1:.3}">${f.emoji||'📄'}</span>`;
@@ -4051,7 +4366,7 @@ function renderDocsCell(c) {
 
 function irAColab(id) {
   // Navega al local del colaborador y lo expande
-  const c = colabs.find(x => x.id===id);
+  const c = getColab(id);
   if (!c) return;
   cerrarPlanilla();
   const local = locales.find(l => l.nombre===c.local);
@@ -4082,6 +4397,7 @@ Object.assign(window, {
   seleccionarTipoDoc, setDocFilter, setTip, setVgDoc, setVgFilter,
   stopCamera, toggleColPanel, togglePerson, verFotoFull,
   resolveConfirm, resolveFecha, resolveRango,
+  plSaveCell, plAgregarColab,
 });
 
 </script>

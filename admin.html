@@ -1544,7 +1544,13 @@ function renderBanco(tab) { renderBancoUnified(tab.startsWith('trivia') ? 'trivi
                 <div id="trk-detail-name" style="font-family:var(--font-display);font-size:18px;font-weight:700;"></div>
                 <div id="trk-detail-sub" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;"></div>
             </div>
-            <div onclick="closeTrackingDetail()" style="cursor:pointer;font-size:20px;padding:4px 8px;">✕</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button id="trk-delete-btn" onclick="deletePlayerFromDetail()"
+                    style="background:var(--danger);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-family:var(--font-mono);font-size:11px;cursor:pointer;font-weight:700;">
+                    🗑 Eliminar
+                </button>
+                <div onclick="closeTrackingDetail()" style="cursor:pointer;font-size:20px;padding:4px 8px;">✕</div>
+            </div>
         </div>
         <div id="trk-detail-body"></div>
     </div>
@@ -1634,6 +1640,14 @@ function renderTrackingList() {
         const last  = p.lastSeen ? new Date(p.lastSeen).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
         const lv    = getLevel(p.totalXp || 0);
         const local = p.local ? (LOCAL_LABELS[p.local] || p.local) : '—';
+        const PXPART = 7;
+        const relH   = (p.history || []).filter(h => h.mode === 'trivia' || h.mode === 'ingredientes' || h.mode === 'daily');
+        const corr   = relH.reduce((s, h) => s + (h.score || 0), 0);
+        const total  = relH.length * PXPART;
+        const wrong  = total - corr;
+        const answersStr = total > 0
+            ? `<span style="color:var(--success);">✓ ${corr}</span> · <span style="color:var(--danger);">✗ ${wrong}</span>`
+            : `<span style="color:var(--text-muted);">sin respuestas</span>`;
         return `<div onclick="openTrackingDetail('${p.dni}')"
             style="display:flex;align-items:center;gap:10px;padding:10px 12px;
                    background:var(--surface);border:1px solid var(--border);
@@ -1649,6 +1663,7 @@ function renderTrackingList() {
                 <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
                     DNI ${p.dni} · ${local} · Niv.${lv+1} ${LEVEL_NAMES[lv]}
                 </div>
+                <div style="font-size:10px;font-family:var(--font-mono);margin-top:2px;">${answersStr}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 <div style="font-family:var(--font-mono);font-size:13px;color:var(--accent);font-weight:700;">${p.totalXp||0} XP</div>
@@ -1658,17 +1673,49 @@ function renderTrackingList() {
                 <div style="font-size:10px;color:var(--text-muted);">${last}</div>
                 <div style="font-size:10px;color:var(--text-muted);">último acceso</div>
             </div>
+            <button onclick="event.stopPropagation();deletePlayer('${p.dni}','${(p.nombre||p.dni).replace(/'/g,"\\'")}')"
+                style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:4px 6px;flex-shrink:0;line-height:1;"
+                title="Eliminar jugador">🗑</button>
         </div>`;
     }).join('');
 }
 
 function closeTrackingDetail() {
     document.getElementById('tracking-detail').style.display = 'none';
+    _openTrackingDni = null;
+}
+
+let _openTrackingDni = null;
+
+async function deletePlayerFromDetail() {
+    if (!_openTrackingDni) return;
+    const p = trkPlayers.find(x => x.dni === _openTrackingDni);
+    await deletePlayer(_openTrackingDni, p?.nombre || _openTrackingDni);
+}
+
+async function deletePlayer(dni, nombre) {
+    if (!confirm(`¿Eliminar a ${nombre} (DNI ${dni})?\n\nSe borrarán todos sus datos del juego. Esta acción no se puede deshacer.`)) return;
+    try {
+        await Promise.all([
+            fsdb.collection(PLAYERS_COL).doc(dni).delete(),
+            fsdb.collection(STREAK_COL_ADMIN).doc(dni).delete().catch(() => {}),
+            fsdb.collection(PLAYER_ANSWERS_COL_ADM).doc(dni).delete().catch(() => {}),
+            fsdb.collection(REPASO_COL_ADM).doc(dni).delete().catch(() => {}),
+        ]);
+        trkPlayers = trkPlayers.filter(p => p.dni !== dni);
+        document.getElementById('tracking-detail').style.display = 'none';
+        _openTrackingDni = null;
+        renderTrackingList();
+    } catch(e) {
+        alert('Error al eliminar: ' + e.message);
+    }
 }
 
 async function openTrackingDetail(dni) {
     const p = trkPlayers.find(x => x.dni === dni);
     if (!p) return;
+
+    _openTrackingDni = dni;
 
     const det = document.getElementById('tracking-detail');
     det.style.display = 'block';

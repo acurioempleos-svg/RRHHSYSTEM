@@ -1409,6 +1409,124 @@ body {
 .pl-col-item input[type=checkbox] { accent-color:var(--amber-hi); width:12px; height:12px; cursor:pointer; }
 .pl-col-item.checked { color:var(--text); }
 
+/* ══ CARPETAS DEL LOCAL ══════════════════════════════════════════ */
+#local-folders-section {
+  padding:12px 14px 0;
+  border-bottom:1px solid var(--b0);
+  flex-shrink:0;
+  max-height:180px;
+}
+@media(min-width:900px){
+  #local-folders-section { padding:14px 18px 0; }
+}
+.lf-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px;
+}
+.lf-label {
+  font-family:'DM Mono',monospace; font-size:9px; font-weight:600;
+  color:var(--amber); letter-spacing:.18em; text-transform:uppercase;
+  display:flex; align-items:center; gap:6px;
+}
+.lf-add-btn {
+  display:flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:7px;
+  background:var(--amber-glow); border:1px solid var(--amber-brd);
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--amber-hi);
+  cursor:pointer; letter-spacing:.04em; transition:all var(--t);
+}
+.lf-add-btn:hover { background:rgba(201,122,26,.28); }
+.lf-add-btn svg { width:10px; height:10px; }
+.lf-grid {
+  display:flex; flex-wrap:nowrap; gap:8px;
+  overflow-x:auto; padding-bottom:12px;
+  scrollbar-width:none;
+}
+.lf-grid::-webkit-scrollbar { display:none; }
+.lf-empty {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--faint);
+  padding:8px 0 12px; letter-spacing:.06em;
+}
+
+/* Bloque de carpeta del local */
+.lf-blk {
+  flex:0 0 auto; width:90px;
+  border-radius:var(--r); border:1px solid var(--b1);
+  background:var(--s2); cursor:pointer; overflow:hidden;
+  transition:all var(--t); position:relative;
+  display:flex; flex-direction:column;
+}
+.lf-blk:hover { border-color:var(--amber-brd); background:var(--s3); }
+.lf-blk:active { transform:scale(.97); }
+.lf-blk.loaded { border-color:var(--s-brd); }
+.lf-blk.drag-over {
+  border-color:var(--amber-brd); background:var(--amber-glow);
+  transform:scale(1.04); transition:all .15s ease;
+}
+.lf-blk-thumb {
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+  opacity:.18; transition:opacity var(--t);
+}
+.lf-blk:hover .lf-blk-thumb { opacity:.26; }
+.lf-blk.loaded .lf-blk-thumb { opacity:.26; }
+.lf-blk-body {
+  position:relative; z-index:1;
+  padding:8px; flex:1; display:flex; flex-direction:column;
+}
+.lf-blk-ico { font-size:15px; margin-bottom:auto; }
+.lf-blk-name {
+  font-size:10px; font-weight:700; margin-top:5px;
+  line-height:1.2; word-break:break-word;
+}
+.lf-blk-tag {
+  position:relative; z-index:1;
+  padding:4px 8px;
+  background:rgba(0,0,0,.45); backdrop-filter:blur(4px);
+  font-family:'DM Mono',monospace; font-size:7.5px;
+  letter-spacing:.06em; text-transform:uppercase;
+  border-top:1px solid var(--b0);
+  display:flex; align-items:center; justify-content:space-between;
+  color:var(--faint);
+}
+.lf-blk.loaded .lf-blk-tag { background:rgba(13,150,114,.3); color:#5ddab4; }
+.lf-del-btn {
+  position:absolute; top:4px; right:4px; z-index:5;
+  width:18px; height:18px; border-radius:5px;
+  background:rgba(196,50,50,.5); color:#f08585;
+  display:none; align-items:center; justify-content:center;
+  cursor:pointer; transition:all var(--t);
+}
+.lf-blk:hover .lf-del-btn { display:flex; }
+.lf-del-btn svg { width:10px; height:10px; }
+
+/* ══ METADATA EXTENDIDA EN CARPETA ══════════════════════════════ */
+/* Campos metadata en el modal de preview */
+.meta-fields {
+  display:flex; flex-direction:column; gap:6px;
+  margin-bottom:10px; padding:10px 12px;
+  background:var(--s2); border-radius:var(--r); border:1px solid var(--b0);
+}
+.meta-field-row {
+  display:flex; align-items:center; gap:8px;
+}
+.meta-field-lbl {
+  font-family:'DM Mono',monospace; font-size:8.5px; color:var(--faint);
+  letter-spacing:.08em; flex:0 0 90px;
+}
+.meta-field-val {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--muted);
+  flex:1; min-width:0;
+}
+.meta-field-input {
+  flex:1; background:var(--s3); border:1px solid var(--b1);
+  border-radius:6px; padding:4px 8px; outline:none;
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--text);
+  transition:border-color var(--t);
+}
+.meta-field-input:focus { border-color:var(--amber-brd); }
+.meta-field-input[type=date] { color-scheme:dark; }
+
 /* Celdas editables planilla */
 .pl-cell-edit {
   background: none; border: none; outline: none;
@@ -1506,6 +1624,19 @@ body {
     </div>
   </div>
   <div id="lv-filters"></div>
+  <!-- Carpetas propias del local -->
+  <div id="local-folders-section">
+    <div class="lf-header">
+      <div class="lf-label">&#x1F3E2; Documentos del local</div>
+      <button class="lf-add-btn" onclick="abrirNuevaCarpetaLocal()">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva carpeta
+      </button>
+    </div>
+    <div class="lf-grid" id="lf-grid">
+      <div class="lf-empty" id="lf-empty">Sin carpetas aun</div>
+    </div>
+  </div>
   <div id="persons-scroll"></div>
 </div>
 
@@ -1650,7 +1781,19 @@ body {
     </div>
     <div class="sheet-body">
       <div id="prev-carousel" style="margin-bottom:8px"></div>
-      <div id="prev-nav" style="display:flex;gap:5px;justify-content:center;margin-bottom:14px"></div>
+      <div id="prev-nav" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px"></div>
+      <!-- Metadata extendida: fecha recibido + colaborador -->
+      <div class="meta-fields" id="doc-meta-fields" style="display:none">
+        <div class="meta-field-row">
+          <span class="meta-field-lbl">FECHA RECIBIDO</span>
+          <input type="date" class="meta-field-input" id="dmf-fecha-recibido" style="color-scheme:dark" onchange="guardarMetaDoc()">
+        </div>
+        <div class="meta-field-row">
+          <span class="meta-field-lbl">COLABORADOR</span>
+          <input type="text" class="meta-field-input" id="dmf-colaborador" placeholder="Nombre o DNI" list="dmf-colab-list" onchange="guardarMetaDoc()" oninput="filtrarColabListDoc(this.value)">
+          <datalist id="dmf-colab-list"></datalist>
+        </div>
+      </div>
       <button class="btn btn-amber" id="btn-agregar-fotos" style="margin-bottom:7px" onclick="abrirReemplazo()">Agregar más fotos</button>
       <button class="btn btn-danger" style="margin-bottom:7px" onclick="abrirConfirmDelete()">Eliminar todo el documento</button>
       <button class="btn btn-ghost" onclick="closeSheet('preview-modal')">Cerrar</button>
@@ -1670,6 +1813,52 @@ body {
       <div class="f-field"><label class="f-label">Nombre de la carpeta</label><input class="f-input" id="nc-nombre" placeholder="Ej: DNI Frente, Contrato, Libreta2026" maxlength="60" onkeydown="if(event.key==='Enter')guardarNuevaCarpeta()"></div>
       <button class="btn btn-amber" id="nc-btn" onclick="guardarNuevaCarpeta()">Crear carpeta</button>
       <button class="btn btn-ghost" onclick="closeSheet('nueva-carpeta-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nueva carpeta del LOCAL modal -->
+<div id="nueva-carpeta-local-modal" class="overlay" onclick="if(event.target===this)closeSheet('nueva-carpeta-local-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Carpeta del local</div>
+      <div class="sheet-x" onclick="closeSheet('nueva-carpeta-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div class="f-field"><label class="f-label">Nombre de la carpeta</label><input class="f-input" id="ncl-nombre" placeholder="Ej: Contratos, Habilitaciones, Seguros" maxlength="60" onkeydown="if(event.key===&#39;Enter&#39;)guardarNuevaCarpetaLocal()"></div>
+      <button class="btn btn-amber" id="ncl-btn" onclick="guardarNuevaCarpetaLocal()">Crear carpeta</button>
+      <button class="btn btn-ghost" onclick="closeSheet('nueva-carpeta-local-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Preview carpeta del local -->
+<div id="preview-local-modal" class="overlay" onclick="closeSheet('preview-local-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title" id="preview-local-title">Documento del local</div>
+      <div class="sheet-x" onclick="closeSheet('preview-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div id="prev-local-carousel" style="margin-bottom:8px"></div>
+      <div id="prev-local-nav" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px"></div>
+      <!-- Metadata extendida -->
+      <div class="meta-fields" id="local-doc-meta-fields">
+        <div class="meta-field-row">
+          <span class="meta-field-lbl">FECHA RECIBIDO</span>
+          <input type="date" class="meta-field-input" id="lmf-fecha-recibido" style="color-scheme:dark" onchange="guardarMetaLocalDoc()">
+        </div>
+        <div class="meta-field-row">
+          <span class="meta-field-lbl">COLABORADOR</span>
+          <input type="text" class="meta-field-input" id="lmf-colaborador" placeholder="Nombre o DNI del colaborador" list="lmf-colab-list" onchange="guardarMetaLocalDoc()" oninput="filtrarColabListLocal(this.value)">
+          <datalist id="lmf-colab-list"></datalist>
+        </div>
+      </div>
+      <button class="btn btn-amber" style="margin-bottom:7px" onclick="abrirReemplazoLocal()">Agregar mas fotos</button>
+      <button class="btn btn-danger" style="margin-bottom:7px" onclick="eliminarContenidoCarpetaLocal()">Vaciar carpeta</button>
+      <button class="btn btn-ghost" onclick="closeSheet('preview-local-modal')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2170,6 +2359,8 @@ const _renderScheduler = (() => {
 onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
   locales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
   actualizarSelectsLocales();
+  // Si hay un local abierto, actualizar sus carpetas
+  if (currentLocal) renderLocalFolders(currentLocal);
 });
 
 onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
@@ -2316,6 +2507,7 @@ function abrirLocal(local) {
   document.querySelector('#lv-bar .lv-search input').value = '';
   localQ = '';
   renderLvFilters();
+  renderLocalFolders(local);
   renderLocal(local, '');
   const v = document.getElementById('view-local');
   document.getElementById('lv-backdrop').classList.add('open');
@@ -2944,6 +3136,325 @@ async function eliminarCarpeta(colabId, folderIdx) {
     });
 }
 
+/* ══ CARPETAS DEL LOCAL ══════════════════════════════════════════ */
+
+// Estado para carpetas del local
+let _localFolderTask = null; // { localId, folderIdx, folderName }
+let _prevLocalUrls   = [];
+let _prevLocalMeta   = [];
+let _prevLocalIdx    = 0;
+
+function getLocalDoc() {
+  return locales.find(l => l.nombre === currentLocal) || null;
+}
+
+function getLocalCarpetas(localDoc) {
+  if (!localDoc) return [];
+  return Array.isArray(localDoc.carpetas) ? localDoc.carpetas : [];
+}
+
+function uidLocalCarpeta() {
+  return 'lc_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+
+// Renderizar el grid de carpetas del local en el panel lateral
+function renderLocalFolders(localNombre) {
+  const grid  = document.getElementById('lf-grid');
+  const empty = document.getElementById('lf-empty');
+  if (!grid) return;
+
+  const localDoc = locales.find(l => l.nombre === localNombre);
+  const carpetas  = getLocalCarpetas(localDoc);
+
+  if (!carpetas.length) {
+    grid.innerHTML = '';
+    if (empty) { empty.style.display='block'; grid.appendChild(empty); }
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  grid.innerHTML = carpetas.map((f, fi) => {
+    const urls   = Array.isArray(f.urls) ? f.urls : [];
+    const loaded = urls.length > 0;
+    const thumb  = loaded && !urls[0].includes('.pdf') ? urls[0] : '';
+    const tagTxt = loaded ? (urls.length > 1 ? urls.length + ' fotos' : 'Cargado') : 'Sin cargar';
+    return '<div class="lf-blk' + (loaded ? ' loaded' : '') + '"' +
+      ' onclick="handleLocalFolder('' + (localDoc ? localDoc.id : '') + '',' + fi + ',' + loaded + ')"' +
+      ' ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"' +
+      ' ondragleave="this.classList.remove('drag-over')"' +
+      ' ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleLocalFolderDrop(event,'' + (localDoc ? localDoc.id : '') + '',' + fi + ')">' +
+      (thumb ? '<div class="lf-blk-thumb" style="background-image:url('' + thumb + '')"></div>' : '') +
+      '<div class="lf-blk-body">' +
+        '<div class="lf-blk-ico">' + (f.emoji || '📁') + '</div>' +
+        '<div class="lf-blk-name">' + esc(f.nombre) + '</div>' +
+      '</div>' +
+      '<div class="lf-blk-tag">' + tagTxt + '</div>' +
+      '<div class="lf-del-btn" onclick="event.stopPropagation();eliminarCarpetaLocal('' + (localDoc ? localDoc.id : '') + '',' + fi + ')" title="Eliminar carpeta">' +
+        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Abrir modal nueva carpeta del local
+function abrirNuevaCarpetaLocal() {
+  document.getElementById('ncl-nombre').value = '';
+  openSheet('nueva-carpeta-local-modal');
+  requestAnimationFrame(() => document.getElementById('ncl-nombre')?.focus());
+}
+
+async function guardarNuevaCarpetaLocal() {
+  const nombre = document.getElementById('ncl-nombre').value.trim();
+  if (!nombre) { document.getElementById('ncl-nombre').focus(); return; }
+  const localDoc = getLocalDoc();
+  if (!localDoc) { toast('Error: local no encontrado'); return; }
+  const carpetas = [...getLocalCarpetas(localDoc)];
+  carpetas.push({ id: uidLocalCarpeta(), nombre, emoji: '📁', urls: [], meta: [] });
+  const idx = locales.findIndex(x => x.id === localDoc.id);
+  const prev = idx !== -1 ? { ...locales[idx] } : null;
+  if (idx !== -1) locales[idx] = { ...locales[idx], carpetas };
+  closeSheet('nueva-carpeta-local-modal');
+  renderLocalFolders(currentLocal);
+  updateDoc(doc(db, 'locales', localDoc.id), { carpetas })
+    .catch(e => {
+      if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
+      toast('Error: ' + (e.code || e.message));
+    });
+}
+
+async function eliminarCarpetaLocal(localId, folderIdx) {
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const carpetas = getLocalCarpetas(localDoc);
+  const folder   = carpetas[folderIdx];
+  if (!folder) return;
+  const ok = await confirmar('Eliminar la carpeta "' + folder.nombre + '" del local? Se perderan las ' + (folder.urls?.length||0) + ' fotos.', 'Eliminar');
+  if (!ok) return;
+  const newCarpetas = carpetas.filter((_, i) => i !== folderIdx);
+  const idx  = locales.findIndex(x => x.id === localId);
+  const prev = idx !== -1 ? { ...locales[idx] } : null;
+  if (idx !== -1) locales[idx] = { ...locales[idx], carpetas: newCarpetas };
+  renderLocalFolders(currentLocal);
+  updateDoc(doc(db, 'locales', localId), { carpetas: newCarpetas })
+    .catch(e => {
+      if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
+      toast('Error: ' + (e.code || e.message));
+    });
+}
+
+// Abrir una carpeta del local
+function handleLocalFolder(localId, folderIdx, loaded) {
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const carpetas = getLocalCarpetas(localDoc);
+  const f = carpetas[folderIdx];
+  if (!f) return;
+
+  _localFolderTask = { localId, folderIdx, folderName: f.nombre };
+
+  if (loaded && f.urls && f.urls.length) {
+    _prevLocalUrls = [...f.urls];
+    _prevLocalMeta = Array.isArray(f.meta) ? [...f.meta] : _prevLocalUrls.map(() => ({}));
+    while (_prevLocalMeta.length < _prevLocalUrls.length) _prevLocalMeta.push({});
+    _prevLocalIdx = 0;
+    document.getElementById('preview-local-title').textContent = f.nombre + (_prevLocalUrls.length > 1 ? ' · ' + _prevLocalUrls.length + ' fotos' : '');
+    renderLocalCarousel();
+    // Poblar datalist de colaboradores
+    const dl = document.getElementById('lmf-colab-list');
+    if (dl) dl.innerHTML = colabs.map(c => '<option value="' + esc(c.nombre) + '">').join('');
+    openSheet('preview-local-modal');
+  } else {
+    // Cargar: reutilizar el choice-modal configurando activeTask especial
+    activeTask = { id: '__local__', localId, folderIdx, type: '__local_folder__', label: f.nombre };
+    document.getElementById('choice-title').textContent = 'Cargar: ' + f.nombre;
+    openSheet('choice-modal');
+  }
+}
+
+// Drag & drop en carpeta del local
+async function handleLocalFolderDrop(event, localId, folderIdx) {
+  const file = event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) { toast('Solo se aceptan imagenes'); return; }
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  activeTask = { id: '__local__', localId, folderIdx, type: '__local_folder__', label: '' };
+
+  const dataUrl = await new Promise(res => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+        canvas.width  = Math.round(img.width*ratio);
+        canvas.height = Math.round(img.height*ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        res(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  try {
+    showL();
+    const urlToSave = await subirDataUrlAImgBB(dataUrl);
+    await guardarFotoEnCarpetaLocal(localId, folderIdx, urlToSave);
+    toast('Foto guardada');
+  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+  finally { hideL(); }
+}
+
+async function guardarFotoEnCarpetaLocal(localId, folderIdx, url, metaExtra) {
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const carpetas = getLocalCarpetas(localDoc).map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
+  const folder   = carpetas[folderIdx];
+  if (!folder) return;
+  if ((folder.urls || []).length >= 20) { toast('Limite de 20 fotos por carpeta'); return; }
+  folder.urls.push(url);
+  folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', ...(metaExtra || {}) });
+  const idx  = locales.findIndex(x => x.id === localId);
+  const prev = idx !== -1 ? { ...locales[idx] } : null;
+  if (idx !== -1) locales[idx] = { ...locales[idx], carpetas };
+  renderLocalFolders(currentLocal);
+  try {
+    await updateDoc(doc(db, 'locales', localId), { carpetas });
+  } catch(e) {
+    if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
+    toast('Error al guardar: ' + (e.code || e.message));
+  }
+}
+
+// Renderizar carousel de la carpeta del local
+function renderLocalCarousel() {
+  const carousel = document.getElementById('prev-local-carousel');
+  const nav      = document.getElementById('prev-local-nav');
+  if (!_prevLocalUrls.length) { if(carousel)carousel.innerHTML=''; if(nav)nav.innerHTML=''; return; }
+
+  const meta    = _prevLocalMeta[_prevLocalIdx] || {};
+  const hasMulti = _prevLocalUrls.length > 1;
+
+  const arrowL = hasMulti ? '<button onclick="prevLocalGoto(' + ((_prevLocalIdx-1+_prevLocalUrls.length)%_prevLocalUrls.length) + ')" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8249;</button>' : '';
+  const arrowR = hasMulti ? '<button onclick="prevLocalGoto(' + ((_prevLocalIdx+1)%_prevLocalUrls.length) + ')" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8250;</button>' : '';
+
+  const slides = _prevLocalUrls.map(url => {
+    const isPdf = url.includes('.pdf') || url.includes('application%2Fpdf');
+    return '<div class="car-slide-item">' + (isPdf ? '<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">&#128196; PDF</div>' : '<img src="' + url + '" loading="lazy">') + '</div>';
+  }).join('');
+
+  const fechaCarga = meta.cargado_en
+    ? '<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">' + fmtDateTime(meta.cargado_en) + '</span></div>'
+    : '';
+  const fotoNum = hasMulti
+    ? '<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">' + (_prevLocalIdx+1) + ' de ' + _prevLocalUrls.length + '</span></div>'
+    : '';
+
+  carousel.innerHTML = '<div style="position:relative">' + arrowL + arrowR +
+    '<div class="car-slide-track" onclick="verFotoFull('' + _prevLocalUrls[_prevLocalIdx] + '')">' +
+      '<div class="car-slide-inner" style="transform:translateX(-' + (_prevLocalIdx*100) + '%)">' + slides + '</div>' +
+    '</div></div>' +
+    '<div class="car-meta">' + fechaCarga + fotoNum + '</div>' +
+    '<div class="car-actions">' +
+      '<button class="car-btn" onclick="descargarFoto('' + _prevLocalUrls[_prevLocalIdx] + '','' + (_localFolderTask?.folderName||'doc') + '',' + (_prevLocalIdx+1) + ')">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar</button>' +
+      (hasMulti ? '<button class="car-btn car-btn-err" onclick="borrarFotoLocal()">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>Eliminar foto</button>' : '') +
+    '</div>';
+
+  // Poblar campos de metadata
+  document.getElementById('lmf-fecha-recibido').value = meta.fecha_recibido || '';
+  document.getElementById('lmf-colaborador').value    = meta.colaborador || '';
+
+  // Nav dots
+  if (hasMulti && nav) {
+    nav.innerHTML = _prevLocalUrls.map((_, i) => {
+      const dot = i === _prevLocalIdx ? 'var(--amber-hi)' : 'var(--b2)';
+      return '<div onclick="prevLocalGoto(' + i + ')" style="width:7px;height:7px;border-radius:50%;background:' + dot + ';cursor:pointer;transition:background .2s"></div>';
+    }).join('');
+  } else if (nav) { nav.innerHTML = ''; }
+}
+
+function prevLocalGoto(i) {
+  _prevLocalIdx = i;
+  renderLocalCarousel();
+}
+
+// Guardar metadata (fecha recibido + colaborador) de la foto actual
+async function guardarMetaLocalDoc() {
+  if (!_localFolderTask) return;
+  const { localId, folderIdx } = _localFolderTask;
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const fechaRec  = document.getElementById('lmf-fecha-recibido').value || '';
+  const colab     = document.getElementById('lmf-colaborador').value.trim() || '';
+  const newMeta   = [..._prevLocalMeta];
+  newMeta[_prevLocalIdx] = { ...newMeta[_prevLocalIdx], fecha_recibido: fechaRec, colaborador: colab };
+  _prevLocalMeta = newMeta;
+  const carpetas = getLocalCarpetas(localDoc).map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
+  carpetas[folderIdx].meta = newMeta;
+  try {
+    await updateDoc(doc(db, 'locales', localId), { carpetas });
+  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+}
+
+function filtrarColabListLocal(q) {
+  const dl = document.getElementById('lmf-colab-list');
+  if (!dl) return;
+  const lq = q.toLowerCase();
+  const filtered = lq ? colabs.filter(c => (c.nombre||'').toLowerCase().includes(lq) || (c.dni_nro||'').includes(lq)) : colabs;
+  dl.innerHTML = filtered.slice(0, 30).map(c => '<option value="' + esc(c.nombre) + '">').join('');
+}
+
+async function borrarFotoLocal() {
+  if (!_localFolderTask) return;
+  const { localId, folderIdx } = _localFolderTask;
+  if (_prevLocalUrls.length <= 1) { toast('Usa "Vaciar carpeta" para eliminar la ultima foto'); return; }
+  const ok = await confirmar('Eliminar esta foto?', 'Eliminar');
+  if (!ok) return;
+  const newUrls = _prevLocalUrls.filter((_, i) => i !== _prevLocalIdx);
+  const newMeta = _prevLocalMeta.filter((_, i) => i !== _prevLocalIdx);
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const carpetas = getLocalCarpetas(localDoc).map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
+  carpetas[folderIdx].urls = newUrls;
+  carpetas[folderIdx].meta = newMeta;
+  try {
+    await updateDoc(doc(db, 'locales', localId), { carpetas });
+    _prevLocalUrls = newUrls; _prevLocalMeta = newMeta;
+    _prevLocalIdx  = Math.min(_prevLocalIdx, Math.max(0, newUrls.length - 1));
+    document.getElementById('preview-local-title').textContent = _localFolderTask.folderName + (newUrls.length > 1 ? ' · ' + newUrls.length + ' fotos' : '');
+    renderLocalCarousel();
+    toast('Foto eliminada');
+  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+}
+
+async function eliminarContenidoCarpetaLocal() {
+  if (!_localFolderTask) return;
+  const { localId, folderIdx } = _localFolderTask;
+  const ok = await confirmar('Vaciar la carpeta? Se perderan todas las fotos.', 'Vaciar');
+  if (!ok) return;
+  const localDoc = locales.find(l => l.id === localId);
+  if (!localDoc) return;
+  const carpetas = getLocalCarpetas(localDoc).map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
+  carpetas[folderIdx].urls = [];
+  carpetas[folderIdx].meta = [];
+  try {
+    await updateDoc(doc(db, 'locales', localId), { carpetas });
+    closeSheet('preview-local-modal');
+    toast('Carpeta vaciada');
+  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+}
+
+function abrirReemplazoLocal() {
+  closeSheet('preview-local-modal');
+  if (_localFolderTask) {
+    const { localId, folderIdx } = _localFolderTask;
+    activeTask = { id: '__local__', localId, folderIdx, type: '__local_folder__', label: _localFolderTask.folderName };
+  }
+  document.getElementById('choice-title').textContent = 'Agregar mas fotos';
+  setTimeout(() => openSheet('choice-modal'), 210);
+}
+
 /* ══ DOC MANAGEMENT ═════════════════════════════════════════════ */
 function handleDoc(id, key, label, askFecha, askRangoFechas, loaded) {
   activeTask = { id, type:key, label, askFecha, askRangoFechas };
@@ -3082,6 +3593,21 @@ function renderCarousel() {
       btnAgregar.style.opacity = '';
     }
   }
+  // Campos de metadata extendida (solo para carpetas flexibles __folder__)
+  const metaFields = document.getElementById('doc-meta-fields');
+  if (metaFields) {
+    const isFolder = activeTask?.type === '__folder__';
+    metaFields.style.display = isFolder ? 'flex' : 'none';
+    if (isFolder) {
+      const m = _prevMeta[_prevIdx] || {};
+      const fecEl = document.getElementById('dmf-fecha-recibido');
+      const colEl = document.getElementById('dmf-colaborador');
+      if (fecEl) fecEl.value = m.fecha_recibido || '';
+      if (colEl) colEl.value = m.colaborador || '';
+      const dl = document.getElementById('dmf-colab-list');
+      if (dl && !dl.children.length) dl.innerHTML = colabs.map(c => '<option value="' + esc(c.nombre) + '">').join('');
+    }
+  }
 }
 function prevGoto(i) {
   _prevIdx = i;
@@ -3166,6 +3692,30 @@ async function ciclarEstadoDoc() {
     renderCarousel();
     toast(`Estado: ${next==='ok'?'OK ✓':next==='revision'?'Requiere revisión':'Rechazado'}`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
+}
+
+// Guardar metadata (fecha_recibido + colaborador) en carpeta de colaborador
+async function guardarMetaDoc() {
+  if (!activeTask || activeTask.type !== '__folder__') return;
+  const fechaRec = document.getElementById('dmf-fecha-recibido')?.value || '';
+  const colab_nm = document.getElementById('dmf-colaborador')?.value.trim() || '';
+  const newMeta  = [..._prevMeta];
+  newMeta[_prevIdx] = { ...newMeta[_prevIdx], fecha_recibido: fechaRec, colaborador: colab_nm };
+  _prevMeta = newMeta;
+  try {
+    const colab    = getColab(activeTask.id);
+    const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
+    carpetas[activeTask.folderIdx].meta = newMeta;
+    await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
+  } catch(e) { toast('Error: '+(e.code||e.message)); }
+}
+
+function filtrarColabListDoc(q) {
+  const dl = document.getElementById('dmf-colab-list');
+  if (!dl) return;
+  const lq = q.toLowerCase();
+  const filtered = lq ? colabs.filter(c=>(c.nombre||'').toLowerCase().includes(lq)||(c.dni_nro||'').includes(lq)) : colabs;
+  dl.innerHTML = filtered.slice(0,30).map(c=>'<option value="'+esc(c.nombre)+'">').join('');
 }
 
 function abrirReemplazo() {
@@ -3484,6 +4034,18 @@ async function confirmarFotoPrevia() {
 }
 async function subirFotoConfirmada(dataUrl) {
   showL();
+
+  // ── RUTA CARPETA DEL LOCAL ──────────────────────────────────────
+  if (activeTask?.type === '__local_folder__') {
+    try {
+      let urlToSave = dataUrl;
+      if (dataUrl.startsWith('data:')) urlToSave = await subirDataUrlAImgBB(dataUrl);
+      await guardarFotoEnCarpetaLocal(activeTask.localId, activeTask.folderIdx, urlToSave);
+      toast('Guardado en carpeta del local');
+    } catch(e) { toast('Error: '+(e.code||e.message)); }
+    finally { hideL(); }
+    return;
+  }
 
   // ── RUTA CARPETA FLEXIBLE ────────────────────────────────────────
   if (activeTask?.type === '__folder__') {
@@ -4398,6 +4960,11 @@ Object.assign(window, {
   stopCamera, toggleColPanel, togglePerson, verFotoFull,
   resolveConfirm, resolveFecha, resolveRango,
   plSaveCell, plAgregarColab,
+  abrirNuevaCarpetaLocal, guardarNuevaCarpetaLocal, eliminarCarpetaLocal,
+  guardarMetaDoc, filtrarColabListDoc,
+  handleLocalFolder, handleLocalFolderDrop, prevLocalGoto,
+  guardarMetaLocalDoc, filtrarColabListLocal, borrarFotoLocal,
+  eliminarContenidoCarpetaLocal, abrirReemplazoLocal,
 });
 
 </script>

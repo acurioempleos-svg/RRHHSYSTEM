@@ -3173,26 +3173,29 @@ function renderLocalFolders(localNombre) {
   }
   if (empty) empty.style.display = 'none';
 
+  const lid = localDoc ? localDoc.id : '';
   grid.innerHTML = carpetas.map((f, fi) => {
     const urls   = Array.isArray(f.urls) ? f.urls : [];
     const loaded = urls.length > 0;
     const thumb  = loaded && !urls[0].includes('.pdf') ? urls[0] : '';
     const tagTxt = loaded ? (urls.length > 1 ? urls.length + ' fotos' : 'Cargado') : 'Sin cargar';
-    return '<div class="lf-blk' + (loaded ? ' loaded' : '') + '"' +
-      ' onclick="handleLocalFolder('' + (localDoc ? localDoc.id : '') + '',' + fi + ',' + loaded + ')"' +
-      ' ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"' +
-      ' ondragleave="this.classList.remove('drag-over')"' +
-      ' ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleLocalFolderDrop(event,'' + (localDoc ? localDoc.id : '') + '',' + fi + ')">' +
-      (thumb ? '<div class="lf-blk-thumb" style="background-image:url('' + thumb + '')"></div>' : '') +
-      '<div class="lf-blk-body">' +
-        '<div class="lf-blk-ico">' + (f.emoji || '📁') + '</div>' +
-        '<div class="lf-blk-name">' + esc(f.nombre) + '</div>' +
-      '</div>' +
-      '<div class="lf-blk-tag">' + tagTxt + '</div>' +
-      '<div class="lf-del-btn" onclick="event.stopPropagation();eliminarCarpetaLocal('' + (localDoc ? localDoc.id : '') + '',' + fi + ')" title="Eliminar carpeta">' +
-        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
-      '</div>' +
-    '</div>';
+    const cls    = 'lf-blk' + (loaded ? ' loaded' : '');
+    const thumbHtml = thumb ? `<div class="lf-blk-thumb" style="background-image:url('${thumb}')"></div>` : '';
+    return `<div class="${cls}"
+      onclick="handleLocalFolder('${lid}',${fi},${loaded})"
+      ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleLocalFolderDrop(event,'${lid}',${fi})">
+      ${thumbHtml}
+      <div class="lf-blk-body">
+        <div class="lf-blk-ico">${f.emoji || '📁'}</div>
+        <div class="lf-blk-name">${esc(f.nombre)}</div>
+      </div>
+      <div class="lf-blk-tag">${tagTxt}</div>
+      <div class="lf-del-btn" onclick="event.stopPropagation();eliminarCarpetaLocal('${lid}',${fi})" title="Eliminar carpeta">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -3331,49 +3334,63 @@ function renderLocalCarousel() {
   const nav      = document.getElementById('prev-local-nav');
   if (!_prevLocalUrls.length) { if(carousel)carousel.innerHTML=''; if(nav)nav.innerHTML=''; return; }
 
-  const meta    = _prevLocalMeta[_prevLocalIdx] || {};
+  const meta     = _prevLocalMeta[_prevLocalIdx] || {};
   const hasMulti = _prevLocalUrls.length > 1;
+  const curUrl   = _prevLocalUrls[_prevLocalIdx];
+  const fname    = _localFolderTask?.folderName || 'doc';
 
-  const arrowL = hasMulti ? '<button onclick="prevLocalGoto(' + ((_prevLocalIdx-1+_prevLocalUrls.length)%_prevLocalUrls.length) + ')" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8249;</button>' : '';
-  const arrowR = hasMulti ? '<button onclick="prevLocalGoto(' + ((_prevLocalIdx+1)%_prevLocalUrls.length) + ')" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8250;</button>' : '';
+  const iL = (_prevLocalIdx - 1 + _prevLocalUrls.length) % _prevLocalUrls.length;
+  const iR = (_prevLocalIdx + 1) % _prevLocalUrls.length;
+  const arrowL = hasMulti ? `<button onclick="prevLocalGoto(${iL})" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8249;</button>` : '';
+  const arrowR = hasMulti ? `<button onclick="prevLocalGoto(${iR})" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:4;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer">&#8250;</button>` : '';
 
   const slides = _prevLocalUrls.map(url => {
     const isPdf = url.includes('.pdf') || url.includes('application%2Fpdf');
-    return '<div class="car-slide-item">' + (isPdf ? '<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">&#128196; PDF</div>' : '<img src="' + url + '" loading="lazy">') + '</div>';
+    const inner = isPdf
+      ? `<div style="text-align:center;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">&#128196; PDF</div>`
+      : `<img src="${url}" loading="lazy">`;
+    return `<div class="car-slide-item">${inner}</div>`;
   }).join('');
 
   const fechaCarga = meta.cargado_en
-    ? '<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">' + fmtDateTime(meta.cargado_en) + '</span></div>'
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}</span></div>`
     : '';
   const fotoNum = hasMulti
-    ? '<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">' + (_prevLocalIdx+1) + ' de ' + _prevLocalUrls.length + '</span></div>'
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevLocalIdx+1} de ${_prevLocalUrls.length}</span></div>`
     : '';
 
-  carousel.innerHTML = '<div style="position:relative">' + arrowL + arrowR +
-    '<div class="car-slide-track" onclick="verFotoFull('' + _prevLocalUrls[_prevLocalIdx] + '')">' +
-      '<div class="car-slide-inner" style="transform:translateX(-' + (_prevLocalIdx*100) + '%)">' + slides + '</div>' +
-    '</div></div>' +
-    '<div class="car-meta">' + fechaCarga + fotoNum + '</div>' +
-    '<div class="car-actions">' +
-      '<button class="car-btn" onclick="descargarFoto('' + _prevLocalUrls[_prevLocalIdx] + '','' + (_localFolderTask?.folderName||'doc') + '',' + (_prevLocalIdx+1) + ')">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar</button>' +
-      (hasMulti ? '<button class="car-btn car-btn-err" onclick="borrarFotoLocal()">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>Eliminar foto</button>' : '') +
-    '</div>';
+  carousel.innerHTML = `
+    <div style="position:relative">
+      ${arrowL}${arrowR}
+      <div class="car-slide-track" onclick="verFotoFull('${curUrl}')">
+        <div class="car-slide-inner" style="transform:translateX(-${_prevLocalIdx*100}%)">${slides}</div>
+      </div>
+    </div>
+    <div class="car-meta">${fechaCarga}${fotoNum}</div>
+    <div class="car-actions">
+      <button class="car-btn" onclick="descargarFoto('${curUrl}','${fname}',${_prevLocalIdx+1})">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar
+      </button>
+      ${hasMulti ? `<button class="car-btn car-btn-err" onclick="borrarFotoLocal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        Eliminar foto</button>` : ''}
+    </div>`;
 
   // Poblar campos de metadata
-  document.getElementById('lmf-fecha-recibido').value = meta.fecha_recibido || '';
-  document.getElementById('lmf-colaborador').value    = meta.colaborador || '';
+  const fecEl = document.getElementById('lmf-fecha-recibido');
+  const colEl = document.getElementById('lmf-colaborador');
+  if (fecEl) fecEl.value = meta.fecha_recibido || '';
+  if (colEl) colEl.value = meta.colaborador || '';
 
   // Nav dots
   if (hasMulti && nav) {
     nav.innerHTML = _prevLocalUrls.map((_, i) => {
       const dot = i === _prevLocalIdx ? 'var(--amber-hi)' : 'var(--b2)';
-      return '<div onclick="prevLocalGoto(' + i + ')" style="width:7px;height:7px;border-radius:50%;background:' + dot + ';cursor:pointer;transition:background .2s"></div>';
+      return `<div onclick="prevLocalGoto(${i})" style="width:7px;height:7px;border-radius:50%;background:${dot};cursor:pointer;transition:background .2s"></div>`;
     }).join('');
   } else if (nav) { nav.innerHTML = ''; }
 }
-
 function prevLocalGoto(i) {
   _prevLocalIdx = i;
   renderLocalCarousel();

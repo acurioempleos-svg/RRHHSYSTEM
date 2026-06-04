@@ -2785,19 +2785,19 @@
 
             <label>Selecciona Entrenamiento</label>
             <div class="modes-grid">
-                <div class="mode-card selected" onclick="app.setMode('ingredientes', this)">
+                <div class="mode-card selected" onclick="app.setMode('sim', this)">
+                    <div class="mode-icon">🎭</div>
+                    <div>
+                        <span class="mode-title">Cliente vs Camarero</span>
+                        <span class="mode-desc">Simulador de servicio y reseñas.</span>
+                    </div>
+                </div>
+                <div class="mode-card" onclick="app.setMode('ingredientes', this)">
                     <div class="mode-icon">🍽️</div>
                     <div>
                         <span class="mode-title">Conocé la Carta</span>
                         <span class="mode-desc">Ingredientes y preparaciones de Barra Chalaca.</span>
                         <span id="ingr-cat-label" style="display:block; font-family:var(--font-mono); font-size:10px; color:var(--accent); margin-top:3px;">🍴 Todas</span>
-                    </div>
-                </div>
-                <div class="mode-card" onclick="app.setMode('rosca', this)">
-                    <div class="mode-icon">🔤</div>
-                    <div>
-                        <span class="mode-title">La Rosca</span>
-                        <span class="mode-desc">Nombrá un plato por cada letra del abecedario.</span>
                     </div>
                 </div>
                 <div class="mode-card repaso-mode" id="repaso-mode-card" onclick="app.setMode('repaso', this)">
@@ -3045,65 +3045,6 @@
             </div>
             <div class="timer-bar"><div id="repaso-fill" class="timer-fill" style="background: linear-gradient(90deg, var(--danger), #ff6b6b);"></div></div>
         </div>
-    </div>
-
-    <!-- ── LA ROSCA ── -->
-    <div id="view-rosca" class="view">
-        <div class="q-meta" style="margin-bottom:6px;">
-            <span id="rosca-count">LETRA 1/10</span>
-            <span class="timer-num" id="rosca-timer">20s</span>
-        </div>
-        <div class="timer-bar"><div id="rosca-fill" class="timer-fill" style="background: linear-gradient(90deg, #a855f7, #c084fc);"></div></div>
-
-        <div id="rosca-letter-display" style="
-            font-family: var(--font-display);
-            font-size: 96px;
-            font-weight: 900;
-            text-align: center;
-            color: var(--accent);
-            line-height: 1;
-            margin: 18px 0 10px;
-            letter-spacing: -4px;
-            text-shadow: 0 0 40px rgba(232,200,74,0.3);
-        ">A</div>
-
-        <!-- Pista del plato -->
-        <div id="rosca-hint" style="
-            text-align:center;
-            font-family:var(--font-mono);
-            font-size:12px;
-            color:var(--text-muted);
-            line-height:1.5;
-            margin-bottom:18px;
-            padding: 0 8px;
-            min-height: 36px;
-        "></div>
-
-        <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input id="rosca-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
-                placeholder="Escribí el nombre del plato..."
-                style="flex:1; padding:14px 16px; font-size:16px; font-family:var(--font-mono);
-                       border-radius:12px; border:2px solid var(--border); background:var(--surface-2);
-                       color:var(--text); outline:none; transition: border-color 0.2s;"
-                onkeydown="if(event.key==='Enter') roscaConfirm()">
-            <button onclick="roscaConfirm()" style="
-                padding:14px 20px; border-radius:12px; border:none;
-                background:var(--accent); color:#000; font-weight:700;
-                font-size:18px; cursor:pointer; flex-shrink:0;">✓</button>
-        </div>
-
-        <!-- Feedback (✅/❌) -->
-        <div id="rosca-feedback" style="display:none; text-align:center; padding:14px; border-radius:12px; margin-bottom:10px; font-family:var(--font-mono); font-weight:700; font-size:15px;"></div>
-
-        <!-- Pips de progreso -->
-        <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-top:8px;" id="rosca-pips"></div>
-
-        <button onclick="roscaSkipLetter()" id="rosca-skip-btn"
-            style="width:100%; margin-top:14px; padding:10px; border-radius:10px;
-                   border:1px solid var(--border); background:transparent;
-                   color:var(--text-muted); font-size:12px; cursor:pointer; font-family:var(--font-mono);">
-            SALTAR LETRA →
-        </button>
     </div>
 
     <!-- ── SIMULADOR ── -->
@@ -3439,36 +3380,6 @@ async function trackQuestionStat(questionText, isCorrect, local, playerDni) {
         }, { merge: true });
     } catch(e) { /* fail silently */ }
 }
-
-// ══════════════════════════════════════════════════════════════════
-// STATS GLOBALES BC: ordena el banco por tasa de error agregada
-// Silencioso — el usuario nunca sabe que la cola está envenenada.
-// ══════════════════════════════════════════════════════════════════
-async function loadBcErrorRates() {
-    try {
-        const snap = await fsdb.collection(Q_STATS_COL)
-            .where('localGroup', '==', 'bc')
-            .get();
-        const rates = {};
-        snap.forEach(doc => {
-            const d = doc.data();
-            const attempts = d.attempts || 0;
-            const errors   = d.errors   || 0;
-            if (attempts > 0) rates[doc.id] = errors / attempts;
-        });
-        return rates; // { qid: errorRate 0..1 }
-    } catch(e) { return {}; }
-}
-
-function sortBankByBcErrors(bank, errorRates) {
-    if (!errorRates || !Object.keys(errorRates).length) return bank;
-    return [...bank].sort((a, b) => {
-        const ra = errorRates[makeQid(a.q)] || 0;
-        const rb = errorRates[makeQid(b.q)] || 0;
-        return rb - ra; // más falladas primero
-    });
-}
-
 // Utility function to shuffle array (Fisher-Yates)
 function shuffleArray(array) {
     const shuffled = [...array];
@@ -3660,7 +3571,7 @@ const app = (() => {
     let state = {
         dni: "",
         nombre: "",
-        mode: "ingredientes",
+        mode: "sim",
         step: 0,
         score: 0,
         streak: 0,
@@ -3671,10 +3582,7 @@ const app = (() => {
         xp: 0,
         soundEnabled: true,
         currentTimer: 0,
-        ingrSelected: [],
-        simSelected: [],
-        topicFailCount: {},
-        topicPendingRetry: null
+        ingrSelected: []
     };
 
     const playSound = (type) => {
@@ -3945,8 +3853,6 @@ const app = (() => {
             state.wrongAnswers = [];
             state.xp         = 0;
             state.wrongCount = 0;
-            state.topicFailCount = {};
-            state.topicPendingRetry = null;
             
             // Seleccionar banco de preguntas según local
             const localTrivia = getLocalTrivia(state.local);
@@ -3955,17 +3861,12 @@ const app = (() => {
                 state.dni, 'trivia', state.local, localTrivia, 7
             );
 
-            // Preparar escenarios del simulador (combina banco base + extras del admin)
-            const extraSimScenarios = (extraData && extraData.sim) ? extraData.sim : [];
-            const fullSimBank = [...DATA.simBank, ...extraSimScenarios];
-            state.simSelected = pickQuestionsAntiRepeat(
-                state.dni, 'sim', state.local, fullSimBank, 5
-            );
-            if (!state.simSelected || state.simSelected.length === 0) {
-                state.simSelected = shuffleArray([...fullSimBank]).slice(0, 5);
+            if (state.mode === 'sim') {
+                // Anti-repetición para el simulador
+                DATA.sim = pickQuestionsAntiRepeat(
+                    state.dni, 'sim', state.local, DATA.simBank, 5
+                );
             }
-
-
             if (state.mode === 'ingredientes') {
                 // Carta: Tanta y La Mar tienen su propio banco, BC comparte
                 const localIngr = getLocalIngredientes(state.local);
@@ -3974,17 +3875,7 @@ const app = (() => {
                     const filtered = bank.filter(q => q.category === _ingrSelectedCategory);
                     if (filtered.length > 0) bank = filtered;
                 }
-                window._fullIngrBank = bank; // para lógica adaptativa
-
-                // Para BC: ordenar silenciosamente por tasa de error global
-                // antes de aplicar anti-repetición — primera pregunta ya va al hueso
-                const isBcLocal = ['bcp','bcbl','bcc','bcb'].includes(state.local);
-                if (isBcLocal) {
-                    const errorRates = await loadBcErrorRates();
-                    bank = sortBankByBcErrors(bank, errorRates);
-                }
-
-                // Anti-repetición: ahora opera sobre banco ya ordenado por dificultad
+                // Anti-repetición para ingredientes
                 state.ingrSelected = pickQuestionsAntiRepeat(
                     state.dni, 'ingredientes' + (_ingrSelectedCategory || ''), state.local, bank, 7
                 );
@@ -3999,6 +3890,12 @@ const app = (() => {
                 }
                 app.startRepaso();
                 return;
+            } else if (state.mode === 'trivia') {
+                switchView('trivia', () => {
+                    renderStreakDots();
+                    updateTriviaProgress();
+                    app.renderTrivia();
+                });
             } else if (state.mode === 'ingredientes') {
                 switchView('ingredientes', () => {
                     app.renderIngredientes();
@@ -4182,6 +4079,8 @@ const app = (() => {
                 playSound('wrong');
                 state.wrongAnswers = state.wrongAnswers || [];
                 state.wrongAnswers.push({ q: q.q, correct: q.o[q.c] });
+                state._wrongFull = state._wrongFull || [];
+                state._wrongFull.push(q);
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
                     state.score -= 1;
@@ -4205,12 +4104,12 @@ const app = (() => {
 
         /* ── SIMULADOR ── */
         renderSim: () => {
-            if (state.step >= state.simSelected.length) {
+            if (state.step >= DATA.sim.length) {
                 app.finish();
                 return;
             }
             
-            const stepData = state.simSelected[state.step];
+            const stepData = DATA.sim[state.step];
             const chat = document.getElementById('sim-chat');
             if (!chat) return;
             
@@ -4245,7 +4144,7 @@ const app = (() => {
             state.score += opt.s;
             state.simScores.push(opt.s);
             state.xp += opt.s * 10;
-            updateXpBar(((state.step + 1) / state.simSelected.length) * 80);
+            updateXpBar(((state.step + 1) / DATA.sim.length) * 80);
             
             if (opt.s === 5) {
                 state.streak++;
@@ -4256,7 +4155,7 @@ const app = (() => {
                 if (opt.s <= 2) shakeWrong();
                 // Guardar en banco de repaso (igual que trivia/ingredientes)
                 state._wrongFull = state._wrongFull || [];
-                const stepData = state.simSelected[state.step];
+                const stepData = DATA.sim[state.step];
                 state._wrongFull.push({ q: stepData.client, o: stepData.options.map(o => o.t), c: stepData.options.findIndex(o => o.s === 5), explanation: '' });
             }
             
@@ -4283,7 +4182,7 @@ const app = (() => {
 
             setTimeout(() => {
                 state.step++;
-                if (state.step < state.simSelected.length) app.renderSim();
+                if (state.step < DATA.sim.length) app.renderSim();
                 else app.finish();
             }, 1800);
         },
@@ -4346,11 +4245,8 @@ const app = (() => {
                 opts.appendChild(b);
             });
 
-            // Timer dinámico: se acorta silenciosamente si el topic tiene errores previos
-            const _cat = q.category;
-            const _fails = (state.topicFailCount && state.topicFailCount[_cat]) || 0;
-            const _timerSec = _fails >= 2 ? 8 : _fails === 1 ? 11 : 15;
-            app.startIngrTimer(_timerSec);
+            // Timer (15s for ingredientes — a bit more time)
+            app.startIngrTimer(15);
         },
 
         startIngrTimer: (sec) => {
@@ -4409,6 +4305,8 @@ const app = (() => {
                 shakeWrong();
                 state.wrongAnswers = state.wrongAnswers || [];
                 state.wrongAnswers.push({ q: q.q || q.dish, correct: q.o[q.c] });
+                state._wrongFull = state._wrongFull || [];
+                state._wrongFull.push(q);
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
                     state.score -= 1;
@@ -4436,29 +4334,6 @@ const app = (() => {
 
             setTimeout(() => {
                 state.step++;
-                // Lógica adaptativa: si falló, inyectar pregunta del mismo topic
-                if (!isCorrect && q.category) {
-                    const cat = q.category;
-                    state.topicFailCount = state.topicFailCount || {};
-                    state.topicFailCount[cat] = (state.topicFailCount[cat] || 0) + 1;
-                    // Buscar pregunta del mismo category que no haya sido mostrada aún
-                    const upcoming = state.ingrSelected.slice(state.step);
-                    const alreadySameNext = upcoming.length && upcoming[0].category === cat;
-                    if (!alreadySameNext) {
-                        const seen = new Set(state.ingrSelected.slice(0, state.step).map(x => x.q));
-                        seen.add(q.q);
-                        // Buscar en el banco completo (ingrSelected puede ser subconjunto)
-                        const fullBank = window._fullIngrBank || state.ingrSelected;
-                        const candidates = fullBank.filter(x => x.category === cat && !seen.has(x.q));
-                        // Escalar reintentos: más errores en el topic → más preguntas inyectadas
-                        const failCount = (state.topicFailCount && state.topicFailCount[cat]) || 1;
-                        const injectCount = Math.min(failCount, 3);
-                        const shuffled = candidates.sort(() => Math.random() - 0.5);
-                        for (let _i = 0; _i < Math.min(injectCount, shuffled.length); _i++) {
-                            state.ingrSelected.splice(state.step + _i, 0, shuffled[_i]);
-                        }
-                    }
-                }
                 if (state.step < state.ingrSelected.length) app.renderIngredientes();
                 else app.finish();
             }, isCorrect ? 1200 : 2600);
@@ -4655,9 +4530,9 @@ function startGameByMode() {
         const nombreInput = document.getElementById('user-nombre');
         if (nombreInput) app.state.nombre = nombreInput.value.trim();
 
-        if (mode === 'repaso') { app.startRepaso(); }
-        else if (mode === 'rosca') { app.startRosca(); }
-        else { _ingrSelectedCategory = null; app.initGame(); }
+        if (mode === 'ingredientes') { _ingrSelectedCategory = null; app.initGame(); }
+        else if (mode === 'repaso') { app.startRepaso(); }
+        else { app.initGame(); }
     } catch(err) {
         console.error('startGameByMode error:', err);
         alert('Error al iniciar: ' + err.message + '\nRecargá la página e intentá de nuevo.');
@@ -4669,8 +4544,8 @@ function onHomeInit() {
     updateRepasoBadge(app.state.dni);
     const modeCards = document.querySelectorAll('.mode-card');
     modeCards.forEach(c => c.classList.remove('selected'));
-    const currentMode = app.state.mode || 'ingredientes';
-    const modeMap = { sim: 'sim', trivia: 'trivia', ingredientes: 'ingredientes', repaso: 'repaso', rosca: 'rosca' };
+    const currentMode = app.state.mode || 'sim';
+    const modeMap = { sim: 'sim', trivia: 'trivia', ingredientes: 'ingredientes', repaso: 'repaso' };
     const targetCard = document.querySelector(`.mode-card[onclick*="'${modeMap[currentMode]}'"]`);
     if (targetCard) targetCard.classList.add('selected');
 }
@@ -6093,278 +5968,6 @@ app.onbSkip = function() {
 window.addEventListener('error', (e) => {
     console.error('App error:', e.error);
 });
-
-// ══════════════════════════════════════════════════════════════════
-// LA ROSCA — juego de letras estilo "Ivan de Pineda"
-// Por cada letra el jugador escribe un plato/ítem del banco.
-// El banco se carga de Firestore: clave `rosca-{local}` (o `rosca`)
-// Formato: [{ letter: "A", answers: ["Anticucho","Ají de gallina"] }, ...]
-// ══════════════════════════════════════════════════════════════════
-
-const ROSCA_LETTERS   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const ROSCA_SECS      = 20;    // segundos por letra
-const ROSCA_Q_COUNT   = 10;    // letras por ronda
-
-
-let _roscaState = null;
-let _roscaTimerInterval = null;
-
-// Banco hardcodeado — cada letra tiene UN ítem: { name, hint }
-// Se reemplaza si admin carga uno en Firestore (clave rosca-{local})
-const DATA_ROSCA_DEFAULT = [
-    { letter: 'A', items: [{ name: 'Anticucho de Corazón', hint: 'Brocheta peruana adobada en ají panca y vinagre, cocinada a la parrilla.' }] },
-    { letter: 'B', items: [{ name: 'Buñuelos de Yuca', hint: 'Bocado frito y esponjoso elaborado con yuca, típico de la cocina criolla.' }] },
-    { letter: 'C', items: [{ name: 'Cebiche Del Puerto', hint: 'Pesca del día marinada al momento en leche de tigre clásica de limón y ají limo.' }] },
-    { letter: 'D', items: [{ name: 'Daikiri de Maracuyá', hint: 'Cóctel clásico preparado con ron, jugo de maracuyá y azúcar.' }] },
-    { letter: 'E', items: [{ name: 'Empanada de Ají Amarillo', hint: 'Masa rellena horneada, acompañada de crema de ají amarillo y salsa criolla.' }] },
-    { letter: 'F', items: [{ name: 'Fritura de Mariscos', hint: 'Surtido de mariscos apanados y fritos, servido con salsa tari y criolla.' }] },
-    { letter: 'G', items: [{ name: 'Granizado de Maracuyá', hint: 'Bebida helada elaborada con pulpa de maracuyá fresca y azúcar.' }] },
-    { letter: 'H', items: [{ name: 'Huancaína', hint: 'Salsa peruana a base de ají amarillo, queso fresco, leche y galleta. Acompaña papas.' }] },
-    { letter: 'I', items: [{ name: 'Inchicapi', hint: 'Sopa amazónica espesa preparada con maní, maíz y gallina.' }] },
-    { letter: 'J', items: [{ name: 'Jalea Chalaca', hint: 'Mezcla de mariscos y pescado fritos, servida con criolla y salsa de ají.' }] },
-    { letter: 'K', items: [{ name: 'Kion Sour', hint: 'Cóctel peruano que incorpora jengibre fresco en lugar de pisco.' }] },
-    { letter: 'L', items: [{ name: 'Leche de Tigre', hint: 'Macerado cítrico de limón, ají limo, apio y pescado. El jugo del cebiche.' }] },
-    { letter: 'M', items: [{ name: 'Mixto de Mariscos', hint: 'Cebiche que combina pesca del día, langostinos y pulpo en leche de tigre.' }] },
-    { letter: 'N', items: [{ name: 'Nikkei de Trucha', hint: 'Tiradito de fusión peruano-japonesa, con trucha y aderezo de soja y sésamo.' }] },
-    { letter: 'O', items: [{ name: 'Ocopa Arequipeña', hint: 'Salsa arequipeña elaborada con ají mirasol, maní, huacatay y galleta.' }] },
-    { letter: 'P', items: [{ name: 'Parihuela', hint: 'Sopa marinera con fondo de pescado, mariscos, ají panca y tomate.' }] },
-    { letter: 'Q', items: [{ name: 'Quinoto de Mariscos', hint: 'Preparación melosa estilo risotto, elaborada con quinoa y mariscos frescos.' }] },
-    { letter: 'R', items: [{ name: 'Rocoto Relleno', hint: 'Ají rocoto rojo relleno de carne molida, pasas y aceitunas, gratinado al horno.' }] },
-    { letter: 'S', items: [{ name: 'Sudado de Corvina', hint: 'Guiso de pescado entero cocinado en caldo de tomate, chicha de jora y ají amarillo.' }] },
-    { letter: 'T', items: [{ name: 'Tiradito Chalaco', hint: 'Pesca laminada al bies bañada en leche de tigre. Sin cebolla, a diferencia del cebiche.' }] },
-    { letter: 'U', items: [{ name: 'Uchu Llajua', hint: 'Salsa picante boliviana-peruana de tomate y locoto, usada como condimento de mesa.' }] },
-    { letter: 'V', items: [{ name: 'Vieiras Gratinadas', hint: 'Conchas de abanico gratinadas al horno con manteca, ajo y parmesano.' }] },
-    { letter: 'W', items: [{ name: 'Wantán Frito', hint: 'Masa de wantán rellena de marisco o carne, frita hasta quedar crocante.' }] },
-    { letter: 'X', items: [{ name: 'Ximénez de Pisco', hint: 'Preparación que combina pisco peruano con Pedro Ximénez, pasas y especias.' }] },
-    { letter: 'Y', items: [{ name: 'Yuca Frita', hint: 'Tubérculo andino hervido y frito hasta dorar, acompañado de huancaína o criolla.' }] },
-    { letter: 'Z', items: [{ name: 'Zapallo en Leche de Tigre', hint: 'Preparación vegetal donde el zapallo macera en leche de tigre con ají limo.' }] },
-];
-
-function getRoscaBank(local) {
-    const key = 'rosca-' + local;
-    const ext = extraData ? (extraData[key] || extraData['rosca'] || []) : [];
-    return ext.length ? ext : DATA_ROSCA_DEFAULT;
-}
-
-// Dado el banco, devuelve UN ítem al azar para la letra (o null)
-function roscaPickItem(bank, letter) {
-    const entry = bank.find(e => e.letter && e.letter.toUpperCase() === letter.toUpperCase());
-    if (!entry) return null;
-    const items = entry.items || [];
-    return items.length ? items[Math.floor(Math.random() * items.length)] : null;
-}
-
-function roscaNormalize(str) {
-    return (str || '')
-        .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-app.startRosca = function() {
-    if (extraData === null) {
-        loadExtraQuestions().then(() => app.startRosca()).catch(() => app.startRosca());
-        return;
-    }
-    const bank = getRoscaBank(app.state.local);
-    const lettersWithItems = ROSCA_LETTERS.filter(l => roscaPickItem(bank, l) !== null);
-    const pool   = lettersWithItems.length >= ROSCA_Q_COUNT ? lettersWithItems : [...ROSCA_LETTERS];
-    const picked = shuffleArray([...pool]).slice(0, ROSCA_Q_COUNT);
-
-    // Pre-seleccionar un ítem por letra
-    const rounds = picked.map(letter => ({ letter, item: roscaPickItem(bank, letter) }));
-
-    _roscaState = {
-        rounds,
-        step:     0,
-        score:    0,
-        results:  [],
-        secsLeft: ROSCA_SECS,
-        answered: false,
-    };
-
-    app.switchView('rosca', () => { roscaRenderLetter(); });
-};
-
-function roscaRenderLetter() {
-    const s = _roscaState;
-    if (s.step >= s.rounds.length) { roscaFinish(); return; }
-
-    const { letter, item } = s.rounds[s.step];
-    document.getElementById('rosca-letter-display').textContent = letter;
-    document.getElementById('rosca-count').textContent = `LETRA ${s.step + 1}/${s.rounds.length}`;
-    // Mostrar pista
-    const hintEl = document.getElementById('rosca-hint');
-    if (hintEl) hintEl.textContent = item ? item.hint : '';
-    document.getElementById('rosca-input').value = '';
-    document.getElementById('rosca-input').disabled = false;
-    document.getElementById('rosca-input').focus();
-    document.getElementById('rosca-feedback').style.display = 'none';
-    document.getElementById('rosca-skip-btn').style.display = '';
-    s.answered = false;
-    s.secsLeft = ROSCA_SECS;
-
-    roscaRenderPips();
-    roscaStartTimer();
-}
-
-function roscaStartTimer() {
-    clearInterval(_roscaTimerInterval);
-    const fill  = document.getElementById('rosca-fill');
-    const label = document.getElementById('rosca-timer');
-    const update = () => {
-        const s = _roscaState;
-        if (!s) { clearInterval(_roscaTimerInterval); return; }
-        label.textContent = s.secsLeft + 's';
-        if (fill) fill.style.width = (s.secsLeft / ROSCA_SECS * 100) + '%';
-        if (s.secsLeft <= 0) {
-            clearInterval(_roscaTimerInterval);
-            if (!s.answered) roscaTimeOut();
-        } else {
-            s.secsLeft--;
-        }
-    };
-    update();
-    _roscaTimerInterval = setInterval(update, 1000);
-}
-
-function roscaConfirm() {
-    const s = _roscaState;
-    if (!s || s.answered) return;
-    clearInterval(_roscaTimerInterval);
-    s.answered = true;
-
-    const { letter, item } = s.rounds[s.step];
-    const input     = document.getElementById('rosca-input').value.trim();
-    const normInput = roscaNormalize(input);
-    const normName  = item ? roscaNormalize(item.name) : '';
-
-    // Correcto si empieza con la letra Y coincide suficientemente con el nombre
-    const startsOk = input && input[0].toUpperCase() === letter;
-    // Aceptar si la primera palabra del nombre está en el input (ej "cebiche" en "cebiche del puerto")
-    const firstWord = normName.split(' ')[0];
-    const correct   = startsOk && normInput.length >= 3 && (
-        normInput === normName ||
-        normName.startsWith(normInput) ||
-        normInput.startsWith(firstWord)
-    );
-
-    if (correct) s.score++;
-    s.results.push({ letter, input, correct, item });
-
-    const fb = document.getElementById('rosca-feedback');
-    fb.style.display = '';
-    if (correct) {
-        fb.style.background = 'rgba(34,197,94,0.15)';
-        fb.style.color = '#4ade80';
-        fb.style.border = '1px solid rgba(34,197,94,0.3)';
-        fb.textContent = `✅ ¡Correcto! La respuesta era "${item ? item.name : ''}"`;
-    } else {
-        fb.style.background = 'rgba(239,68,68,0.12)';
-        fb.style.color = '#f87171';
-        fb.style.border = '1px solid rgba(239,68,68,0.3)';
-        fb.textContent = `❌ Era "${item ? item.name : ''}"`;
-    }
-
-    document.getElementById('rosca-input').disabled = true;
-    document.getElementById('rosca-skip-btn').style.display = 'none';
-    roscaRenderPips();
-
-    setTimeout(() => { s.step++; roscaRenderLetter(); }, correct ? 1400 : 2200);
-}
-
-function roscaSkipLetter() {
-    const s = _roscaState;
-    if (!s || s.answered) return;
-    clearInterval(_roscaTimerInterval);
-    s.answered = true;
-    const { letter, item } = s.rounds[s.step];
-    s.results.push({ letter, input: '', correct: false, item });
-    roscaRenderPips();
-    s.step++;
-    roscaRenderLetter();
-}
-
-function roscaTimeOut() {
-    const s = _roscaState;
-    if (!s || s.answered) return;
-    s.answered = true;
-    const { letter, item } = s.rounds[s.step];
-    const input = document.getElementById('rosca-input').value.trim();
-    s.results.push({ letter, input, correct: false, item });
-
-    const fb = document.getElementById('rosca-feedback');
-    fb.style.display = '';
-    fb.style.background = 'rgba(234,179,8,0.12)';
-    fb.style.color = '#facc15';
-    fb.style.border = '1px solid rgba(234,179,8,0.3)';
-    fb.textContent = `⏱ Tiempo — era "${item ? item.name : ''}"`;
-    document.getElementById('rosca-skip-btn').style.display = 'none';
-    document.getElementById('rosca-input').disabled = true;
-    roscaRenderPips();
-
-    setTimeout(() => { s.step++; roscaRenderLetter(); }, 2000);
-}
-
-function roscaRenderPips() {
-    const s  = _roscaState;
-    const el = document.getElementById('rosca-pips');
-    if (!el || !s) return;
-    el.innerHTML = s.rounds.map(({ letter }, i) => {
-        let bg = 'var(--surface-2)', col = 'var(--text-muted)';
-        if (i < s.results.length) {
-            bg  = s.results[i].correct ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.2)';
-            col = s.results[i].correct ? '#4ade80' : '#f87171';
-        } else if (i === s.step) {
-            bg = 'rgba(232,200,74,0.2)'; col = 'var(--accent)';
-        }
-        return `<div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;background:${bg};color:${col};">${letter}</div>`;
-    }).join('');
-}
-
-function roscaFinish() {
-    clearInterval(_roscaTimerInterval);
-    const s   = _roscaState;
-    const pct = Math.round(s.score / s.rounds.length * 100);
-    const xp  = s.score * 15;
-
-    try {
-        const player = DB.getPlayer(app.state.dni);
-        player.xp        = (player.xp || 0) + xp;
-        player.roscaGames = (player.roscaGames || 0) + 1;
-        player.roscaBest  = Math.max(player.roscaBest || 0, s.score);
-        DB.savePlayer(app.state.dni, player);
-        if (typeof savePlayerToFirestore === 'function') savePlayerToFirestore(app.state.dni, player);
-    } catch(e) {}
-
-    const rows = s.results.map(r => {
-        const icon = r.correct ? '✅' : '❌';
-        const name = r.item ? r.item.name : '—';
-        const inputStr = r.input ? ` <span style="color:var(--text-muted);font-size:11px;">(escribiste: ${r.input})</span>` : '';
-        return `<div style="display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);">
-            <span style="font-family:var(--font-mono);font-size:22px;font-weight:900;color:var(--accent);width:28px;flex-shrink:0;">${r.letter}</span>
-            <span>${icon}</span>
-            <span style="font-family:var(--font-mono);font-size:13px;">${name}${inputStr}</span>
-        </div>`;
-    }).join('');
-
-    app.switchView('result', () => {
-        const scoreEl  = document.getElementById('res-score');
-        const msgEl    = document.getElementById('res-msg');
-        const xpEl     = document.getElementById('res-xp');
-        const detailEl = document.getElementById('res-detail');
-        const rankEl   = document.getElementById('res-rank-label');
-        const titleEl  = document.getElementById('res-title');
-        if (titleEl)  titleEl.textContent  = '🔤 La Rosca — Resultado';
-        if (scoreEl)  scoreEl.textContent  = `${s.score}/${s.rounds.length}`;
-        if (msgEl)    msgEl.textContent    = pct >= 80 ? '🏆 ¡Excelente!' : pct >= 50 ? '👏 ¡Bien!' : '📚 Seguí practicando';
-        if (xpEl)     xpEl.textContent     = `+${xp} XP`;
-        if (rankEl)   rankEl.textContent   = 'LETRAS CORRECTAS';
-        if (detailEl) detailEl.innerHTML   = `<div style="margin-top:12px;">${rows}</div>`;
-    });
-}
 </script>
 
 

@@ -409,13 +409,44 @@
   // ─── FINGERPRINT ────────────────────────────────────────────────────────────
   async function initFingerprint() {
     try {
-      const fpjs = await import('https://openfpcdn.io/fingerprintjs/v4');
-      const fp   = await fpjs.load();
-      const res  = await fp.get();
-      deviceFingerprint = res.visitorId;
+      // Usar ID guardado en localStorage si ya existe
+      let stored = localStorage.getItem('_andino_did');
+      if (stored) { deviceFingerprint = stored; checkDeviceRegistration(); return; }
+
+      // Construir huella con señales del navegador (sin dependencias externas)
+      const signals = [
+        navigator.userAgent,
+        navigator.language,
+        navigator.languages?.join(',') ?? '',
+        String(screen.width) + 'x' + String(screen.height),
+        String(screen.colorDepth),
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        String(navigator.hardwareConcurrency ?? ''),
+        String(navigator.deviceMemory ?? ''),
+        String(navigator.maxTouchPoints ?? ''),
+        navigator.platform ?? '',
+      ].join('||');
+
+      // Hash SHA-256 de las señales del dispositivo
+      const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(signals));
+      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+
+      // Mezclar con UUID aleatorio para que dos celulares idénticos no colisionen
+      const rand = crypto.randomUUID().replace(/-/g,'');
+      const fp   = hash.slice(0, 32) + rand.slice(0, 32);
+
+      localStorage.setItem('_andino_did', fp);
+      deviceFingerprint = fp;
       checkDeviceRegistration();
     } catch (e) {
-      showStatus("Error al generar ID de dispositivo.", "error");
+      // Fallback: UUID puro guardado en localStorage
+      let fb = localStorage.getItem('_andino_did_fb');
+      if (!fb) {
+        fb = crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,'');
+        localStorage.setItem('_andino_did_fb', fb);
+      }
+      deviceFingerprint = fb;
+      checkDeviceRegistration();
     }
   }
 

@@ -130,6 +130,11 @@
   <!-- Registro de dispositivo -->
   <section id="view-register" class="hidden space-y-4">
     <div>
+      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">DNI</label>
+      <input type="text" id="emp-dni" placeholder="Ej. 30123456" maxlength="10"
+        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+    </div>
+    <div>
       <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Nombre y Apellido</label>
       <input type="text" id="emp-name" placeholder="Ej. Juan Pérez"
         class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
@@ -209,8 +214,42 @@
       <i class="fa-solid fa-trash mr-2"></i>Limpiar Historial
     </button>
     <button onclick="setWorkLocation()" class="bg-indigo-950/50 hover:bg-indigo-900/50 text-indigo-400 px-4 py-2 rounded-lg text-xs transition-all border border-indigo-500/30 cursor-pointer sm:ml-auto">
-      <i class="fa-solid fa-location-dot mr-2"></i>Fijar GPS Local
+      <i class="fa-solid fa-location-dot mr-2"></i>Fijar GPS (posición actual)
     </button>
+  </div>
+
+  <!-- Config ubicación manual -->
+  <div class="mb-4 p-4 bg-slate-900 rounded-xl border border-slate-700">
+    <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-map-pin mr-2"></i>Configurar Ubicación del Local</h3>
+    <div class="flex flex-col sm:flex-row gap-2 mb-2">
+      <div class="flex-1">
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre del local</label>
+        <input type="text" id="venue-name-input" placeholder="Ej. Tanta San Isidro"
+          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+      <div class="flex-1">
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Latitud</label>
+        <input type="number" id="venue-lat-input" placeholder="-34.60370" step="0.00001"
+          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div class="flex-1">
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Longitud</label>
+        <input type="number" id="venue-lng-input" placeholder="-58.38160" step="0.00001"
+          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div class="flex-1">
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Radio permitido (m)</label>
+        <input type="number" id="venue-radius-input" placeholder="30" min="10" max="500"
+          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+    </div>
+    <p class="text-[10px] text-slate-600 mb-3">💡 Podés obtener lat/lng desde Google Maps: clic derecho en el local → "¿Qué hay aquí?"</p>
+    <button onclick="saveVenueLocation()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
+      <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ubicación
+    </button>
+    <p id="venue-location-current" class="text-[10px] text-slate-500 mt-2"></p>
   </div>
 
   <!-- FILTROS -->
@@ -234,6 +273,7 @@
       <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
         <tr>
           <th class="px-4 py-3">Colaborador</th>
+          <th class="px-4 py-3">DNI</th>
           <th class="px-4 py-3">Acción</th>
           <th class="px-4 py-3">Fecha y Hora</th>
           <th class="px-4 py-3">Dispositivo</th>
@@ -319,10 +359,16 @@
   async function loadVenueQrToken() {
     try {
       const snap = await getDoc(doc(db, "config", "venue"));
-      if (snap.exists() && snap.data().qrToken) {
-        venueQrToken = snap.data().qrToken;
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.qrToken) venueQrToken = data.qrToken;
+        // Cargar coordenadas guardadas en Firestore (tienen precedencia sobre localStorage)
+        if (data.lat && data.lng) {
+          workLocation = { lat: data.lat, lng: data.lng };
+          localStorage.setItem('work_location', JSON.stringify(workLocation));
+        }
+        if (data.radius) window._maxDist = data.radius;
       }
-      // Si no existe aún, se genera cuando el admin lo solicite explícitamente
     } catch (e) { /* silencio al inicio */ }
   }
 
@@ -368,8 +414,9 @@
       showStatus("GPS requerido — activá la ubicación.", "error");
       return false;
     }
+    const maxDist = window._maxDist || MAX_DIST;
     const dist = distMeters(userLocation, workLocation);
-    if (dist <= MAX_DIST) {
+    if (dist <= maxDist) {
       showStatus("Ubicación verificada ✓", "success");
       return true;
     }
@@ -519,11 +566,14 @@
   }
 
   window.registerDevice = async function() {
+    const dni  = document.getElementById('emp-dni').value.trim();
     const name = document.getElementById('emp-name').value.trim();
-    if (!name) { showToast("Ingresá un nombre.", "error"); return; }
+    if (!dni)  { showToast("Ingresá tu DNI.", "error"); return; }
+    if (!/^\d{7,10}$/.test(dni)) { showToast("DNI inválido (solo números, 7-10 dígitos).", "error"); return; }
+    if (!name) { showToast("Ingresá tu nombre y apellido.", "error"); return; }
     try {
       await setDoc(doc(db, "employees", deviceFingerprint), {
-        name, registeredAt: new Date().toISOString()
+        name, dni, registeredAt: new Date().toISOString()
       });
       showToast(`Dispositivo vinculado como ${name}.`, "success");
       checkDeviceRegistration();
@@ -565,6 +615,7 @@
 
       await addDoc(collection(db, "attendance_logs"), {
         name,
+        dni:  empSnap.exists() ? (empSnap.data().dni || '') : '',
         type,
         timestamp: now.toISOString(),
         deviceId:  deviceFingerprint
@@ -694,15 +745,16 @@
   }
 
   async function loadAdminLogs() {
+    showVenueLocationCurrent();
     const tbody = document.getElementById('admin-table-body');
-    tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
     try {
       const q    = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"));
       const snap = await getDocs(q);
       allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       applyFilters();
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-rose-400">Error al cargar registros.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-rose-400">Error al cargar registros.</td></tr>`;
     }
   }
 
@@ -730,7 +782,7 @@
   function renderAdminTable(logs) {
     const tbody = document.getElementById('admin-table-body');
     if (logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`;
       return;
     }
     tbody.innerHTML = logs.map(l => {
@@ -738,6 +790,7 @@
       return `
         <tr class="hover:bg-slate-800/80 transition-colors">
           <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
+          <td class="px-4 py-3 text-slate-400 text-sm font-mono">${l.dni || '—'}</td>
           <td class="px-4 py-3">
             <span class="px-2 py-1 rounded text-[10px] uppercase font-bold
               ${l.type === 'ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">
@@ -752,10 +805,10 @@
 
   window.exportToCSV = function() {
     if (!allLogs.length) { showToast("No hay datos para exportar.", "info"); return; }
-    let csv = "Colaborador,Accion,Fecha_y_Hora,ID_Dispositivo\n";
+    let csv = "Colaborador,DNI,Accion,Fecha_y_Hora,ID_Dispositivo\n";
     allLogs.forEach(l => {
       const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '';
-      csv += `${l.name},${l.type},"${ts}",${l.deviceId}\n`;
+      csv += `${l.name},${l.dni || ''},${l.type},"${ts}",${l.deviceId}\n`;
     });
     const link = document.createElement("a");
     link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
@@ -785,10 +838,46 @@
     if (confirm(`¿Fijar ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)} como ubicación del local?`)) {
       workLocation = { ...userLocation };
       localStorage.setItem('work_location', JSON.stringify(workLocation));
+      await setDoc(doc(db, "config", "venue"), {
+        lat: workLocation.lat, lng: workLocation.lng, radius: MAX_DIST
+      }, { merge: true });
       showToast("Ubicación GPS guardada.", "success");
+      showVenueLocationCurrent();
       checkDeviceRegistration();
     }
   };
+
+  window.saveVenueLocation = async function() {
+    const name   = document.getElementById('venue-name-input').value.trim();
+    const latVal = parseFloat(document.getElementById('venue-lat-input').value);
+    const lngVal = parseFloat(document.getElementById('venue-lng-input').value);
+    const radVal = parseInt(document.getElementById('venue-radius-input').value) || MAX_DIST;
+
+    if (isNaN(latVal) || isNaN(lngVal)) {
+      showToast("Ingresá latitud y longitud válidas.", "error"); return;
+    }
+    if (latVal < -90 || latVal > 90 || lngVal < -180 || lngVal > 180) {
+      showToast("Coordenadas fuera de rango.", "error"); return;
+    }
+
+    workLocation = { lat: latVal, lng: lngVal };
+    localStorage.setItem('work_location', JSON.stringify(workLocation));
+
+    const venueData = { lat: latVal, lng: lngVal, radius: radVal };
+    if (name) venueData.name = name;
+
+    await setDoc(doc(db, "config", "venue"), venueData, { merge: true });
+    showToast(`Ubicación guardada${name ? ' para ' + name : ''}.`, "success");
+    showVenueLocationCurrent();
+  };
+
+  function showVenueLocationCurrent() {
+    const el = document.getElementById('venue-location-current');
+    if (!el) return;
+    const snap_lat = workLocation?.lat?.toFixed(5) ?? '—';
+    const snap_lng = workLocation?.lng?.toFixed(5) ?? '—';
+    el.textContent = `Actualmente configurado: ${snap_lat}, ${snap_lng}`;
+  }
 
 </script>
 </body>

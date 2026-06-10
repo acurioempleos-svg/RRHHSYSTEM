@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proyecto Andino RRHH - Control de Asistencia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+  <style>
+    @media print {
+      body { background-color: white !important; }
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+      }
+      #print-title { visibility: visible; color: black; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+    }
+
+    /* TOASTS */
+    #toast-container {
+      position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+      display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
+    }
+    .toast {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem; border-radius: 0.75rem;
+      font-size: 0.875rem; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      animation: slideIn 0.3s ease-out forwards;
+      pointer-events: auto; min-width: 240px; max-width: 320px;
+    }
+    .toast.hide { animation: slideOut 0.3s ease-in forwards; }
+    .toast-success { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
+    .toast-error   { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+    .toast-info    { background: #1e1b4b; color: #a5b4fc; border: 1px solid #312e81; }
+    .toast-warning { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
+    @keyframes slideIn  { from { opacity:0; transform: translateX(40px); } to { opacity:1; transform: translateX(0); } }
+    @keyframes slideOut { from { opacity:1; transform: translateX(0); } to { opacity:0; transform: translateX(40px); } }
+
+    /* RELOJ */
+    #clock-display { font-variant-numeric: tabular-nums; }
+
+    /* Overlay de confirmación post-fichaje */
+    #punch-confirm {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.92);
+      flex-direction: column; align-items: center; justify-content: center;
+      z-index: 8888; gap: 1rem;
+    }
+    #punch-confirm:not(.hidden) { display: flex; }
+
+    /* Overlay escáner QR */
+    #scanner-overlay {
+      position: fixed; inset: 0; background: rgba(2,6,23,0.97);
+      flex-direction: column; align-items: center; justify-content: center;
+      z-index: 8000; gap: 1rem;
+    }
+    #scanner-overlay:not(.hidden) { display: flex; }
+    #scanner-video { width: 100%; max-width: 340px; border-radius: 1rem; border: 2px solid #6366f1; }
+    #scanner-canvas { display: none; }
+    .scan-frame {
+      position: relative; width: 100%; max-width: 340px;
+    }
+    .scan-line {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: #6366f1; box-shadow: 0 0 8px #6366f1;
+      animation: scanMove 2s linear infinite;
+    }
+    @keyframes scanMove {
+      0%   { top: 0%; }
+      100% { top: 100%; }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-4 flex flex-col items-center">
+
+<div id="toast-container"></div>
+
+<!-- Overlay post-fichaje -->
+<div id="punch-confirm" class="hidden">
+  <div id="pc-icon" class="text-6xl mb-2"></div>
+  <div id="pc-type" class="text-3xl font-black"></div>
+  <div id="pc-name" class="text-xl text-slate-300"></div>
+  <div id="pc-time" class="text-2xl font-mono text-indigo-300 mt-1"></div>
+  <p class="text-slate-500 text-sm mt-4">Cerrando en <span id="pc-countdown">5</span>s...</p>
+</div>
+
+<!-- Overlay escáner QR -->
+<div id="scanner-overlay" class="hidden">
+  <p class="text-indigo-300 font-semibold text-sm uppercase tracking-widest mb-1">Escaneá el QR del local</p>
+  <div class="scan-frame">
+    <video id="scanner-video" autoplay playsinline muted></video>
+    <div class="scan-line"></div>
+  </div>
+  <canvas id="scanner-canvas"></canvas>
+  <p id="scanner-status" class="text-slate-400 text-xs mt-2 min-h-[1.5rem]"></p>
+  <button onclick="closeScannerOverlay()" class="mt-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-5 py-2 rounded-lg text-sm cursor-pointer transition-colors">
+    <i class="fa-solid fa-xmark mr-2"></i>Cancelar
+  </button>
+</div>
+
+<div class="w-full max-w-2xl flex justify-end mb-2">
+  <button onclick="requestAdminAccess()" class="text-slate-500 hover:text-indigo-400 transition-colors text-sm flex items-center gap-2 cursor-pointer">
+    <i class="fa-solid fa-user-shield"></i> Acceso RRHH
+  </button>
+</div>
+
+<!-- VISTA EMPLEADO -->
+<main id="employee-view" class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700 transition-all">
+  <header class="text-center mb-6">
+    <div class="inline-flex p-3 bg-indigo-600/20 text-indigo-400 rounded-full mb-3 text-2xl">
+      <i class="fa-solid fa-fingerprint"></i>
+    </div>
+    <h1 class="text-xl font-bold tracking-tight">Proyecto Andino RRHH</h1>
+    <p class="text-xs text-slate-400 mt-1">Terminal de Asistencia</p>
+    <!-- Reloj en tiempo real -->
+    <div id="clock-display" class="mt-3 text-3xl font-mono font-bold text-indigo-300 tracking-widest">--:--:--</div>
+    <div id="date-display" class="text-xs text-slate-500 mt-1"></div>
+  </header>
+
+  <div id="status-card" class="mb-5 p-3 rounded-lg text-sm flex items-center gap-3 bg-slate-700 text-slate-300">
+    <i id="status-icon" class="fa-solid fa-spinner animate-spin"></i>
+    <span id="status-text">Inicializando seguridad...</span>
+  </div>
+
+  <!-- Registro de dispositivo -->
+  <section id="view-register" class="hidden space-y-4">
+    <div>
+      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Nombre y Apellido</label>
+      <input type="text" id="emp-name" placeholder="Ej. Juan Pérez"
+        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+    </div>
+    <button onclick="registerDevice()"
+      class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-all shadow-lg shadow-indigo-600/20 cursor-pointer">
+      Vincular este dispositivo
+    </button>
+  </section>
+
+  <!-- Panel de fichaje -->
+  <section id="view-punch" class="hidden space-y-6 text-center">
+    <div>
+      <p class="text-xs text-slate-400 uppercase">Bienvenido/a</p>
+      <h2 id="welcome-name" class="text-2xl font-black text-indigo-400 mt-0.5">Cargando...</h2>
+      <p id="last-punch-info" class="text-xs text-slate-500 mt-1"></p>
+    </div>
+    <!-- Botón único: abre el escáner -->
+    <button id="btn-scan" onclick="openScannerOverlay()"
+      class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-600/30">
+      <i class="fa-solid fa-qrcode text-3xl"></i>
+      <span class="font-bold">Escanear QR del local</span>
+      <span class="text-xs text-indigo-200 font-normal">Apuntá la cámara al cartel de la entrada</span>
+    </button>
+    <!-- Selector de tipo de fichaje (visible tras QR válido) -->
+    <div id="punch-type-selector" class="hidden grid grid-cols-2 gap-4">
+      <button id="btn-entrada" onclick="submitPunch('ENTRADA')"
+        class="bg-emerald-600 hover:bg-emerald-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg">
+        <i class="fa-solid fa-right-to-bracket text-2xl"></i>
+        <span class="font-bold text-sm">Entrada</span>
+      </button>
+      <button id="btn-salida" onclick="submitPunch('SALIDA')"
+        class="bg-rose-600 hover:bg-rose-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg">
+        <i class="fa-solid fa-right-from-bracket text-2xl"></i>
+        <span class="font-bold text-sm">Salida</span>
+      </button>
+    </div>
+    <p id="qr-verified-badge" class="hidden text-xs text-emerald-400 flex items-center justify-center gap-2">
+      <i class="fa-solid fa-circle-check"></i> QR verificado — elegí tu acción
+    </p>
+  </section>
+</main>
+
+<!-- PANEL ADMIN -->
+<main id="admin-view" class="hidden max-w-2xl w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700 transition-all">
+  <header class="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
+    <div>
+      <h2 class="text-xl font-bold text-indigo-400"><i class="fa-solid fa-table-list mr-2"></i>Panel de Registros</h2>
+      <p class="text-xs text-slate-400">Gestión interna de asistencia</p>
+    </div>
+    <button onclick="closeAdmin()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors">
+      <i class="fa-solid fa-xmark mr-1"></i> Cerrar
+    </button>
+  </header>
+
+  <!-- QR -->
+  <div class="mb-6 p-4 bg-slate-900 rounded-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="text-left">
+      <h3 class="text-sm font-bold text-indigo-400 mb-1"><i class="fa-solid fa-qrcode mr-2"></i>QR de Acceso</h3>
+      <p class="text-xs text-slate-400 mb-3 max-w-xs">Imprime este código y colócalo en la entrada.</p>
+      <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer">
+        <i class="fa-solid fa-print mr-2"></i>Imprimir Cartel
+      </button>
+    </div>
+    <div id="print-area" class="flex flex-col items-center">
+      <h1 id="print-title" class="hidden">Escanear para Fichar</h1>
+      <div class="bg-white p-3 rounded-lg shadow-inner" id="qrcode-container"></div>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
+      <i class="fa-solid fa-file-csv mr-2"></i>Descargar CSV
+    </button>
+    <button onclick="clearRecords()" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 px-4 py-2 rounded-lg text-xs transition-all border border-rose-500/30 cursor-pointer">
+      <i class="fa-solid fa-trash mr-2"></i>Limpiar Historial
+    </button>
+    <button onclick="setWorkLocation()" class="bg-indigo-950/50 hover:bg-indigo-900/50 text-indigo-400 px-4 py-2 rounded-lg text-xs transition-all border border-indigo-500/30 cursor-pointer sm:ml-auto">
+      <i class="fa-solid fa-location-dot mr-2"></i>Fijar GPS Local
+    </button>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="mb-4 flex flex-col sm:flex-row gap-2">
+    <input type="date" id="filter-date"
+      class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
+      onchange="applyFilters()">
+    <input type="text" id="filter-name" placeholder="Filtrar por colaborador..."
+      class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
+      oninput="applyFilters()">
+    <button onclick="clearFilters()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Limpiar
+    </button>
+  </div>
+
+  <!-- Contador -->
+  <p id="filter-count" class="text-xs text-slate-500 mb-2"></p>
+
+  <div class="overflow-x-auto rounded-lg border border-slate-700">
+    <table class="w-full text-left text-sm text-slate-300">
+      <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+        <tr>
+          <th class="px-4 py-3">Colaborador</th>
+          <th class="px-4 py-3">Acción</th>
+          <th class="px-4 py-3">Fecha y Hora</th>
+          <th class="px-4 py-3">Dispositivo</th>
+        </tr>
+      </thead>
+      <tbody id="admin-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Firebase v9 -->
+<script type="module">
+  import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit, getDocs, where, deleteDoc, writeBatch }
+                                     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ─── CONFIGURACIÓN FIREBASE ──────────────────────────────────────────────
+  // ⚠️  Reemplazá con tu firebaseConfig de tablero-locales (o nuevo proyecto)
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+    authDomain:        "rrhhsystem.firebaseapp.com",
+    projectId:         "rrhhsystem",
+    storageBucket:     "rrhhsystem.firebasestorage.app",
+    messagingSenderId: "71511125212",
+    appId:             "1:71511125212:web:03a0ad11b281e397a29819"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Colecciones
+  // employees/{fingerprintId}  → { name, registeredAt }
+  // attendance_logs/{autoId}   → { name, type, timestamp (ISO), deviceId }
+  // config/admin               → { pinHash }
+
+  // ─── ESTADO ──────────────────────────────────────────────────────────────
+  let deviceFingerprint = "";
+  let userLocation      = null;
+  let workLocation      = JSON.parse(localStorage.getItem('work_location')) || { lat: -34.6037, lng: -58.3816 };
+  let qrCodeInstance    = null;
+  let allLogs           = [];       // cache local para filtros
+  const MAX_DIST        = 30;       // metros
+  let venueQrToken      = null;     // token permanente del local (Firestore)
+  let qrVerified        = false;    // se pone true tras escaneo exitoso
+  let scannerStream     = null;     // MediaStream activo del escáner
+  let scannerAnimFrame  = null;     // requestAnimationFrame del loop de decodificación
+
+  // ─── INIT ─────────────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    startClock();
+    await loadVenueQrToken();
+    await initFingerprint();
+    initGeolocation();
+  });
+
+  // ─── RELOJ EN TIEMPO REAL ────────────────────────────────────────────────
+  function startClock() {
+    const clockEl = document.getElementById('clock-display');
+    const dateEl  = document.getElementById('date-display');
+    const tick = () => {
+      const now  = new Date();
+      clockEl.textContent = now.toLocaleTimeString('es-AR', { hour12: false });
+      dateEl.textContent  = now.toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  // ─── FINGERPRINT ─────────────────────────────────────────────────────────
+  async function initFingerprint() {
+    try {
+      const fpjs = await import('https://openfpcdn.io/fingerprintjs/v4');
+      const fp   = await fpjs.load();
+      const res  = await fp.get();
+      deviceFingerprint = res.visitorId;
+      checkDeviceRegistration();
+    } catch (e) {
+      showStatus("Error al generar ID de dispositivo.", "error");
+    }
+  }
+
+  // ─── QR TOKEN DEL LOCAL ──────────────────────────────────────────────────
+  async function loadVenueQrToken() {
+    try {
+      const snap = await getDoc(doc(db, "config", "venue"));
+      if (snap.exists() && snap.data().qrToken) {
+        venueQrToken = snap.data().qrToken;
+      }
+      // Si no existe aún, se genera cuando el admin lo solicite explícitamente
+    } catch (e) { /* silencio al inicio */ }
+  }
+
+  async function ensureVenueQrToken() {
+    if (venueQrToken) return venueQrToken;
+    // Generar token único y guardarlo en Firestore
+    const token = crypto.randomUUID();
+    await setDoc(doc(db, "config", "venue"), { qrToken: token }, { merge: true });
+    venueQrToken = token;
+    return token;
+  }
+
+  // ─── GPS (OBLIGATORIO) ────────────────────────────────────────────────────
+  function initGeolocation() {
+    if (!navigator.geolocation) {
+      showStatus("GPS no disponible en este dispositivo.", "error");
+      return;
+    }
+    showStatus("Obteniendo ubicación GPS...", "warning");
+    navigator.geolocation.watchPosition(
+      pos => {
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (deviceFingerprint) checkDeviceRegistration();
+      },
+      () => {
+        userLocation = null;
+        showStatus("GPS denegado — necesitás dar permiso de ubicación.", "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function distMeters(a, b) {
+    const R = 6371e3, p1 = a.lat * Math.PI/180, p2 = b.lat * Math.PI/180;
+    const dLat = (b.lat - a.lat) * Math.PI/180, dLon = (b.lng - a.lng) * Math.PI/180;
+    const x = Math.sin(dLat/2)**2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+
+  // Devuelve true solo si GPS OK y en rango; bloquea si no
+  function validateProximity() {
+    if (!userLocation) {
+      showStatus("GPS requerido — activá la ubicación.", "error");
+      return false;
+    }
+    const dist = distMeters(userLocation, workLocation);
+    if (dist <= MAX_DIST) {
+      showStatus("Ubicación verificada ✓", "success");
+      return true;
+    }
+    showStatus(`Fuera de rango (${Math.round(dist)} m del local).`, "error");
+    return false;
+  }
+
+  // ─── ESCÁNER QR INTEGRADO ─────────────────────────────────────────────────
+  window.openScannerOverlay = function() {
+    if (!validateProximity()) {
+      showToast("Activá el GPS y acercate al local para poder fichar.", "error", 4000);
+      return;
+    }
+    qrVerified = false;
+    document.getElementById('punch-type-selector').classList.add('hidden');
+    document.getElementById('qr-verified-badge').classList.add('hidden');
+    document.getElementById('scanner-overlay').classList.remove('hidden');
+    startCamera();
+  };
+
+  window.closeScannerOverlay = function() {
+    stopCamera();
+    document.getElementById('scanner-overlay').classList.add('hidden');
+  };
+
+  async function startCamera() {
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      const video = document.getElementById('scanner-video');
+      video.srcObject = scannerStream;
+      video.play();
+      video.onloadedmetadata = () => tickScan();
+      document.getElementById('scanner-status').textContent = 'Apuntá al código QR del local...';
+    } catch (e) {
+      document.getElementById('scanner-status').textContent = 'No se pudo acceder a la cámara.';
+      showToast("Permiso de cámara denegado.", "error");
+    }
+  }
+
+  function stopCamera() {
+    if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+    if (scannerStream)    { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  }
+
+  function tickScan() {
+    const video  = document.getElementById('scanner-video');
+    const canvas = document.getElementById('scanner-canvas');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx  = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result  = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+      if (result) {
+        handleQrScan(result.data);
+        return; // detener loop tras detección
+      }
+    }
+    scannerAnimFrame = requestAnimationFrame(tickScan);
+  }
+
+  async function handleQrScan(data) {
+    // Verificar GPS nuevamente en el momento del escaneo
+    if (!validateProximity()) {
+      stopCamera();
+      document.getElementById('scanner-overlay').classList.add('hidden');
+      showToast("Fuera de rango GPS. No podés fichar.", "error", 4000);
+      return;
+    }
+
+    if (!venueQrToken) {
+      document.getElementById('scanner-status').textContent = 'QR del local no configurado.';
+      stopCamera();
+      showToast("El local aún no tiene QR configurado. Contactá a RRHH.", "error", 5000);
+      return;
+    }
+
+    if (data === venueQrToken) {
+      stopCamera();
+      document.getElementById('scanner-overlay').classList.add('hidden');
+      qrVerified = true;
+      document.getElementById('punch-type-selector').classList.remove('hidden');
+      document.getElementById('punch-type-selector').classList.add('grid');
+      document.getElementById('qr-verified-badge').classList.remove('hidden');
+      showToast("QR verificado. Elegí tu acción.", "success");
+    } else {
+      document.getElementById('scanner-status').textContent = 'QR no reconocido. Usá el cartel del local.';
+      // Continuar escaneando
+      scannerAnimFrame = requestAnimationFrame(tickScan);
+    }
+  }
+
+  // ─── REGISTRO / VERIFICACIÓN DE DISPOSITIVO ──────────────────────────────
+  async function checkDeviceRegistration() {
+    try {
+      const snap = await getDoc(doc(db, "employees", deviceFingerprint));
+      if (snap.exists()) {
+        const { name } = snap.data();
+        document.getElementById('view-register').classList.add('hidden');
+        document.getElementById('view-punch').classList.remove('hidden');
+        document.getElementById('welcome-name').textContent = name;
+        await loadLastPunch(name);
+        validateProximity();
+      } else {
+        document.getElementById('view-punch').classList.add('hidden');
+        document.getElementById('view-register').classList.remove('hidden');
+        showStatus("Registrá tu dispositivo para comenzar.", "info");
+      }
+    } catch (e) {
+      showStatus("Error al verificar dispositivo.", "error");
+    }
+  }
+  window.checkDeviceRegistration = checkDeviceRegistration;
+
+  // Último fichaje para hint de secuencia
+  async function loadLastPunch(name) {
+    try {
+      const q = query(
+        collection(db, "attendance_logs"),
+        where("deviceId", "==", deviceFingerprint),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      const infoEl = document.getElementById('last-punch-info');
+      if (!snap.empty) {
+        const last = snap.docs[0].data();
+        const ts = new Date(last.timestamp).toLocaleString('es-AR');
+        infoEl.textContent = `Último registro: ${last.type} — ${ts}`;
+        // Highlight el botón opuesto
+        const btnE = document.getElementById('btn-entrada');
+        const btnS = document.getElementById('btn-salida');
+        if (last.type === 'ENTRADA') {
+          btnS.classList.add('ring-2','ring-rose-400');
+          btnE.classList.remove('ring-2','ring-emerald-400');
+        } else {
+          btnE.classList.add('ring-2','ring-emerald-400');
+          btnS.classList.remove('ring-2','ring-rose-400');
+        }
+      } else {
+        infoEl.textContent = "Primera vez hoy — empezá con Entrada.";
+      }
+    } catch (e) { /* silencio */ }
+  }
+
+  window.registerDevice = async function() {
+    const name = document.getElementById('emp-name').value.trim();
+    if (!name) { showToast("Ingresá un nombre.", "error"); return; }
+    try {
+      await setDoc(doc(db, "employees", deviceFingerprint), {
+        name, registeredAt: new Date().toISOString()
+      });
+      showToast(`Dispositivo vinculado como ${name}.`, "success");
+      checkDeviceRegistration();
+    } catch (e) {
+      showToast("Error al registrar. Revisá tu conexión.", "error");
+    }
+  };
+
+  // ─── FICHAJE ──────────────────────────────────────────────────────────────
+  window.submitPunch = async function(type) {
+    if (!qrVerified) {
+      showToast("Escaneá el QR del local primero.", "warning");
+      return;
+    }
+    if (!validateProximity()) {
+      showToast("Fuera de rango GPS. No podés fichar.", "error");
+      return;
+    }
+
+    // Validación de secuencia — no dos ENTRADA/SALIDA seguidas
+    try {
+      const q = query(
+        collection(db, "attendance_logs"),
+        where("deviceId", "==", deviceFingerprint),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty && snap.docs[0].data().type === type) {
+        showToast(`Ya registraste una ${type} anteriormente. Registrá la acción opuesta.`, "warning");
+        return;
+      }
+    } catch (e) { /* continuar si falla la verificación */ }
+
+    try {
+      const empSnap = await getDoc(doc(db, "employees", deviceFingerprint));
+      const name    = empSnap.exists() ? empSnap.data().name : "Desconocido";
+      const now     = new Date();
+
+      await addDoc(collection(db, "attendance_logs"), {
+        name,
+        type,
+        timestamp: now.toISOString(),
+        deviceId:  deviceFingerprint
+      });
+
+      // Reset QR tras fichaje exitoso — obliga a re-escanear la próxima vez
+      qrVerified = false;
+      document.getElementById('punch-type-selector').classList.add('hidden');
+      document.getElementById('punch-type-selector').classList.remove('grid');
+      document.getElementById('qr-verified-badge').classList.add('hidden');
+
+      showPunchConfirm(type, name, now);
+      loadLastPunch(name);
+    } catch (e) {
+      showToast("Error al registrar fichaje. Revisá tu conexión.", "error");
+    }
+  };
+
+  // ─── OVERLAY CONFIRMACIÓN POST-FICHAJE ───────────────────────────────────
+  function showPunchConfirm(type, name, date) {
+    const overlay  = document.getElementById('punch-confirm');
+    const iconEl   = document.getElementById('pc-icon');
+    const typeEl   = document.getElementById('pc-type');
+    const nameEl   = document.getElementById('pc-name');
+    const timeEl   = document.getElementById('pc-time');
+    const countEl  = document.getElementById('pc-countdown');
+
+    iconEl.textContent = type === 'ENTRADA' ? '✅' : '👋';
+    typeEl.textContent = type;
+    typeEl.className   = `text-3xl font-black ${type === 'ENTRADA' ? 'text-emerald-400' : 'text-rose-400'}`;
+    nameEl.textContent = name;
+    timeEl.textContent = date.toLocaleTimeString('es-AR', { hour12: false });
+    overlay.classList.remove('hidden');
+
+    let secs = 5;
+    countEl.textContent = secs;
+    const t = setInterval(() => {
+      secs--;
+      countEl.textContent = secs;
+      if (secs <= 0) { clearInterval(t); overlay.classList.add('hidden'); }
+    }, 1000);
+
+    // También cerrar con tap
+    overlay.onclick = () => { clearInterval(t); overlay.classList.add('hidden'); };
+  }
+
+  // ─── STATUS (barra de estado GPS) ────────────────────────────────────────
+  window.showStatus = function(text, type) {
+    const card = document.getElementById('status-card');
+    const icon = document.getElementById('status-icon');
+    document.getElementById('status-text').textContent = text;
+    card.className = "mb-5 p-3 rounded-lg text-sm flex items-center gap-3 ";
+    icon.className = "fa-solid ";
+    if      (type === "success") { card.classList.add("bg-emerald-950/50","text-emerald-400"); icon.classList.add("fa-circle-check"); }
+    else if (type === "error")   { card.classList.add("bg-rose-950/50","text-rose-400");       icon.classList.add("fa-triangle-exclamation"); }
+    else if (type === "warning") { card.classList.add("bg-amber-950/50","text-amber-400");     icon.classList.add("fa-spinner","animate-spin"); }
+    else                         { card.classList.add("bg-slate-700","text-slate-300");        icon.classList.add("fa-circle-info"); }
+  };
+
+  // ─── TOASTS ───────────────────────────────────────────────────────────────
+  window.showToast = function(msg, type = "info", duration = 3500) {
+    const container = document.getElementById('toast-container');
+    const icons = { success:'fa-circle-check', error:'fa-triangle-exclamation', info:'fa-circle-info', warning:'fa-exclamation-circle' };
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}"></i><span>${msg}</span>`;
+    container.appendChild(el);
+    const remove = () => {
+      el.classList.add('hide');
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+    };
+    const timer = setTimeout(remove, duration);
+    el.onclick = () => { clearTimeout(timer); remove(); };
+  };
+
+  // ─── PANEL ADMIN ─────────────────────────────────────────────────────────
+
+  // Hash simple SHA-256 para el PIN
+  async function hashPin(pin) {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  window.requestAdminAccess = async function() {
+    const pin = prompt("PIN de Recursos Humanos:");
+    if (pin === null) return;
+
+    try {
+      // Buscar hash en Firestore
+      const cfgSnap = await getDoc(doc(db, "config", "admin"));
+      let storedHash = cfgSnap.exists() ? cfgSnap.data().pinHash : null;
+
+      // Si no existe aún, crear con "1234" como default (solo primera vez)
+      if (!storedHash) {
+        storedHash = await hashPin("1234");
+        await setDoc(doc(db, "config", "admin"), { pinHash: storedHash });
+      }
+
+      const inputHash = await hashPin(pin);
+      if (inputHash === storedHash) {
+        document.getElementById('employee-view').classList.add('hidden');
+        document.getElementById('admin-view').classList.remove('hidden');
+        await loadAdminLogs();
+        await generateSystemQR();
+      } else {
+        showToast("PIN incorrecto.", "error");
+      }
+    } catch (e) {
+      showToast("Error al verificar PIN.", "error");
+    }
+  };
+
+  window.closeAdmin = function() {
+    document.getElementById('admin-view').classList.add('hidden');
+    document.getElementById('employee-view').classList.remove('hidden');
+  };
+
+  async function generateSystemQR() {
+    const token     = await ensureVenueQrToken();
+    const container = document.getElementById("qrcode-container");
+    container.innerHTML = ""; // limpiar instancia anterior si hay
+    qrCodeInstance = new QRCode(container, {
+      text: token, width: 140, height: 140,
+      colorDark: "#0f172a", colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }
+
+  async function loadAdminLogs() {
+    const tbody = document.getElementById('admin-table-body');
+    tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
+    try {
+      const q    = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"));
+      const snap = await getDocs(q);
+      allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      applyFilters();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-rose-400">Error al cargar registros.</td></tr>`;
+    }
+  }
+
+  window.applyFilters = function() {
+    const dateVal = document.getElementById('filter-date').value;   // "YYYY-MM-DD"
+    const nameVal = document.getElementById('filter-name').value.toLowerCase().trim();
+
+    let filtered = allLogs;
+    if (dateVal)  filtered = filtered.filter(l => l.timestamp.startsWith(dateVal));
+    if (nameVal)  filtered = filtered.filter(l => l.name?.toLowerCase().includes(nameVal));
+
+    renderAdminTable(filtered);
+    const countEl = document.getElementById('filter-count');
+    countEl.textContent = filtered.length < allLogs.length
+      ? `Mostrando ${filtered.length} de ${allLogs.length} registros`
+      : `${allLogs.length} registros en total`;
+  };
+
+  window.clearFilters = function() {
+    document.getElementById('filter-date').value = '';
+    document.getElementById('filter-name').value = '';
+    applyFilters();
+  };
+
+  function renderAdminTable(logs) {
+    const tbody = document.getElementById('admin-table-body');
+    if (logs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = logs.map(l => {
+      const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
+      return `
+        <tr class="hover:bg-slate-800/80 transition-colors">
+          <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 rounded text-[10px] uppercase font-bold
+              ${l.type === 'ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">
+              ${l.type}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-slate-400 text-sm">${ts}</td>
+          <td class="px-4 py-3 text-slate-500 font-mono text-[10px]">${(l.deviceId || '').substring(0,10)}...</td>
+        </tr>`;
+    }).join('');
+  }
+
+  window.exportToCSV = function() {
+    if (!allLogs.length) { showToast("No hay datos para exportar.", "info"); return; }
+    let csv = "Colaborador,Accion,Fecha_y_Hora,ID_Dispositivo\n";
+    allLogs.forEach(l => {
+      const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '';
+      csv += `${l.name},${l.type},"${ts}",${l.deviceId}\n`;
+    });
+    const link = document.createElement("a");
+    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    link.download = `andino_asistencia_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  window.clearRecords = async function() {
+    if (!confirm("¿Eliminar TODOS los registros? No se puede deshacer.")) return;
+    try {
+      const snap  = await getDocs(collection(db, "attendance_logs"));
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      allLogs = [];
+      renderAdminTable([]);
+      showToast("Historial eliminado.", "success");
+    } catch (e) {
+      showToast("Error al eliminar. Revisá permisos Firestore.", "error");
+    }
+  };
+
+  window.setWorkLocation = async function() {
+    if (!userLocation) { showToast("Sin coordenadas GPS aún.", "warning"); return; }
+    if (confirm(`¿Fijar ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)} como ubicación del local?`)) {
+      workLocation = { ...userLocation };
+      localStorage.setItem('work_location', JSON.stringify(workLocation));
+      showToast("Ubicación GPS guardada.", "success");
+      checkDeviceRegistration();
+    }
+  };
+
+</script>
+</body>
+</html>

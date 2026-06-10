@@ -18,10 +18,9 @@
         position: absolute; left: 0; top: 0; width: 100%; height: 100%;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
       }
-      #print-title { visibility: visible; color: black; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+      #print-title { visibility: visible; color: black; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+      #print-venue-name { visibility: visible; color: #444; text-align: center; font-size: 16px; margin-bottom: 16px; }
     }
-
-    /* TOASTS */
     #toast-container {
       position: fixed; top: 1rem; right: 1rem; z-index: 9999;
       display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
@@ -41,19 +40,13 @@
     .toast-warning { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
     @keyframes slideIn  { from { opacity:0; transform: translateX(40px); } to { opacity:1; transform: translateX(0); } }
     @keyframes slideOut { from { opacity:1; transform: translateX(0); } to { opacity:0; transform: translateX(40px); } }
-
-    /* RELOJ */
     #clock-display { font-variant-numeric: tabular-nums; }
-
-    /* Overlay de confirmación post-fichaje */
     #punch-confirm {
       position: fixed; inset: 0; background: rgba(15,23,42,0.92);
       flex-direction: column; align-items: center; justify-content: center;
       z-index: 8888; gap: 1rem;
     }
     #punch-confirm:not(.hidden) { display: flex; }
-
-    /* Overlay escáner QR */
     #scanner-overlay {
       position: fixed; inset: 0; background: rgba(2,6,23,0.97);
       flex-direction: column; align-items: center; justify-content: center;
@@ -62,18 +55,25 @@
     #scanner-overlay:not(.hidden) { display: flex; }
     #scanner-video { width: 100%; max-width: 340px; border-radius: 1rem; border: 2px solid #6366f1; }
     #scanner-canvas { display: none; }
-    .scan-frame {
-      position: relative; width: 100%; max-width: 340px;
-    }
+    .scan-frame { position: relative; width: 100%; max-width: 340px; }
     .scan-line {
       position: absolute; top: 0; left: 0; right: 0; height: 2px;
       background: #6366f1; box-shadow: 0 0 8px #6366f1;
       animation: scanMove 2s linear infinite;
     }
-    @keyframes scanMove {
-      0%   { top: 0%; }
-      100% { top: 100%; }
-    }
+    @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
+    /* Tabs */
+    .admin-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem 0.5rem 0 0; font-size: 0.75rem; font-weight: 600; transition: all 0.15s; }
+    .admin-tab.active { background: #312e81; color: #a5b4fc; border-bottom: 2px solid #6366f1; }
+    .admin-tab:not(.active) { color: #64748b; }
+    .admin-tab:not(.active):hover { color: #94a3b8; background: #1e293b; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    /* Tabla colaboradores */
+    .collab-row:hover { background: rgba(99,102,241,0.07); }
+    /* QR card locales */
+    .venue-qr-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.75rem; padding: 1rem; }
+    .venue-qr-card.selected { border-color: #6366f1; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-4 flex flex-col items-center">
@@ -85,6 +85,7 @@
   <div id="pc-icon" class="text-6xl mb-2"></div>
   <div id="pc-type" class="text-3xl font-black"></div>
   <div id="pc-name" class="text-xl text-slate-300"></div>
+  <div id="pc-venue" class="text-sm text-indigo-300 mt-1 font-medium"></div>
   <div id="pc-time" class="text-2xl font-mono text-indigo-300 mt-1"></div>
   <p class="text-slate-500 text-sm mt-4">Cerrando en <span id="pc-countdown">5</span>s...</p>
 </div>
@@ -117,7 +118,6 @@
     </div>
     <h1 class="text-xl font-bold tracking-tight">Proyecto Andino RRHH</h1>
     <p class="text-xs text-slate-400 mt-1">Terminal de Asistencia</p>
-    <!-- Reloj en tiempo real -->
     <div id="clock-display" class="mt-3 text-3xl font-mono font-bold text-indigo-300 tracking-widest">--:--:--</div>
     <div id="date-display" class="text-xs text-slate-500 mt-1"></div>
   </header>
@@ -129,18 +129,22 @@
 
   <!-- Registro de dispositivo -->
   <section id="view-register" class="hidden space-y-4">
+    <p class="text-xs text-slate-400 text-center">Ingresá tu DNI para vincular este dispositivo. Tu nombre se cargará automáticamente desde la planilla.</p>
     <div>
       <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">DNI</label>
       <input type="text" id="emp-dni" placeholder="Ej. 30123456" maxlength="10"
         class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
     </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Nombre y Apellido</label>
-      <input type="text" id="emp-name" placeholder="Ej. Juan Pérez"
-        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+    <div id="lookup-result" class="hidden p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-sm">
+      <p class="text-indigo-300 font-medium" id="lookup-name"></p>
+      <p class="text-slate-400 text-xs mt-0.5" id="lookup-venue"></p>
     </div>
-    <button onclick="registerDevice()"
-      class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-all shadow-lg shadow-indigo-600/20 cursor-pointer">
+    <button onclick="lookupDNI()"
+      class="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg text-sm transition-all cursor-pointer">
+      <i class="fa-solid fa-magnifying-glass mr-2"></i>Buscar en planilla
+    </button>
+    <button onclick="registerDevice()" id="btn-register" disabled
+      class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-all shadow-lg shadow-indigo-600/20 cursor-pointer">
       Vincular este dispositivo
     </button>
   </section>
@@ -150,16 +154,17 @@
     <div>
       <p class="text-xs text-slate-400 uppercase">Bienvenido/a</p>
       <h2 id="welcome-name" class="text-2xl font-black text-indigo-400 mt-0.5">Cargando...</h2>
+      <p id="welcome-venue" class="text-xs text-emerald-400 mt-1 font-medium flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-store"></i><span></span>
+      </p>
       <p id="last-punch-info" class="text-xs text-slate-500 mt-1"></p>
     </div>
-    <!-- Botón único: abre el escáner -->
     <button id="btn-scan" onclick="openScannerOverlay()"
       class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-600/30">
       <i class="fa-solid fa-qrcode text-3xl"></i>
       <span class="font-bold">Escanear QR del local</span>
       <span class="text-xs text-indigo-200 font-normal">Apuntá la cámara al cartel de la entrada</span>
     </button>
-    <!-- Selector de tipo de fichaje (visible tras QR válido) -->
     <div id="punch-type-selector" class="hidden grid grid-cols-2 gap-4">
       <button id="btn-entrada" onclick="submitPunch('ENTRADA')"
         class="bg-emerald-600 hover:bg-emerald-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg">
@@ -179,119 +184,178 @@
 </main>
 
 <!-- PANEL ADMIN -->
-<main id="admin-view" class="hidden max-w-2xl w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700 transition-all">
+<main id="admin-view" class="hidden max-w-3xl w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700">
   <header class="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
     <div>
-      <h2 class="text-xl font-bold text-indigo-400"><i class="fa-solid fa-table-list mr-2"></i>Panel de Registros</h2>
-      <p class="text-xs text-slate-400">Gestión interna de asistencia</p>
+      <h2 class="text-xl font-bold text-indigo-400"><i class="fa-solid fa-building mr-2"></i>Panel RRHH — Multi-local</h2>
+      <p class="text-xs text-slate-400">Gestión de locales, colaboradores y asistencia</p>
     </div>
     <button onclick="closeAdmin()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors">
       <i class="fa-solid fa-xmark mr-1"></i> Cerrar
     </button>
   </header>
 
-  <!-- QR -->
-  <div class="mb-6 p-4 bg-slate-900 rounded-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
-    <div class="text-left">
-      <h3 class="text-sm font-bold text-indigo-400 mb-1"><i class="fa-solid fa-qrcode mr-2"></i>QR de Acceso</h3>
-      <p class="text-xs text-slate-400 mb-3 max-w-xs">Imprime este código y colócalo en la entrada.</p>
-      <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer">
-        <i class="fa-solid fa-print mr-2"></i>Imprimir Cartel
-      </button>
-    </div>
-    <div id="print-area" class="flex flex-col items-center">
-      <h1 id="print-title" class="hidden">Escanear para Fichar</h1>
-      <div class="bg-white p-3 rounded-lg shadow-inner" id="qrcode-container"></div>
-    </div>
+  <!-- TABS -->
+  <div class="flex gap-1 border-b border-slate-700 mb-4">
+    <button class="admin-tab active" onclick="switchTab('tab-venues')" id="taббtn-venues"><i class="fa-solid fa-store mr-1.5"></i>Locales</button>
+    <button class="admin-tab" onclick="switchTab('tab-staff')" id="tabbtn-staff"><i class="fa-solid fa-users mr-1.5"></i>Colaboradores</button>
+    <button class="admin-tab" onclick="switchTab('tab-logs')" id="tabbtn-logs"><i class="fa-solid fa-table-list mr-1.5"></i>Registros</button>
   </div>
 
-  <!-- Acciones -->
-  <div class="flex flex-wrap gap-2 mb-4">
-    <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
-      <i class="fa-solid fa-file-csv mr-2"></i>Descargar CSV
-    </button>
-    <button onclick="clearRecords()" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 px-4 py-2 rounded-lg text-xs transition-all border border-rose-500/30 cursor-pointer">
-      <i class="fa-solid fa-trash mr-2"></i>Limpiar Historial
-    </button>
-    <button onclick="setWorkLocation()" class="bg-indigo-950/50 hover:bg-indigo-900/50 text-indigo-400 px-4 py-2 rounded-lg text-xs transition-all border border-indigo-500/30 cursor-pointer sm:ml-auto">
-      <i class="fa-solid fa-location-dot mr-2"></i>Fijar GPS (posición actual)
-    </button>
-  </div>
-
-  <!-- Config ubicación manual -->
-  <div class="mb-4 p-4 bg-slate-900 rounded-xl border border-slate-700">
-    <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-map-pin mr-2"></i>Configurar Ubicación del Local</h3>
-    <div class="flex flex-col sm:flex-row gap-2 mb-2">
-      <div class="flex-1">
+  <!-- TAB: LOCALES -->
+  <div id="tab-venues" class="tab-content active">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest"><i class="fa-solid fa-plus mr-2"></i>Agregar / Editar local</h3>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+      <div>
         <label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre del local</label>
-        <input type="text" id="venue-name-input" placeholder="Ej. Tanta San Isidro"
-          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <input type="text" id="venue-name-input" placeholder="Ej. Local Palermo"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
       </div>
-    </div>
-    <div class="flex flex-col sm:flex-row gap-2 mb-3">
-      <div class="flex-1">
+      <div>
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Dirección (referencia)</label>
+        <input type="text" id="venue-address-input" placeholder="Ej. Av. Santa Fe 3000"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
         <label class="block text-[10px] text-slate-500 uppercase mb-1">Latitud</label>
         <input type="number" id="venue-lat-input" placeholder="-34.60370" step="0.00001"
-          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
       </div>
-      <div class="flex-1">
+      <div>
         <label class="block text-[10px] text-slate-500 uppercase mb-1">Longitud</label>
         <input type="number" id="venue-lng-input" placeholder="-58.38160" step="0.00001"
-          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
       </div>
-      <div class="flex-1">
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Radio permitido (m)</label>
-        <input type="number" id="venue-radius-input" placeholder="30" min="10" max="500"
-          class="w-full bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      <div>
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Radio GPS permitido (m)</label>
+        <input type="number" id="venue-radius-input" placeholder="30" min="10" max="500" value="30"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div class="flex items-end">
+        <button onclick="useCurrentGPS()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors">
+          <i class="fa-solid fa-location-crosshairs mr-1"></i>Usar mi GPS actual
+        </button>
       </div>
     </div>
-    <p class="text-[10px] text-slate-600 mb-3">💡 Podés obtener lat/lng desde Google Maps: clic derecho en el local → "¿Qué hay aquí?"</p>
-    <button onclick="saveVenueLocation()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
-      <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar ubicación
-    </button>
-    <p id="venue-location-current" class="text-[10px] text-slate-500 mt-2"></p>
+    <p class="text-[10px] text-slate-600 mb-3">💡 Lat/lng desde Google Maps: clic derecho → "¿Qué hay aquí?"</p>
+    <div class="flex gap-2 mb-5">
+      <button onclick="saveVenue()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar local
+      </button>
+      <button onclick="clearVenueForm()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors">
+        Limpiar
+      </button>
+      <input type="hidden" id="venue-edit-id">
+    </div>
+
+    <!-- Lista de locales con QR -->
+    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3"><i class="fa-solid fa-qrcode mr-2"></i>QR por local</h3>
+    <div id="venues-list" class="space-y-3">
+      <p class="text-slate-500 text-xs">No hay locales cargados aún.</p>
+    </div>
   </div>
 
-  <!-- FILTROS -->
-  <div class="mb-4 flex flex-col sm:flex-row gap-2">
-    <input type="date" id="filter-date"
-      class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
-      onchange="applyFilters()">
-    <input type="text" id="filter-name" placeholder="Filtrar por colaborador..."
-      class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
-      oninput="applyFilters()">
-    <button onclick="clearFilters()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Limpiar
-    </button>
+  <!-- TAB: COLABORADORES -->
+  <div id="tab-staff" class="tab-content">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest">Planilla de Colaboradores</h3>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+      <div>
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">DNI</label>
+        <input type="text" id="staff-dni" placeholder="30123456" maxlength="10"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre y Apellido</label>
+        <input type="text" id="staff-name" placeholder="Juan Pérez"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-[10px] text-slate-500 uppercase mb-1">Local asignado</label>
+        <select id="staff-venue"
+          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          <option value="">-- Seleccioná un local --</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button onclick="saveStaff()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
+        <i class="fa-solid fa-user-plus mr-2"></i>Agregar colaborador
+      </button>
+      <input type="hidden" id="staff-edit-id">
+    </div>
+    <div class="overflow-x-auto rounded-lg border border-slate-700">
+      <table class="w-full text-left text-sm text-slate-300">
+        <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">DNI</th>
+            <th class="px-4 py-3">Local</th>
+            <th class="px-4 py-3">Dispositivo</th>
+            <th class="px-4 py-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="staff-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50">
+          <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores cargados.</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Contador -->
-  <p id="filter-count" class="text-xs text-slate-500 mb-2"></p>
-
-  <div class="overflow-x-auto rounded-lg border border-slate-700">
-    <table class="w-full text-left text-sm text-slate-300">
-      <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
-        <tr>
-          <th class="px-4 py-3">Colaborador</th>
-          <th class="px-4 py-3">DNI</th>
-          <th class="px-4 py-3">Acción</th>
-          <th class="px-4 py-3">Fecha y Hora</th>
-          <th class="px-4 py-3">Dispositivo</th>
-        </tr>
-      </thead>
-      <tbody id="admin-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
-    </table>
+  <!-- TAB: REGISTROS -->
+  <div id="tab-logs" class="tab-content">
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
+        <i class="fa-solid fa-file-csv mr-2"></i>Descargar CSV
+      </button>
+      <button onclick="clearRecords()" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 px-4 py-2 rounded-lg text-xs transition-all border border-rose-500/30 cursor-pointer">
+        <i class="fa-solid fa-trash mr-2"></i>Limpiar historial
+      </button>
+    </div>
+    <div class="mb-4 flex flex-col sm:flex-row gap-2">
+      <input type="date" id="filter-date"
+        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
+        onchange="applyFilters()">
+      <input type="text" id="filter-name" placeholder="Filtrar por colaborador..."
+        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
+        oninput="applyFilters()">
+      <select id="filter-venue" onchange="applyFilters()"
+        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1">
+        <option value="">Todos los locales</option>
+      </select>
+      <button onclick="clearFilters()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors whitespace-nowrap">
+        <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Limpiar
+      </button>
+    </div>
+    <p id="filter-count" class="text-xs text-slate-500 mb-2"></p>
+    <div class="overflow-x-auto rounded-lg border border-slate-700">
+      <table class="w-full text-left text-sm text-slate-300">
+        <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">Colaborador</th>
+            <th class="px-4 py-3">DNI</th>
+            <th class="px-4 py-3">Local</th>
+            <th class="px-4 py-3">Acción</th>
+            <th class="px-4 py-3">Fecha y Hora</th>
+          </tr>
+        </thead>
+        <tbody id="admin-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
+      </table>
+    </div>
   </div>
 </main>
 
 <!-- Firebase v9 -->
 <script type="module">
   import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit, getDocs, where, deleteDoc, writeBatch }
+  import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit,
+           getDocs, where, deleteDoc, writeBatch }
                                      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // ─── CONFIGURACIÓN FIREBASE ──────────────────────────────────────────────
-  // ⚠️  Reemplazá con tu firebaseConfig de tablero-locales (o nuevo proyecto)
+  // ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
   const firebaseConfig = {
     apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
     authDomain:        "rrhhsystem.firebaseapp.com",
@@ -301,48 +365,48 @@
     appId:             "1:71511125212:web:03a0ad11b281e397a29819"
   };
 
+  // Colecciones Firestore:
+  // venues/{venueId}          → { name, address, lat, lng, radius, qrToken }
+  // staff/{dni}               → { name, dni, venueId, venueName, addedAt }
+  // attendance_logs/{autoId}  → { name, dni, venueId, venueName, type, timestamp, deviceId }
+  // config/admin              → { pinHash }
+
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  // Colecciones
-  // employees/{fingerprintId}  → { name, registeredAt }
-  // attendance_logs/{autoId}   → { name, type, timestamp (ISO), deviceId }
-  // config/admin               → { pinHash }
-
-  // ─── ESTADO ──────────────────────────────────────────────────────────────
+  // ─── ESTADO ─────────────────────────────────────────────────────────────────
   let deviceFingerprint = "";
   let userLocation      = null;
-  let workLocation      = JSON.parse(localStorage.getItem('work_location')) || { lat: -34.6037, lng: -58.3816 };
-  let qrCodeInstance    = null;
-  let allLogs           = [];       // cache local para filtros
-  const MAX_DIST        = 30;       // metros
-  let venueQrToken      = null;     // token permanente del local (Firestore)
-  let qrVerified        = false;    // se pone true tras escaneo exitoso
-  let scannerStream     = null;     // MediaStream activo del escáner
-  let scannerAnimFrame  = null;     // requestAnimationFrame del loop de decodificación
+  let allVenues         = [];      // cache de locales
+  let allLogs           = [];
+  let allStaff          = [];
+  let qrVerified        = false;
+  let scannedVenueId    = null;    // venue detectado tras escanear QR
+  let scannerStream     = null;
+  let scannerAnimFrame  = null;
+  let currentEmployee   = null;    // { name, dni, venueId, venueName }
 
-  // ─── INIT ─────────────────────────────────────────────────────────────────
+  // ─── INIT ────────────────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', async () => {
     startClock();
-    await loadVenueQrToken();
+    await loadVenues();
     await initFingerprint();
     initGeolocation();
   });
 
-  // ─── RELOJ EN TIEMPO REAL ────────────────────────────────────────────────
+  // ─── RELOJ ──────────────────────────────────────────────────────────────────
   function startClock() {
     const clockEl = document.getElementById('clock-display');
     const dateEl  = document.getElementById('date-display');
     const tick = () => {
-      const now  = new Date();
+      const now = new Date();
       clockEl.textContent = now.toLocaleTimeString('es-AR', { hour12: false });
       dateEl.textContent  = now.toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
     };
-    tick();
-    setInterval(tick, 1000);
+    tick(); setInterval(tick, 1000);
   }
 
-  // ─── FINGERPRINT ─────────────────────────────────────────────────────────
+  // ─── FINGERPRINT ────────────────────────────────────────────────────────────
   async function initFingerprint() {
     try {
       const fpjs = await import('https://openfpcdn.io/fingerprintjs/v4');
@@ -355,48 +419,414 @@
     }
   }
 
-  // ─── QR TOKEN DEL LOCAL ──────────────────────────────────────────────────
-  async function loadVenueQrToken() {
+  // ─── CARGA DE LOCALES ────────────────────────────────────────────────────────
+  async function loadVenues() {
     try {
-      const snap = await getDoc(doc(db, "config", "venue"));
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.qrToken) venueQrToken = data.qrToken;
-        // Cargar coordenadas guardadas en Firestore (tienen precedencia sobre localStorage)
-        if (data.lat && data.lng) {
-          workLocation = { lat: data.lat, lng: data.lng };
-          localStorage.setItem('work_location', JSON.stringify(workLocation));
-        }
-        if (data.radius) window._maxDist = data.radius;
-      }
-    } catch (e) { /* silencio al inicio */ }
+      const snap = await getDocs(collection(db, "venues"));
+      allVenues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderVenuesList();
+      populateVenueSelects();
+    } catch (e) { /* silencio */ }
+  }
+  window.loadVenues = loadVenues;
+
+  function populateVenueSelects() {
+    // Select en el form de colaboradores
+    const staffSel = document.getElementById('staff-venue');
+    const filterSel = document.getElementById('filter-venue');
+    const savedStaff = staffSel.value;
+    staffSel.innerHTML = '<option value="">-- Seleccioná un local --</option>';
+    filterSel.innerHTML = '<option value="">Todos los locales</option>';
+    allVenues.forEach(v => {
+      staffSel.innerHTML  += `<option value="${v.id}">${v.name}</option>`;
+      filterSel.innerHTML += `<option value="${v.id}">${v.name}</option>`;
+    });
+    if (savedStaff) staffSel.value = savedStaff;
   }
 
-  async function ensureVenueQrToken() {
-    if (venueQrToken) return venueQrToken;
-    // Generar token único y guardarlo en Firestore
-    const token = crypto.randomUUID();
-    await setDoc(doc(db, "config", "venue"), { qrToken: token }, { merge: true });
-    venueQrToken = token;
-    return token;
-  }
-
-  // ─── GPS (OBLIGATORIO) ────────────────────────────────────────────────────
-  function initGeolocation() {
-    if (!navigator.geolocation) {
-      showStatus("GPS no disponible en este dispositivo.", "error");
+  function renderVenuesList() {
+    const container = document.getElementById('venues-list');
+    if (!allVenues.length) {
+      container.innerHTML = '<p class="text-slate-500 text-xs">No hay locales cargados aún.</p>';
       return;
     }
+    container.innerHTML = allVenues.map(v => `
+      <div class="venue-qr-card" id="venue-card-${v.id}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <i class="fa-solid fa-store text-indigo-400 text-xs"></i>
+              <span class="font-semibold text-slate-200 text-sm">${v.name}</span>
+            </div>
+            ${v.address ? `<p class="text-[11px] text-slate-500 mb-1">${v.address}</p>` : ''}
+            <p class="text-[10px] text-slate-600 font-mono">${v.lat?.toFixed(5) ?? '—'}, ${v.lng?.toFixed(5) ?? '—'} · radio ${v.radius ?? 30}m</p>
+          </div>
+          <div class="flex flex-col items-center gap-2 shrink-0">
+            <div class="bg-white p-1.5 rounded" id="qr-${v.id}"></div>
+            <button onclick="printVenueQR('${v.id}')" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded cursor-pointer transition-colors">
+              <i class="fa-solid fa-print mr-1"></i>Imprimir
+            </button>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button onclick="editVenue('${v.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+            <i class="fa-solid fa-pen-to-square mr-1"></i>Editar
+          </button>
+          <button onclick="deleteVenue('${v.id}')" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer transition-colors">
+            <i class="fa-solid fa-trash mr-1"></i>Eliminar
+          </button>
+        </div>
+      </div>
+    `).join('');
+    // Generar QR para cada local
+    allVenues.forEach(v => {
+      if (v.qrToken) {
+        const el = document.getElementById(`qr-${v.id}`);
+        if (el && !el.hasChildNodes()) {
+          new QRCode(el, { text: v.qrToken, width: 80, height: 80, colorDark: "#0f172a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+        }
+      }
+    });
+  }
+
+  window.saveVenue = async function() {
+    const name    = document.getElementById('venue-name-input').value.trim();
+    const address = document.getElementById('venue-address-input').value.trim();
+    const latVal  = parseFloat(document.getElementById('venue-lat-input').value);
+    const lngVal  = parseFloat(document.getElementById('venue-lng-input').value);
+    const radVal  = parseInt(document.getElementById('venue-radius-input').value) || 30;
+    const editId  = document.getElementById('venue-edit-id').value;
+
+    if (!name) { showToast("El nombre del local es requerido.", "error"); return; }
+    if (isNaN(latVal) || isNaN(lngVal)) { showToast("Ingresá latitud y longitud válidas.", "error"); return; }
+
+    try {
+      let venueRef;
+      let qrToken;
+      if (editId) {
+        venueRef = doc(db, "venues", editId);
+        const existing = await getDoc(venueRef);
+        qrToken = existing.exists() ? existing.data().qrToken : crypto.randomUUID();
+      } else {
+        venueRef = doc(collection(db, "venues"));
+        qrToken = crypto.randomUUID();
+      }
+      await setDoc(venueRef, { name, address, lat: latVal, lng: lngVal, radius: radVal, qrToken }, { merge: true });
+      showToast(`Local "${name}" guardado.`, "success");
+      clearVenueForm();
+      await loadVenues();
+    } catch (e) {
+      showToast("Error al guardar local.", "error");
+    }
+  };
+
+  window.editVenue = async function(id) {
+    const v = allVenues.find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('venue-name-input').value   = v.name || '';
+    document.getElementById('venue-address-input').value = v.address || '';
+    document.getElementById('venue-lat-input').value    = v.lat || '';
+    document.getElementById('venue-lng-input').value    = v.lng || '';
+    document.getElementById('venue-radius-input').value = v.radius || 30;
+    document.getElementById('venue-edit-id').value      = id;
+    document.querySelector('#tab-venues').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  window.deleteVenue = async function(id) {
+    const v = allVenues.find(x => x.id === id);
+    if (!confirm(`¿Eliminar el local "${v?.name}"? Los registros históricos se mantienen.`)) return;
+    try {
+      await deleteDoc(doc(db, "venues", id));
+      showToast("Local eliminado.", "success");
+      await loadVenues();
+    } catch (e) { showToast("Error al eliminar local.", "error"); }
+  };
+
+  window.clearVenueForm = function() {
+    ['venue-name-input','venue-address-input','venue-lat-input','venue-lng-input'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('venue-radius-input').value = '30';
+    document.getElementById('venue-edit-id').value = '';
+  };
+
+  window.useCurrentGPS = function() {
+    if (!userLocation) { showToast("GPS no disponible aún.", "warning"); return; }
+    document.getElementById('venue-lat-input').value = userLocation.lat.toFixed(6);
+    document.getElementById('venue-lng-input').value = userLocation.lng.toFixed(6);
+    showToast("Coordenadas GPS copiadas al formulario.", "info");
+  };
+
+  // Imprimir QR de un local específico
+  window.printVenueQR = function(venueId) {
+    const v = allVenues.find(x => x.id === venueId);
+    if (!v) return;
+    const printWin = window.open('', '_blank', 'width=400,height=400');
+    const qrDiv = document.getElementById(`qr-${venueId}`);
+    const imgSrc = qrDiv?.querySelector('img')?.src || qrDiv?.querySelector('canvas')?.toDataURL() || '';
+    printWin.document.write(`
+      <html><head><title>QR ${v.name}</title></head>
+      <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#fff;">
+        <h2 style="margin-bottom:8px;font-size:20px;color:#1e293b;">Escanear para Fichar</h2>
+        <p style="font-size:15px;color:#64748b;margin-bottom:16px;font-weight:600;">${v.name}</p>
+        <img src="${imgSrc}" style="width:220px;height:220px;">
+        ${v.address ? `<p style="margin-top:12px;font-size:12px;color:#94a3b8;">${v.address}</p>` : ''}
+        <script>window.onload=()=>{window.print();window.close();}<\/script>
+      </body></html>
+    `);
+    printWin.document.close();
+  };
+
+  // ─── COLABORADORES (PLANILLA) ─────────────────────────────────────────────────
+  async function loadStaff() {
+    try {
+      const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
+      allStaff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderStaffTable();
+    } catch (e) {
+      showToast("Error al cargar colaboradores.", "error");
+    }
+  }
+
+  function renderStaffTable() {
+    const tbody = document.getElementById('staff-table-body');
+    if (!allStaff.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores cargados.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = allStaff.map(s => {
+      const isBound = !!s.boundDevice;
+      const deviceBadge = isBound
+        ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
+             <i class="fa-solid fa-mobile-screen-button"></i>Vinculado
+           </span>
+           <button onclick="unbindDevice('${s.id}','${s.name}')"
+             class="ml-1 text-[10px] text-rose-400/60 hover:text-rose-400 cursor-pointer transition-colors" title="Desvincular dispositivo">
+             <i class="fa-solid fa-link-slash"></i>
+           </button>`
+        : `<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 text-slate-500 rounded text-[10px]">
+             <i class="fa-solid fa-mobile-screen-button"></i>Sin vincular
+           </span>`;
+      return `
+      <tr class="collab-row transition-colors">
+        <td class="px-4 py-3 font-medium text-slate-200">${s.name}</td>
+        <td class="px-4 py-3 text-slate-400 font-mono text-xs">${s.dni}</td>
+        <td class="px-4 py-3">
+          <span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] font-medium">
+            <i class="fa-solid fa-store mr-1"></i>${s.venueName || '—'}
+          </span>
+        </td>
+        <td class="px-4 py-3">${deviceBadge}</td>
+        <td class="px-4 py-3 text-right flex justify-end gap-2">
+          <button onclick="editStaff('${s.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+          <button onclick="deleteStaff('${s.id}','${s.name}')" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer transition-colors ml-2">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  window.saveStaff = async function() {
+    const dni      = document.getElementById('staff-dni').value.trim();
+    const name     = document.getElementById('staff-name').value.trim();
+    const venueId  = document.getElementById('staff-venue').value;
+    const editId   = document.getElementById('staff-edit-id').value;
+
+    if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("DNI inválido (7-10 dígitos).", "error"); return; }
+    if (!name)    { showToast("Ingresá el nombre del colaborador.", "error"); return; }
+    if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
+
+    const venue = allVenues.find(v => v.id === venueId);
+    const venueName = venue?.name || '';
+
+    try {
+      // El doc ID es el DNI para búsqueda directa
+      const staffRef = doc(db, "staff", dni);
+      await setDoc(staffRef, { name, dni, venueId, venueName, addedAt: new Date().toISOString() }, { merge: false });
+      showToast(`${name} guardado/a en planilla.`, "success");
+      // Limpiar form
+      ['staff-dni','staff-name'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('staff-venue').value = '';
+      document.getElementById('staff-edit-id').value = '';
+      await loadStaff();
+    } catch (e) {
+      showToast("Error al guardar colaborador.", "error");
+    }
+  };
+
+  window.editStaff = function(id) {
+    const s = allStaff.find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('staff-dni').value   = s.dni;
+    document.getElementById('staff-name').value  = s.name;
+    document.getElementById('staff-venue').value = s.venueId;
+    document.getElementById('staff-edit-id').value = id;
+    switchTab('tab-staff');
+  };
+
+  window.deleteStaff = async function(id, name) {
+    if (!confirm(`¿Eliminar a ${name} de la planilla?`)) return;
+    try {
+      // Antes de eliminar al colaborador, borrar también el registro de empleado vinculado
+      const staffSnap = await getDoc(doc(db, "staff", id));
+      if (staffSnap.exists() && staffSnap.data().boundDevice) {
+        await deleteDoc(doc(db, "employees", staffSnap.data().boundDevice));
+      }
+      await deleteDoc(doc(db, "staff", id));
+      showToast(`${name} eliminado/a de la planilla.`, "success");
+      await loadStaff();
+    } catch (e) { showToast("Error al eliminar.", "error"); }
+  };
+
+  // Desvincular dispositivo de un colaborador (solo admin)
+  window.unbindDevice = async function(id, name) {
+    if (!confirm(`¿Desvincular el dispositivo de ${name}?\nLa próxima vez que abra la app deberá vincular de nuevo.`)) return;
+    try {
+      const staffSnap = await getDoc(doc(db, "staff", id));
+      if (staffSnap.exists() && staffSnap.data().boundDevice) {
+        // Eliminar el doc en employees para que el dispositivo quede libre
+        await deleteDoc(doc(db, "employees", staffSnap.data().boundDevice));
+      }
+      // Borrar el campo boundDevice del colaborador
+      await setDoc(doc(db, "staff", id), { boundDevice: null }, { merge: true });
+      showToast(`Dispositivo de ${name} desvinculado.`, "success");
+      await loadStaff();
+    } catch (e) { showToast("Error al desvincular.", "error"); }
+  };
+
+  // ─── LOOKUP DNI (vista empleado) ─────────────────────────────────────────────
+  window.lookupDNI = async function() {
+    const dni = document.getElementById('emp-dni').value.trim();
+    if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("Ingresá un DNI válido (7-10 dígitos).", "error"); return; }
+    try {
+      const staffSnap = await getDoc(doc(db, "staff", dni));
+      const resultEl  = document.getElementById('lookup-result');
+      const btnReg    = document.getElementById('btn-register');
+
+      if (!staffSnap.exists()) {
+        resultEl.classList.add('hidden');
+        btnReg.disabled = true;
+        showToast("DNI no encontrado en la planilla. Contactá a RRHH.", "error", 5000);
+        return;
+      }
+
+      const { name, venueName, boundDevice } = staffSnap.data();
+
+      // ¿El DNI ya tiene OTRO dispositivo vinculado?
+      if (boundDevice && boundDevice !== deviceFingerprint) {
+        resultEl.classList.add('hidden');
+        btnReg.disabled = true;
+        showToast(`El DNI de ${name} ya está vinculado a otro dispositivo. Contactá a RRHH para desvincular.`, "error", 7000);
+        return;
+      }
+
+      document.getElementById('lookup-name').textContent  = name;
+      document.getElementById('lookup-venue').textContent = `Local: ${venueName}`;
+      resultEl.classList.remove('hidden');
+      btnReg.disabled = false;
+    } catch (e) {
+      showToast("Error al buscar DNI.", "error");
+    }
+  };
+
+  // ─── REGISTRO DE DISPOSITIVO ──────────────────────────────────────────────────
+  window.registerDevice = async function() {
+    const dni = document.getElementById('emp-dni').value.trim();
+    if (!dni) { showToast("Ingresá tu DNI primero.", "error"); return; }
+    try {
+      const staffRef  = doc(db, "staff", dni);
+      const staffSnap = await getDoc(staffRef);
+      if (!staffSnap.exists()) { showToast("DNI no en planilla. Contactá a RRHH.", "error"); return; }
+
+      const staffData = staffSnap.data();
+
+      // Doble check: ¿ya vinculado a otro dispositivo?
+      if (staffData.boundDevice && staffData.boundDevice !== deviceFingerprint) {
+        showToast(`Este DNI ya está vinculado a otro dispositivo. Contactá a RRHH.`, "error", 7000);
+        return;
+      }
+
+      // Guardar en employees
+      await setDoc(doc(db, "employees", deviceFingerprint), {
+        name:      staffData.name,
+        dni:       staffData.dni,
+        venueId:   staffData.venueId,
+        venueName: staffData.venueName,
+        registeredAt: new Date().toISOString()
+      });
+
+      // Grabar el fingerprint en el registro del colaborador (vínculo 1-a-1)
+      await setDoc(staffRef, { boundDevice: deviceFingerprint }, { merge: true });
+
+      showToast(`Dispositivo vinculado como ${staffData.name} — ${staffData.venueName}.`, "success");
+      checkDeviceRegistration();
+    } catch (e) {
+      showToast("Error al registrar. Revisá tu conexión.", "error");
+    }
+  };
+
+  // ─── VERIFICACIÓN DISPOSITIVO ─────────────────────────────────────────────────
+  async function checkDeviceRegistration() {
+    try {
+      const snap = await getDoc(doc(db, "employees", deviceFingerprint));
+      if (snap.exists()) {
+        currentEmployee = snap.data();
+        document.getElementById('view-register').classList.add('hidden');
+        document.getElementById('view-punch').classList.remove('hidden');
+        document.getElementById('welcome-name').textContent = currentEmployee.name;
+        document.querySelector('#welcome-venue span').textContent = currentEmployee.venueName || '';
+        await loadLastPunch(currentEmployee.name);
+        validateProximity();
+      } else {
+        document.getElementById('view-punch').classList.add('hidden');
+        document.getElementById('view-register').classList.remove('hidden');
+        showStatus("Ingresá tu DNI para comenzar.", "info");
+      }
+    } catch (e) {
+      showStatus("Error al verificar dispositivo.", "error");
+    }
+  }
+  window.checkDeviceRegistration = checkDeviceRegistration;
+
+  async function loadLastPunch(name) {
+    try {
+      const q = query(
+        collection(db, "attendance_logs"),
+        where("deviceId", "==", deviceFingerprint),
+        orderBy("timestamp", "desc"), limit(1)
+      );
+      const snap = await getDocs(q);
+      const infoEl = document.getElementById('last-punch-info');
+      if (!snap.empty) {
+        const last = snap.docs[0].data();
+        const ts = new Date(last.timestamp).toLocaleString('es-AR');
+        infoEl.textContent = `Último registro: ${last.type} — ${ts}`;
+        const btnE = document.getElementById('btn-entrada');
+        const btnS = document.getElementById('btn-salida');
+        if (last.type === 'ENTRADA') {
+          btnS.classList.add('ring-2','ring-rose-400');
+          btnE.classList.remove('ring-2','ring-emerald-400');
+        } else {
+          btnE.classList.add('ring-2','ring-emerald-400');
+          btnS.classList.remove('ring-2','ring-rose-400');
+        }
+      } else {
+        infoEl.textContent = "Primera vez hoy — empezá con Entrada.";
+      }
+    } catch (e) { /* silencio */ }
+  }
+
+  // ─── GPS ──────────────────────────────────────────────────────────────────────
+  function initGeolocation() {
+    if (!navigator.geolocation) { showStatus("GPS no disponible en este dispositivo.", "error"); return; }
     showStatus("Obteniendo ubicación GPS...", "warning");
     navigator.geolocation.watchPosition(
       pos => {
         userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         if (deviceFingerprint) checkDeviceRegistration();
       },
-      () => {
-        userLocation = null;
-        showStatus("GPS denegado — necesitás dar permiso de ubicación.", "error");
-      },
+      () => { userLocation = null; showStatus("GPS denegado — necesitás dar permiso de ubicación.", "error"); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
@@ -408,29 +838,38 @@
     return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
   }
 
-  // Devuelve true solo si GPS OK y en rango; bloquea si no
-  function validateProximity() {
-    if (!userLocation) {
-      showStatus("GPS requerido — activá la ubicación.", "error");
-      return false;
+  // Valida proximidad al local ASIGNADO al empleado (o al local del QR escaneado)
+  function validateProximity(venueOverride) {
+    if (!userLocation) { showStatus("GPS requerido — activá la ubicación.", "error"); return false; }
+    // Si hay un venueOverride (local del QR), usarlo; sino usar el del empleado
+    let venue = venueOverride;
+    if (!venue && currentEmployee?.venueId) {
+      venue = allVenues.find(v => v.id === currentEmployee.venueId);
     }
-    const maxDist = window._maxDist || MAX_DIST;
-    const dist = distMeters(userLocation, workLocation);
+    if (!venue) { showStatus("Local no configurado. Contactá a RRHH.", "error"); return false; }
+    const maxDist = venue.radius || 30;
+    const dist = distMeters(userLocation, { lat: venue.lat, lng: venue.lng });
     if (dist <= maxDist) {
-      showStatus("Ubicación verificada ✓", "success");
+      showStatus(`Ubicación verificada ✓ — ${venue.name}`, "success");
       return true;
     }
-    showStatus(`Fuera de rango (${Math.round(dist)} m del local).`, "error");
+    showStatus(`Fuera de rango del ${venue.name} (${Math.round(dist)} m).`, "error");
     return false;
   }
 
-  // ─── ESCÁNER QR INTEGRADO ─────────────────────────────────────────────────
+  // ─── ESCÁNER QR ───────────────────────────────────────────────────────────────
   window.openScannerOverlay = function() {
-    if (!validateProximity()) {
+    if (!currentEmployee?.venueId) {
+      showToast("Dispositivo no vinculado correctamente.", "error");
+      return;
+    }
+    const myVenue = allVenues.find(v => v.id === currentEmployee.venueId);
+    if (!validateProximity(myVenue)) {
       showToast("Activá el GPS y acercate al local para poder fichar.", "error", 4000);
       return;
     }
-    qrVerified = false;
+    qrVerified    = false;
+    scannedVenueId = null;
     document.getElementById('punch-type-selector').classList.add('hidden');
     document.getElementById('qr-verified-badge').classList.add('hidden');
     document.getElementById('scanner-overlay').classList.remove('hidden');
@@ -448,8 +887,7 @@
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       const video = document.getElementById('scanner-video');
-      video.srcObject = scannerStream;
-      video.play();
+      video.srcObject = scannerStream; video.play();
       video.onloadedmetadata = () => tickScan();
       document.getElementById('scanner-status').textContent = 'Apuntá al código QR del local...';
     } catch (e) {
@@ -464,205 +902,116 @@
   }
 
   function tickScan() {
-    const video  = document.getElementById('scanner-video');
+    const video = document.getElementById('scanner-video');
     const canvas = document.getElementById('scanner-canvas');
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width  = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx  = canvas.getContext('2d');
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const result  = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-      if (result) {
-        handleQrScan(result.data);
-        return; // detener loop tras detección
-      }
+      if (result) { handleQrScan(result.data); return; }
     }
     scannerAnimFrame = requestAnimationFrame(tickScan);
   }
 
   async function handleQrScan(data) {
-    // Verificar GPS nuevamente en el momento del escaneo
-    if (!validateProximity()) {
+    // Buscar a qué local corresponde el token escaneado
+    const matchedVenue = allVenues.find(v => v.qrToken === data);
+    if (!matchedVenue) {
+      document.getElementById('scanner-status').textContent = 'QR no reconocido. Usá el cartel del local.';
+      scannerAnimFrame = requestAnimationFrame(tickScan);
+      return;
+    }
+
+    // Verificar que el QR corresponde al local ASIGNADO al empleado
+    if (currentEmployee?.venueId && matchedVenue.id !== currentEmployee.venueId) {
+      stopCamera();
+      document.getElementById('scanner-overlay').classList.add('hidden');
+      showToast(`Este QR es del local "${matchedVenue.name}". Tu local asignado es "${currentEmployee.venueName}".`, "error", 6000);
+      return;
+    }
+
+    // Verificar GPS nuevamente
+    if (!validateProximity(matchedVenue)) {
       stopCamera();
       document.getElementById('scanner-overlay').classList.add('hidden');
       showToast("Fuera de rango GPS. No podés fichar.", "error", 4000);
       return;
     }
 
-    if (!venueQrToken) {
-      document.getElementById('scanner-status').textContent = 'QR del local no configurado.';
-      stopCamera();
-      showToast("El local aún no tiene QR configurado. Contactá a RRHH.", "error", 5000);
-      return;
-    }
-
-    if (data === venueQrToken) {
-      stopCamera();
-      document.getElementById('scanner-overlay').classList.add('hidden');
-      qrVerified = true;
-      document.getElementById('punch-type-selector').classList.remove('hidden');
-      document.getElementById('punch-type-selector').classList.add('grid');
-      document.getElementById('qr-verified-badge').classList.remove('hidden');
-      showToast("QR verificado. Elegí tu acción.", "success");
-    } else {
-      document.getElementById('scanner-status').textContent = 'QR no reconocido. Usá el cartel del local.';
-      // Continuar escaneando
-      scannerAnimFrame = requestAnimationFrame(tickScan);
-    }
+    stopCamera();
+    document.getElementById('scanner-overlay').classList.add('hidden');
+    qrVerified     = true;
+    scannedVenueId = matchedVenue.id;
+    document.getElementById('punch-type-selector').classList.remove('hidden');
+    document.getElementById('punch-type-selector').classList.add('grid');
+    document.getElementById('qr-verified-badge').classList.remove('hidden');
+    showToast(`QR verificado — ${matchedVenue.name}. Elegí tu acción.`, "success");
   }
 
-  // ─── REGISTRO / VERIFICACIÓN DE DISPOSITIVO ──────────────────────────────
-  async function checkDeviceRegistration() {
-    try {
-      const snap = await getDoc(doc(db, "employees", deviceFingerprint));
-      if (snap.exists()) {
-        const { name } = snap.data();
-        document.getElementById('view-register').classList.add('hidden');
-        document.getElementById('view-punch').classList.remove('hidden');
-        document.getElementById('welcome-name').textContent = name;
-        await loadLastPunch(name);
-        validateProximity();
-      } else {
-        document.getElementById('view-punch').classList.add('hidden');
-        document.getElementById('view-register').classList.remove('hidden');
-        showStatus("Registrá tu dispositivo para comenzar.", "info");
-      }
-    } catch (e) {
-      showStatus("Error al verificar dispositivo.", "error");
-    }
-  }
-  window.checkDeviceRegistration = checkDeviceRegistration;
-
-  // Último fichaje para hint de secuencia
-  async function loadLastPunch(name) {
-    try {
-      const q = query(
-        collection(db, "attendance_logs"),
-        where("deviceId", "==", deviceFingerprint),
-        orderBy("timestamp", "desc"),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      const infoEl = document.getElementById('last-punch-info');
-      if (!snap.empty) {
-        const last = snap.docs[0].data();
-        const ts = new Date(last.timestamp).toLocaleString('es-AR');
-        infoEl.textContent = `Último registro: ${last.type} — ${ts}`;
-        // Highlight el botón opuesto
-        const btnE = document.getElementById('btn-entrada');
-        const btnS = document.getElementById('btn-salida');
-        if (last.type === 'ENTRADA') {
-          btnS.classList.add('ring-2','ring-rose-400');
-          btnE.classList.remove('ring-2','ring-emerald-400');
-        } else {
-          btnE.classList.add('ring-2','ring-emerald-400');
-          btnS.classList.remove('ring-2','ring-rose-400');
-        }
-      } else {
-        infoEl.textContent = "Primera vez hoy — empezá con Entrada.";
-      }
-    } catch (e) { /* silencio */ }
-  }
-
-  window.registerDevice = async function() {
-    const dni  = document.getElementById('emp-dni').value.trim();
-    const name = document.getElementById('emp-name').value.trim();
-    if (!dni)  { showToast("Ingresá tu DNI.", "error"); return; }
-    if (!/^\d{7,10}$/.test(dni)) { showToast("DNI inválido (solo números, 7-10 dígitos).", "error"); return; }
-    if (!name) { showToast("Ingresá tu nombre y apellido.", "error"); return; }
-    try {
-      await setDoc(doc(db, "employees", deviceFingerprint), {
-        name, dni, registeredAt: new Date().toISOString()
-      });
-      showToast(`Dispositivo vinculado como ${name}.`, "success");
-      checkDeviceRegistration();
-    } catch (e) {
-      showToast("Error al registrar. Revisá tu conexión.", "error");
-    }
-  };
-
-  // ─── FICHAJE ──────────────────────────────────────────────────────────────
+  // ─── FICHAJE ──────────────────────────────────────────────────────────────────
   window.submitPunch = async function(type) {
-    if (!qrVerified) {
-      showToast("Escaneá el QR del local primero.", "warning");
-      return;
-    }
-    if (!validateProximity()) {
-      showToast("Fuera de rango GPS. No podés fichar.", "error");
-      return;
-    }
+    if (!qrVerified) { showToast("Escaneá el QR del local primero.", "warning"); return; }
+    const punchVenue = allVenues.find(v => v.id === scannedVenueId);
+    if (!validateProximity(punchVenue)) { showToast("Fuera de rango GPS.", "error"); return; }
 
-    // Validación de secuencia — no dos ENTRADA/SALIDA seguidas
+    // Validación de secuencia
     try {
-      const q = query(
-        collection(db, "attendance_logs"),
-        where("deviceId", "==", deviceFingerprint),
-        orderBy("timestamp", "desc"),
-        limit(1)
-      );
+      const q = query(collection(db, "attendance_logs"), where("deviceId","==",deviceFingerprint), orderBy("timestamp","desc"), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty && snap.docs[0].data().type === type) {
-        showToast(`Ya registraste una ${type} anteriormente. Registrá la acción opuesta.`, "warning");
+        showToast(`Ya registraste una ${type}. Registrá la acción opuesta.`, "warning");
         return;
       }
-    } catch (e) { /* continuar si falla la verificación */ }
+    } catch (e) { /* continuar */ }
 
     try {
       const empSnap = await getDoc(doc(db, "employees", deviceFingerprint));
-      const name    = empSnap.exists() ? empSnap.data().name : "Desconocido";
+      const emp     = empSnap.exists() ? empSnap.data() : {};
       const now     = new Date();
 
       await addDoc(collection(db, "attendance_logs"), {
-        name,
-        dni:  empSnap.exists() ? (empSnap.data().dni || '') : '',
+        name:      emp.name      || "Desconocido",
+        dni:       emp.dni       || '',
+        venueId:   scannedVenueId || emp.venueId || '',
+        venueName: punchVenue?.name || emp.venueName || '',
         type,
         timestamp: now.toISOString(),
         deviceId:  deviceFingerprint
       });
 
-      // Reset QR tras fichaje exitoso — obliga a re-escanear la próxima vez
       qrVerified = false;
+      scannedVenueId = null;
       document.getElementById('punch-type-selector').classList.add('hidden');
       document.getElementById('punch-type-selector').classList.remove('grid');
       document.getElementById('qr-verified-badge').classList.add('hidden');
 
-      showPunchConfirm(type, name, now);
-      loadLastPunch(name);
+      showPunchConfirm(type, emp.name || "Desconocido", punchVenue?.name || '', now);
+      loadLastPunch(emp.name);
     } catch (e) {
       showToast("Error al registrar fichaje. Revisá tu conexión.", "error");
     }
   };
 
-  // ─── OVERLAY CONFIRMACIÓN POST-FICHAJE ───────────────────────────────────
-  function showPunchConfirm(type, name, date) {
+  function showPunchConfirm(type, name, venueName, date) {
     const overlay  = document.getElementById('punch-confirm');
-    const iconEl   = document.getElementById('pc-icon');
-    const typeEl   = document.getElementById('pc-type');
-    const nameEl   = document.getElementById('pc-name');
-    const timeEl   = document.getElementById('pc-time');
-    const countEl  = document.getElementById('pc-countdown');
-
-    iconEl.textContent = type === 'ENTRADA' ? '✅' : '👋';
+    document.getElementById('pc-icon').textContent  = type === 'ENTRADA' ? '✅' : '👋';
+    const typeEl = document.getElementById('pc-type');
     typeEl.textContent = type;
     typeEl.className   = `text-3xl font-black ${type === 'ENTRADA' ? 'text-emerald-400' : 'text-rose-400'}`;
-    nameEl.textContent = name;
-    timeEl.textContent = date.toLocaleTimeString('es-AR', { hour12: false });
+    document.getElementById('pc-name').textContent  = name;
+    document.getElementById('pc-venue').textContent = venueName ? `📍 ${venueName}` : '';
+    document.getElementById('pc-time').textContent  = date.toLocaleTimeString('es-AR', { hour12: false });
     overlay.classList.remove('hidden');
-
     let secs = 5;
+    const countEl = document.getElementById('pc-countdown');
     countEl.textContent = secs;
-    const t = setInterval(() => {
-      secs--;
-      countEl.textContent = secs;
-      if (secs <= 0) { clearInterval(t); overlay.classList.add('hidden'); }
-    }, 1000);
-
-    // También cerrar con tap
+    const t = setInterval(() => { secs--; countEl.textContent = secs; if (secs <= 0) { clearInterval(t); overlay.classList.add('hidden'); } }, 1000);
     overlay.onclick = () => { clearInterval(t); overlay.classList.add('hidden'); };
   }
 
-  // ─── STATUS (barra de estado GPS) ────────────────────────────────────────
+  // ─── STATUS BAR ───────────────────────────────────────────────────────────────
   window.showStatus = function(text, type) {
     const card = document.getElementById('status-card');
     const icon = document.getElementById('status-icon');
@@ -675,7 +1024,7 @@
     else                         { card.classList.add("bg-slate-700","text-slate-300");        icon.classList.add("fa-circle-info"); }
   };
 
-  // ─── TOASTS ───────────────────────────────────────────────────────────────
+  // ─── TOASTS ───────────────────────────────────────────────────────────────────
   window.showToast = function(msg, type = "info", duration = 3500) {
     const container = document.getElementById('toast-container');
     const icons = { success:'fa-circle-check', error:'fa-triangle-exclamation', info:'fa-circle-info', warning:'fa-exclamation-circle' };
@@ -683,49 +1032,52 @@
     el.className = `toast toast-${type}`;
     el.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}"></i><span>${msg}</span>`;
     container.appendChild(el);
-    const remove = () => {
-      el.classList.add('hide');
-      el.addEventListener('animationend', () => el.remove(), { once: true });
-    };
+    const remove = () => { el.classList.add('hide'); el.addEventListener('animationend', () => el.remove(), { once: true }); };
     const timer = setTimeout(remove, duration);
     el.onclick = () => { clearTimeout(timer); remove(); };
   };
 
-  // ─── PANEL ADMIN ─────────────────────────────────────────────────────────
+  // ─── TABS ADMIN ───────────────────────────────────────────────────────────────
+  window.switchTab = function(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    // Encontrar el botón correspondiente
+    const map = { 'tab-venues': 'taббtn-venues', 'tab-staff': 'tabbtn-staff', 'tab-logs': 'tabbtn-logs' };
+    const btnId = map[tabId];
+    if (btnId) document.getElementById(btnId)?.classList.add('active');
+    // Cargar datos al cambiar de pestaña
+    if (tabId === 'tab-staff') loadStaff();
+    if (tabId === 'tab-logs')  loadAdminLogs();
+  };
 
-  // Hash simple SHA-256 para el PIN
+  // ─── PANEL ADMIN ──────────────────────────────────────────────────────────────
   async function hashPin(pin) {
-    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
   window.requestAdminAccess = async function() {
     const pin = prompt("PIN de Recursos Humanos:");
     if (pin === null) return;
-
     try {
-      // Buscar hash en Firestore
       const cfgSnap = await getDoc(doc(db, "config", "admin"));
       let storedHash = cfgSnap.exists() ? cfgSnap.data().pinHash : null;
-
-      // Si no existe aún, crear con "1234" como default (solo primera vez)
       if (!storedHash) {
         storedHash = await hashPin("1234");
         await setDoc(doc(db, "config", "admin"), { pinHash: storedHash });
       }
-
       const inputHash = await hashPin(pin);
       if (inputHash === storedHash) {
         document.getElementById('employee-view').classList.add('hidden');
         document.getElementById('admin-view').classList.remove('hidden');
-        await loadAdminLogs();
-        await generateSystemQR();
+        await loadVenues();
+        // Activar primera pestaña
+        switchTab('tab-venues');
       } else {
         showToast("PIN incorrecto.", "error");
       }
-    } catch (e) {
-      showToast("Error al verificar PIN.", "error");
-    }
+    } catch (e) { showToast("Error al verificar PIN.", "error"); }
   };
 
   window.closeAdmin = function() {
@@ -733,19 +1085,7 @@
     document.getElementById('employee-view').classList.remove('hidden');
   };
 
-  async function generateSystemQR() {
-    const token     = await ensureVenueQrToken();
-    const container = document.getElementById("qrcode-container");
-    container.innerHTML = ""; // limpiar instancia anterior si hay
-    qrCodeInstance = new QRCode(container, {
-      text: token, width: 140, height: 140,
-      colorDark: "#0f172a", colorLight: "#ffffff",
-      correctLevel: QRCode.CorrectLevel.H
-    });
-  }
-
   async function loadAdminLogs() {
-    showVenueLocationCurrent();
     const tbody = document.getElementById('admin-table-body');
     tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
     try {
@@ -759,13 +1099,13 @@
   }
 
   window.applyFilters = function() {
-    const dateVal = document.getElementById('filter-date').value;   // "YYYY-MM-DD"
-    const nameVal = document.getElementById('filter-name').value.toLowerCase().trim();
-
+    const dateVal  = document.getElementById('filter-date').value;
+    const nameVal  = document.getElementById('filter-name').value.toLowerCase().trim();
+    const venueVal = document.getElementById('filter-venue').value;
     let filtered = allLogs;
-    if (dateVal)  filtered = filtered.filter(l => l.timestamp.startsWith(dateVal));
+    if (dateVal)  filtered = filtered.filter(l => l.timestamp?.startsWith(dateVal));
     if (nameVal)  filtered = filtered.filter(l => l.name?.toLowerCase().includes(nameVal));
-
+    if (venueVal) filtered = filtered.filter(l => l.venueId === venueVal);
     renderAdminTable(filtered);
     const countEl = document.getElementById('filter-count');
     countEl.textContent = filtered.length < allLogs.length
@@ -774,48 +1114,48 @@
   };
 
   window.clearFilters = function() {
-    document.getElementById('filter-date').value = '';
-    document.getElementById('filter-name').value = '';
+    document.getElementById('filter-date').value  = '';
+    document.getElementById('filter-name').value  = '';
+    document.getElementById('filter-venue').value = '';
     applyFilters();
   };
 
   function renderAdminTable(logs) {
     const tbody = document.getElementById('admin-table-body');
-    if (logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`;
-      return;
-    }
+    if (!logs.length) { tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`; return; }
     tbody.innerHTML = logs.map(l => {
       const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
       return `
         <tr class="hover:bg-slate-800/80 transition-colors">
           <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
-          <td class="px-4 py-3 text-slate-400 text-sm font-mono">${l.dni || '—'}</td>
+          <td class="px-4 py-3 text-slate-400 text-xs font-mono">${l.dni || '—'}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">
+              <i class="fa-solid fa-store mr-1"></i>${l.venueName || '—'}
+            </span>
+          </td>
           <td class="px-4 py-3">
             <span class="px-2 py-1 rounded text-[10px] uppercase font-bold
               ${l.type === 'ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">
               ${l.type}
             </span>
           </td>
-          <td class="px-4 py-3 text-slate-400 text-sm">${ts}</td>
-          <td class="px-4 py-3 text-slate-500 font-mono text-[10px]">${(l.deviceId || '').substring(0,10)}...</td>
+          <td class="px-4 py-3 text-slate-400 text-xs">${ts}</td>
         </tr>`;
     }).join('');
   }
 
   window.exportToCSV = function() {
     if (!allLogs.length) { showToast("No hay datos para exportar.", "info"); return; }
-    let csv = "Colaborador,DNI,Accion,Fecha_y_Hora,ID_Dispositivo\n";
+    let csv = "Colaborador,DNI,Local,Accion,Fecha_y_Hora\n";
     allLogs.forEach(l => {
       const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '';
-      csv += `${l.name},${l.dni || ''},${l.type},"${ts}",${l.deviceId}\n`;
+      csv += `${l.name},${l.dni || ''},"${l.venueName || ''}",${l.type},"${ts}"\n`;
     });
     const link = document.createElement("a");
     link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
     link.download = `andino_asistencia_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    document.body.appendChild(link); link.click(); link.remove();
   };
 
   window.clearRecords = async function() {
@@ -828,56 +1168,8 @@
       allLogs = [];
       renderAdminTable([]);
       showToast("Historial eliminado.", "success");
-    } catch (e) {
-      showToast("Error al eliminar. Revisá permisos Firestore.", "error");
-    }
+    } catch (e) { showToast("Error al eliminar. Revisá permisos Firestore.", "error"); }
   };
-
-  window.setWorkLocation = async function() {
-    if (!userLocation) { showToast("Sin coordenadas GPS aún.", "warning"); return; }
-    if (confirm(`¿Fijar ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)} como ubicación del local?`)) {
-      workLocation = { ...userLocation };
-      localStorage.setItem('work_location', JSON.stringify(workLocation));
-      await setDoc(doc(db, "config", "venue"), {
-        lat: workLocation.lat, lng: workLocation.lng, radius: MAX_DIST
-      }, { merge: true });
-      showToast("Ubicación GPS guardada.", "success");
-      showVenueLocationCurrent();
-      checkDeviceRegistration();
-    }
-  };
-
-  window.saveVenueLocation = async function() {
-    const name   = document.getElementById('venue-name-input').value.trim();
-    const latVal = parseFloat(document.getElementById('venue-lat-input').value);
-    const lngVal = parseFloat(document.getElementById('venue-lng-input').value);
-    const radVal = parseInt(document.getElementById('venue-radius-input').value) || MAX_DIST;
-
-    if (isNaN(latVal) || isNaN(lngVal)) {
-      showToast("Ingresá latitud y longitud válidas.", "error"); return;
-    }
-    if (latVal < -90 || latVal > 90 || lngVal < -180 || lngVal > 180) {
-      showToast("Coordenadas fuera de rango.", "error"); return;
-    }
-
-    workLocation = { lat: latVal, lng: lngVal };
-    localStorage.setItem('work_location', JSON.stringify(workLocation));
-
-    const venueData = { lat: latVal, lng: lngVal, radius: radVal };
-    if (name) venueData.name = name;
-
-    await setDoc(doc(db, "config", "venue"), venueData, { merge: true });
-    showToast(`Ubicación guardada${name ? ' para ' + name : ''}.`, "success");
-    showVenueLocationCurrent();
-  };
-
-  function showVenueLocationCurrent() {
-    const el = document.getElementById('venue-location-current');
-    if (!el) return;
-    const snap_lat = workLocation?.lat?.toFixed(5) ?? '—';
-    const snap_lng = workLocation?.lng?.toFixed(5) ?? '—';
-    el.textContent = `Actualmente configurado: ${snap_lat}, ${snap_lng}`;
-  }
 
 </script>
 </body>

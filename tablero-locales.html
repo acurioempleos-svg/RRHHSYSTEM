@@ -672,6 +672,83 @@ body {
 .expired .doc-blk-check { background:var(--d-dim); color:var(--danger); }
 
 /* Acciones del colaborador */
+
+/* ══ TOGGLE DESVINCULADO ═══════════════════════════════════════ */
+.desv-toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--b1);
+}
+.desv-toggle-lbl {
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:var(--muted); letter-spacing:.06em;
+  display:flex; align-items:center; gap:7px;
+}
+.toggle-sw {
+  position:relative; width:34px; height:19px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.toggle-sw input { opacity:0; width:0; height:0; position:absolute; }
+.toggle-track {
+  position:absolute; inset:0; border-radius:10px;
+  background:var(--b1); border:1px solid var(--b1);
+  transition:background .22s, border-color .22s;
+}
+.toggle-sw input:checked ~ .toggle-track {
+  background:rgba(196,50,50,.28); border-color:rgba(196,50,50,.45);
+}
+.toggle-thumb {
+  position:absolute; top:2px; left:2px;
+  width:13px; height:13px; border-radius:50%;
+  background:var(--muted); transition:transform .22s, background .22s;
+  pointer-events:none;
+}
+.toggle-sw input:checked ~ .toggle-thumb {
+  transform:translateX(15px); background:var(--danger);
+}
+
+/* ══ SECCIÓN DESVINCULADOS ═══════════════════════════════════════ */
+#desv-section {
+  margin:0 14px; padding-bottom:20px;
+}
+.desv-section-btn {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-radius:10px;
+  border:1px solid var(--b1); background:var(--s1);
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.07em;
+  color:var(--muted); cursor:pointer;
+  transition:all var(--t);
+  margin-bottom:0;
+}
+.desv-section-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
+.desv-section-btn .desv-badge {
+  background:var(--d-dim); color:var(--danger);
+  border:1px solid rgba(196,50,50,.22);
+  padding:2px 8px; border-radius:5px;
+  font-size:9px; margin-left:6px;
+}
+.desv-section-btn .desv-chevron {
+  color:var(--faint); transition:rotate var(--t);
+}
+.desv-section-btn.open .desv-chevron { rotate:180deg; }
+.desv-list {
+  margin-top:8px;
+  display:flex; flex-direction:column; gap:12px;
+  animation:blockIn .25s ease both;
+}
+.person-block.desvinculado .pb-face {
+  opacity:.6;
+}
+.person-block.desvinculado .pb-avatar {
+  background:var(--s3); color:var(--muted);
+}
+.desv-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.06em;
+  padding:2px 7px; border-radius:5px;
+  background:var(--d-dim); color:var(--danger);
+  border:1px solid rgba(196,50,50,.2);
+  margin-left:4px; vertical-align:middle;
+}
 .pb-actions {
   display:flex; gap:6px;
   margin-top:12px; padding-top:12px; border-top:1px solid var(--b1);
@@ -1663,6 +1740,16 @@ body {
     </div>
   </div>
   <div id="persons-scroll"></div>
+  <div id="desv-section">
+    <button class="desv-section-btn" id="desv-section-btn" onclick="toggleDesvSection()" style="display:none">
+      <span style="display:flex;align-items:center;gap:6px">
+        <span>DESVINCULADOS</span>
+        <span class="desv-badge" id="desv-badge">0</span>
+      </span>
+      <svg class="desv-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="desv-list" id="desv-list" style="display:none"></div>
+  </div>
 </div>
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
@@ -2561,6 +2648,11 @@ function abrirLocal(local) {
   requestAnimationFrame(() => v.classList.add('visible'));
 }
 function cerrarLocal() {
+  _desvOpen = false;
+  const desvList = document.getElementById('desv-list');
+  const desvBtn  = document.getElementById('desv-section-btn');
+  if (desvList) desvList.style.display = 'none';
+  if (desvBtn)  desvBtn.classList.remove('open');
   const v = document.getElementById('view-local');
   v.classList.remove('visible');
   document.getElementById('lv-backdrop').classList.remove('open');
@@ -2630,6 +2722,7 @@ function _buildPersonFace(c, hoy) {
 function _buildPersonDocs(c) {
   const carpetas   = getCarpetas(c);
   const foldersHTML = renderFolders(c.id, carpetas);
+  const isDesv = !!c.desvinculado;
   return `${foldersHTML}
   <div class="pb-actions">
     <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
@@ -2644,6 +2737,17 @@ function _buildPersonDocs(c) {
       <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-trash"/></svg>
       Eliminar
     </button>
+  </div>
+  <div class="desv-toggle-row" onclick="event.stopPropagation()">
+    <span class="desv-toggle-lbl">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 17l5-5-5-5"/><path d="M8 7l-5 5 5 5"/></svg>
+      ${isDesv ? 'REINCORPORAR' : 'DESVINCULAR'}
+    </span>
+    <label class="toggle-sw" title="${isDesv ? 'Reincorporar' : 'Marcar como desvinculado'}">
+      <input type="checkbox" ${isDesv ? 'checked' : ''} onchange="toggleDesvinculado('${c.id}', ${isDesv}, event)">
+      <div class="toggle-track"></div>
+      <div class="toggle-thumb"></div>
+    </label>
   </div>`;
 }
 
@@ -2655,91 +2759,109 @@ function _buildPersonDocs(c) {
    Personas que no cambiaron y están colapsadas → cero trabajo DOM. ══ */
 function renderLocal(local, q='') {
   const lq  = q.toLowerCase();
-  let list  = colabs.filter(c => (c.local||'Sin Local')===local);
-  if (lq) list = list.filter(c =>
+  let allList = colabs.filter(c => (c.local||'Sin Local')===local);
+  if (lq) allList = allList.filter(c =>
     (c.nombre||'').toLowerCase().includes(lq) ||
     (c.dni_nro||'').includes(lq) ||
     (c.puesto||'').toLowerCase().includes(lq)
   );
+
+  const list     = allList.filter(c => !c.desvinculado);
+  const desvList = allList.filter(c => !!c.desvinculado);
 
   document.getElementById('lv-count').textContent = `${list.length} persona${list.length!==1?'s':''}`;
   const hoy    = new Date();
   const scroll = document.getElementById('persons-scroll');
   const scrollTop = scroll.scrollTop;
 
-  // IDs visibles en esta pasada
+  // ── Activos ────────────────────────────────────────────────────
   const visibleIds = new Set(list.map(c => c.id));
-
-  // Eliminar tarjetas que ya no están en la lista filtrada
   Array.from(scroll.querySelectorAll('.person-block[data-pid]')).forEach(el => {
     if (!visibleIds.has(el.dataset.pid)) el.remove();
   });
 
-  // Caso vacío
   if (!list.length) {
     if (!scroll.querySelector('.lv-empty'))
-      scroll.innerHTML = `<div class="lv-empty">Sin resultados para tu búsqueda.</div>`;
-    return;
+      scroll.innerHTML = `<div class="lv-empty">Sin colaboradores activos.</div>`;
+  } else {
+    scroll.querySelector('.lv-empty')?.remove();
   }
-  scroll.querySelector('.lv-empty')?.remove();
 
-  // Patch / insertar cada persona en orden
   list.forEach((c, ci) => {
-    const isExpanded = _expandedPersons.has(c.id);
-    const newFace    = _buildPersonFace(c, hoy);
+    _renderPersonBlock(c, ci, scroll, hoy, false);
+  });
+  scroll.scrollTop = scrollTop;
 
-    let block = document.getElementById(`pb-${c.id}`);
+  // ── Desvinculados ─────────────────────────────────────────────
+  const desvBtn  = document.getElementById('desv-section-btn');
+  const desvBadge = document.getElementById('desv-badge');
+  const desvListEl = document.getElementById('desv-list');
 
-    if (!block) {
-      // Persona nueva en la lista — crear nodo completo
-      block = document.createElement('div');
-      block.className = 'person-block';
-      block.id        = `pb-${c.id}`;
-      block.dataset.pid = c.id;
-      block.style.animation = `blockIn .3s ease ${ci*50}ms both`;
+  if (desvBtn) desvBtn.style.display = desvList.length ? 'flex' : 'none';
+  if (desvBadge) desvBadge.textContent = desvList.length;
 
-      const face = document.createElement('div');
-      face.className = 'pb-face';
-      face.setAttribute('onclick', `togglePerson('${c.id}',event)`);
-      face.innerHTML = newFace;
+  if (desvListEl) {
+    // Remover bloques que ya no son desvinculados
+    const desvIds = new Set(desvList.map(c => c.id));
+    Array.from(desvListEl.querySelectorAll('.person-block[data-pid]')).forEach(el => {
+      if (!desvIds.has(el.dataset.pid)) el.remove();
+    });
+    desvList.forEach((c, ci) => {
+      _renderPersonBlock(c, ci, desvListEl, hoy, true);
+    });
+  }
+}
 
-      const docsEl = document.createElement('div');
-      docsEl.className = 'pb-docs';
-      docsEl.id = `pbdocs-${c.id}`;
-      docsEl.style.display = 'none';
+function _renderPersonBlock(c, ci, container, hoy, isDesv) {
+  const isExpanded = _expandedPersons.has(c.id);
+  const newFace    = _buildPersonFace(c, hoy);
+  let block = document.getElementById(`pb-${c.id}`);
 
-      block.appendChild(face);
-      block.appendChild(docsEl);
-      scroll.appendChild(block);
-    } else {
-      // Persona existente — patch selectivo
-      block.dataset.pid = c.id; // asegurar atributo si venía de render anterior
+  if (!block) {
+    block = document.createElement('div');
+    block.className = 'person-block' + (isDesv ? ' desvinculado' : '');
+    block.id        = `pb-${c.id}`;
+    block.dataset.pid = c.id;
+    block.style.animation = `blockIn .3s ease ${ci*50}ms both`;
 
-      // Face: actualizar solo si cambió
-      const faceEl = block.querySelector('.pb-face');
-      if (faceEl && faceEl.innerHTML !== newFace) faceEl.innerHTML = newFace;
+    const face = document.createElement('div');
+    face.className = 'pb-face';
+    face.setAttribute('onclick', `togglePerson('${c.id}',event)`);
+    face.innerHTML = newFace;
 
-      // Docs: actualizar solo si está expandida (el usuario la está viendo)
-      if (isExpanded) {
-        const docsEl = document.getElementById(`pbdocs-${c.id}`);
-        if (docsEl) {
-          const newDocs = _buildPersonDocs(c);
-          if (docsEl.innerHTML !== newDocs) docsEl.innerHTML = newDocs;
-        }
+    const docsEl = document.createElement('div');
+    docsEl.className = 'pb-docs';
+    docsEl.id = `pbdocs-${c.id}`;
+    docsEl.style.display = 'none';
+
+    block.appendChild(face);
+    block.appendChild(docsEl);
+    container.appendChild(block);
+  } else {
+    // Si el bloque existe pero está en el contenedor equivocado, moverlo
+    if (block.parentElement !== container) {
+      container.appendChild(block);
+    }
+    block.classList.toggle('desvinculado', isDesv);
+
+    const faceEl = block.querySelector('.pb-face');
+    if (faceEl && faceEl.innerHTML !== newFace) faceEl.innerHTML = newFace;
+
+    if (isExpanded) {
+      const docsEl = document.getElementById(`pbdocs-${c.id}`);
+      if (docsEl) {
+        const newDocs = _buildPersonDocs(c);
+        if (docsEl.innerHTML !== newDocs) docsEl.innerHTML = newDocs;
       }
     }
+  }
 
-    // Sincronizar estado visual con el Store
-    block.classList.toggle('expanded', isExpanded);
-    const docsEl = document.getElementById(`pbdocs-${c.id}`);
-    if (docsEl) docsEl.style.display = isExpanded ? 'block' : 'none';
+  block.classList.toggle('expanded', isExpanded);
+  const docsEl = document.getElementById(`pbdocs-${c.id}`);
+  if (docsEl) docsEl.style.display = isExpanded ? 'block' : 'none';
 
-    // Reordenar si el nodo no está en la posición correcta
-    const currentAtPos = scroll.children[ci];
-    if (currentAtPos !== block) scroll.insertBefore(block, currentAtPos || null);
-  });
-
-  scroll.scrollTop = scrollTop;
+  const currentAtPos = container.children[ci];
+  if (currentAtPos !== block) container.insertBefore(block, currentAtPos || null);
 }
 
 function togglePerson(id, event) {
@@ -2765,6 +2887,36 @@ function togglePerson(id, event) {
   if (!pb || !docs) return;
   pb.classList.toggle('expanded', !isExpanded);
   docs.style.display = isExpanded ? 'none' : 'block';
+}
+
+/* ══ SECCIÓN DESVINCULADOS ═══════════════════════════════════════ */
+let _desvOpen = false;
+
+function toggleDesvSection() {
+  _desvOpen = !_desvOpen;
+  const btn  = document.getElementById('desv-section-btn');
+  const list = document.getElementById('desv-list');
+  if (btn)  btn.classList.toggle('open', _desvOpen);
+  if (list) list.style.display = _desvOpen ? 'flex' : 'none';
+}
+
+async function toggleDesvinculado(id, currentVal, event) {
+  event.stopPropagation();
+  const nuevoEstado = !currentVal;
+  const c = getColab(id);
+  if (!c) return;
+  const nombre = c.nombre || 'esta persona';
+  const msg = nuevoEstado
+    ? `¿Marcar a ${nombre} como desvinculado? Pasará a la sección de bajas.`
+    : `¿Reincorporar a ${nombre}? Volverá a la lista activa.`;
+  const ok = await confirmar(msg, nuevoEstado ? 'Desvincular' : 'Reincorporar');
+  if (!ok) return;
+  try {
+    await updateDoc(doc(db, 'colaboradores', id), { desvinculado: nuevoEstado });
+    toast(nuevoEstado ? `↓ ${nombre} movido a desvinculados` : `↑ ${nombre} reincorporado`);
+  } catch(e) {
+    toast('Error: ' + (e.code || e.message));
+  }
 }
 
 /* ══ CONFIRM SHEET (reemplaza confirm() nativo) ══════════════════ */
@@ -5169,6 +5321,7 @@ Object.assign(window, {
   eliminarContenidoCarpetaLocal, abrirReemplazoLocal,
   filtrarFotoConfirmColab,
   mostrarPDFPrevio, _restoreImageModal,
+  toggleDesvinculado, toggleDesvSection,
 });
 
 </script>

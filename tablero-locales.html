@@ -1770,7 +1770,7 @@ body {
     </div>
   </div>
 </div>
-<input type="file" id="file-input" accept="image/*" style="display:none" onchange="procesarArchivo(event)">
+<input type="file" id="file-input" accept="image/*,application/pdf" style="display:none" onchange="procesarArchivo(event)">
 
 <!-- Choice OCR -->
 <div id="choice-ocr-modal" class="overlay" onclick="closeSheet('choice-ocr-modal')">
@@ -1794,7 +1794,7 @@ body {
     </div>
   </div>
 </div>
-<input type="file" id="file-input-ocr" accept="image/*" style="display:none" onchange="procesarArchivoOCR(event)">
+<input type="file" id="file-input-ocr" accept="image/*,application/pdf" style="display:none" onchange="procesarArchivoOCR(event)">
 
 <!-- Preview doc -->
 <div id="preview-modal" class="overlay" onclick="closeSheet('preview-modal')">
@@ -1903,7 +1903,7 @@ body {
       <div class="prev-img-wrap" style="margin-bottom:10px">
         <img id="foto-preview-img" style="max-width:100%;max-height:55dvh;width:auto;height:auto;object-fit:contain;transition:transform .25s ease">
       </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px;justify-content:center">
+      <div id="foto-confirm-rot-btns" style="display:flex;gap:6px;margin-bottom:10px;justify-content:center">
         <button class="btn btn-ghost" style="flex:0 0 auto;padding:7px 14px" onclick="rotarPreview(-90)" title="Rotar izquierda">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6"/><path d="M2.66 15.57a10 10 0 1 0 .57-8.38"/></svg>
         </button>
@@ -2215,8 +2215,13 @@ const showL = ()  => { const l=$('loading'); if(l) l.style.display='flex'; };
 const hideL = ()  => { const l=$('loading'); if(l) l.style.display='none'; };
 
 /* ── Sube a ImgBB con retry automático (1 reintento) ── */
+/* ── PDFs se guardan como data URL directamente (ImgBB no acepta PDF) ── */
 const IMGBB_KEY = '123d273a2cb8ffb8cd9861eff0c33f9b';
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
+  // Los PDFs no son aceptados por ImgBB → los guardamos como data URL directa
+  if (dataUrl.startsWith('data:application/pdf')) {
+    return dataUrl; // se persiste la data URL en Firestore tal cual
+  }
   const base64 = dataUrl.split(',')[1];
   if (!base64) throw new Error('Imagen inválida');
   const form = new FormData();
@@ -2782,26 +2787,31 @@ function abrirConfirmDelete() {
 /* ══ DRAG & DROP + SUBIDA OPTIMISTA ════════════════════════════ */
 async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
   const file = event.dataTransfer.files[0];
-  if (!file || !file.type.startsWith('image/')) { toast('⚠ Solo se aceptan imágenes'); return; }
+  if (!file || (!file.type.startsWith('image/') && file.type !== 'application/pdf')) { toast('⚠ Solo se aceptan imágenes o PDF'); return; }
   const blk = document.getElementById(`docblk-${id}-${key}`);
   activeTask = { id, type:key, label, askFecha, askRangoFechas };
 
-  // 1. Comprimir imagen
+  // 1. Comprimir imagen (los PDF se leen directo, sin canvas)
   const dataUrl = await new Promise(res => {
     const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-        canvas.width  = Math.round(img.width*ratio);
-        canvas.height = Math.round(img.height*ratio);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        res(canvas.toDataURL('image/jpeg', 0.75));
+    if (file.type === 'application/pdf') {
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+          canvas.width  = Math.round(img.width*ratio);
+          canvas.height = Math.round(img.height*ratio);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          res(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
   });
 
   // 2. Preview optimista inmediato
@@ -2814,8 +2824,14 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
       thumbEl.className = 'doc-blk-thumb';
       blk.insertBefore(thumbEl, blk.firstChild);
     }
-    thumbEl.style.backgroundImage = `url('${dataUrl}')`;
-    thumbEl.style.opacity = '.35';
+    if (file.type === 'application/pdf') {
+      thumbEl.style.backgroundImage = '';
+      thumbEl.innerHTML = '<span style="font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;height:100%">📄</span>';
+      thumbEl.style.opacity = '.35';
+    } else {
+      thumbEl.style.backgroundImage = `url('${dataUrl}')`;
+      thumbEl.style.opacity = '.35';
+    }
     const tagTxtEl = blk.querySelector('.doc-blk-tag-txt');
     if (tagTxtEl) tagTxtEl.textContent = 'Subiendo…';
     let bar = blk.querySelector('.doc-blk-upload-bar');
@@ -2857,7 +2873,7 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
       const thumbEl = blk.querySelector('.doc-blk-thumb');
       if (thumbEl) thumbEl.style.opacity = '.25';
       const tagTxtEl = blk.querySelector('.doc-blk-tag-txt');
-      if (tagTxtEl) tagTxtEl.textContent = arr.length > 1 ? `${arr.length} fotos` : 'Cargado';
+      if (tagTxtEl) tagTxtEl.textContent = arr.length > 1 ? `${arr.length} archivos` : 'Cargado';
     }
     toast(`✓ ${label} guardado`);
   } catch(e) {
@@ -3036,26 +3052,31 @@ function handleFolder(colabId, folderIdx, loaded) {
 // Drag & drop directo en carpeta
 async function handleFolderDrop(event, colabId, folderIdx) {
   const file = event.dataTransfer.files[0];
-  if (!file || !file.type.startsWith('image/')) { toast('⚠ Solo se aceptan imágenes'); return; }
+  if (!file || (!file.type.startsWith('image/') && file.type !== 'application/pdf')) { toast('⚠ Solo se aceptan imágenes o PDF'); return; }
   const blk = document.getElementById(`fldblk-${colabId}-${folderIdx}`);
   activeTask = { id: colabId, type: '__folder__', folderIdx };
 
-  // Comprimir
+  // Comprimir (los PDF se leen directo, sin canvas)
   const dataUrl = await new Promise(res => {
     const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-        canvas.width  = Math.round(img.width*ratio);
-        canvas.height = Math.round(img.height*ratio);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        res(canvas.toDataURL('image/jpeg', 0.75));
+    if (file.type === 'application/pdf') {
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+          canvas.width  = Math.round(img.width*ratio);
+          canvas.height = Math.round(img.height*ratio);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          res(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
   });
 
   // Preview optimista
@@ -3068,8 +3089,14 @@ async function handleFolderDrop(event, colabId, folderIdx) {
       thumbEl.className = 'folder-blk-thumb';
       blk.insertBefore(thumbEl, blk.firstChild);
     }
-    thumbEl.style.backgroundImage = `url('${dataUrl}')`;
-    thumbEl.style.opacity = '.35';
+    if (file.type === 'application/pdf') {
+      thumbEl.style.backgroundImage = '';
+      thumbEl.innerHTML = '<span style="font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;height:100%">📄</span>';
+      thumbEl.style.opacity = '.35';
+    } else {
+      thumbEl.style.backgroundImage = `url('${dataUrl}')`;
+      thumbEl.style.opacity = '.35';
+    }
     const tagTxtEl = blk.querySelector('.folder-blk-tag-txt');
     if (tagTxtEl) tagTxtEl.textContent = 'Subiendo…';
     let bar = blk.querySelector('.folder-upload-bar');
@@ -3118,7 +3145,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
       const thumbEl = blkEl.querySelector('.folder-blk-thumb');
       if (thumbEl) thumbEl.style.opacity = '.25';
       const tagTxtEl = blkEl.querySelector('.folder-blk-tag-txt');
-      if (tagTxtEl) tagTxtEl.textContent = folder.urls.length > 1 ? `${folder.urls.length} fotos` : 'Cargado';
+      if (tagTxtEl) tagTxtEl.textContent = folder.urls.length > 1 ? `${folder.urls.length} archivos` : 'Cargado';
     }
   } catch(e) {
     // Rollback
@@ -3318,26 +3345,31 @@ function handleLocalFolder(localId, folderIdx, loaded) {
 // Drag & drop en carpeta del local
 async function handleLocalFolderDrop(event, localId, folderIdx) {
   const file = event.dataTransfer.files[0];
-  if (!file || !file.type.startsWith('image/')) { toast('Solo se aceptan imagenes'); return; }
+  if (!file || (!file.type.startsWith('image/') && file.type !== 'application/pdf')) { toast('Solo se aceptan imagenes o PDF'); return; }
   const localDoc = locales.find(l => l.id === localId);
   if (!localDoc) return;
   activeTask = { id: '__local__', localId, folderIdx, type: '__local_folder__', label: '' };
 
   const dataUrl = await new Promise(res => {
     const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-        canvas.width  = Math.round(img.width*ratio);
-        canvas.height = Math.round(img.height*ratio);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        res(canvas.toDataURL('image/jpeg', 0.75));
+    if (file.type === 'application/pdf') {
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+          canvas.width  = Math.round(img.width*ratio);
+          canvas.height = Math.round(img.height*ratio);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          res(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
   });
   try {
     showL();
@@ -3696,7 +3728,8 @@ function fmtDateTime(iso) {
 function descargarFoto(url, label, idx) {
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${label.replace(/\s+/g,'_')}_${idx}.jpg`;
+  const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
+  a.download = `${label.replace(/\s+/g,'_')}_${idx}.${isPdf ? 'pdf' : 'jpg'}`;
   a.click();
 }
 
@@ -4047,21 +4080,32 @@ function procesarArchivo(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.getElementById('canvas');
-      const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-      canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+  if (file.type === 'application/pdf') {
+    // PDF: saltar canvas, mostrar previa especial
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
       _pendingDataUrl = dataUrl;
       _pendingSource  = 'direct';
-      mostrarFotoPrevia(dataUrl);
+      mostrarPDFPrevio(dataUrl);
     };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  } else {
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.getElementById('canvas');
+        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
+        canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        _pendingDataUrl = dataUrl;
+        _pendingSource  = 'direct';
+        mostrarFotoPrevia(dataUrl);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
   document.getElementById('file-input').value = '';
   closeSheet('choice-modal');
 }
@@ -4084,6 +4128,46 @@ function mostrarFotoPrevia(dataUrl) {
   if (extra) extra.style.display = _pendingSource === 'ocr' ? 'none' : 'flex';
   openSheet('foto-confirm-modal');
 }
+/* ── Muestra el modal de confirmación para un PDF pendiente ── */
+function mostrarPDFPrevio(dataUrl) {
+  _previewRotation = 0;
+  // Ocultar la img y mostrar el placeholder de PDF
+  const imgEl = document.getElementById('foto-preview-img');
+  if (imgEl) { imgEl.src = ''; imgEl.style.display = 'none'; }
+  let pdfPlaceholder = document.getElementById('pdf-preview-placeholder');
+  if (!pdfPlaceholder) {
+    pdfPlaceholder = document.createElement('div');
+    pdfPlaceholder.id = 'pdf-preview-placeholder';
+    pdfPlaceholder.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:32px 0;color:var(--muted);font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.06em';
+    pdfPlaceholder.innerHTML = '<span style="font-size:44px">📄</span><span>PDF listo para subir</span>';
+    if (imgEl) imgEl.parentNode.insertBefore(pdfPlaceholder, imgEl.nextSibling);
+  }
+  pdfPlaceholder.style.display = 'flex';
+  // Ocultar botones de rotar (no aplican a PDF)
+  const rotBtns = document.getElementById('foto-confirm-rot-btns');
+  if (rotBtns) rotBtns.style.display = 'none';
+  // Limpiar campos
+  const colabEl = document.getElementById('fotoconfirm-colab');
+  const fechaEl = document.getElementById('fotoconfirm-fecha');
+  const notaEl  = document.getElementById('fotoconfirm-nota');
+  if (colabEl) colabEl.value = '';
+  if (fechaEl) fechaEl.value = '';
+  if (notaEl)  notaEl.value  = '';
+  const dl = document.getElementById('fotoconfirm-colab-list');
+  if (dl) dl.innerHTML = colabs.map(c => '<option value="' + esc(c.nombre) + '">').join('');
+  const extra = document.getElementById('fotoconfirm-extra');
+  if (extra) extra.style.display = 'flex';
+  openSheet('foto-confirm-modal');
+}
+function _restoreImageModal() {
+  const imgEl = document.getElementById('foto-preview-img');
+  if (imgEl) imgEl.style.display = '';
+  const pdfPlaceholder = document.getElementById('pdf-preview-placeholder');
+  if (pdfPlaceholder) pdfPlaceholder.style.display = 'none';
+  const rotBtns = document.getElementById('foto-confirm-rot-btns');
+  if (rotBtns) rotBtns.style.display = '';
+}
+
 function filtrarFotoConfirmColab(q) {
   const dl = document.getElementById('fotoconfirm-colab-list');
   if (!dl) return;
@@ -4094,6 +4178,7 @@ function filtrarFotoConfirmColab(q) {
 function descartarFotoPrevia() {
   _pendingDataUrl = null;
   _previewRotation = 0;
+  _restoreImageModal();
   closeSheet('foto-confirm-modal');
 }
 async function confirmarFotoPrevia() {
@@ -4106,9 +4191,20 @@ async function confirmarFotoPrevia() {
   if (colabVal) metaExtra.colaborador    = colabVal;
   if (fechaVal) metaExtra.fecha_recibido = fechaVal;
   if (notaVal)  metaExtra.nota           = notaVal;
+  // PDFs no pasan por canvas de rotación
+  if (_pendingDataUrl && _pendingDataUrl.startsWith('data:application/pdf')) {
+    const dataUrl = _pendingDataUrl;
+    _pendingDataUrl = null;
+    _previewRotation = 0;
+    _restoreImageModal();
+    closeSheet('foto-confirm-modal');
+    await subirFotoConfirmada(dataUrl, Object.keys(metaExtra).length ? metaExtra : undefined);
+    return;
+  }
   getRotatedDataUrl(_pendingDataUrl, _previewRotation, async (dataUrl) => {
     _pendingDataUrl = null;
     _previewRotation = 0;
+    _restoreImageModal();
     closeSheet('foto-confirm-modal');
     if (_pendingSource === 'ocr') {
       ocrDataUrl = dataUrl;
@@ -4683,6 +4779,26 @@ function closeSheet(id) { const el=document.getElementById(id); el.classList.rem
 function verFotoFull(url) {
   const ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none';
+
+  // PDF: mostrar placeholder con botón para abrir en nueva pestaña
+  const isPdfUrl = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
+  if (isPdfUrl) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;color:#fff;font-family:"DM Mono",monospace';
+    wrap.innerHTML = '<span style="font-size:64px">📄</span><span style="font-size:13px;opacity:.7;letter-spacing:.06em">DOCUMENTO PDF</span>';
+    const btnOpen = document.createElement('a');
+    btnOpen.href = url;
+    btnOpen.target = '_blank';
+    btnOpen.rel = 'noopener';
+    btnOpen.textContent = 'Abrir PDF ↗';
+    btnOpen.style.cssText = 'background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:10px;padding:10px 22px;font-family:"DM Mono",monospace;font-size:12px;cursor:pointer;text-decoration:none;letter-spacing:.06em';
+    wrap.appendChild(btnOpen);
+    ov.appendChild(wrap);
+    ov.onclick = e => { if (e.target === ov) document.body.removeChild(ov); };
+    document.body.appendChild(ov);
+    return;
+  }
+
   const img = document.createElement('img');
   img.src = url;
   let viewRotation = 0;
@@ -5052,6 +5168,7 @@ Object.assign(window, {
   guardarMetaLocalDoc, filtrarColabListLocal, borrarFotoLocal,
   eliminarContenidoCarpetaLocal, abrirReemplazoLocal,
   filtrarFotoConfirmColab,
+  mostrarPDFPrevio, _restoreImageModal,
 });
 
 </script>

@@ -120,23 +120,37 @@
   </div>
 </div>
 
-<!-- ═══ OVERLAY REGISTRO FACIAL (PRIMER USO) ════════════════════════════ -->
+<!-- ═══ OVERLAY REGISTRO FACIAL (MULTI-ÁNGULO) ════════════════════════════ -->
 <div id="register-face-overlay" class="hidden">
   <p class="text-emerald-300 font-semibold text-sm uppercase tracking-widest">Registrar cara</p>
   <p id="reg-name-label" class="text-slate-300 text-sm"></p>
+
+  <!-- Indicador de tomas: 4 círculos -->
+  <div class="flex gap-2 items-center">
+    <div id="reg-dot-0" class="w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"></div>
+    <div id="reg-dot-1" class="w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"></div>
+    <div id="reg-dot-2" class="w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"></div>
+    <div id="reg-dot-3" class="w-3 h-3 rounded-full bg-slate-600 transition-all duration-300"></div>
+  </div>
+
   <div class="relative w-full max-w-[340px]">
     <video id="reg-video" autoplay playsinline muted></video>
     <canvas id="reg-canvas" class="absolute inset-0 w-full h-full pointer-events-none rounded-xl"></canvas>
     <!-- Guía visual para centrar cara -->
     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div class="w-48 h-56 border-2 border-dashed border-emerald-400/50 rounded-full"></div>
+      <div id="reg-oval-guide" class="w-48 h-56 border-2 border-dashed border-emerald-400/50 rounded-full transition-all duration-500"></div>
     </div>
+    <!-- Flash de captura -->
+    <div id="reg-flash" class="absolute inset-0 bg-white rounded-xl opacity-0 pointer-events-none transition-opacity duration-100"></div>
   </div>
+
   <p id="reg-status" class="text-slate-400 text-xs text-center max-w-[300px] min-h-[1.5rem]">Centrá tu cara en el óvalo</p>
+  <p id="reg-angle-hint" class="text-emerald-400 text-sm font-semibold text-center min-h-[1.5rem]"></p>
+
   <div class="flex gap-3">
     <button id="reg-capture-btn" onclick="captureDescriptor()" disabled
       class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
-      <i class="fa-solid fa-camera mr-2"></i>Registrar cara
+      <i class="fa-solid fa-camera mr-2"></i><span id="reg-capture-label">Tomar foto 1/4</span>
     </button>
     <button onclick="closeRegisterFaceOverlay()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors">
       Cancelar
@@ -516,10 +530,15 @@ async function loadKnownFaces() {
     knownFaces = [];
     snap.docs.forEach(d => {
       const s = d.data();
-      if (s.faceDescriptor) {
-        // Reconvertir array → Float32Array
-        const desc = new Float32Array(Object.values(s.faceDescriptor));
-        knownFaces.push({ dni: s.dni, name: s.name, venueName: s.venueName, venueId: s.venueId, descriptor: desc });
+      // Soporte para múltiples descriptores (faceDescriptors[]) y descriptor único legacy (faceDescriptor)
+      let descriptors = [];
+      if (s.faceDescriptors && Array.isArray(s.faceDescriptors) && s.faceDescriptors.length > 0) {
+        descriptors = s.faceDescriptors.map(raw => new Float32Array(Object.values(raw)));
+      } else if (s.faceDescriptor) {
+        descriptors = [new Float32Array(Object.values(s.faceDescriptor))];
+      }
+      if (descriptors.length > 0) {
+        knownFaces.push({ dni: s.dni, name: s.name, venueName: s.venueName, venueId: s.venueId, descriptors });
       }
     });
   } catch (e) { /* silencio */ }
@@ -601,7 +620,7 @@ async function tickFaceScan() {
 
     if (knownFaces.length > 0) {
       const labeledDescriptors = knownFaces.map(f =>
-        new faceapi.LabeledFaceDescriptors(f.dni, [f.descriptor])
+        new faceapi.LabeledFaceDescriptors(f.dni, f.descriptors)
       );
       const matcher   = new faceapi.FaceMatcher(labeledDescriptors, MATCH_THRESHOLD);
       const bestMatch = matcher.findBestMatch(detections[0].descriptor);
@@ -800,25 +819,52 @@ async function showRecentPunches() {
   } catch (e) { /* silencio */ }
 }
 
-// ── REGISTRO DE CARA (desde panel admin o primer uso) ────────────────────
+// ── REGISTRO DE CARA (multi-ángulo) ─────────────────────────────────────
 let regTargetDni  = null;
 let regTargetName = null;
+let regCapturedDescriptors = []; // descriptores capturados en esta sesión
+
+const REG_ANGLES = [
+  { hint: '📷 Mirá directo a la cámara',          guide: 'border-emerald-400/60' },
+  { hint: '↙️ Girá levemente hacia la izquierda',  guide: 'border-sky-400/60'     },
+  { hint: '↘️ Girá levemente hacia la derecha',    guide: 'border-violet-400/60'  },
+  { hint: '🔆 Levantá un poco el mentón',          guide: 'border-amber-400/60'   },
+];
+
+function updateRegUI() {
+  const step = regCapturedDescriptors.length;
+  document.getElementById('reg-capture-label').textContent = `Tomar foto ${step + 1}/4`;
+  document.getElementById('reg-angle-hint').textContent = step < REG_ANGLES.length ? REG_ANGLES[step].hint : '';
+  // Dots
+  REG_ANGLES.forEach((_, i) => {
+    const dot = document.getElementById(`reg-dot-${i}`);
+    if (i < step)      dot.className = 'w-3 h-3 rounded-full bg-emerald-400 transition-all duration-300';
+    else if (i === step) dot.className = 'w-3 h-3 rounded-full bg-emerald-400/40 ring-2 ring-emerald-400 transition-all duration-300';
+    else                dot.className = 'w-3 h-3 rounded-full bg-slate-600 transition-all duration-300';
+  });
+  // Óvalo de color según ángulo
+  const oval = document.getElementById('reg-oval-guide');
+  const colorClass = REG_ANGLES[Math.min(step, REG_ANGLES.length - 1)].guide;
+  oval.className = `w-48 h-56 border-2 border-dashed ${colorClass} rounded-full transition-all duration-500`;
+}
 
 window.openRegisterFace = async function(dni, name) {
   if (!modelsLoaded) { showToast("Modelos aún cargando.", "warning"); return; }
   regTargetDni  = dni;
   regTargetName = name;
+  regCapturedDescriptors = [];
   document.getElementById('reg-name-label').textContent = `Registrando cara de: ${name}`;
   document.getElementById('reg-status').textContent = 'Centrá tu cara en el óvalo';
   document.getElementById('reg-capture-btn').disabled = true;
   document.getElementById('register-face-overlay').classList.remove('hidden');
+  updateRegUI();
   await startRegCamera();
 };
 
 window.closeRegisterFaceOverlay = function() {
   stopRegCamera();
   document.getElementById('register-face-overlay').classList.add('hidden');
-  regTargetDni = null; regTargetName = null;
+  regTargetDni = null; regTargetName = null; regCapturedDescriptors = [];
 };
 
 async function startRegCamera() {
@@ -859,7 +905,10 @@ async function tickRegDetect() {
   if (detection) {
     const resized = faceapi.resizeResults(detection, { width: video.videoWidth, height: video.videoHeight });
     faceapi.draw.drawDetections(canvas, [resized]);
-    document.getElementById('reg-status').textContent = '✅ Cara detectada — listo para registrar';
+    const step = regCapturedDescriptors.length;
+    document.getElementById('reg-status').textContent = step === 0
+      ? '✅ Cara detectada — tomá la foto cuando estés listo'
+      : `✅ Cara detectada — foto ${step + 1} de 4`;
     document.getElementById('reg-capture-btn').disabled = false;
     window._lastRegDescriptor = detection.descriptor;
   } else {
@@ -875,54 +924,68 @@ window.captureDescriptor = async function() {
   if (!window._lastRegDescriptor || !regTargetDni) return;
   const btn    = document.getElementById('reg-capture-btn');
   const status = document.getElementById('reg-status');
-
-  // Capturar N descriptores y promediarlos para mayor robustez
-  const SAMPLES   = 5;
-  const collected = [];
   btn.disabled = true;
 
-  for (let i = 0; i < SAMPLES; i++) {
-    status.textContent = `Capturando muestra ${i + 1} de ${SAMPLES}... Mantené la posición.`;
-    await new Promise(r => setTimeout(r, 350)); // pequeña pausa entre frames
+  // Flash visual de captura
+  const flash = document.getElementById('reg-flash');
+  flash.style.opacity = '0.7';
+  setTimeout(() => { flash.style.opacity = '0'; }, 120);
 
-    const video = document.getElementById('reg-video');
+  // Capturar 3 muestras rápidas de este ángulo y promediarlas
+  const video = document.getElementById('reg-video');
+  const samples = [];
+  for (let i = 0; i < 3; i++) {
+    await new Promise(r => setTimeout(r, 200));
     const det = await faceapi
       .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
       .withFaceLandmarks(true)
       .withFaceDescriptor();
-
-    if (det) {
-      collected.push(det.descriptor);
-    } else {
-      i--; // reintentar si no detectó cara en este frame
-      if (collected.length + (SAMPLES - i) < SAMPLES) {
-        status.textContent = 'No se detectó cara. Reposicioná el rostro.';
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
+    if (det) samples.push(det.descriptor);
   }
+  // Incluir el descriptor del momento del click también
+  samples.push(window._lastRegDescriptor);
 
-  if (collected.length < 3) {
-    status.textContent = 'No se pudo capturar suficientes muestras. Intentá de nuevo.';
+  if (samples.length === 0) {
+    status.textContent = 'No se detectó cara. Intentá de nuevo.';
     btn.disabled = false;
     return;
   }
 
-  // Promediar todos los descriptores capturados (128 dimensiones)
-  status.textContent = 'Procesando...';
-  const avgDescriptor = new Float32Array(128);
-  collected.forEach(d => { for (let j = 0; j < 128; j++) avgDescriptor[j] += d[j]; });
-  for (let j = 0; j < 128; j++) avgDescriptor[j] /= collected.length;
+  // Promediar muestras de este ángulo
+  const avg = new Float32Array(128);
+  samples.forEach(d => { for (let j = 0; j < 128; j++) avg[j] += d[j]; });
+  for (let j = 0; j < 128; j++) avg[j] /= samples.length;
 
+  regCapturedDescriptors.push(avg);
+  updateRegUI();
+
+  if (regCapturedDescriptors.length < 4) {
+    // Todavía faltan ángulos
+    status.textContent = `✅ Foto ${regCapturedDescriptors.length} guardada. Ahora ${REG_ANGLES[regCapturedDescriptors.length].hint.toLowerCase()}`;
+    btn.disabled = true; // se reactiva cuando detecte cara de nuevo
+    return;
+  }
+
+  // Las 4 tomas completadas → guardar en Firestore
+  status.textContent = 'Guardando...';
   try {
-    const serialized = Object.fromEntries([...avgDescriptor].map((v, i) => [i, v]));
-    await setDoc(doc(db, "staff", regTargetDni), { faceDescriptor: serialized }, { merge: true });
+    const serialized = regCapturedDescriptors.map(desc =>
+      Object.fromEntries([...desc].map((v, i) => [i, v]))
+    );
+    await setDoc(doc(db, "staff", regTargetDni), {
+      faceDescriptors: serialized,
+      faceDescriptor:  null   // limpiar campo legacy si existía
+    }, { merge: true });
     stopRegCamera();
     document.getElementById('register-face-overlay').classList.add('hidden');
-    showToast(`Cara de ${regTargetName} registrada con ${collected.length} muestras.`, "success");
+    showToast(`Cara de ${regTargetName} registrada con 4 ángulos. 🎉`, "success");
+    regCapturedDescriptors = [];
     await loadKnownFaces();
     await loadStaff();
-  } catch (e) { showToast("Error al guardar la cara. Revisá tu conexión.", "error"); btn.disabled = false; }
+  } catch (e) {
+    showToast("Error al guardar la cara. Revisá tu conexión.", "error");
+    btn.disabled = false;
+  }
 };
 
 // ── CARGA DE LOCALES ──────────────────────────────────────────────────────

@@ -505,7 +505,7 @@ function startClock() {
 // ── CARGAR MODELOS FACE-API ───────────────────────────────────────────────
 async function loadModels() {
   const statusEl = document.getElementById('model-status-text');
-  const modelUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+  const modelUrl = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
   try {
     statusEl.textContent = 'Descargando modelos de IA facial...';
     await Promise.all([
@@ -750,7 +750,7 @@ async function lookupFallbackDNI(dni) {
     document.getElementById('fallback-result').classList.remove('hidden');
     document.getElementById('fallback-punch-buttons').classList.remove('hidden');
     // Si no tiene cara registrada, mostrar opción de registrar
-    if (!s.faceDescriptor) {
+    if (!s.faceDescriptor && !s.faceDescriptors?.length) {
       showToast(`${s.name} no tiene cara registrada. Podés registrarla desde el panel de colaboradores.`, "info", 5000);
     }
   } catch (e) { showToast("Error al buscar DNI.", "error"); }
@@ -1074,10 +1074,11 @@ function renderStaffTable() {
     return;
   }
   tbody.innerHTML = allStaff.map(s => {
-    const hasFace = !!s.faceDescriptor;
+    const hasFace = !!(s.faceDescriptors?.length || s.faceDescriptor);
+    const faceCount = s.faceDescriptors?.length || (s.faceDescriptor ? 1 : 0);
     const faceBadge = hasFace
       ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
-           <i class="fa-solid fa-face-smile"></i>Registrada
+           <i class="fa-solid fa-face-smile"></i>Registrada${faceCount > 1 ? ` (${faceCount} ángulos)` : ''}
          </span>
          <button onclick="openRegisterFace('${s.dni}','${s.name.replace(/'/g,"\\'")}'); event.stopPropagation()"
            class="ml-1 text-[10px] text-amber-400/60 hover:text-amber-400 cursor-pointer" title="Actualizar cara">
@@ -1231,6 +1232,7 @@ window.clearRecords = async function() {
     await batch.commit();
     allLogs = [];
     renderAdminTable([]);
+    document.getElementById('filter-count').textContent = '0 registros en total';
     showToast("Historial eliminado.", "success");
   } catch (e) { showToast("Error.", "error"); }
 };
@@ -1287,11 +1289,9 @@ window.loadHours = async function() {
   try {
     const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp","asc")));
     const allL = snap.docs.map(d => d.data());
-    const toPlus1 = new Date(to + 'T12:00:00'); toPlus1.setDate(toPlus1.getDate() + 1);
-    const toPlus1Str = toPlus1.toISOString().slice(0,10);
     const filtered = allL.filter(l => {
       const ds = (l.timestamp || '').slice(0,10);
-      if (ds < from || ds > toPlus1Str) return false;
+      if (ds < from || ds > to) return false;
       if (staff && l.dni !== staff) return false;
       if (venue && l.venueId !== venue) return false;
       return true;

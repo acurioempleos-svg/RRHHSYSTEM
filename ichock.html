@@ -3,36 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proyecto Andino RRHH - Control de Asistencia</title>
+  <title>iCheck — Reconocimiento Facial</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- face-api.js para reconocimiento facial en el navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
   <style>
     @media print {
       body { background-color: white !important; }
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
-      #print-area {
-        position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-        display: flex; flex-direction: column; justify-content: center; align-items: center;
-      }
-      #print-title { visibility: visible; color: black; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
-      #print-venue-name { visibility: visible; color: #444; text-align: center; font-size: 16px; margin-bottom: 16px; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     }
-    #toast-container {
-      position: fixed; top: 1rem; right: 1rem; z-index: 9999;
-      display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;
-    }
-    .toast {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.75rem 1rem; border-radius: 0.75rem;
-      font-size: 0.875rem; font-weight: 500;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      animation: slideIn 0.3s ease-out forwards;
-      pointer-events: auto; min-width: 240px; max-width: 320px;
-    }
+    #toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none; }
+    .toast { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slideIn 0.3s ease-out forwards; pointer-events: auto; min-width: 240px; max-width: 320px; }
     .toast.hide { animation: slideOut 0.3s ease-in forwards; }
     .toast-success { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
     .toast-error   { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
@@ -41,266 +27,270 @@
     @keyframes slideIn  { from { opacity:0; transform: translateX(40px); } to { opacity:1; transform: translateX(0); } }
     @keyframes slideOut { from { opacity:1; transform: translateX(0); } to { opacity:0; transform: translateX(40px); } }
     #clock-display { font-variant-numeric: tabular-nums; }
-    #punch-confirm {
-      position: fixed; inset: 0; background: rgba(15,23,42,0.92);
-      flex-direction: column; align-items: center; justify-content: center;
-      z-index: 8888; gap: 1rem;
-    }
+    #punch-confirm { position: fixed; inset: 0; background: rgba(15,23,42,0.92); flex-direction: column; align-items: center; justify-content: center; z-index: 8888; gap: 1rem; }
     #punch-confirm:not(.hidden) { display: flex; }
-    #scanner-overlay {
-      position: fixed; inset: 0; background: rgba(2,6,23,0.97);
-      flex-direction: column; align-items: center; justify-content: center;
-      z-index: 8000; gap: 1rem;
-    }
-    #scanner-overlay:not(.hidden) { display: flex; }
-    #scanner-video { width: 100%; max-width: 340px; border-radius: 1rem; border: 2px solid #6366f1; }
-    #scanner-canvas { display: none; }
-    .scan-frame { position: relative; width: 100%; max-width: 340px; }
-    .scan-line {
-      position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: #6366f1; box-shadow: 0 0 8px #6366f1;
-      animation: scanMove 2s linear infinite;
-    }
-    @keyframes scanMove { 0% { top: 0%; } 100% { top: 100%; } }
+
+    /* ── FACE SCANNER ─────────────────────────────────────────────── */
+    #face-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.97); flex-direction: column; align-items: center; justify-content: center; z-index: 8000; gap: 0.75rem; }
+    #face-overlay:not(.hidden) { display: flex; }
+    #face-video { width: 100%; max-width: 360px; border-radius: 1rem; border: 2px solid #6366f1; display: block; }
+    #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; border-radius: 1rem; }
+    .face-frame { position: relative; width: 100%; max-width: 360px; }
+    /* Overlay de resultado post-reconocimiento */
+    #face-result-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); border-radius: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; }
+    /* Pulso de escaneo */
+    .face-scan-ring { position: absolute; inset: 15%; border: 2px solid rgba(99,102,241,0.4); border-radius: 50%; animation: pulseScan 2s ease-in-out infinite; }
+    @keyframes pulseScan { 0%,100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.05); opacity: 0.9; } }
+
+    /* ── REGISTRO FACIAL ──────────────────────────────────────────── */
+    #register-face-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.97); flex-direction: column; align-items: center; justify-content: center; z-index: 8100; gap: 0.75rem; }
+    #register-face-overlay:not(.hidden) { display: flex; }
+    #reg-video { width: 100%; max-width: 340px; border-radius: 1rem; border: 2px solid #10b981; display: block; }
+
     /* Tabs */
-    .admin-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem 0.5rem 0 0; font-size: 0.75rem; font-weight: 600; transition: all 0.15s; }
+    .admin-tab { cursor: pointer; padding: 0.5rem 0.6rem; border-radius: 0.5rem 0.5rem 0 0; font-size: 0.7rem; font-weight: 600; transition: all 0.15s; }
+    @media (min-width: 480px) { .admin-tab { padding: 0.5rem 1rem; font-size: 0.75rem; } }
     .admin-tab.active { background: #312e81; color: #a5b4fc; border-bottom: 2px solid #6366f1; }
     .admin-tab:not(.active) { color: #64748b; }
     .admin-tab:not(.active):hover { color: #94a3b8; background: #1e293b; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
-    /* Tabla colaboradores */
     .collab-row:hover { background: rgba(99,102,241,0.07); }
-    /* QR card locales */
-    .venue-qr-card { background: #0f172a; border: 1px solid #334155; border-radius: 0.75rem; padding: 1rem; }
-    .venue-qr-card.selected { border-color: #6366f1; }
+
+    /* Badge manual_dni en tabla de registros */
+    .badge-manual { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen p-4 flex flex-col items-center">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center overflow-x-hidden">
 
 <div id="toast-container"></div>
 
-<!-- Overlay post-fichaje -->
+<!-- ═══ OVERLAY FICHAJE CONFIRMADO ══════════════════════════════════════ -->
 <div id="punch-confirm" class="hidden">
-  <div id="pc-icon" class="text-6xl mb-2"></div>
+  <div id="pc-avatar" class="w-24 h-24 rounded-full border-4 border-indigo-500 overflow-hidden bg-slate-700 flex items-center justify-center mb-1">
+    <i class="fa-solid fa-user text-4xl text-slate-500"></i>
+  </div>
+  <div id="pc-icon" class="text-5xl mb-1"></div>
   <div id="pc-type" class="text-3xl font-black"></div>
   <div id="pc-name" class="text-xl text-slate-300"></div>
   <div id="pc-venue" class="text-sm text-indigo-300 mt-1 font-medium"></div>
   <div id="pc-time" class="text-2xl font-mono text-indigo-300 mt-1"></div>
-  <p class="text-slate-500 text-sm mt-4">Cerrando en <span id="pc-countdown">5</span>s...</p>
+  <p class="text-slate-600 text-xs mt-3">Tocá para cerrar</p>
 </div>
 
-<!-- Overlay escáner QR -->
-<div id="scanner-overlay" class="hidden">
-  <p class="text-indigo-300 font-semibold text-sm uppercase tracking-widest mb-1">Escaneá el QR del local</p>
-  <div class="scan-frame">
-    <video id="scanner-video" autoplay playsinline muted></video>
-    <div class="scan-line"></div>
+<!-- ═══ OVERLAY ESCÁNER FACIAL (MODO KIOSKO) ════════════════════════════ -->
+<div id="face-overlay" class="hidden">
+  <p class="text-indigo-300 font-semibold text-xs uppercase tracking-widest">Mirá a la cámara</p>
+
+  <div class="face-frame">
+    <video id="face-video" autoplay playsinline muted></video>
+    <canvas id="face-canvas"></canvas>
+    <div class="face-scan-ring"></div>
+    <!-- Resultado overlay (aparece tras reconocer) -->
+    <div id="face-result-overlay" class="hidden">
+      <div id="fr-icon" class="text-5xl"></div>
+      <p id="fr-name" class="text-white font-bold text-xl"></p>
+      <p id="fr-conf" class="text-slate-400 text-xs"></p>
+    </div>
   </div>
-  <canvas id="scanner-canvas"></canvas>
-  <p id="scanner-status" class="text-slate-400 text-xs mt-2 min-h-[1.5rem]"></p>
-  <button onclick="closeScannerOverlay()" class="mt-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-5 py-2 rounded-lg text-sm cursor-pointer transition-colors">
-    <i class="fa-solid fa-xmark mr-2"></i>Cancelar
-  </button>
+
+  <p id="face-status" class="text-slate-400 text-xs text-center max-w-[320px] min-h-[1.5rem]">Iniciando cámara...</p>
+
+  <!-- Botones entrada/salida: aparecen tras reconocer -->
+  <div id="face-punch-buttons" class="hidden grid grid-cols-2 gap-4 w-full max-w-[340px]">
+    <button id="face-btn-entrada" onclick="submitFacePunch('ENTRADA')"
+      class="bg-emerald-600 active:bg-emerald-700 text-white py-6 rounded-2xl flex flex-col items-center gap-2 cursor-pointer shadow-lg select-none">
+      <i class="fa-solid fa-right-to-bracket text-3xl"></i>
+      <span class="font-bold">Entrada</span>
+    </button>
+    <button id="face-btn-salida" onclick="submitFacePunch('SALIDA')"
+      class="bg-rose-600 active:bg-rose-700 text-white py-6 rounded-2xl flex flex-col items-center gap-2 cursor-pointer shadow-lg select-none">
+      <i class="fa-solid fa-right-from-bracket text-3xl"></i>
+      <span class="font-bold">Salida</span>
+    </button>
+  </div>
+
+  <div class="flex gap-3 mt-1">
+    <button onclick="closeFaceOverlay()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-5 py-2 rounded-lg text-sm cursor-pointer transition-colors">
+      <i class="fa-solid fa-xmark mr-2"></i>Cancelar
+    </button>
+    <button onclick="fallbackToDNI()" class="bg-amber-900/60 hover:bg-amber-800/60 text-amber-300 px-4 py-2 rounded-lg text-xs cursor-pointer transition-colors border border-amber-700/40">
+      <i class="fa-solid fa-id-card mr-1"></i>Usar DNI
+    </button>
+  </div>
 </div>
 
-<div class="w-full max-w-2xl flex justify-end mb-2">
+<!-- ═══ OVERLAY REGISTRO FACIAL (PRIMER USO) ════════════════════════════ -->
+<div id="register-face-overlay" class="hidden">
+  <p class="text-emerald-300 font-semibold text-sm uppercase tracking-widest">Registrar cara</p>
+  <p id="reg-name-label" class="text-slate-300 text-sm"></p>
+  <div class="relative w-full max-w-[340px]">
+    <video id="reg-video" autoplay playsinline muted></video>
+    <canvas id="reg-canvas" class="absolute inset-0 w-full h-full pointer-events-none rounded-xl"></canvas>
+    <!-- Guía visual para centrar cara -->
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div class="w-48 h-56 border-2 border-dashed border-emerald-400/50 rounded-full"></div>
+    </div>
+  </div>
+  <p id="reg-status" class="text-slate-400 text-xs text-center max-w-[300px] min-h-[1.5rem]">Centrá tu cara en el óvalo</p>
+  <div class="flex gap-3">
+    <button id="reg-capture-btn" onclick="captureDescriptor()" disabled
+      class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
+      <i class="fa-solid fa-camera mr-2"></i>Registrar cara
+    </button>
+    <button onclick="closeRegisterFaceOverlay()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer transition-colors">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- ═══ ACCESO RRHH ═══════════════════════════════════════════════════════ -->
+<div class="w-full max-w-2xl flex justify-end pt-3 pr-3">
   <button onclick="requestAdminAccess()" class="text-slate-500 hover:text-indigo-400 transition-colors text-sm flex items-center gap-2 cursor-pointer">
     <i class="fa-solid fa-user-shield"></i> Acceso RRHH
   </button>
 </div>
 
-<!-- VISTA EMPLEADO -->
-<main id="employee-view" class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700 transition-all">
-  <header class="text-center mb-6">
-    <div class="inline-flex p-3 bg-indigo-600/20 text-indigo-400 rounded-full mb-3 text-2xl">
-      <i class="fa-solid fa-fingerprint"></i>
-    </div>
-    <h1 class="text-xl font-bold tracking-tight">Proyecto Andino RRHH</h1>
-    <p class="text-xs text-slate-400 mt-1">Terminal de Asistencia</p>
-    <div id="clock-display" class="mt-3 text-3xl font-mono font-bold text-indigo-300 tracking-widest">--:--:--</div>
-    <div id="date-display" class="text-xs text-slate-500 mt-1"></div>
+<!-- ═══ VISTA KIOSKO (TABLET GERENCIA) ══════════════════════════════════ -->
+<main id="kiosk-view" class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden mx-3 mb-4">
+  <!-- Header: reloj -->
+  <header class="px-5 pt-5 pb-3 text-center">
+    <div id="clock-display" class="text-3xl font-mono font-bold text-indigo-300 tracking-widest">--:--:--</div>
+    <div id="date-display" class="text-xs text-slate-500 mt-0.5 capitalize"></div>
   </header>
 
-  <div id="status-card" class="mb-5 p-3 rounded-lg text-sm flex items-center gap-3 bg-slate-700 text-slate-300">
-    <i id="status-icon" class="fa-solid fa-spinner animate-spin"></i>
-    <span id="status-text">Inicializando seguridad...</span>
+  <!-- Status carga modelos -->
+  <div id="model-status" class="mx-4 mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2 bg-slate-700/80 text-amber-300">
+    <i class="fa-solid fa-spinner animate-spin shrink-0"></i>
+    <span id="model-status-text">Cargando modelos de reconocimiento facial...</span>
   </div>
 
-  <!-- Registro de dispositivo -->
-  <section id="view-register" class="hidden space-y-4">
-    <p class="text-xs text-slate-400 text-center">Ingresá tu DNI para vincular este dispositivo. Tu nombre se cargará automáticamente desde la planilla.</p>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">DNI</label>
-      <input type="text" id="emp-dni" placeholder="Ej. 30123456" maxlength="10"
-        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white">
+  <!-- Pantalla principal: botón escanear -->
+  <section id="view-kiosk-ready" class="hidden px-5 pb-6 space-y-4">
+    <div class="text-center mb-2">
+      <p class="text-slate-400 text-xs">Acercate a la cámara para fichar</p>
     </div>
-    <div id="lookup-result" class="hidden p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-sm">
-      <p class="text-indigo-300 font-medium" id="lookup-name"></p>
-      <p class="text-slate-400 text-xs mt-0.5" id="lookup-venue"></p>
+
+    <button id="btn-start-scan" onclick="openFaceOverlay()"
+      class="w-full bg-indigo-600 active:bg-indigo-700 text-white py-10 rounded-2xl flex flex-col items-center gap-3 transition-all cursor-pointer shadow-lg shadow-indigo-600/30 select-none">
+      <i class="fa-solid fa-face-smile text-5xl"></i>
+      <span class="font-bold text-xl">Reconocimiento Facial</span>
+      <span class="text-xs text-indigo-300">Tocá para iniciar</span>
+    </button>
+
+    <!-- Últimos fichajes del día -->
+    <div id="recent-punches" class="space-y-2">
+      <p class="text-xs text-slate-500 uppercase tracking-widest">Últimos fichajes</p>
+      <div id="recent-list" class="space-y-1.5 max-h-48 overflow-y-auto">
+        <p class="text-slate-600 text-xs">Sin fichajes aún hoy.</p>
+      </div>
     </div>
-    <button onclick="lookupDNI()"
-      class="w-full bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg text-sm transition-all cursor-pointer">
-      <i class="fa-solid fa-magnifying-glass mr-2"></i>Buscar en planilla
-    </button>
-    <button onclick="registerDevice()" id="btn-register" disabled
-      class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-all shadow-lg shadow-indigo-600/20 cursor-pointer">
-      Vincular este dispositivo
-    </button>
   </section>
 
-  <!-- Panel de fichaje -->
-  <section id="view-punch" class="hidden space-y-6 text-center">
-    <div>
-      <p class="text-xs text-slate-400 uppercase">Bienvenido/a</p>
-      <h2 id="welcome-name" class="text-2xl font-black text-indigo-400 mt-0.5">Cargando...</h2>
-      <p id="welcome-venue" class="text-xs text-emerald-400 mt-1 font-medium flex items-center justify-center gap-1.5">
-        <i class="fa-solid fa-store"></i><span></span>
-      </p>
-      <p id="last-punch-info" class="text-xs text-slate-500 mt-1"></p>
+  <!-- Pantalla de DNI fallback -->
+  <section id="view-dni-fallback" class="hidden px-5 pb-5 space-y-4">
+    <div class="flex items-center gap-2 mb-1">
+      <button onclick="backToKiosk()" class="text-slate-500 hover:text-slate-300 cursor-pointer">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <p class="text-amber-300 text-sm font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Ingreso por DNI — requiere revisión</p>
     </div>
-    <button id="btn-scan" onclick="openScannerOverlay()"
-      class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg shadow-indigo-600/30">
-      <i class="fa-solid fa-qrcode text-3xl"></i>
-      <span class="font-bold">Escanear QR del local</span>
-      <span class="text-xs text-indigo-200 font-normal">Apuntá la cámara al cartel de la entrada</span>
-    </button>
-    <div id="punch-type-selector" class="hidden grid grid-cols-2 gap-4">
-      <button id="btn-entrada" onclick="submitPunch('ENTRADA')"
-        class="bg-emerald-600 hover:bg-emerald-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg">
+    <p class="text-xs text-slate-400">El reconocimiento facial no funcionó. Ingresá tu DNI para fichar, pero este registro quedará marcado para revisión de RRHH.</p>
+    <div>
+      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">DNI</label>
+      <input type="text" id="fallback-dni" placeholder="Ej. 30123456" maxlength="10" inputmode="numeric"
+        oninput="onFallbackDniInput()"
+        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-amber-500 text-white">
+    </div>
+    <div id="fallback-result" class="hidden p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-sm">
+      <p class="text-amber-300 font-medium" id="fallback-name"></p>
+      <p class="text-slate-400 text-xs mt-0.5" id="fallback-venue"></p>
+    </div>
+    <div id="fallback-punch-buttons" class="hidden grid grid-cols-2 gap-3">
+      <button onclick="submitDNIFallback('ENTRADA')"
+        class="bg-emerald-700 active:bg-emerald-600 text-white py-5 rounded-2xl flex flex-col items-center gap-2 cursor-pointer">
         <i class="fa-solid fa-right-to-bracket text-2xl"></i>
         <span class="font-bold text-sm">Entrada</span>
       </button>
-      <button id="btn-salida" onclick="submitPunch('SALIDA')"
-        class="bg-rose-600 hover:bg-rose-500 text-white p-5 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer shadow-lg">
+      <button onclick="submitDNIFallback('SALIDA')"
+        class="bg-rose-700 active:bg-rose-600 text-white py-5 rounded-2xl flex flex-col items-center gap-2 cursor-pointer">
         <i class="fa-solid fa-right-from-bracket text-2xl"></i>
         <span class="font-bold text-sm">Salida</span>
       </button>
     </div>
-    <p id="qr-verified-badge" class="hidden text-xs text-emerald-400 flex items-center justify-center gap-2">
-      <i class="fa-solid fa-circle-check"></i> QR verificado — elegí tu acción
-    </p>
   </section>
 </main>
 
-<!-- PANEL ADMIN -->
-<main id="admin-view" class="hidden max-w-3xl w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700">
+<!-- ═══ PANEL ADMIN ══════════════════════════════════════════════════════ -->
+<main id="admin-view" class="hidden max-w-3xl w-full bg-slate-800 rounded-2xl shadow-2xl p-4 sm:p-6 border border-slate-700 box-border mx-3 mb-4">
   <header class="flex justify-between items-center mb-4 border-b border-slate-700 pb-4">
     <div>
-      <h2 class="text-xl font-bold text-indigo-400"><i class="fa-solid fa-building mr-2"></i>Panel RRHH — Multi-local</h2>
-      <p class="text-xs text-slate-400">Gestión de locales, colaboradores y asistencia</p>
+      <h2 class="text-xl font-bold text-indigo-400"><i class="fa-solid fa-building mr-2"></i>Panel RRHH</h2>
+      <p class="text-xs text-slate-400">Locales · Colaboradores · Asistencia · Horas · Turnos</p>
     </div>
     <button onclick="closeAdmin()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors">
       <i class="fa-solid fa-xmark mr-1"></i> Cerrar
     </button>
   </header>
 
-  <!-- TABS -->
-  <div class="flex gap-1 border-b border-slate-700 mb-4">
-    <button class="admin-tab active" onclick="switchTab('tab-venues')" id="taббtn-venues"><i class="fa-solid fa-store mr-1.5"></i>Locales</button>
-    <button class="admin-tab" onclick="switchTab('tab-staff')" id="tabbtn-staff"><i class="fa-solid fa-users mr-1.5"></i>Colaboradores</button>
-    <button class="admin-tab" onclick="switchTab('tab-logs')" id="tabbtn-logs"><i class="fa-solid fa-table-list mr-1.5"></i>Registros</button>
+  <div class="flex gap-1 border-b border-slate-700 mb-4 flex-wrap">
+    <button class="admin-tab active" onclick="switchTab('tab-venues')" id="tabbtn-venues"><i class="fa-solid fa-store mr-1.5"></i>Locales</button>
+    <button class="admin-tab" onclick="switchTab('tab-staff')"  id="tabbtn-staff"><i class="fa-solid fa-users mr-1.5"></i>Colaboradores</button>
+    <button class="admin-tab" onclick="switchTab('tab-logs')"   id="tabbtn-logs"><i class="fa-solid fa-table-list mr-1.5"></i>Registros</button>
+    <button class="admin-tab" onclick="switchTab('tab-hours')"  id="tabbtn-hours"><i class="fa-solid fa-clock mr-1.5"></i>Horas</button>
+    <button class="admin-tab" onclick="switchTab('tab-shifts')" id="tabbtn-shifts"><i class="fa-solid fa-calendar-days mr-1.5"></i>Turnos</button>
   </div>
 
   <!-- TAB: LOCALES -->
   <div id="tab-venues" class="tab-content active">
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest"><i class="fa-solid fa-plus mr-2"></i>Agregar / Editar local</h3>
-    </div>
+    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3"><i class="fa-solid fa-plus mr-2"></i>Agregar / Editar local</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre del local</label>
-        <input type="text" id="venue-name-input" placeholder="Ej. Local Palermo"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Dirección (referencia)</label>
-        <input type="text" id="venue-address-input" placeholder="Ej. Av. Santa Fe 3000"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Latitud</label>
-        <input type="number" id="venue-lat-input" placeholder="-34.60370" step="0.00001"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Longitud</label>
-        <input type="number" id="venue-lng-input" placeholder="-58.38160" step="0.00001"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Radio GPS permitido (m)</label>
-        <input type="number" id="venue-radius-input" placeholder="30" min="10" max="500" value="30"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div class="flex items-end">
-        <button onclick="useCurrentGPS()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors">
-          <i class="fa-solid fa-location-crosshairs mr-1"></i>Usar mi GPS actual
-        </button>
-      </div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre del local</label>
+        <input type="text" id="venue-name-input" placeholder="Ej. Local Palermo" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Dirección</label>
+        <input type="text" id="venue-address-input" placeholder="Ej. Av. Santa Fe 3000" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
     </div>
-    <p class="text-[10px] text-slate-600 mb-3">💡 Lat/lng desde Google Maps: clic derecho → "¿Qué hay aquí?"</p>
     <div class="flex gap-2 mb-5">
-      <button onclick="saveVenue()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
-        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar local
-      </button>
-      <button onclick="clearVenueForm()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors">
-        Limpiar
-      </button>
+      <button onclick="saveVenue()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar local</button>
+      <button onclick="clearVenueForm()" class="bg-slate-700 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer">Limpiar</button>
       <input type="hidden" id="venue-edit-id">
     </div>
-
-    <!-- Lista de locales con QR -->
-    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3"><i class="fa-solid fa-qrcode mr-2"></i>QR por local</h3>
-    <div id="venues-list" class="space-y-3">
+    <div id="venues-list" class="space-y-2">
       <p class="text-slate-500 text-xs">No hay locales cargados aún.</p>
     </div>
   </div>
 
   <!-- TAB: COLABORADORES -->
   <div id="tab-staff" class="tab-content">
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest">Planilla de Colaboradores</h3>
-    </div>
+    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3">Planilla de Colaboradores</h3>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">DNI</label>
-        <input type="text" id="staff-dni" placeholder="30123456" maxlength="10"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre y Apellido</label>
-        <input type="text" id="staff-name" placeholder="Juan Pérez"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      </div>
-      <div>
-        <label class="block text-[10px] text-slate-500 uppercase mb-1">Local asignado</label>
-        <select id="staff-venue"
-          class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-          <option value="">-- Seleccioná un local --</option>
-        </select>
-      </div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">DNI</label>
+        <input type="text" id="staff-dni" placeholder="30123456" maxlength="10" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre y Apellido</label>
+        <input type="text" id="staff-name" placeholder="Juan Pérez" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Local asignado</label>
+        <select id="staff-venue" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          <option value="">-- Seleccioná un local --</option></select></div>
     </div>
-    <div class="flex gap-2 mb-4">
-      <button onclick="saveStaff()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
-        <i class="fa-solid fa-user-plus mr-2"></i>Agregar colaborador
-      </button>
+    <div class="flex gap-2 mb-5">
+      <button onclick="saveStaff()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar</button>
+      <button onclick="clearStaffForm()" class="bg-slate-700 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer">Limpiar</button>
       <input type="hidden" id="staff-edit-id">
     </div>
     <div class="overflow-x-auto rounded-lg border border-slate-700">
-      <table class="w-full text-left text-sm text-slate-300">
-        <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+      <table class="w-full text-left text-xs text-slate-300">
+        <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
           <tr>
-            <th class="px-4 py-3">Nombre</th>
+            <th class="px-4 py-3">Colaborador</th>
             <th class="px-4 py-3">DNI</th>
             <th class="px-4 py-3">Local</th>
-            <th class="px-4 py-3">Dispositivo</th>
+            <th class="px-4 py-3">Cara</th>
             <th class="px-4 py-3 text-right">Acciones</th>
           </tr>
         </thead>
-        <tbody id="staff-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50">
-          <tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores cargados.</td></tr>
-        </tbody>
+        <tbody id="staff-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
       </table>
     </div>
   </div>
@@ -308,27 +298,18 @@
   <!-- TAB: REGISTROS -->
   <div id="tab-logs" class="tab-content">
     <div class="flex flex-wrap gap-2 mb-4">
-      <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer">
-        <i class="fa-solid fa-file-csv mr-2"></i>Descargar CSV
-      </button>
-      <button onclick="clearRecords()" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 px-4 py-2 rounded-lg text-xs transition-all border border-rose-500/30 cursor-pointer">
-        <i class="fa-solid fa-trash mr-2"></i>Limpiar historial
-      </button>
+      <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+        <i class="fa-solid fa-file-excel mr-2"></i>Descargar Excel</button>
+      <button onclick="clearRecords()" class="bg-rose-950/50 text-rose-400 px-4 py-2 rounded-lg text-xs border border-rose-500/30 cursor-pointer">
+        <i class="fa-solid fa-trash mr-2"></i>Limpiar historial</button>
     </div>
     <div class="mb-4 flex flex-col sm:flex-row gap-2">
-      <input type="date" id="filter-date"
-        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
-        onchange="applyFilters()">
-      <input type="text" id="filter-name" placeholder="Filtrar por colaborador..."
-        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1"
-        oninput="applyFilters()">
-      <select id="filter-venue" onchange="applyFilters()"
-        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1">
-        <option value="">Todos los locales</option>
-      </select>
-      <button onclick="clearFilters()" class="bg-slate-700 hover:bg-slate-600 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors whitespace-nowrap">
-        <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Limpiar
-      </button>
+      <input type="date" id="filter-date" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1" onchange="applyFilters()">
+      <input type="text" id="filter-name" placeholder="Filtrar por colaborador..." class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1" oninput="applyFilters()">
+      <select id="filter-venue" onchange="applyFilters()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 flex-1">
+        <option value="">Todos los locales</option></select>
+      <button onclick="clearFilters()" class="bg-slate-700 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer whitespace-nowrap">
+        <i class="fa-solid fa-filter-circle-xmark mr-1"></i>Limpiar</button>
     </div>
     <p id="filter-count" class="text-xs text-slate-500 mb-2"></p>
     <div class="overflow-x-auto rounded-lg border border-slate-700">
@@ -338,6 +319,7 @@
             <th class="px-4 py-3">Colaborador</th>
             <th class="px-4 py-3">DNI</th>
             <th class="px-4 py-3">Local</th>
+            <th class="px-4 py-3">Método</th>
             <th class="px-4 py-3">Acción</th>
             <th class="px-4 py-3">Fecha y Hora</th>
           </tr>
@@ -346,861 +328,1115 @@
       </table>
     </div>
   </div>
-</main>
 
-<!-- Firebase v9 -->
-<script type="module">
-  import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit,
-           getDocs, where, deleteDoc, writeBatch }
-                                     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <!-- TAB: HORAS -->
+  <div id="tab-hours" class="tab-content">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Desde</label>
+        <input type="date" id="hours-date-from" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hasta</label>
+        <input type="date" id="hours-date-to" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Colaborador</label>
+        <select id="hours-filter-staff" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option value="">Todos</option></select></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Local</label>
+        <select id="hours-filter-venue" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option value="">Todos</option></select></div>
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button onclick="loadHours()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+        <i class="fa-solid fa-calculator mr-2"></i>Calcular</button>
+      <button onclick="exportHoursCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs cursor-pointer">
+        <i class="fa-solid fa-file-excel mr-2"></i>Exportar</button>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="bg-slate-900 rounded-xl p-3 text-center"><p class="text-[10px] text-slate-500 uppercase mb-1">Total hs.</p><p id="hours-total" class="text-xl font-bold text-indigo-400">—</p></div>
+      <div class="bg-slate-900 rounded-xl p-3 text-center"><p class="text-[10px] text-slate-500 uppercase mb-1">Días trabajados</p><p id="hours-days" class="text-xl font-bold text-emerald-400">—</p></div>
+      <div class="bg-slate-900 rounded-xl p-3 text-center"><p class="text-[10px] text-slate-500 uppercase mb-1">Promedio/día</p><p id="hours-avg" class="text-xl font-bold text-amber-400">—</p></div>
+    </div>
+    <div class="flex gap-2 mb-3">
+      <button onclick="setHoursView('byCollab')" id="hv-btn-collab" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer">Por colaborador</button>
+      <button onclick="setHoursView('byDay')" id="hv-btn-day" class="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-400 cursor-pointer">Por día</button>
+    </div>
+    <div class="overflow-x-auto rounded-lg border border-slate-700">
+      <table class="w-full text-left text-sm text-slate-300">
+        <thead class="bg-slate-900 text-slate-400 uppercase text-xs" id="hours-thead">
+          <tr>
+            <th class="px-4 py-3">Colaborador</th><th class="px-4 py-3">DNI</th><th class="px-4 py-3">Local</th>
+            <th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Entrada</th><th class="px-4 py-3">Salida</th>
+            <th class="px-4 py-3">Hs. realizadas</th><th class="px-4 py-3 text-indigo-400/80">Turno asig.</th>
+            <th class="px-4 py-3 text-indigo-400/80">Diferencia</th><th class="px-4 py-3">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="hours-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50">
+          <tr><td colspan="10" class="px-4 py-8 text-center text-slate-500">Seleccioná un rango y hacé clic en Calcular.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-  // ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
-  const firebaseConfig = {
-    apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
-    authDomain:        "rrhhsystem.firebaseapp.com",
-    projectId:         "rrhhsystem",
-    storageBucket:     "rrhhsystem.firebasestorage.app",
-    messagingSenderId: "71511125212",
-    appId:             "1:71511125212:web:03a0ad11b281e397a29819"
-  };
-
-  // Colecciones Firestore:
-  // venues/{venueId}          → { name, address, lat, lng, radius, qrToken }
-  // staff/{dni}               → { name, dni, venueId, venueName, addedAt }
-  // attendance_logs/{autoId}  → { name, dni, venueId, venueName, type, timestamp, deviceId }
-  // config/admin              → { pinHash }
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-
-  // ─── ESTADO ─────────────────────────────────────────────────────────────────
-  let deviceFingerprint = "";
-  let userLocation      = null;
-  let allVenues         = [];      // cache de locales
-  let allLogs           = [];
-  let allStaff          = [];
-  let qrVerified        = false;
-  let scannedVenueId    = null;    // venue detectado tras escanear QR
-  let scannerStream     = null;
-  let scannerAnimFrame  = null;
-  let currentEmployee   = null;    // { name, dni, venueId, venueName }
-
-  // ─── INIT ────────────────────────────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', async () => {
-    startClock();
-    await loadVenues();
-    await initFingerprint();
-    initGeolocation();
-  });
-
-  // ─── RELOJ ──────────────────────────────────────────────────────────────────
-  function startClock() {
-    const clockEl = document.getElementById('clock-display');
-    const dateEl  = document.getElementById('date-display');
-    const tick = () => {
-      const now = new Date();
-      clockEl.textContent = now.toLocaleTimeString('es-AR', { hour12: false });
-      dateEl.textContent  = now.toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
-    };
-    tick(); setInterval(tick, 1000);
-  }
-
-  // ─── FINGERPRINT ────────────────────────────────────────────────────────────
-  async function initFingerprint() {
-    try {
-      // Usar ID guardado en localStorage si ya existe
-      let stored = localStorage.getItem('_andino_did');
-      if (stored) { deviceFingerprint = stored; checkDeviceRegistration(); return; }
-
-      // Construir huella con señales del navegador (sin dependencias externas)
-      const signals = [
-        navigator.userAgent,
-        navigator.language,
-        navigator.languages?.join(',') ?? '',
-        String(screen.width) + 'x' + String(screen.height),
-        String(screen.colorDepth),
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        String(navigator.hardwareConcurrency ?? ''),
-        String(navigator.deviceMemory ?? ''),
-        String(navigator.maxTouchPoints ?? ''),
-        navigator.platform ?? '',
-      ].join('||');
-
-      // Hash SHA-256 de las señales del dispositivo
-      const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(signals));
-      const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-
-      // Mezclar con UUID aleatorio para que dos celulares idénticos no colisionen
-      const rand = crypto.randomUUID().replace(/-/g,'');
-      const fp   = hash.slice(0, 32) + rand.slice(0, 32);
-
-      localStorage.setItem('_andino_did', fp);
-      deviceFingerprint = fp;
-      checkDeviceRegistration();
-    } catch (e) {
-      // Fallback: UUID puro guardado en localStorage
-      let fb = localStorage.getItem('_andino_did_fb');
-      if (!fb) {
-        fb = crypto.randomUUID().replace(/-/g,'') + crypto.randomUUID().replace(/-/g,'');
-        localStorage.setItem('_andino_did_fb', fb);
-      }
-      deviceFingerprint = fb;
-      checkDeviceRegistration();
-    }
-  }
-
-  // ─── CARGA DE LOCALES ────────────────────────────────────────────────────────
-  async function loadVenues() {
-    try {
-      const snap = await getDocs(collection(db, "venues"));
-      allVenues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderVenuesList();
-      populateVenueSelects();
-    } catch (e) { /* silencio */ }
-  }
-  window.loadVenues = loadVenues;
-
-  function populateVenueSelects() {
-    // Select en el form de colaboradores
-    const staffSel = document.getElementById('staff-venue');
-    const filterSel = document.getElementById('filter-venue');
-    const savedStaff = staffSel.value;
-    staffSel.innerHTML = '<option value="">-- Seleccioná un local --</option>';
-    filterSel.innerHTML = '<option value="">Todos los locales</option>';
-    allVenues.forEach(v => {
-      staffSel.innerHTML  += `<option value="${v.id}">${v.name}</option>`;
-      filterSel.innerHTML += `<option value="${v.id}">${v.name}</option>`;
-    });
-    if (savedStaff) staffSel.value = savedStaff;
-  }
-
-  function renderVenuesList() {
-    const container = document.getElementById('venues-list');
-    if (!allVenues.length) {
-      container.innerHTML = '<p class="text-slate-500 text-xs">No hay locales cargados aún.</p>';
-      return;
-    }
-    container.innerHTML = allVenues.map(v => `
-      <div class="venue-qr-card" id="venue-card-${v.id}">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-0.5">
-              <i class="fa-solid fa-store text-indigo-400 text-xs"></i>
-              <span class="font-semibold text-slate-200 text-sm">${v.name}</span>
-            </div>
-            ${v.address ? `<p class="text-[11px] text-slate-500 mb-1">${v.address}</p>` : ''}
-            <p class="text-[10px] text-slate-600 font-mono">${v.lat?.toFixed(5) ?? '—'}, ${v.lng?.toFixed(5) ?? '—'} · radio ${v.radius ?? 30}m</p>
-          </div>
-          <div class="flex flex-col items-center gap-2 shrink-0">
-            <div class="bg-white p-1.5 rounded" id="qr-${v.id}"></div>
-            <button onclick="printVenueQR('${v.id}')" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-1 rounded cursor-pointer transition-colors">
-              <i class="fa-solid fa-print mr-1"></i>Imprimir
-            </button>
-          </div>
+  <!-- TAB: TURNOS -->
+  <div id="tab-shifts" class="tab-content">
+    <div class="flex gap-2 mb-4 items-end flex-wrap">
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Modo</label>
+        <select id="shift-mode" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          <option value="week">Vista semanal</option><option value="day">Vista por día</option></select></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Semana / Fecha</label>
+        <input type="date" id="shift-date" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Local</label>
+        <select id="shift-filter-venue" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+          <option value="">Todos los locales</option></select></div>
+      <button onclick="saveAllShifts()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar turnos</button>
+      <button onclick="exportShiftsPDF()" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs cursor-pointer">
+        <i class="fa-solid fa-print mr-2"></i>Imprimir</button>
+    </div>
+    <div id="shift-grid-wrap" class="overflow-x-auto rounded-lg border border-slate-700">
+      <div id="shift-grid" class="min-w-[600px]">
+        <p class="text-slate-500 text-xs px-4 py-6">Seleccioná una fecha para ver la grilla de turnos.</p>
+      </div>
+    </div>
+    <!-- Modal turno -->
+    <div id="shift-modal" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4">
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm p-5 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-indigo-300 text-sm"><i class="fa-solid fa-clock mr-2"></i>Asignar turno</h3>
+          <button onclick="closeShiftModal()" class="text-slate-500 hover:text-slate-300 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="flex gap-2 mt-2">
-          <button onclick="editVenue('${v.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
-            <i class="fa-solid fa-pen-to-square mr-1"></i>Editar
-          </button>
-          <button onclick="deleteVenue('${v.id}')" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer transition-colors">
-            <i class="fa-solid fa-trash mr-1"></i>Eliminar
-          </button>
+        <p id="shift-modal-info" class="text-xs text-slate-400 mb-3"></p>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora entrada</label>
+            <input type="time" id="shift-modal-in" onchange="checkMidnightCross()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
+          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora salida <span id="shift-modal-out-label" class="text-amber-400 normal-case hidden">(día sig.)</span></label>
+            <input type="time" id="shift-modal-out" onchange="checkMidnightCross()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
+        </div>
+        <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Nota (opcional)</label>
+          <input type="text" id="shift-modal-note" placeholder="Ej. Cubrir a Juan, franco, etc." class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="shift-modal-free" onchange="toggleFreeDay()" class="accent-rose-500">
+          <label for="shift-modal-free" class="text-xs text-slate-400 cursor-pointer">Marcar como día libre / franco</label>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="applyShiftModal()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Confirmar</button>
+          <button onclick="clearShiftCell()" class="bg-slate-700 text-slate-400 px-4 py-2 rounded-lg text-sm cursor-pointer">Borrar</button>
         </div>
       </div>
-    `).join('');
-    // Generar QR para cada local
-    allVenues.forEach(v => {
-      if (v.qrToken) {
-        const el = document.getElementById(`qr-${v.id}`);
-        if (el && !el.hasChildNodes()) {
-          new QRCode(el, { text: v.qrToken, width: 80, height: 80, colorDark: "#0f172a", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
-        }
+    </div>
+  </div>
+</main>
+
+<!-- ═══ FIREBASE + LÓGICA ════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit,
+         getDocs, where, deleteDoc, writeBatch }
+                            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ── FIREBASE CONFIG ──────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
+  authDomain:        "rrhhsystem.firebaseapp.com",
+  projectId:         "rrhhsystem",
+  storageBucket:     "rrhhsystem.firebasestorage.app",
+  messagingSenderId: "71511125212",
+  appId:             "1:71511125212:web:03a0ad11b281e397a29819"
+};
+// Colecciones Firestore:
+// venues/{venueId}         → { name, address, qrToken }
+// staff/{dni}              → { name, dni, venueId, venueName, faceDescriptor: Float32Array serializado }
+// attendance_logs/{autoId} → { name, dni, venueId, venueName, type, timestamp, method: 'face'|'manual_dni' }
+// config/admin             → { pinHash }
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── ESTADO ───────────────────────────────────────────────────────────────
+let allVenues   = [];
+let allLogs     = [];
+let allStaff    = [];
+let faceStream  = null;
+let faceAnimId  = null;
+let regStream   = null;
+let regAnimId   = null;
+let modelsLoaded = false;
+let knownFaces  = [];    // [{ dni, name, venueName, venueId, descriptor: Float32Array }]
+let recognizedEmployee = null;  // empleado reconocido pendiente de fichar
+let fallbackEmployee   = null;  // empleado del fallback DNI
+let hoursData   = [];
+let hoursView   = 'byCollab';
+let shiftData   = {};
+let shiftDirty  = {};
+let shiftModalKey = '';
+const DAYS_ES   = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  startClock();
+  await loadVenues();
+  await loadModels();
+  await loadKnownFaces();
+  showRecentPunches();
+});
+
+// ── RELOJ ─────────────────────────────────────────────────────────────────
+function startClock() {
+  const clockEl = document.getElementById('clock-display');
+  const dateEl  = document.getElementById('date-display');
+  const tick = () => {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('es-AR', { hour12: false });
+    dateEl.textContent  = now.toLocaleDateString('es-AR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  };
+  tick(); setInterval(tick, 1000);
+}
+
+// ── CARGAR MODELOS FACE-API ───────────────────────────────────────────────
+async function loadModels() {
+  const statusEl = document.getElementById('model-status-text');
+  const modelUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+  try {
+    statusEl.textContent = 'Descargando modelos de IA facial...';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUrl),
+      faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl),
+    ]);
+    modelsLoaded = true;
+    document.getElementById('model-status').classList.add('hidden');
+    document.getElementById('view-kiosk-ready').classList.remove('hidden');
+  } catch (e) {
+    statusEl.textContent = 'Error al cargar modelos. Revisá la conexión.';
+    document.getElementById('model-status').className =
+      'mx-4 mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2 bg-rose-950/50 text-rose-300';
+  }
+}
+
+// ── CARGAR CARAS CONOCIDAS DESDE FIRESTORE ───────────────────────────────
+async function loadKnownFaces() {
+  try {
+    const snap = await getDocs(collection(db, "staff"));
+    knownFaces = [];
+    snap.docs.forEach(d => {
+      const s = d.data();
+      if (s.faceDescriptor) {
+        // Reconvertir array → Float32Array
+        const desc = new Float32Array(Object.values(s.faceDescriptor));
+        knownFaces.push({ dni: s.dni, name: s.name, venueName: s.venueName, venueId: s.venueId, descriptor: desc });
       }
     });
+  } catch (e) { /* silencio */ }
+}
+window.loadKnownFaces = loadKnownFaces;
+
+// ── ABRIR ESCÁNER FACIAL ──────────────────────────────────────────────────
+window.openFaceOverlay = async function() {
+  if (!modelsLoaded) { showToast("Modelos aún cargando. Esperá un momento.", "warning"); return; }
+  recognizedEmployee = null;
+  document.getElementById('face-punch-buttons').classList.add('hidden');
+  document.getElementById('face-result-overlay').classList.add('hidden');
+  document.getElementById('face-status').textContent = 'Iniciando cámara...';
+  document.getElementById('face-overlay').classList.remove('hidden');
+  await startFaceCamera();
+};
+
+window.closeFaceOverlay = function() {
+  stopFaceCamera();
+  document.getElementById('face-overlay').classList.add('hidden');
+  recognizedEmployee = null;
+};
+
+async function startFaceCamera() {
+  try {
+    faceStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
+    const video = document.getElementById('face-video');
+    video.srcObject = faceStream;
+    await video.play();
+    document.getElementById('face-status').textContent = knownFaces.length === 0
+      ? 'Sin caras registradas. Usá el DNI o registrá colaboradores primero.'
+      : 'Buscando cara...';
+    tickFaceScan();
+  } catch (e) {
+    document.getElementById('face-status').textContent = 'Sin acceso a la cámara. Revisá permisos.';
   }
+}
 
-  window.saveVenue = async function() {
-    const name    = document.getElementById('venue-name-input').value.trim();
-    const address = document.getElementById('venue-address-input').value.trim();
-    const latVal  = parseFloat(document.getElementById('venue-lat-input').value);
-    const lngVal  = parseFloat(document.getElementById('venue-lng-input').value);
-    const radVal  = parseInt(document.getElementById('venue-radius-input').value) || 30;
-    const editId  = document.getElementById('venue-edit-id').value;
+function stopFaceCamera() {
+  if (faceAnimId) { cancelAnimationFrame(faceAnimId); faceAnimId = null; }
+  if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
+}
 
-    if (!name) { showToast("El nombre del local es requerido.", "error"); return; }
-    if (isNaN(latVal) || isNaN(lngVal)) { showToast("Ingresá latitud y longitud válidas.", "error"); return; }
+// ── LOOP DE RECONOCIMIENTO ────────────────────────────────────────────────
+let faceDetectCooldown = false;
+async function tickFaceScan() {
+  if (faceDetectCooldown || !faceStream) return;
+  const video  = document.getElementById('face-video');
+  const canvas = document.getElementById('face-canvas');
+  if (video.readyState < 2) { faceAnimId = requestAnimationFrame(tickFaceScan); return; }
 
-    try {
-      let venueRef;
-      let qrToken;
-      if (editId) {
-        venueRef = doc(db, "venues", editId);
-        const existing = await getDoc(venueRef);
-        qrToken = existing.exists() ? existing.data().qrToken : crypto.randomUUID();
-      } else {
-        venueRef = doc(collection(db, "venues"));
-        qrToken = crypto.randomUUID();
-      }
-      await setDoc(venueRef, { name, address, lat: latVal, lng: lngVal, radius: radVal, qrToken }, { merge: true });
-      showToast(`Local "${name}" guardado.`, "success");
-      clearVenueForm();
-      await loadVenues();
-    } catch (e) {
-      showToast("Error al guardar local.", "error");
-    }
-  };
+  // Sincronizar tamaño del canvas con el video
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
 
-  window.editVenue = async function(id) {
-    const v = allVenues.find(x => x.id === id);
-    if (!v) return;
-    document.getElementById('venue-name-input').value   = v.name || '';
-    document.getElementById('venue-address-input').value = v.address || '';
-    document.getElementById('venue-lat-input').value    = v.lat || '';
-    document.getElementById('venue-lng-input').value    = v.lng || '';
-    document.getElementById('venue-radius-input').value = v.radius || 30;
-    document.getElementById('venue-edit-id').value      = id;
-    document.querySelector('#tab-venues').scrollIntoView({ behavior: 'smooth' });
-  };
+  const detections = await faceapi
+    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+    .withFaceLandmarks(true)
+    .withFaceDescriptors();
 
-  window.deleteVenue = async function(id) {
-    const v = allVenues.find(x => x.id === id);
-    if (!confirm(`¿Eliminar el local "${v?.name}"? Los registros históricos se mantienen.`)) return;
-    try {
-      await deleteDoc(doc(db, "venues", id));
-      showToast("Local eliminado.", "success");
-      await loadVenues();
-    } catch (e) { showToast("Error al eliminar local.", "error"); }
-  };
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  window.clearVenueForm = function() {
-    ['venue-name-input','venue-address-input','venue-lat-input','venue-lng-input'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('venue-radius-input').value = '30';
-    document.getElementById('venue-edit-id').value = '';
-  };
+  if (detections.length > 0) {
+    const resized = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
+    // Dibujar caja de detección
+    faceapi.draw.drawDetections(canvas, resized);
 
-  window.useCurrentGPS = function() {
-    if (!userLocation) { showToast("GPS no disponible aún.", "warning"); return; }
-    document.getElementById('venue-lat-input').value = userLocation.lat.toFixed(6);
-    document.getElementById('venue-lng-input').value = userLocation.lng.toFixed(6);
-    showToast("Coordenadas GPS copiadas al formulario.", "info");
-  };
-
-  // Imprimir QR de un local específico
-  window.printVenueQR = function(venueId) {
-    const v = allVenues.find(x => x.id === venueId);
-    if (!v) return;
-    const printWin = window.open('', '_blank', 'width=400,height=400');
-    const qrDiv = document.getElementById(`qr-${venueId}`);
-    const imgSrc = qrDiv?.querySelector('img')?.src || qrDiv?.querySelector('canvas')?.toDataURL() || '';
-    printWin.document.write(`
-      <html><head><title>QR ${v.name}</title></head>
-      <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#fff;">
-        <h2 style="margin-bottom:8px;font-size:20px;color:#1e293b;">Escanear para Fichar</h2>
-        <p style="font-size:15px;color:#64748b;margin-bottom:16px;font-weight:600;">${v.name}</p>
-        <img src="${imgSrc}" style="width:220px;height:220px;">
-        ${v.address ? `<p style="margin-top:12px;font-size:12px;color:#94a3b8;">${v.address}</p>` : ''}
-        <script>window.onload=()=>{window.print();window.close();}<\/script>
-      </body></html>
-    `);
-    printWin.document.close();
-  };
-
-  // ─── COLABORADORES (PLANILLA) ─────────────────────────────────────────────────
-  async function loadStaff() {
-    try {
-      const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
-      allStaff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderStaffTable();
-    } catch (e) {
-      showToast("Error al cargar colaboradores.", "error");
-    }
-  }
-
-  function renderStaffTable() {
-    const tbody = document.getElementById('staff-table-body');
-    if (!allStaff.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores cargados.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = allStaff.map(s => {
-      const isBound = !!s.boundDevice;
-      const deviceBadge = isBound
-        ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
-             <i class="fa-solid fa-mobile-screen-button"></i>Vinculado
-           </span>
-           <button onclick="unbindDevice('${s.id}','${s.name}')"
-             class="ml-1 text-[10px] text-rose-400/60 hover:text-rose-400 cursor-pointer transition-colors" title="Desvincular dispositivo">
-             <i class="fa-solid fa-link-slash"></i>
-           </button>`
-        : `<span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 text-slate-500 rounded text-[10px]">
-             <i class="fa-solid fa-mobile-screen-button"></i>Sin vincular
-           </span>`;
-      return `
-      <tr class="collab-row transition-colors">
-        <td class="px-4 py-3 font-medium text-slate-200">${s.name}</td>
-        <td class="px-4 py-3 text-slate-400 font-mono text-xs">${s.dni}</td>
-        <td class="px-4 py-3">
-          <span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] font-medium">
-            <i class="fa-solid fa-store mr-1"></i>${s.venueName || '—'}
-          </span>
-        </td>
-        <td class="px-4 py-3">${deviceBadge}</td>
-        <td class="px-4 py-3 text-right flex justify-end gap-2">
-          <button onclick="editStaff('${s.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer transition-colors">
-            <i class="fa-solid fa-pen-to-square"></i>
-          </button>
-          <button onclick="deleteStaff('${s.id}','${s.name}')" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer transition-colors ml-2">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  window.saveStaff = async function() {
-    const dni      = document.getElementById('staff-dni').value.trim();
-    const name     = document.getElementById('staff-name').value.trim();
-    const venueId  = document.getElementById('staff-venue').value;
-    const editId   = document.getElementById('staff-edit-id').value;
-
-    if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("DNI inválido (7-10 dígitos).", "error"); return; }
-    if (!name)    { showToast("Ingresá el nombre del colaborador.", "error"); return; }
-    if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
-
-    const venue = allVenues.find(v => v.id === venueId);
-    const venueName = venue?.name || '';
-
-    try {
-      // El doc ID es el DNI para búsqueda directa
-      const staffRef = doc(db, "staff", dni);
-      await setDoc(staffRef, { name, dni, venueId, venueName, addedAt: new Date().toISOString() }, { merge: false });
-      showToast(`${name} guardado/a en planilla.`, "success");
-      // Limpiar form
-      ['staff-dni','staff-name'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('staff-venue').value = '';
-      document.getElementById('staff-edit-id').value = '';
-      await loadStaff();
-    } catch (e) {
-      showToast("Error al guardar colaborador.", "error");
-    }
-  };
-
-  window.editStaff = function(id) {
-    const s = allStaff.find(x => x.id === id);
-    if (!s) return;
-    document.getElementById('staff-dni').value   = s.dni;
-    document.getElementById('staff-name').value  = s.name;
-    document.getElementById('staff-venue').value = s.venueId;
-    document.getElementById('staff-edit-id').value = id;
-    switchTab('tab-staff');
-  };
-
-  window.deleteStaff = async function(id, name) {
-    if (!confirm(`¿Eliminar a ${name} de la planilla?`)) return;
-    try {
-      // Antes de eliminar al colaborador, borrar también el registro de empleado vinculado
-      const staffSnap = await getDoc(doc(db, "staff", id));
-      if (staffSnap.exists() && staffSnap.data().boundDevice) {
-        await deleteDoc(doc(db, "employees", staffSnap.data().boundDevice));
-      }
-      await deleteDoc(doc(db, "staff", id));
-      showToast(`${name} eliminado/a de la planilla.`, "success");
-      await loadStaff();
-    } catch (e) { showToast("Error al eliminar.", "error"); }
-  };
-
-  // Desvincular dispositivo de un colaborador (solo admin)
-  window.unbindDevice = async function(id, name) {
-    if (!confirm(`¿Desvincular el dispositivo de ${name}?\nLa próxima vez que abra la app deberá vincular de nuevo.`)) return;
-    try {
-      const staffSnap = await getDoc(doc(db, "staff", id));
-      if (staffSnap.exists() && staffSnap.data().boundDevice) {
-        // Eliminar el doc en employees para que el dispositivo quede libre
-        await deleteDoc(doc(db, "employees", staffSnap.data().boundDevice));
-      }
-      // Borrar el campo boundDevice del colaborador
-      await setDoc(doc(db, "staff", id), { boundDevice: null }, { merge: true });
-      showToast(`Dispositivo de ${name} desvinculado.`, "success");
-      await loadStaff();
-    } catch (e) { showToast("Error al desvincular.", "error"); }
-  };
-
-  // ─── LOOKUP DNI (vista empleado) ─────────────────────────────────────────────
-  window.lookupDNI = async function() {
-    const dni = document.getElementById('emp-dni').value.trim();
-    if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("Ingresá un DNI válido (7-10 dígitos).", "error"); return; }
-    try {
-      const staffSnap = await getDoc(doc(db, "staff", dni));
-      const resultEl  = document.getElementById('lookup-result');
-      const btnReg    = document.getElementById('btn-register');
-
-      if (!staffSnap.exists()) {
-        resultEl.classList.add('hidden');
-        btnReg.disabled = true;
-        showToast("DNI no encontrado en la planilla. Contactá a RRHH.", "error", 5000);
-        return;
-      }
-
-      const { name, venueName, boundDevice } = staffSnap.data();
-
-      // ¿El DNI ya tiene OTRO dispositivo vinculado?
-      if (boundDevice && boundDevice !== deviceFingerprint) {
-        resultEl.classList.add('hidden');
-        btnReg.disabled = true;
-        showToast(`El DNI de ${name} ya está vinculado a otro dispositivo. Contactá a RRHH para desvincular.`, "error", 7000);
-        return;
-      }
-
-      document.getElementById('lookup-name').textContent  = name;
-      document.getElementById('lookup-venue').textContent = `Local: ${venueName}`;
-      resultEl.classList.remove('hidden');
-      btnReg.disabled = false;
-    } catch (e) {
-      showToast("Error al buscar DNI.", "error");
-    }
-  };
-
-  // ─── REGISTRO DE DISPOSITIVO ──────────────────────────────────────────────────
-  window.registerDevice = async function() {
-    const dni = document.getElementById('emp-dni').value.trim();
-    if (!dni) { showToast("Ingresá tu DNI primero.", "error"); return; }
-    try {
-      const staffRef  = doc(db, "staff", dni);
-      const staffSnap = await getDoc(staffRef);
-      if (!staffSnap.exists()) { showToast("DNI no en planilla. Contactá a RRHH.", "error"); return; }
-
-      const staffData = staffSnap.data();
-
-      // Doble check: ¿ya vinculado a otro dispositivo?
-      if (staffData.boundDevice && staffData.boundDevice !== deviceFingerprint) {
-        showToast(`Este DNI ya está vinculado a otro dispositivo. Contactá a RRHH.`, "error", 7000);
-        return;
-      }
-
-      // Guardar en employees
-      await setDoc(doc(db, "employees", deviceFingerprint), {
-        name:      staffData.name,
-        dni:       staffData.dni,
-        venueId:   staffData.venueId,
-        venueName: staffData.venueName,
-        registeredAt: new Date().toISOString()
-      });
-
-      // Grabar el fingerprint en el registro del colaborador (vínculo 1-a-1)
-      await setDoc(staffRef, { boundDevice: deviceFingerprint }, { merge: true });
-
-      showToast(`Dispositivo vinculado como ${staffData.name} — ${staffData.venueName}.`, "success");
-      checkDeviceRegistration();
-    } catch (e) {
-      showToast("Error al registrar. Revisá tu conexión.", "error");
-    }
-  };
-
-  // ─── VERIFICACIÓN DISPOSITIVO ─────────────────────────────────────────────────
-  async function checkDeviceRegistration() {
-    try {
-      const snap = await getDoc(doc(db, "employees", deviceFingerprint));
-      if (snap.exists()) {
-        currentEmployee = snap.data();
-        document.getElementById('view-register').classList.add('hidden');
-        document.getElementById('view-punch').classList.remove('hidden');
-        document.getElementById('welcome-name').textContent = currentEmployee.name;
-        document.querySelector('#welcome-venue span').textContent = currentEmployee.venueName || '';
-        await loadLastPunch(currentEmployee.name);
-        validateProximity();
-      } else {
-        document.getElementById('view-punch').classList.add('hidden');
-        document.getElementById('view-register').classList.remove('hidden');
-        showStatus("Ingresá tu DNI para comenzar.", "info");
-      }
-    } catch (e) {
-      showStatus("Error al verificar dispositivo.", "error");
-    }
-  }
-  window.checkDeviceRegistration = checkDeviceRegistration;
-
-  async function loadLastPunch(name) {
-    try {
-      const q = query(
-        collection(db, "attendance_logs"),
-        where("deviceId", "==", deviceFingerprint),
-        orderBy("timestamp", "desc"), limit(1)
+    if (knownFaces.length > 0) {
+      // Comparar con caras conocidas
+      const labeledDescriptors = knownFaces.map(f =>
+        new faceapi.LabeledFaceDescriptors(f.dni, [f.descriptor])
       );
-      const snap = await getDocs(q);
-      const infoEl = document.getElementById('last-punch-info');
-      if (!snap.empty) {
-        const last = snap.docs[0].data();
-        const ts = new Date(last.timestamp).toLocaleString('es-AR');
-        infoEl.textContent = `Último registro: ${last.type} — ${ts}`;
-        const btnE = document.getElementById('btn-entrada');
-        const btnS = document.getElementById('btn-salida');
-        if (last.type === 'ENTRADA') {
-          btnS.classList.add('ring-2','ring-rose-400');
-          btnE.classList.remove('ring-2','ring-emerald-400');
-        } else {
-          btnE.classList.add('ring-2','ring-emerald-400');
-          btnS.classList.remove('ring-2','ring-rose-400');
-        }
+      const matcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5); // umbral 0.5
+      const bestMatch = matcher.findBestMatch(detections[0].descriptor);
+
+      if (bestMatch.label !== 'unknown') {
+        faceDetectCooldown = true;
+        const emp = knownFaces.find(f => f.dni === bestMatch.label);
+        recognizedEmployee = emp;
+        const conf = Math.round((1 - bestMatch.distance) * 100);
+        showRecognized(emp, conf);
       } else {
-        infoEl.textContent = "Primera vez hoy — empezá con Entrada.";
+        document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
+        faceAnimId = requestAnimationFrame(tickFaceScan);
       }
-    } catch (e) { /* silencio */ }
-  }
-
-  // ─── GPS ──────────────────────────────────────────────────────────────────────
-  function initGeolocation() {
-    if (!navigator.geolocation) { showStatus("GPS no disponible en este dispositivo.", "error"); return; }
-    showStatus("Obteniendo ubicación GPS...", "warning");
-    navigator.geolocation.watchPosition(
-      pos => {
-        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        if (deviceFingerprint) checkDeviceRegistration();
-      },
-      () => { userLocation = null; showStatus("GPS denegado — necesitás dar permiso de ubicación.", "error"); },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
-
-  function distMeters(a, b) {
-    const R = 6371e3, p1 = a.lat * Math.PI/180, p2 = b.lat * Math.PI/180;
-    const dLat = (b.lat - a.lat) * Math.PI/180, dLon = (b.lng - a.lng) * Math.PI/180;
-    const x = Math.sin(dLat/2)**2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-  }
-
-  // Valida proximidad al local ASIGNADO al empleado (o al local del QR escaneado)
-  function validateProximity(venueOverride) {
-    if (!userLocation) { showStatus("GPS requerido — activá la ubicación.", "error"); return false; }
-    // Si hay un venueOverride (local del QR), usarlo; sino usar el del empleado
-    let venue = venueOverride;
-    if (!venue && currentEmployee?.venueId) {
-      venue = allVenues.find(v => v.id === currentEmployee.venueId);
+    } else {
+      document.getElementById('face-status').textContent = 'Cara detectada. Sin colaboradores registrados aún.';
+      faceAnimId = requestAnimationFrame(tickFaceScan);
     }
-    if (!venue) { showStatus("Local no configurado. Contactá a RRHH.", "error"); return false; }
-    const maxDist = venue.radius || 30;
-    const dist = distMeters(userLocation, { lat: venue.lat, lng: venue.lng });
-    if (dist <= maxDist) {
-      showStatus(`Ubicación verificada ✓ — ${venue.name}`, "success");
-      return true;
-    }
-    showStatus(`Fuera de rango del ${venue.name} (${Math.round(dist)} m).`, "error");
-    return false;
+  } else {
+    document.getElementById('face-status').textContent = 'Buscando cara...';
+    faceAnimId = requestAnimationFrame(tickFaceScan);
   }
+}
 
-  // ─── ESCÁNER QR ───────────────────────────────────────────────────────────────
-  window.openScannerOverlay = function() {
-    if (!currentEmployee?.venueId) {
-      showToast("Dispositivo no vinculado correctamente.", "error");
-      return;
-    }
-    const myVenue = allVenues.find(v => v.id === currentEmployee.venueId);
-    if (!validateProximity(myVenue)) {
-      showToast("Activá el GPS y acercate al local para poder fichar.", "error", 4000);
-      return;
-    }
-    qrVerified    = false;
-    scannedVenueId = null;
-    document.getElementById('punch-type-selector').classList.add('hidden');
-    document.getElementById('qr-verified-badge').classList.add('hidden');
-    document.getElementById('scanner-overlay').classList.remove('hidden');
-    startCamera();
-  };
+function showRecognized(emp, confidence) {
+  if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+  const resultOverlay = document.getElementById('face-result-overlay');
+  document.getElementById('fr-icon').textContent  = '✅';
+  document.getElementById('fr-name').textContent  = emp.name;
+  document.getElementById('fr-conf').textContent  = `Confianza: ${confidence}% · ${emp.venueName || ''}`;
+  resultOverlay.classList.remove('hidden');
+  document.getElementById('face-status').textContent = `¡Hola ${emp.name.split(' ')[0]}! Elegí tu acción.`;
+  document.getElementById('face-punch-buttons').classList.remove('hidden');
+}
 
-  window.closeScannerOverlay = function() {
-    stopCamera();
-    document.getElementById('scanner-overlay').classList.add('hidden');
-  };
-
-  async function startCamera() {
-    try {
-      scannerStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      const video = document.getElementById('scanner-video');
-      video.srcObject = scannerStream; video.play();
-      video.onloadedmetadata = () => tickScan();
-      document.getElementById('scanner-status').textContent = 'Apuntá al código QR del local...';
-    } catch (e) {
-      document.getElementById('scanner-status').textContent = 'No se pudo acceder a la cámara.';
-      showToast("Permiso de cámara denegado.", "error");
-    }
-  }
-
-  function stopCamera() {
-    if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
-    if (scannerStream)    { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
-  }
-
-  function tickScan() {
-    const video = document.getElementById('scanner-video');
-    const canvas = document.getElementById('scanner-canvas');
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result  = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
-      if (result) { handleQrScan(result.data); return; }
-    }
-    scannerAnimFrame = requestAnimationFrame(tickScan);
-  }
-
-  async function handleQrScan(data) {
-    // Buscar a qué local corresponde el token escaneado
-    const matchedVenue = allVenues.find(v => v.qrToken === data);
-    if (!matchedVenue) {
-      document.getElementById('scanner-status').textContent = 'QR no reconocido. Usá el cartel del local.';
-      scannerAnimFrame = requestAnimationFrame(tickScan);
-      return;
-    }
-
-    // Verificar que el QR corresponde al local ASIGNADO al empleado
-    if (currentEmployee?.venueId && matchedVenue.id !== currentEmployee.venueId) {
-      stopCamera();
-      document.getElementById('scanner-overlay').classList.add('hidden');
-      showToast(`Este QR es del local "${matchedVenue.name}". Tu local asignado es "${currentEmployee.venueName}".`, "error", 6000);
-      return;
-    }
-
-    // Verificar GPS nuevamente
-    if (!validateProximity(matchedVenue)) {
-      stopCamera();
-      document.getElementById('scanner-overlay').classList.add('hidden');
-      showToast("Fuera de rango GPS. No podés fichar.", "error", 4000);
-      return;
-    }
-
-    stopCamera();
-    document.getElementById('scanner-overlay').classList.add('hidden');
-    qrVerified     = true;
-    scannedVenueId = matchedVenue.id;
-    document.getElementById('punch-type-selector').classList.remove('hidden');
-    document.getElementById('punch-type-selector').classList.add('grid');
-    document.getElementById('qr-verified-badge').classList.remove('hidden');
-    showToast(`QR verificado — ${matchedVenue.name}. Elegí tu acción.`, "success");
-  }
-
-  // ─── FICHAJE ──────────────────────────────────────────────────────────────────
-  window.submitPunch = async function(type) {
-    if (!qrVerified) { showToast("Escaneá el QR del local primero.", "warning"); return; }
-    const punchVenue = allVenues.find(v => v.id === scannedVenueId);
-    if (!validateProximity(punchVenue)) { showToast("Fuera de rango GPS.", "error"); return; }
-
-    // Validación de secuencia
-    try {
-      const q = query(collection(db, "attendance_logs"), where("deviceId","==",deviceFingerprint), orderBy("timestamp","desc"), limit(1));
-      const snap = await getDocs(q);
-      if (!snap.empty && snap.docs[0].data().type === type) {
-        showToast(`Ya registraste una ${type}. Registrá la acción opuesta.`, "warning");
-        return;
-      }
-    } catch (e) { /* continuar */ }
-
-    try {
-      const empSnap = await getDoc(doc(db, "employees", deviceFingerprint));
-      const emp     = empSnap.exists() ? empSnap.data() : {};
-      const now     = new Date();
-
-      await addDoc(collection(db, "attendance_logs"), {
-        name:      emp.name      || "Desconocido",
-        dni:       emp.dni       || '',
-        venueId:   scannedVenueId || emp.venueId || '',
-        venueName: punchVenue?.name || emp.venueName || '',
-        type,
-        timestamp: now.toISOString(),
-        deviceId:  deviceFingerprint
-      });
-
-      qrVerified = false;
-      scannedVenueId = null;
-      document.getElementById('punch-type-selector').classList.add('hidden');
-      document.getElementById('punch-type-selector').classList.remove('grid');
-      document.getElementById('qr-verified-badge').classList.add('hidden');
-
-      showPunchConfirm(type, emp.name || "Desconocido", punchVenue?.name || '', now);
-      loadLastPunch(emp.name);
-    } catch (e) {
-      showToast("Error al registrar fichaje. Revisá tu conexión.", "error");
-    }
-  };
-
-  function showPunchConfirm(type, name, venueName, date) {
-    const overlay  = document.getElementById('punch-confirm');
-    document.getElementById('pc-icon').textContent  = type === 'ENTRADA' ? '✅' : '👋';
-    const typeEl = document.getElementById('pc-type');
-    typeEl.textContent = type;
-    typeEl.className   = `text-3xl font-black ${type === 'ENTRADA' ? 'text-emerald-400' : 'text-rose-400'}`;
-    document.getElementById('pc-name').textContent  = name;
-    document.getElementById('pc-venue').textContent = venueName ? `📍 ${venueName}` : '';
-    document.getElementById('pc-time').textContent  = date.toLocaleTimeString('es-AR', { hour12: false });
-    overlay.classList.remove('hidden');
-    let secs = 5;
-    const countEl = document.getElementById('pc-countdown');
-    countEl.textContent = secs;
-    const t = setInterval(() => { secs--; countEl.textContent = secs; if (secs <= 0) { clearInterval(t); overlay.classList.add('hidden'); } }, 1000);
-    overlay.onclick = () => { clearInterval(t); overlay.classList.add('hidden'); };
-  }
-
-  // ─── STATUS BAR ───────────────────────────────────────────────────────────────
-  window.showStatus = function(text, type) {
-    const card = document.getElementById('status-card');
-    const icon = document.getElementById('status-icon');
-    document.getElementById('status-text').textContent = text;
-    card.className = "mb-5 p-3 rounded-lg text-sm flex items-center gap-3 ";
-    icon.className = "fa-solid ";
-    if      (type === "success") { card.classList.add("bg-emerald-950/50","text-emerald-400"); icon.classList.add("fa-circle-check"); }
-    else if (type === "error")   { card.classList.add("bg-rose-950/50","text-rose-400");       icon.classList.add("fa-triangle-exclamation"); }
-    else if (type === "warning") { card.classList.add("bg-amber-950/50","text-amber-400");     icon.classList.add("fa-spinner","animate-spin"); }
-    else                         { card.classList.add("bg-slate-700","text-slate-300");        icon.classList.add("fa-circle-info"); }
-  };
-
-  // ─── TOASTS ───────────────────────────────────────────────────────────────────
-  window.showToast = function(msg, type = "info", duration = 3500) {
-    const container = document.getElementById('toast-container');
-    const icons = { success:'fa-circle-check', error:'fa-triangle-exclamation', info:'fa-circle-info', warning:'fa-exclamation-circle' };
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}"></i><span>${msg}</span>`;
-    container.appendChild(el);
-    const remove = () => { el.classList.add('hide'); el.addEventListener('animationend', () => el.remove(), { once: true }); };
-    const timer = setTimeout(remove, duration);
-    el.onclick = () => { clearTimeout(timer); remove(); };
-  };
-
-  // ─── TABS ADMIN ───────────────────────────────────────────────────────────────
-  window.switchTab = function(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    // Encontrar el botón correspondiente
-    const map = { 'tab-venues': 'taббtn-venues', 'tab-staff': 'tabbtn-staff', 'tab-logs': 'tabbtn-logs' };
-    const btnId = map[tabId];
-    if (btnId) document.getElementById(btnId)?.classList.add('active');
-    // Cargar datos al cambiar de pestaña
-    if (tabId === 'tab-staff') loadStaff();
-    if (tabId === 'tab-logs')  loadAdminLogs();
-  };
-
-  // ─── PANEL ADMIN ──────────────────────────────────────────────────────────────
-  async function hashPin(pin) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  }
-
-  window.requestAdminAccess = async function() {
-    const pin = prompt("PIN de Recursos Humanos:");
-    if (pin === null) return;
-    try {
-      const cfgSnap = await getDoc(doc(db, "config", "admin"));
-      let storedHash = cfgSnap.exists() ? cfgSnap.data().pinHash : null;
-      if (!storedHash) {
-        storedHash = await hashPin("1234");
-        await setDoc(doc(db, "config", "admin"), { pinHash: storedHash });
-      }
-      const inputHash = await hashPin(pin);
-      if (inputHash === storedHash) {
-        document.getElementById('employee-view').classList.add('hidden');
-        document.getElementById('admin-view').classList.remove('hidden');
-        await loadVenues();
-        // Activar primera pestaña
-        switchTab('tab-venues');
-      } else {
-        showToast("PIN incorrecto.", "error");
-      }
-    } catch (e) { showToast("Error al verificar PIN.", "error"); }
-  };
-
-  window.closeAdmin = function() {
-    document.getElementById('admin-view').classList.add('hidden');
-    document.getElementById('employee-view').classList.remove('hidden');
-  };
-
-  async function loadAdminLogs() {
-    const tbody = document.getElementById('admin-table-body');
-    tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
-    try {
-      const q    = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"));
-      const snap = await getDocs(q);
-      allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      applyFilters();
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-rose-400">Error al cargar registros.</td></tr>`;
-    }
-  }
-
-  window.applyFilters = function() {
-    const dateVal  = document.getElementById('filter-date').value;
-    const nameVal  = document.getElementById('filter-name').value.toLowerCase().trim();
-    const venueVal = document.getElementById('filter-venue').value;
-    let filtered = allLogs;
-    if (dateVal)  filtered = filtered.filter(l => l.timestamp?.startsWith(dateVal));
-    if (nameVal)  filtered = filtered.filter(l => l.name?.toLowerCase().includes(nameVal));
-    if (venueVal) filtered = filtered.filter(l => l.venueId === venueVal);
-    renderAdminTable(filtered);
-    const countEl = document.getElementById('filter-count');
-    countEl.textContent = filtered.length < allLogs.length
-      ? `Mostrando ${filtered.length} de ${allLogs.length} registros`
-      : `${allLogs.length} registros en total`;
-  };
-
-  window.clearFilters = function() {
-    document.getElementById('filter-date').value  = '';
-    document.getElementById('filter-name').value  = '';
-    document.getElementById('filter-venue').value = '';
-    applyFilters();
-  };
-
-  function renderAdminTable(logs) {
-    const tbody = document.getElementById('admin-table-body');
-    if (!logs.length) { tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay registros.</td></tr>`; return; }
-    tbody.innerHTML = logs.map(l => {
-      const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
-      return `
-        <tr class="hover:bg-slate-800/80 transition-colors">
-          <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
-          <td class="px-4 py-3 text-slate-400 text-xs font-mono">${l.dni || '—'}</td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">
-              <i class="fa-solid fa-store mr-1"></i>${l.venueName || '—'}
-            </span>
-          </td>
-          <td class="px-4 py-3">
-            <span class="px-2 py-1 rounded text-[10px] uppercase font-bold
-              ${l.type === 'ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">
-              ${l.type}
-            </span>
-          </td>
-          <td class="px-4 py-3 text-slate-400 text-xs">${ts}</td>
-        </tr>`;
-    }).join('');
-  }
-
-  window.exportToCSV = function() {
-    if (!allLogs.length) { showToast("No hay datos para exportar.", "info"); return; }
-    let csv = "Colaborador,DNI,Local,Accion,Fecha_y_Hora\n";
-    allLogs.forEach(l => {
-      const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '';
-      csv += `${l.name},${l.dni || ''},"${l.venueName || ''}",${l.type},"${ts}"\n`;
+// ── FICHAR CON CARA RECONOCIDA ────────────────────────────────────────────
+window.submitFacePunch = async function(type) {
+  if (!recognizedEmployee) return;
+  document.getElementById('face-btn-entrada').disabled = true;
+  document.getElementById('face-btn-salida').disabled  = true;
+  try {
+    const emp = recognizedEmployee;
+    const now = new Date();
+    await addDoc(collection(db, "attendance_logs"), {
+      name:      emp.name,
+      dni:       emp.dni,
+      venueId:   emp.venueId   || '',
+      venueName: emp.venueName || '',
+      type,
+      timestamp: now.toISOString(),
+      method:    'face'
     });
-    const link = document.createElement("a");
-    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    link.download = `andino_asistencia_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link); link.click(); link.remove();
-  };
+    closeFaceOverlay();
+    showPunchConfirm(type, emp.name, emp.venueName || '', now);
+    showRecentPunches();
+  } catch (e) {
+    showToast("Error al registrar fichaje.", "error");
+  } finally {
+    document.getElementById('face-btn-entrada').disabled = false;
+    document.getElementById('face-btn-salida').disabled  = false;
+    faceDetectCooldown = false;
+  }
+};
 
-  window.clearRecords = async function() {
-    if (!confirm("¿Eliminar TODOS los registros? No se puede deshacer.")) return;
-    try {
-      const snap  = await getDocs(collection(db, "attendance_logs"));
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      allLogs = [];
-      renderAdminTable([]);
-      showToast("Historial eliminado.", "success");
-    } catch (e) { showToast("Error al eliminar. Revisá permisos Firestore.", "error"); }
+// ── FALLBACK DNI ──────────────────────────────────────────────────────────
+window.fallbackToDNI = function() {
+  closeFaceOverlay();
+  document.getElementById('kiosk-view').querySelector('#view-kiosk-ready').classList.add('hidden');
+  document.getElementById('view-dni-fallback').classList.remove('hidden');
+  document.getElementById('fallback-dni').value = '';
+  document.getElementById('fallback-result').classList.add('hidden');
+  document.getElementById('fallback-punch-buttons').classList.add('hidden');
+  fallbackEmployee = null;
+};
+
+window.backToKiosk = function() {
+  document.getElementById('view-dni-fallback').classList.add('hidden');
+  document.getElementById('view-kiosk-ready').classList.remove('hidden');
+};
+
+let fallbackTimer = null;
+window.onFallbackDniInput = function() {
+  const dni = document.getElementById('fallback-dni').value.trim();
+  document.getElementById('fallback-result').classList.add('hidden');
+  document.getElementById('fallback-punch-buttons').classList.add('hidden');
+  fallbackEmployee = null;
+  if (fallbackTimer) clearTimeout(fallbackTimer);
+  if (!/^\d{7,10}$/.test(dni)) return;
+  fallbackTimer = setTimeout(() => lookupFallbackDNI(dni), 500);
+};
+
+async function lookupFallbackDNI(dni) {
+  try {
+    const snap = await getDoc(doc(db, "staff", dni));
+    if (!snap.exists()) { showToast("DNI no encontrado. Contactá a RRHH.", "error"); return; }
+    const s = snap.data();
+    fallbackEmployee = s;
+    document.getElementById('fallback-name').textContent  = s.name;
+    document.getElementById('fallback-venue').textContent = `Local: ${s.venueName || '—'}`;
+    document.getElementById('fallback-result').classList.remove('hidden');
+    document.getElementById('fallback-punch-buttons').classList.remove('hidden');
+    // Si no tiene cara registrada, mostrar opción de registrar
+    if (!s.faceDescriptor) {
+      showToast(`${s.name} no tiene cara registrada. Podés registrarla desde el panel de colaboradores.`, "info", 5000);
+    }
+  } catch (e) { showToast("Error al buscar DNI.", "error"); }
+}
+
+window.submitDNIFallback = async function(type) {
+  if (!fallbackEmployee) return;
+  try {
+    const emp = fallbackEmployee;
+    const now = new Date();
+    await addDoc(collection(db, "attendance_logs"), {
+      name:      emp.name,
+      dni:       emp.dni,
+      venueId:   emp.venueId   || '',
+      venueName: emp.venueName || '',
+      type,
+      timestamp: now.toISOString(),
+      method:    'manual_dni'  // marcado para revisión RRHH
+    });
+    backToKiosk();
+    showPunchConfirm(type, emp.name, emp.venueName || '', now, true);
+    showRecentPunches();
+  } catch (e) { showToast("Error al registrar fichaje.", "error"); }
+};
+
+// ── OVERLAY CONFIRMACIÓN ──────────────────────────────────────────────────
+function showPunchConfirm(type, name, venueName, date, isManual = false) {
+  const overlay = document.getElementById('punch-confirm');
+  document.getElementById('pc-icon').textContent  = type === 'ENTRADA' ? '✅' : '👋';
+  const typeEl = document.getElementById('pc-type');
+  typeEl.textContent = type + (isManual ? ' ⚠️' : '');
+  typeEl.className   = `text-3xl font-black ${type === 'ENTRADA' ? 'text-emerald-400' : 'text-rose-400'}`;
+  document.getElementById('pc-name').textContent  = name;
+  document.getElementById('pc-venue').textContent = venueName ? `📍 ${venueName}` : '';
+  document.getElementById('pc-time').textContent  = date.toLocaleTimeString('es-AR', { hour12: false });
+  overlay.classList.remove('hidden');
+  const close = () => { clearTimeout(t); overlay.classList.add('hidden'); };
+  const t = setTimeout(close, 3000);
+  overlay.addEventListener('click', close, { once: true });
+}
+
+// ── ÚLTIMOS FICHAJES ──────────────────────────────────────────────────────
+async function showRecentPunches() {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const q = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"), limit(8));
+    const snap = await getDocs(q);
+    const list = document.getElementById('recent-list');
+    const logs = snap.docs.map(d => d.data()).filter(l => l.timestamp?.startsWith(today));
+    if (!logs.length) {
+      list.innerHTML = '<p class="text-slate-600 text-xs">Sin fichajes aún hoy.</p>';
+      return;
+    }
+    list.innerHTML = logs.map(l => {
+      const ts = new Date(l.timestamp).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+      const isManual = l.method === 'manual_dni';
+      return `<div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-700/40 text-xs">
+        <span class="font-medium text-slate-300">${l.name}</span>
+        <div class="flex items-center gap-2">
+          ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
+          <span class="${l.type==='ENTRADA' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${l.type}</span>
+          <span class="text-slate-500 font-mono">${ts}</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { /* silencio */ }
+}
+
+// ── REGISTRO DE CARA (desde panel admin o primer uso) ────────────────────
+let regTargetDni  = null;
+let regTargetName = null;
+
+window.openRegisterFace = async function(dni, name) {
+  if (!modelsLoaded) { showToast("Modelos aún cargando.", "warning"); return; }
+  regTargetDni  = dni;
+  regTargetName = name;
+  document.getElementById('reg-name-label').textContent = `Registrando cara de: ${name}`;
+  document.getElementById('reg-status').textContent = 'Centrá tu cara en el óvalo';
+  document.getElementById('reg-capture-btn').disabled = true;
+  document.getElementById('register-face-overlay').classList.remove('hidden');
+  await startRegCamera();
+};
+
+window.closeRegisterFaceOverlay = function() {
+  stopRegCamera();
+  document.getElementById('register-face-overlay').classList.add('hidden');
+  regTargetDni = null; regTargetName = null;
+};
+
+async function startRegCamera() {
+  try {
+    regStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
+    const video = document.getElementById('reg-video');
+    video.srcObject = regStream;
+    await video.play();
+    tickRegDetect();
+  } catch (e) {
+    document.getElementById('reg-status').textContent = 'Sin acceso a la cámara.';
+  }
+}
+
+function stopRegCamera() {
+  if (regAnimId)  { cancelAnimationFrame(regAnimId); regAnimId = null; }
+  if (regStream)  { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
+}
+
+async function tickRegDetect() {
+  const video = document.getElementById('reg-video');
+  const canvas = document.getElementById('reg-canvas');
+  if (!regStream || video.readyState < 2) { regAnimId = requestAnimationFrame(tickRegDetect); return; }
+
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
+
+  const detection = await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+    .withFaceLandmarks(true)
+    .withFaceDescriptor();
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (detection) {
+    const resized = faceapi.resizeResults(detection, { width: video.videoWidth, height: video.videoHeight });
+    faceapi.draw.drawDetections(canvas, [resized]);
+    document.getElementById('reg-status').textContent = '✅ Cara detectada — listo para registrar';
+    document.getElementById('reg-capture-btn').disabled = false;
+    window._lastRegDescriptor = detection.descriptor;
+  } else {
+    document.getElementById('reg-status').textContent = 'No se detecta cara. Centrá tu rostro.';
+    document.getElementById('reg-capture-btn').disabled = true;
+    window._lastRegDescriptor = null;
+  }
+
+  regAnimId = requestAnimationFrame(tickRegDetect);
+}
+
+window.captureDescriptor = async function() {
+  if (!window._lastRegDescriptor || !regTargetDni) return;
+  try {
+    const descriptor = window._lastRegDescriptor;
+    // Serializar Float32Array como objeto plano (Firestore no acepta typed arrays)
+    const serialized = Object.fromEntries([...descriptor].map((v, i) => [i, v]));
+    await setDoc(doc(db, "staff", regTargetDni), { faceDescriptor: serialized }, { merge: true });
+    stopRegCamera();
+    document.getElementById('register-face-overlay').classList.add('hidden');
+    showToast(`Cara de ${regTargetName} registrada correctamente.`, "success");
+    await loadKnownFaces(); // recargar caras en memoria
+    await loadStaff();      // actualizar tabla admin
+  } catch (e) { showToast("Error al guardar la cara. Revisá tu conexión.", "error"); }
+};
+
+// ── CARGA DE LOCALES ──────────────────────────────────────────────────────
+async function loadVenues() {
+  try {
+    const snap = await getDocs(collection(db, "venues"));
+    allVenues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderVenuesList();
+    populateVenueSelects();
+  } catch (e) { /* silencio */ }
+}
+window.loadVenues = loadVenues;
+
+function populateVenueSelects() {
+  ['staff-venue','filter-venue','hours-filter-venue','shift-filter-venue'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const saved = el.value;
+    const isFilter = id.startsWith('filter') || id.startsWith('hours') || id.startsWith('shift');
+    el.innerHTML = isFilter ? '<option value="">Todos</option>' : '<option value="">-- Seleccioná un local --</option>';
+    allVenues.forEach(v => el.innerHTML += `<option value="${v.id}">${v.name}</option>`);
+    if (saved) el.value = saved;
+  });
+}
+
+function renderVenuesList() {
+  const container = document.getElementById('venues-list');
+  if (!allVenues.length) { container.innerHTML = '<p class="text-slate-500 text-xs">No hay locales cargados aún.</p>'; return; }
+  container.innerHTML = allVenues.map(v => `
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex items-center justify-between">
+      <div>
+        <p class="font-semibold text-slate-200 text-sm">${v.name}</p>
+        <p class="text-xs text-slate-500">${v.address || '—'}</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="editVenue('${v.id}')" class="text-indigo-400 hover:text-indigo-300 text-xs cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button onclick="deleteVenue('${v.id}')" class="text-rose-400/70 hover:text-rose-400 text-xs cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+window.saveVenue = async function() {
+  const name    = document.getElementById('venue-name-input').value.trim();
+  const address = document.getElementById('venue-address-input').value.trim();
+  const editId  = document.getElementById('venue-edit-id').value;
+  if (!name) { showToast("Ingresá el nombre del local.", "error"); return; }
+  try {
+    const venueRef = editId ? doc(db, "venues", editId) : doc(collection(db, "venues"));
+    await setDoc(venueRef, { name, address }, { merge: true });
+    showToast(`Local "${name}" guardado.`, "success");
+    clearVenueForm();
+    await loadVenues();
+  } catch (e) { showToast("Error al guardar local.", "error"); }
+};
+
+window.editVenue = function(id) {
+  const v = allVenues.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('venue-name-input').value    = v.name    || '';
+  document.getElementById('venue-address-input').value = v.address || '';
+  document.getElementById('venue-edit-id').value       = id;
+};
+window.deleteVenue = async function(id) {
+  const v = allVenues.find(x => x.id === id);
+  if (!confirm(`¿Eliminar "${v?.name}"?`)) return;
+  try { await deleteDoc(doc(db, "venues", id)); await loadVenues(); } catch (e) { showToast("Error.", "error"); }
+};
+window.clearVenueForm = function() {
+  ['venue-name-input','venue-address-input'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('venue-edit-id').value = '';
+};
+
+// ── COLABORADORES ─────────────────────────────────────────────────────────
+async function loadStaff() {
+  try {
+    const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
+    allStaff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderStaffTable();
+  } catch (e) { showToast("Error al cargar colaboradores.", "error"); }
+}
+
+function renderStaffTable() {
+  const tbody = document.getElementById('staff-table-body');
+  if (!allStaff.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allStaff.map(s => {
+    const hasFace = !!s.faceDescriptor;
+    const faceBadge = hasFace
+      ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
+           <i class="fa-solid fa-face-smile"></i>Registrada
+         </span>
+         <button onclick="openRegisterFace('${s.dni}','${s.name.replace(/'/g,"\\'")}'); event.stopPropagation()"
+           class="ml-1 text-[10px] text-amber-400/60 hover:text-amber-400 cursor-pointer" title="Actualizar cara">
+           <i class="fa-solid fa-rotate"></i>
+         </button>`
+      : `<button onclick="openRegisterFace('${s.dni}','${s.name.replace(/'/g,"\\'")}'); event.stopPropagation()"
+           class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] cursor-pointer hover:bg-indigo-900/50 transition-colors">
+           <i class="fa-solid fa-camera"></i>Registrar cara
+         </button>`;
+    return `
+    <tr class="collab-row transition-colors">
+      <td class="px-4 py-3 font-medium text-slate-200">${s.name}</td>
+      <td class="px-4 py-3 text-slate-400 font-mono text-xs">${s.dni}</td>
+      <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${s.venueName || '—'}</span></td>
+      <td class="px-4 py-3">${faceBadge}</td>
+      <td class="px-4 py-3 text-right flex justify-end gap-2">
+        <button onclick="editStaff('${s.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button onclick="deleteStaff('${s.id}','${s.name.replace(/'/g,"\\'")}' )" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+window.saveStaff = async function() {
+  const dni     = document.getElementById('staff-dni').value.trim();
+  const name    = document.getElementById('staff-name').value.trim();
+  const venueId = document.getElementById('staff-venue').value;
+  const editId  = document.getElementById('staff-edit-id').value;
+  if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("DNI inválido.", "error"); return; }
+  if (!name)    { showToast("Ingresá el nombre.", "error"); return; }
+  if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
+  const venue = allVenues.find(v => v.id === venueId);
+  try {
+    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName: venue?.name || '', addedAt: new Date().toISOString() }, { merge: false });
+    showToast(`${name} guardado/a.`, "success");
+    clearStaffForm();
+    await loadStaff();
+  } catch (e) { showToast("Error al guardar.", "error"); }
+};
+window.editStaff = function(id) {
+  const s = allStaff.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('staff-dni').value   = s.dni;
+  document.getElementById('staff-name').value  = s.name;
+  document.getElementById('staff-venue').value = s.venueId;
+  document.getElementById('staff-edit-id').value = id;
+  switchTab('tab-staff');
+};
+window.deleteStaff = async function(id, name) {
+  if (!confirm(`¿Eliminar a ${name}?`)) return;
+  try { await deleteDoc(doc(db, "staff", id)); await loadStaff(); } catch (e) { showToast("Error.", "error"); }
+};
+window.clearStaffForm = function() {
+  ['staff-dni','staff-name'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('staff-venue').value = '';
+  document.getElementById('staff-edit-id').value = '';
+};
+
+// ── ADMIN AUTH ────────────────────────────────────────────────────────────
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+window.requestAdminAccess = async function() {
+  const pin = prompt("PIN de Recursos Humanos:");
+  if (pin === null) return;
+  try {
+    const cfgSnap = await getDoc(doc(db, "config", "admin"));
+    let storedHash = cfgSnap.exists() ? cfgSnap.data().pinHash : null;
+    if (!storedHash) { storedHash = await hashPin("1234"); await setDoc(doc(db, "config", "admin"), { pinHash: storedHash }); }
+    if (await hashPin(pin) === storedHash) {
+      document.getElementById('kiosk-view').classList.add('hidden');
+      document.getElementById('admin-view').classList.remove('hidden');
+      await loadVenues(); switchTab('tab-venues');
+    } else { showToast("PIN incorrecto.", "error"); }
+  } catch (e) { showToast("Error al verificar PIN.", "error"); }
+};
+window.closeAdmin = function() {
+  document.getElementById('admin-view').classList.add('hidden');
+  document.getElementById('kiosk-view').classList.remove('hidden');
+};
+
+// ── REGISTROS ─────────────────────────────────────────────────────────────
+async function loadAdminLogs() {
+  const tbody = document.getElementById('admin-table-body');
+  tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp", "desc")));
+    allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    applyFilters();
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-rose-400">Error.</td></tr>`; }
+}
+
+window.applyFilters = function() {
+  const dateVal  = document.getElementById('filter-date').value;
+  const nameVal  = document.getElementById('filter-name').value.toLowerCase().trim();
+  const venueVal = document.getElementById('filter-venue').value;
+  let filtered = allLogs;
+  if (dateVal)  filtered = filtered.filter(l => l.timestamp?.startsWith(dateVal));
+  if (nameVal)  filtered = filtered.filter(l => l.name?.toLowerCase().includes(nameVal));
+  if (venueVal) filtered = filtered.filter(l => l.venueId === venueVal);
+  renderAdminTable(filtered);
+  document.getElementById('filter-count').textContent = filtered.length < allLogs.length
+    ? `Mostrando ${filtered.length} de ${allLogs.length} registros` : `${allLogs.length} registros en total`;
+};
+window.clearFilters = function() {
+  ['filter-date','filter-name'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filter-venue').value = '';
+  applyFilters();
+};
+
+function renderAdminTable(logs) {
+  const tbody = document.getElementById('admin-table-body');
+  if (!logs.length) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Sin registros.</td></tr>`; return; }
+  tbody.innerHTML = logs.map(l => {
+    const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
+    const isManual = l.method === 'manual_dni';
+    const methodBadge = isManual
+      ? `<span class="px-2 py-1 rounded text-[10px] font-bold badge-manual"><i class="fa-solid fa-triangle-exclamation mr-1"></i>DNI Manual</span>`
+      : `<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-face-smile mr-1"></i>Facial</span>`;
+    return `
+      <tr class="hover:bg-slate-800/80 transition-colors">
+        <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
+        <td class="px-4 py-3 text-slate-400 text-xs font-mono">${l.dni || '—'}</td>
+        <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${l.venueName || '—'}</span></td>
+        <td class="px-4 py-3">${methodBadge}</td>
+        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase font-bold ${l.type==='ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">${l.type}</span></td>
+        <td class="px-4 py-3 text-slate-400 text-xs">${ts}</td>
+      </tr>`;
+  }).join('');
+}
+
+window.exportToCSV = function() {
+  if (!allLogs.length) { showToast("Sin datos.", "info"); return; }
+  const rows = allLogs.map(l => ({
+    "Colaborador": l.name, "DNI": l.dni || '', "Local": l.venueName || '',
+    "Método": l.method === 'manual_dni' ? 'DNI Manual ⚠️' : 'Facial',
+    "Acción": l.type, "Fecha y Hora": l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
+  XLSX.writeFile(wb, `andino_asistencia_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+window.clearRecords = async function() {
+  if (!confirm("¿Eliminar TODOS los registros? No se puede deshacer.")) return;
+  try {
+    const snap = await getDocs(collection(db, "attendance_logs"));
+    const batch = writeBatch(db);
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    allLogs = [];
+    renderAdminTable([]);
+    showToast("Historial eliminado.", "success");
+  } catch (e) { showToast("Error.", "error"); }
+};
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+window.switchTab = function(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  const map = { 'tab-venues':'tabbtn-venues','tab-staff':'tabbtn-staff','tab-logs':'tabbtn-logs','tab-hours':'tabbtn-hours','tab-shifts':'tabbtn-shifts' };
+  document.getElementById(map[tabId])?.classList.add('active');
+  if (tabId === 'tab-staff')  loadStaff();
+  if (tabId === 'tab-logs')   loadAdminLogs();
+  if (tabId === 'tab-hours')  initHoursTab();
+  if (tabId === 'tab-shifts') initShiftsTab();
+};
+
+// ── TAB HORAS ─────────────────────────────────────────────────────────────
+async function initHoursTab() {
+  const today = new Date();
+  const mon   = new Date(today); mon.setDate(today.getDate() - today.getDay() + 1);
+  const sun   = new Date(mon);   sun.setDate(mon.getDate() + 6);
+  const fmt   = d => d.toISOString().slice(0,10);
+  if (!document.getElementById('hours-date-from').value) document.getElementById('hours-date-from').value = fmt(mon);
+  if (!document.getElementById('hours-date-to').value)   document.getElementById('hours-date-to').value   = fmt(sun);
+  if (!allStaff.length) await loadStaff();
+  const staffSel = document.getElementById('hours-filter-staff');
+  const venueSel = document.getElementById('hours-filter-venue');
+  staffSel.innerHTML = '<option value="">Todos</option>';
+  venueSel.innerHTML = '<option value="">Todos</option>';
+  allStaff.forEach(s  => staffSel.innerHTML += `<option value="${s.dni}">${s.name}</option>`);
+  allVenues.forEach(v => venueSel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
+}
+
+window.setHoursView = function(view) {
+  hoursView = view;
+  document.getElementById('hv-btn-collab').className = view === 'byCollab'
+    ? 'text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer'
+    : 'text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-400 cursor-pointer';
+  document.getElementById('hv-btn-day').className = view === 'byDay'
+    ? 'text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-semibold cursor-pointer'
+    : 'text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-400 cursor-pointer';
+  renderHoursTable();
+};
+
+window.loadHours = async function() {
+  const from  = document.getElementById('hours-date-from').value;
+  const to    = document.getElementById('hours-date-to').value;
+  const staff = document.getElementById('hours-filter-staff').value;
+  const venue = document.getElementById('hours-filter-venue').value;
+  if (!from || !to) { showToast("Seleccioná un rango.", "warning"); return; }
+  const tbody = document.getElementById('hours-table-body');
+  tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Calculando...</td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp","asc")));
+    const allL = snap.docs.map(d => d.data());
+    const toPlus1 = new Date(to + 'T12:00:00'); toPlus1.setDate(toPlus1.getDate() + 1);
+    const toPlus1Str = toPlus1.toISOString().slice(0,10);
+    const filtered = allL.filter(l => {
+      const ds = (l.timestamp || '').slice(0,10);
+      if (ds < from || ds > toPlus1Str) return false;
+      if (staff && l.dni !== staff) return false;
+      if (venue && l.venueId !== venue) return false;
+      return true;
+    });
+    // Agrupar ENTRADA/SALIDA por (dni, date)
+    const map = {};
+    filtered.filter(l => l.type === 'ENTRADA').forEach(l => {
+      const date = l.timestamp.slice(0,10);
+      const key  = `${l.dni}__${date}`;
+      if (!map[key]) map[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date, entries: [], exits: [] };
+      map[key].entries.push(l.timestamp);
+    });
+    const entriesByDni = {};
+    filtered.filter(l => l.type === 'ENTRADA').forEach(l => {
+      if (!entriesByDni[l.dni]) entriesByDni[l.dni] = [];
+      entriesByDni[l.dni].push({ ts: l.timestamp, date: l.timestamp.slice(0,10) });
+    });
+    filtered.filter(l => l.type === 'SALIDA').forEach(l => {
+      const candidates = (entriesByDni[l.dni] || []).filter(e => e.ts < l.timestamp);
+      if (!candidates.length) return;
+      const closest = candidates.reduce((a, b) => a.ts > b.ts ? a : b);
+      const key = `${l.dni}__${closest.date}`;
+      if (!map[key]) map[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date: closest.date, entries: [], exits: [] };
+      map[key].exits.push(l.timestamp);
+    });
+    // Calcular horas
+    const shiftsSnap = await getDocs(query(collection(db, "shifts"), where("date", ">=", from), where("date", "<=", to)));
+    const shiftsMap = {};
+    shiftsSnap.docs.forEach(d => { const s = d.data(); shiftsMap[`${s.dni}__${s.date}`] = s; });
+    hoursData = Object.values(map).filter(r => r.date >= from && r.date <= to).map(r => {
+      const entrada = r.entries[0] ? new Date(r.entries[0]).toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'}) : '—';
+      const salida  = r.exits[0]   ? new Date(r.exits[0]).toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'})   : '—';
+      const mins = r.entries[0] && r.exits[0] ? Math.round((new Date(r.exits[0]) - new Date(r.entries[0])) / 60000) : 0;
+      const shift = shiftsMap[`${r.dni}__${r.date}`];
+      let shiftMins = 0, diffMins = null;
+      if (shift && !shift.free && shift.in && shift.out) {
+        let outD = new Date(`2000-01-01T${shift.out}`), inD = new Date(`2000-01-01T${shift.in}`);
+        if (outD <= inD) outD.setDate(outD.getDate() + 1);
+        shiftMins = Math.round((outD - inD) / 60000);
+        if (mins > 0) diffMins = mins - shiftMins;
+      }
+      const status = !r.entries[0] ? 'sin_entrada' : !r.exits[0] ? 'sin_salida' : mins < 60 ? 'alerta' : 'ok';
+      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada, salida, mins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, status };
+    });
+    const totalMins  = hoursData.reduce((s,r) => s + r.mins, 0);
+    const totalDays  = hoursData.filter(r => r.mins > 0).length;
+    const avgMins    = totalDays > 0 ? Math.round(totalMins / totalDays) : 0;
+    const fmtM = m => `${Math.floor(m/60)}h ${Math.round(m%60)}m`;
+    document.getElementById('hours-total').textContent = totalMins > 0 ? fmtM(totalMins) : '—';
+    document.getElementById('hours-days').textContent  = totalDays || '—';
+    document.getElementById('hours-avg').textContent   = avgMins > 0 ? fmtM(avgMins) : '—';
+    renderHoursTable();
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-rose-400">Error al calcular.</td></tr>`; }
+};
+
+function renderHoursTable() {
+  const tbody = document.getElementById('hours-table-body');
+  if (!hoursData.length) { tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-500">Sin datos en el rango seleccionado.</td></tr>`; return; }
+  const fmtMins = m => m > 0 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : '—';
+  const diffCell = dm => {
+    if (dm === null || dm === undefined) return `<td class="px-4 py-2 text-[11px] text-slate-600">—</td>`;
+    const sign = dm > 0 ? '+' : '-'; const color = dm > 0 ? 'text-emerald-400' : 'text-rose-400';
+    const abs = Math.abs(dm); const str = abs >= 60 ? `${Math.floor(abs/60)}h ${Math.round(abs%60)}m` : `${Math.round(abs)}m`;
+    return `<td class="px-4 py-2 text-[11px] font-semibold ${color}">${dm===0?'=0m':sign+str}</td>`;
   };
+  const shiftCell = r => {
+    if (!r.shiftIn) return `<td class="px-4 py-2 text-[11px] text-slate-600">—</td>`;
+    return `<td class="px-4 py-2 text-[11px]"><span class="font-mono text-indigo-300">${r.shiftIn}</span>–<span class="font-mono text-indigo-300">${r.shiftOut}</span></td>`;
+  };
+  const statusMap = { ok: '<i class="fa-solid fa-circle-check text-emerald-400"></i>', sin_salida: '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>', sin_entrada: '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>', alerta: '<i class="fa-solid fa-clock text-amber-400"></i>' };
+  if (hoursView === 'byCollab') {
+    const byDni = {};
+    hoursData.forEach(r => { if (!byDni[r.dni]) byDni[r.dni] = { name: r.name, dni: r.dni, venueName: r.venueName, rows: [] }; byDni[r.dni].rows.push(r); });
+    tbody.innerHTML = Object.values(byDni).map(g => {
+      const totalMins = g.rows.reduce((s,r) => s+r.mins, 0);
+      const details = g.rows.map(r => `
+        <tr class="bg-slate-900/30">
+          <td class="px-4 py-2 pl-8 text-slate-500 text-[11px]" colspan="2">${new Date(r.date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'short'})}</td>
+          <td class="px-4 py-2 text-[11px] text-slate-400">${r.venueName||'—'}</td>
+          <td class="px-4 py-2 text-[11px]">${r.date}</td>
+          <td class="px-4 py-2 text-[11px] font-mono text-emerald-300">${r.entrada}</td>
+          <td class="px-4 py-2 text-[11px] font-mono text-rose-300">${r.salida}</td>
+          <td class="px-4 py-2 text-[11px]">${r.mins>0?fmtMins(r.mins):'—'}</td>
+          ${shiftCell(r)}${diffCell(r.diffMins)}
+          <td class="px-4 py-2 text-[11px]">${statusMap[r.status]||''}</td>
+        </tr>`).join('');
+      return `
+        <tr class="hover:bg-slate-700/30 cursor-pointer border-t border-slate-700" onclick="this.nextElementSibling.classList.toggle('hidden')">
+          <td class="px-4 py-3 font-semibold text-slate-200"><i class="fa-solid fa-chevron-right text-[9px] text-slate-500 mr-2"></i>${g.name}</td>
+          <td class="px-4 py-3 text-slate-400 font-mono text-xs">${g.dni}</td>
+          <td class="px-4 py-3 text-xs text-indigo-300">${g.venueName||'—'}</td>
+          <td class="px-4 py-3 text-xs text-slate-500" colspan="4">${g.rows.length} día(s)</td>
+          <td class="px-4 py-3 font-bold text-emerald-400" colspan="3">${fmtMins(totalMins)}</td>
+        </tr>
+        <tr class="hidden"><td colspan="10" class="p-0"><table class="w-full"><tbody>${details}</tbody></table></td></tr>`;
+    }).join('');
+  } else {
+    const sorted = [...hoursData].sort((a,b) => a.date.localeCompare(b.date)||a.name.localeCompare(b.name));
+    tbody.innerHTML = sorted.map(r => `
+      <tr class="hover:bg-slate-800/80">
+        <td class="px-4 py-3 font-medium text-slate-200">${r.name}</td>
+        <td class="px-4 py-3 text-slate-400 font-mono text-xs">${r.dni}</td>
+        <td class="px-4 py-3 text-xs text-indigo-300">${r.venueName||'—'}</td>
+        <td class="px-4 py-3 text-xs text-slate-400">${new Date(r.date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'short'})}</td>
+        <td class="px-4 py-3 font-mono text-emerald-300 text-xs">${r.entrada}</td>
+        <td class="px-4 py-3 font-mono text-rose-300 text-xs">${r.salida}</td>
+        <td class="px-4 py-3 font-bold text-slate-200">${r.mins>0?fmtMins(r.mins):'—'}</td>
+        ${shiftCell(r)}${diffCell(r.diffMins)}
+        <td class="px-4 py-3">${statusMap[r.status]||''}</td>
+      </tr>`).join('');
+  }
+}
+
+window.exportHoursCSV = function() {
+  if (!hoursData.length) { showToast("Calculá primero.", "info"); return; }
+  const rows = hoursData.map(r => ({
+    "Colaborador": r.name, "DNI": r.dni, "Local": r.venueName||'', "Fecha": r.date,
+    "Entrada": r.entrada, "Salida": r.salida,
+    "Hs.Realizadas": r.mins>0?`${Math.floor(r.mins/60)}:${String(Math.round(r.mins%60)).padStart(2,'0')}`:'0:00',
+    "Estado": r.status
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Horas");
+  XLSX.writeFile(wb, `andino_horas_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+
+// ── TAB TURNOS ────────────────────────────────────────────────────────────
+function initShiftsTab() {
+  if (!document.getElementById('shift-date').value) document.getElementById('shift-date').value = new Date().toISOString().slice(0,10);
+  const sel = document.getElementById('shift-filter-venue');
+  sel.innerHTML = '<option value="">Todos los locales</option>';
+  allVenues.forEach(v => sel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
+  renderShiftGrid();
+}
+
+function getMondayOf(ds) { const d = new Date(ds+'T12:00:00'), day = d.getDay()||7; d.setDate(d.getDate()-day+1); return d; }
+function fmtDate(d) { return d.toISOString().slice(0,10); }
+function fmtDayLabel(d) { return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'}); }
+
+window.renderShiftGrid = async function() {
+  const mode  = document.getElementById('shift-mode').value;
+  const dateV = document.getElementById('shift-date').value;
+  const venue = document.getElementById('shift-filter-venue').value;
+  if (!dateV) return;
+  let days = [];
+  if (mode === 'week') { const mon = getMondayOf(dateV); for (let i=0;i<7;i++) { const d=new Date(mon); d.setDate(mon.getDate()+i); days.push(d); } }
+  else days = [new Date(dateV+'T12:00:00')];
+  const dayKeys = days.map(d => fmtDate(d));
+  const staff = venue ? allStaff.filter(s => s.venueId === venue) : allStaff;
+  const grid = document.getElementById('shift-grid');
+  grid.innerHTML = `<div class="px-4 py-6 text-center text-slate-500 text-xs"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</div>`;
+  try {
+    const q = query(collection(db, "shifts"), where("date","in",dayKeys));
+    const snap = await getDocs(q);
+    shiftData = {};
+    snap.docs.forEach(d => { const s=d.data(); shiftData[`${s.dni}__${s.date}`]=s; });
+  } catch (e) { /* continúa */ }
+  if (!staff.length) { grid.innerHTML='<p class="text-slate-500 text-xs px-4 py-6">Sin colaboradores.</p>'; return; }
+  const colW = mode==='week' ? 'min-w-[100px]' : 'min-w-[200px]';
+  let html = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-900 text-slate-400 uppercase text-[10px] sticky top-0 z-10"><tr><th class="px-3 py-3 text-left sticky left-0 bg-slate-900 z-20 min-w-[130px]">Colaborador</th>`;
+  days.forEach(d => { const isToday = fmtDate(d)===new Date().toISOString().slice(0,10); html+=`<th class="px-2 py-3 text-center ${colW} ${isToday?'text-indigo-400':''}">${fmtDayLabel(d)}</th>`; });
+  html+=`</tr></thead><tbody class="divide-y divide-slate-700/30">`;
+  staff.forEach(s => {
+    html+=`<tr class="hover:bg-slate-800/30"><td class="px-3 py-2.5 sticky left-0 bg-slate-800 font-medium text-slate-200 text-xs border-r border-slate-700"><div>${s.name}</div><div class="text-[10px] text-indigo-400/70">${s.venueName||'—'}</div></td>`;
+    dayKeys.forEach(dk => {
+      const key = `${s.dni}__${dk}`;
+      const shift = shiftData[key] || shiftDirty[key];
+      const isDirty = !!shiftDirty[key];
+      let cellHtml;
+      if (!shift) cellHtml=`<span class="text-slate-600">—</span>`;
+      else if (shift.free) cellHtml=`<span class="px-1.5 py-0.5 bg-slate-700/60 text-slate-400 rounded text-[9px]">Franco</span>`;
+      else {
+        const hrsMin = shift.in&&shift.out ? (()=>{ let o=new Date(`2000-01-01T${shift.out}`),i=new Date(`2000-01-01T${shift.in}`); if(o<=i)o.setDate(o.getDate()+1); return Math.round((o-i)/60000); })() : 0;
+        const hrsStr = hrsMin>0 ? `${Math.floor(hrsMin/60)}h${Math.round(hrsMin%60)>0?Math.round(hrsMin%60)+'m':''}` : '';
+        cellHtml=`<div class="flex flex-col items-center gap-0.5"><span class="font-mono text-emerald-400 text-[11px]">${shift.in||'—'}</span><span class="font-mono text-rose-400 text-[11px]">${shift.out||'—'}</span>${hrsStr?`<span class="text-[9px] text-slate-500">${hrsStr}</span>`:''}</div>`;
+      }
+      const dirtyDot = isDirty ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400"></span>` : '';
+      html+=`<td class="px-1 py-1.5 text-center cursor-pointer relative hover:bg-indigo-950/30 transition-colors border border-slate-700/20 rounded" onclick="openShiftModal('${s.dni}','${s.name}','${dk}')">${dirtyDot}${cellHtml}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+=`</tbody></table>`;
+  grid.innerHTML=html;
+};
+
+window.openShiftModal = function(dni, name, date) {
+  shiftModalKey = `${dni}__${date}`;
+  const shift = shiftDirty[shiftModalKey] || shiftData[shiftModalKey];
+  document.getElementById('shift-modal-info').textContent = `${name} — ${new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'})}`;
+  document.getElementById('shift-modal-in').value   = shift?.in   || '';
+  document.getElementById('shift-modal-out').value  = shift?.out  || '';
+  document.getElementById('shift-modal-note').value = shift?.note || '';
+  document.getElementById('shift-modal-free').checked = shift?.free || false;
+  toggleFreeDay(); checkMidnightCross();
+  document.getElementById('shift-modal').classList.remove('hidden');
+};
+window.closeShiftModal = function() { document.getElementById('shift-modal').classList.add('hidden'); };
+window.checkMidnightCross = function() {
+  const i=document.getElementById('shift-modal-in').value, o=document.getElementById('shift-modal-out').value;
+  document.getElementById('shift-modal-out-label').classList.toggle('hidden', !(i&&o&&o<i));
+};
+window.toggleFreeDay = function() {
+  const f=document.getElementById('shift-modal-free').checked;
+  ['shift-modal-in','shift-modal-out','shift-modal-note'].forEach(id=>document.getElementById(id).disabled=f);
+};
+window.applyShiftModal = function() {
+  const isFree=document.getElementById('shift-modal-free').checked;
+  const inVal=document.getElementById('shift-modal-in').value, outVal=document.getElementById('shift-modal-out').value;
+  const note=document.getElementById('shift-modal-note').value.trim();
+  if (!isFree && !inVal && !outVal) { showToast("Ingresá horario o marcá franco.", "warning"); return; }
+  if (!isFree && inVal && outVal && inVal===outVal) { showToast("Entrada y salida iguales.", "warning"); return; }
+  const [dni, date] = shiftModalKey.split('__');
+  shiftDirty[shiftModalKey] = { dni, date, in: isFree?'':inVal, out: isFree?'':outVal, note: isFree?'':note, free: isFree };
+  closeShiftModal(); renderShiftGrid();
+  showToast("Turno actualizado (pendiente guardar).", "info");
+};
+window.clearShiftCell = function() { delete shiftDirty[shiftModalKey]; delete shiftData[shiftModalKey]; closeShiftModal(); renderShiftGrid(); };
+window.saveAllShifts = async function() {
+  const pending = Object.entries(shiftDirty).filter(([,v]) => v!==null);
+  if (!pending.length) { showToast("Sin cambios pendientes.", "info"); return; }
+  try {
+    const batch = writeBatch(db);
+    pending.forEach(([key, shift]) => {
+      const [dni, date] = key.split('__');
+      const sr = allStaff.find(s => s.dni===dni);
+      batch.set(doc(db, "shifts", key.replace('__','_')), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
+      shiftData[key] = shift;
+    });
+    await batch.commit();
+    shiftDirty = {};
+    showToast(`${pending.length} turno(s) guardado(s).`, "success");
+    renderShiftGrid();
+  } catch (e) { showToast("Error al guardar.", "error"); }
+};
+window.exportShiftsPDF = function() {
+  const mode=document.getElementById('shift-mode').value, dateV=document.getElementById('shift-date').value;
+  if (!dateV) return;
+  let days=[];
+  if (mode==='week') { const mon=getMondayOf(dateV); for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);days.push(d);} } else days=[new Date(dateV+'T12:00:00')];
+  const dayKeys=days.map(d=>fmtDate(d)), venueV=document.getElementById('shift-filter-venue').value;
+  const staff=venueV?allStaff.filter(s=>s.venueId===venueV):allStaff;
+  const venueName=venueV?(allVenues.find(v=>v.id===venueV)?.name||''):'Todos los locales';
+  const periodLabel=mode==='week'?`Semana ${days[0].toLocaleDateString('es-AR',{day:'2-digit',month:'long'})} al ${days[6].toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})}`:new Date(dateV+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  let thead=`<tr style="background:#e2e8f0"><th style="padding:6px 10px;text-align:left;font-size:11px;border:1px solid #cbd5e1">Colaborador</th>`;
+  days.forEach(d=>thead+=`<th style="padding:6px 8px;text-align:center;font-size:11px;border:1px solid #cbd5e1">${d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'})}</th>`);
+  thead+=`<th style="padding:6px 10px;text-align:center;font-size:11px;border:1px solid #cbd5e1">Total hs.</th></tr>`;
+  let tbody='';
+  staff.forEach((s,idx)=>{
+    let totalMins=0, cells='';
+    dayKeys.forEach(dk=>{
+      const shift=shiftDirty[`${s.dni}__${dk}`]||shiftData[`${s.dni}__${dk}`];
+      let cell='';
+      if (!shift) cell='<span style="color:#94a3b8">—</span>';
+      else if (shift.free) cell='<span style="color:#64748b;font-size:10px">Franco</span>';
+      else {
+        const m=shift.in&&shift.out?(()=>{let o=new Date(`2000-01-01T${shift.out}`),i=new Date(`2000-01-01T${shift.in}`);if(o<=i)o.setDate(o.getDate()+1);return Math.round((o-i)/60000);})():0;
+        totalMins+=m;
+        cell=`<div style="font-size:11px;line-height:1.4"><span style="color:#16a34a">${shift.in||'—'}</span><br><span style="color:#dc2626">${shift.out||'—'}</span></div>`;
+      }
+      cells+=`<td style="padding:5px 6px;text-align:center;border:1px solid #e2e8f0;background:${idx%2===0?'#fff':'#f8fafc'}">${cell}</td>`;
+    });
+    tbody+=`<tr><td style="padding:5px 10px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:${idx%2===0?'#fff':'#f8fafc'}">${s.name}</td>${cells}<td style="padding:5px 8px;text-align:center;font-size:11px;font-weight:700;color:#16a34a;border:1px solid #e2e8f0;background:${idx%2===0?'#fff':'#f8fafc'}">${totalMins>0?`${Math.floor(totalMins/60)}h ${Math.round(totalMins%60)}m`:'—'}</td></tr>`;
+  });
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Turnos</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}table{border-collapse:collapse;width:100%}@media print{@page{size:landscape;margin:12mm}}</style></head><body><h1>📅 ${venueName}</h1><h2>${periodLabel}</h2><table><thead>${thead}</thead><tbody>${tbody}</tbody></table><script>window.onload=()=>{window.print()}<\/script></body></html>`;
+  const win=window.open('','_blank','width=900,height=600');
+  win.document.write(html); win.document.close();
+};
+
+// ── TOASTS ────────────────────────────────────────────────────────────────
+window.showToast = function(msg, type='info', duration=3500) {
+  const container = document.getElementById('toast-container');
+  const icons = { success:'fa-circle-check', error:'fa-triangle-exclamation', info:'fa-circle-info', warning:'fa-exclamation-circle' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<i class="fa-solid ${icons[type]||'fa-circle-info'}"></i><span>${msg}</span>`;
+  container.appendChild(el);
+  const remove = () => { el.classList.add('hide'); el.addEventListener('animationend', ()=>el.remove(), {once:true}); };
+  const timer = setTimeout(remove, duration);
+  el.onclick = () => { clearTimeout(timer); remove(); };
+};
 
 </script>
 </body>

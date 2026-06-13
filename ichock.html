@@ -491,7 +491,7 @@ function startClock() {
 // ── CARGAR MODELOS FACE-API ───────────────────────────────────────────────
 async function loadModels() {
   const statusEl = document.getElementById('model-status-text');
-  const modelUrl = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+  const modelUrl = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
   try {
     statusEl.textContent = 'Descargando modelos de IA facial...';
     await Promise.all([
@@ -541,6 +541,8 @@ window.closeFaceOverlay = function() {
   stopFaceCamera();
   document.getElementById('face-overlay').classList.add('hidden');
   recognizedEmployee = null;
+  faceDetectCooldown = false;
+  faceVoteBuffer = [];
 };
 
 async function startFaceCamera() {
@@ -566,20 +568,27 @@ function stopFaceCamera() {
 }
 
 // ── LOOP DE RECONOCIMIENTO ────────────────────────────────────────────────
+// Sistema de votación: acumula N frames y solo confirma si la misma persona
+// gana en la mayoría — elimina falsos positivos por frames malos.
+const VOTE_FRAMES   = 6;   // cuántos frames analizar antes de confirmar
+const VOTE_MIN_WINS = 4;   // mínimo de frames que deben coincidir
+const MATCH_THRESHOLD = 0.42; // distancia máxima para considerar match válido
+
 let faceDetectCooldown = false;
+let faceVoteBuffer     = []; // historial de labels en los últimos frames
+
 async function tickFaceScan() {
   if (faceDetectCooldown || !faceStream) return;
   const video  = document.getElementById('face-video');
   const canvas = document.getElementById('face-canvas');
   if (video.readyState < 2) { faceAnimId = requestAnimationFrame(tickFaceScan); return; }
 
-  // Sincronizar tamaño del canvas con el video
   canvas.width  = video.videoWidth;
   canvas.height = video.videoHeight;
   faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
 
   const detections = await faceapi
-    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.55 }))
     .withFaceLandmarks(true)
     .withFaceDescriptors();
 
@@ -588,35 +597,59 @@ async function tickFaceScan() {
 
   if (detections.length > 0) {
     const resized = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
-    // Dibujar caja de detección
     faceapi.draw.drawDetections(canvas, resized);
 
     if (knownFaces.length > 0) {
-      // Comparar con caras conocidas
       const labeledDescriptors = knownFaces.map(f =>
         new faceapi.LabeledFaceDescriptors(f.dni, [f.descriptor])
       );
-      const matcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5); // umbral 0.5
+      const matcher   = new faceapi.FaceMatcher(labeledDescriptors, MATCH_THRESHOLD);
       const bestMatch = matcher.findBestMatch(detections[0].descriptor);
 
-      if (bestMatch.label !== 'unknown') {
-        faceDetectCooldown = true;
-        const emp = knownFaces.find(f => f.dni === bestMatch.label);
-        recognizedEmployee = emp;
-        const conf = Math.round((1 - bestMatch.distance) * 100);
-        showRecognized(emp, conf);
+      // Agregar resultado al buffer de votación
+      faceVoteBuffer.push(bestMatch.label);
+      if (faceVoteBuffer.length > VOTE_FRAMES) faceVoteBuffer.shift();
+
+      if (faceVoteBuffer.length === VOTE_FRAMES) {
+        // Contar votos por label
+        const votes = {};
+        faceVoteBuffer.forEach(l => { votes[l] = (votes[l] || 0) + 1; });
+        const topLabel = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+
+        if (topLabel[0] !== 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
+          // Confirmado: calcular confianza promedio solo de los frames que matchearon
+          faceDetectCooldown = true;
+          faceVoteBuffer = [];
+          const emp  = knownFaces.find(f => f.dni === topLabel[0]);
+          recognizedEmployee = emp;
+          const conf = Math.round((1 - bestMatch.distance) * 100);
+          showRecognized(emp, conf);
+          return;
+        } else if (topLabel[0] === 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
+          // Mayoría desconocida confirmada
+          faceVoteBuffer = [];
+          document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
+        } else {
+          // Buffer lleno pero sin mayoría clara: seguir escaneando
+          const filled = faceVoteBuffer.filter(l => l !== 'unknown').length;
+          document.getElementById('face-status').textContent =
+            filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Buscando cara...';
+        }
       } else {
-        document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
-        faceAnimId = requestAnimationFrame(tickFaceScan);
+        // Buffer acumulando
+        const filled = faceVoteBuffer.filter(l => l !== 'unknown').length;
+        document.getElementById('face-status').textContent =
+          filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Cara detectada, analizando...';
       }
     } else {
       document.getElementById('face-status').textContent = 'Cara detectada. Sin colaboradores registrados aún.';
-      faceAnimId = requestAnimationFrame(tickFaceScan);
     }
   } else {
+    faceVoteBuffer = []; // resetear si pierde la cara
     document.getElementById('face-status').textContent = 'Buscando cara...';
-    faceAnimId = requestAnimationFrame(tickFaceScan);
   }
+
+  faceAnimId = requestAnimationFrame(tickFaceScan);
 }
 
 function showRecognized(emp, confidence) {
@@ -656,6 +689,7 @@ window.submitFacePunch = async function(type) {
     document.getElementById('face-btn-entrada').disabled = false;
     document.getElementById('face-btn-salida').disabled  = false;
     faceDetectCooldown = false;
+    faceVoteBuffer = [];
   }
 };
 
@@ -815,7 +849,7 @@ async function tickRegDetect() {
   faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
 
   const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
     .withFaceLandmarks(true)
     .withFaceDescriptor();
 
@@ -839,17 +873,56 @@ async function tickRegDetect() {
 
 window.captureDescriptor = async function() {
   if (!window._lastRegDescriptor || !regTargetDni) return;
+  const btn    = document.getElementById('reg-capture-btn');
+  const status = document.getElementById('reg-status');
+
+  // Capturar N descriptores y promediarlos para mayor robustez
+  const SAMPLES   = 5;
+  const collected = [];
+  btn.disabled = true;
+
+  for (let i = 0; i < SAMPLES; i++) {
+    status.textContent = `Capturando muestra ${i + 1} de ${SAMPLES}... Mantené la posición.`;
+    await new Promise(r => setTimeout(r, 350)); // pequeña pausa entre frames
+
+    const video = document.getElementById('reg-video');
+    const det = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
+      .withFaceLandmarks(true)
+      .withFaceDescriptor();
+
+    if (det) {
+      collected.push(det.descriptor);
+    } else {
+      i--; // reintentar si no detectó cara en este frame
+      if (collected.length + (SAMPLES - i) < SAMPLES) {
+        status.textContent = 'No se detectó cara. Reposicioná el rostro.';
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+  }
+
+  if (collected.length < 3) {
+    status.textContent = 'No se pudo capturar suficientes muestras. Intentá de nuevo.';
+    btn.disabled = false;
+    return;
+  }
+
+  // Promediar todos los descriptores capturados (128 dimensiones)
+  status.textContent = 'Procesando...';
+  const avgDescriptor = new Float32Array(128);
+  collected.forEach(d => { for (let j = 0; j < 128; j++) avgDescriptor[j] += d[j]; });
+  for (let j = 0; j < 128; j++) avgDescriptor[j] /= collected.length;
+
   try {
-    const descriptor = window._lastRegDescriptor;
-    // Serializar Float32Array como objeto plano (Firestore no acepta typed arrays)
-    const serialized = Object.fromEntries([...descriptor].map((v, i) => [i, v]));
+    const serialized = Object.fromEntries([...avgDescriptor].map((v, i) => [i, v]));
     await setDoc(doc(db, "staff", regTargetDni), { faceDescriptor: serialized }, { merge: true });
     stopRegCamera();
     document.getElementById('register-face-overlay').classList.add('hidden');
-    showToast(`Cara de ${regTargetName} registrada correctamente.`, "success");
-    await loadKnownFaces(); // recargar caras en memoria
-    await loadStaff();      // actualizar tabla admin
-  } catch (e) { showToast("Error al guardar la cara. Revisá tu conexión.", "error"); }
+    showToast(`Cara de ${regTargetName} registrada con ${collected.length} muestras.`, "success");
+    await loadKnownFaces();
+    await loadStaff();
+  } catch (e) { showToast("Error al guardar la cara. Revisá tu conexión.", "error"); btn.disabled = false; }
 };
 
 // ── CARGA DE LOCALES ──────────────────────────────────────────────────────
@@ -975,7 +1048,7 @@ window.saveStaff = async function() {
   if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
   const venue = allVenues.find(v => v.id === venueId);
   try {
-    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName: venue?.name || '', addedAt: new Date().toISOString() }, { merge: false });
+    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName: venue?.name || '', addedAt: new Date().toISOString() }, { merge: true });
     showToast(`${name} guardado/a.`, "success");
     clearStaffForm();
     await loadStaff();

@@ -594,7 +594,7 @@ const VOTE_MIN_WINS = 4;   // mínimo de frames que deben coincidir
 const MATCH_THRESHOLD = 0.42; // distancia máxima para considerar match válido
 
 let faceDetectCooldown = false;
-let faceVoteBuffer     = []; // historial de labels en los últimos frames
+let faceVoteBuffer     = []; // historial de { label, distance } en los últimos frames
 
 async function tickFaceScan() {
   if (faceDetectCooldown || !faceStream) return;
@@ -626,22 +626,26 @@ async function tickFaceScan() {
       const bestMatch = matcher.findBestMatch(detections[0].descriptor);
 
       // Agregar resultado al buffer de votación
-      faceVoteBuffer.push(bestMatch.label);
+      faceVoteBuffer.push({ label: bestMatch.label, distance: bestMatch.distance });
       if (faceVoteBuffer.length > VOTE_FRAMES) faceVoteBuffer.shift();
 
       if (faceVoteBuffer.length === VOTE_FRAMES) {
         // Contar votos por label
         const votes = {};
-        faceVoteBuffer.forEach(l => { votes[l] = (votes[l] || 0) + 1; });
+        faceVoteBuffer.forEach(({ label }) => { votes[label] = (votes[label] || 0) + 1; });
         const topLabel = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
 
         if (topLabel[0] !== 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
-          // Confirmado: calcular confianza promedio solo de los frames que matchearon
+          // Confirmado: confianza promedio de los frames ganadores (snapshot antes de limpiar)
+          const winnerDni = topLabel[0];
+          const avgDistance = faceVoteBuffer
+            .filter(v => v.label === winnerDni)
+            .reduce((s, v) => s + v.distance, 0) / topLabel[1];
+          const conf = Math.round((1 - avgDistance) * 100);
           faceDetectCooldown = true;
           faceVoteBuffer = [];
-          const emp  = knownFaces.find(f => f.dni === topLabel[0]);
+          const emp = knownFaces.find(f => f.dni === winnerDni);
           recognizedEmployee = emp;
-          const conf = Math.round((1 - bestMatch.distance) * 100);
           showRecognized(emp, conf);
           return;
         } else if (topLabel[0] === 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
@@ -650,13 +654,13 @@ async function tickFaceScan() {
           document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
         } else {
           // Buffer lleno pero sin mayoría clara: seguir escaneando
-          const filled = faceVoteBuffer.filter(l => l !== 'unknown').length;
+          const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
           document.getElementById('face-status').textContent =
             filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Buscando cara...';
         }
       } else {
         // Buffer acumulando
-        const filled = faceVoteBuffer.filter(l => l !== 'unknown').length;
+        const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
         document.getElementById('face-status').textContent =
           filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Cara detectada, analizando...';
       }
@@ -685,8 +689,10 @@ function showRecognized(emp, confidence) {
 // ── FICHAR CON CARA RECONOCIDA ────────────────────────────────────────────
 window.submitFacePunch = async function(type) {
   if (!recognizedEmployee) return;
-  document.getElementById('face-btn-entrada').disabled = true;
-  document.getElementById('face-btn-salida').disabled  = true;
+  const btnIn  = document.getElementById('face-btn-entrada');
+  const btnOut = document.getElementById('face-btn-salida');
+  btnIn.disabled  = true;
+  btnOut.disabled = true;
   try {
     const emp = recognizedEmployee;
     const now = new Date();
@@ -699,16 +705,22 @@ window.submitFacePunch = async function(type) {
       timestamp: now.toISOString(),
       method:    'face'
     });
+    // Éxito: cerrar overlay (resetea todo internamente) y mostrar confirmación
     closeFaceOverlay();
     showPunchConfirm(type, emp.name, emp.venueName || '', now);
     showRecentPunches();
   } catch (e) {
-    showToast("Error al registrar fichaje.", "error");
-  } finally {
-    document.getElementById('face-btn-entrada').disabled = false;
-    document.getElementById('face-btn-salida').disabled  = false;
-    faceDetectCooldown = false;
-    faceVoteBuffer = [];
+    showToast("Error al registrar fichaje. Intentá de nuevo.", "error");
+    // Solo en error: rehabilitar botones y resetear cooldown para que el usuario pueda reintentar
+    // Solo si el overlay sigue abierto (el usuario no lo cerró mientras tanto)
+    if (!document.getElementById('face-overlay').classList.contains('hidden')) {
+      btnIn.disabled  = false;
+      btnOut.disabled = false;
+      faceDetectCooldown = false;
+      faceVoteBuffer = [];
+      // Volver a correr el loop de reconocimiento
+      tickFaceScan();
+    }
   }
 };
 

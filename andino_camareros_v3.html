@@ -3432,7 +3432,7 @@ function _qidFromItem(item) {
  * @param {number} count  cuántas preguntas seleccionar
  * @returns {Array}       preguntas seleccionadas (mezcladas)
  */
-function pickQuestionsAntiRepeat(dni, mode, local, bank, count) {
+function pickQuestionsAntiRepeat(dni, mode, local, bank, count, globalStats) {
     if (!bank || bank.length === 0) return [];
     count = Math.min(count, bank.length);
 
@@ -3446,11 +3446,13 @@ function pickQuestionsAntiRepeat(dni, mode, local, bank, count) {
 
     if (unseen.length >= count) {
         // Caso normal: hay suficientes preguntas nuevas
-        selected = shuffleArray(unseen).slice(0, count);
+        // Ordenar por tasa de error (mayor error primero) con desempate aleatorio
+        selected = sortByErrorRate(unseen, dni, globalStats).slice(0, count);
     } else {
         // Tomamos todas las no vistas + completamos con vistas
-        const extra = shuffleArray(viewed).slice(0, count - unseen.length);
-        selected    = shuffleArray([...unseen, ...extra]);
+        const extra = sortByErrorRate(viewed, dni, globalStats).slice(0, count - unseen.length);
+        // Combinar: no-vistas primero (ya ordenadas por error), luego las de repaso
+        selected = [...sortByErrorRate(unseen, dni, globalStats), ...extra];
 
         // Si agotamos el banco completo, resetear para el próximo ciclo
         if (unseen.length === 0) {
@@ -3463,6 +3465,182 @@ function pickQuestionsAntiRepeat(dni, mode, local, bank, count) {
     _saveSeen(dni, mode, local, newSeen);
 
     return selected;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SISTEMA DE ORDEN ADAPTATIVO — Prioriza preguntas más falladas
+// ══════════════════════════════════════════════════════════════════
+//
+// Cómo funciona:
+//   1. Al iniciar sesión: carga stats GLOBALES de Firestore (andino_question_stats)
+//      y ordena el banco priorizando las preguntas con mayor tasa de error global.
+//   2. Al fallar: inserta preguntas del mismo tema (category) ordenadas
+//      por tasa de error GLOBAL justo después de la pregunta actual.
+//      Las preguntas inyectadas se marcan con _reinforcement = true.
+//   3. Al acertar una pregunta de refuerzo: se limpia el flag y el flujo
+//      vuelve al ranking global (sin quedarse atascado en la categoría).
+//
+// Stats personales (localStorage) se siguen registrando como fallback.
+// Clave de localStorage: "andino_qstats_v1_<dni>"
+// Valor: { [qid]: { attempts, errors } }
+
+const QSTATS_KEY_PREFIX = 'andino_qstats_v1';
+
+function _qstatsKey(dni) {
+    return `${QSTATS_KEY_PREFIX}_${dni}`;
+}
+
+function _loadQStats(dni) {
+    try { return JSON.parse(localStorage.getItem(_qstatsKey(dni))) || {}; }
+    catch { return {}; }
+}
+
+function _saveQStats(dni, stats) {
+    try { localStorage.setItem(_qstatsKey(dni), JSON.stringify(stats)); }
+    catch {}
+}
+
+// Registra un intento (correcto o no) para una pregunta (stats personales en localStorage)
+function recordQStat(dni, qid, isCorrect) {
+    if (!dni || !qid) return;
+    const stats = _loadQStats(dni);
+    if (!stats[qid]) stats[qid] = { attempts: 0, errors: 0 };
+    stats[qid].attempts++;
+    if (!isCorrect) stats[qid].errors++;
+    _saveQStats(dni, stats);
+}
+
+// ── Cache de stats globales (Firestore) ─────────────────────────────
+// Se carga una vez al inicio del juego de Ingredientes.
+// Formato: { [qid]: { attempts, errors } }
+let _globalStatsCache = null;
+let _globalStatsCacheGroup = null; // localGroup para el que se cargó
+
+/**
+ * Carga stats globales de Firestore para el localGroup dado.
+ * Cachea el resultado en memoria para la sesión actual.
+ * @param {string} localGroup  'bc' | 'tanta' | 'lamar'
+ * @returns {Promise<Object>}  { [qid]: { attempts, errors } }
+ */
+async function loadGlobalQStats(localGroup) {
+    if (_globalStatsCache && _globalStatsCacheGroup === localGroup) {
+        return _globalStatsCache;
+    }
+    try {
+        const snap = await fsdb.collection(Q_STATS_COL)
+            .where('localGroup', '==', localGroup)
+            .get();
+        const result = {};
+        snap.forEach(doc => {
+            const d = doc.data();
+            result[doc.id] = {
+                attempts: d.attempts || 0,
+                errors:   d.errors   || 0,
+            };
+        });
+        _globalStatsCache      = result;
+        _globalStatsCacheGroup = localGroup;
+        return result;
+    } catch(e) {
+        console.warn('[Asesino] No se pudieron cargar stats globales, usando personales.', e);
+        return null; // fallback a stats personales
+    }
+}
+
+/** Invalida el cache global (llamar al inicio de cada partida nueva) */
+function invalidateGlobalStatsCache() {
+    _globalStatsCache      = null;
+    _globalStatsCacheGroup = null;
+}
+
+// Devuelve la tasa de error de una pregunta (0..1). Sin datos → 0.5 (neutro)
+function _errorRate(qid, stats) {
+    const s = stats ? stats[qid] : null;
+    if (!s || s.attempts === 0) return 0.5; // sin historial → prioridad media
+    return s.errors / s.attempts;
+}
+
+/**
+ * Ordena un banco de preguntas priorizando las de mayor tasa de error.
+ * Usa stats globales si están disponibles; cae a stats personales si no.
+ * Las sin historial quedan en posición media (tasa 0.5).
+ * Dentro del mismo grupo de tasa, se mezclan aleatoriamente (Fisher-Yates).
+ *
+ * @param {Array}  bank        - preguntas a ordenar
+ * @param {string} dni         - DNI del jugador
+ * @param {Object} [globalStats] - stats globales precargadas (opcional)
+ * @returns {Array}            - banco ordenado
+ */
+function sortByErrorRate(bank, dni, globalStats) {
+    // Preferir stats globales; fallback a personales
+    const stats = globalStats || _loadQStats(dni);
+    const rated = bank.map(q => ({
+        q,
+        rate: _errorRate(_qidFromItem(q), stats),
+        rand: Math.random()
+    }));
+    rated.sort((a, b) => b.rate - a.rate || a.rand - b.rand);
+    return rated.map(r => r.q);
+}
+
+/**
+ * Inserta preguntas del mismo tema en la cola inmediatamente después
+ * de la posición actual, ordenadas por mayor tasa de error GLOBAL.
+ * Las preguntas insertadas reciben el flag _reinforcement = true para
+ * que, al acertarse, el juego sepa que puede volver al flujo global.
+ * Evita duplicar preguntas que ya están en la cola.
+ *
+ * @param {Array}  queue         - state.ingrSelected (se muta)
+ * @param {number} currentIdx    - state.step (pregunta que acaba de fallar)
+ * @param {Array}  fullBank      - banco completo de preguntas del local
+ * @param {string} category      - category de la pregunta fallada
+ * @param {string} dni           - DNI del jugador
+ * @param {number} [maxInsert=2] - cuántas preguntas refuerzo insertar
+ * @param {Object} [globalStats] - stats globales precargadas (opcional)
+ */
+function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni, maxInsert, globalStats) {
+    maxInsert = maxInsert || 2;
+    if (!category || !fullBank) return;
+
+    // Antes de inyectar nuevo refuerzo: limpiar refuerzos pendientes anteriores
+    // de la misma categoría que siguen en cola sin resolver, para no acumular
+    for (let i = currentIdx + 1; i < queue.length; ) {
+        if (queue[i]._reinforcement && queue[i].category === category) {
+            queue.splice(i, 1);
+        } else {
+            i++;
+        }
+    }
+
+    // IDs ya presentes en la cola (a partir de la siguiente posición)
+    const queuedQids = new Set(
+        queue.slice(currentIdx + 1).map(_qidFromItem)
+    );
+
+    // Candidatos: mismo category, no están ya en cola, no es la pregunta actual
+    const currentQid = _qidFromItem(queue[currentIdx]);
+    const candidates = fullBank.filter(q => {
+        return q.category === category &&
+               _qidFromItem(q) !== currentQid &&
+               !queuedQids.has(_qidFromItem(q));
+    });
+
+    if (!candidates.length) return;
+
+    // Ordenar candidatos por mayor tasa de error — GLOBAL si disponible
+    const stats = globalStats || _loadQStats(dni);
+    const sorted = candidates
+        .map(q => ({ q, rate: _errorRate(_qidFromItem(q), stats), rand: Math.random() }))
+        .sort((a, b) => b.rate - a.rate || a.rand - b.rand)
+        .slice(0, maxInsert)
+        .map(r => {
+            // Clonar para no mutar el banco original; marcar como refuerzo
+            const clone = { ...r.q, _reinforcement: true };
+            return clone;
+        });
+
+    // Insertar justo después de currentIdx
+    queue.splice(currentIdx + 1, 0, ...sorted);
 }
 
 // ── Emojis por categoría de carta ──────────────────────────
@@ -3875,9 +4053,23 @@ const app = (() => {
                     const filtered = bank.filter(q => q.category === _ingrSelectedCategory);
                     if (filtered.length > 0) bank = filtered;
                 }
-                // Anti-repetición para ingredientes
+                // Guardar banco completo para el refuerzo adaptativo por categoría
+                state.ingrFullBank = bank;
+
+                // Invalidar cache para que se recarguen las stats globales en esta partida
+                invalidateGlobalStatsCache();
+
+                // Determinar localGroup (igual que en trackQuestionStat)
+                const isBc = state.local && ['bcp','bcbl','bcc','bcb'].includes(state.local);
+                const localGroup = isBc ? 'bc' : (state.local || 'bc');
+
+                // Cargar stats globales de Firestore y guardarlo en state para usarlo en refuerzos
+                state.globalStats = await loadGlobalQStats(localGroup);
+
+                // Anti-repetición + orden adaptativo GLOBAL (mayor error global primero)
                 state.ingrSelected = pickQuestionsAntiRepeat(
-                    state.dni, 'ingredientes' + (_ingrSelectedCategory || ''), state.local, bank, 7
+                    state.dni, 'ingredientes' + (_ingrSelectedCategory || ''), state.local, bank, 7,
+                    state.globalStats
                 );
             }
 
@@ -4031,8 +4223,9 @@ const app = (() => {
             // Siempre marcar la opción correcta (visible tanto en error como en timeout)
             allOptions.forEach(b => { if (parseInt(b.getAttribute('data-index')) === q.c) b.classList.add('correct'); });
 
-            // Registrar stat de esta pregunta en Firestore
+            // Registrar stat en Firestore (global) y local (orden adaptativo)
             trackQuestionStat(q.q, isCorrect, state.local, state.dni);
+            recordQStat(state.dni, _qidFromItem(q), isCorrect);
 
             if (isCorrect) {
                 if (btn) btn.classList.add('correct');
@@ -4282,9 +4475,12 @@ const app = (() => {
             allOptions.forEach(b => { if (parseInt(b.getAttribute('data-index')) === q.c) b.classList.add('correct'); });
 
             const isCorrect = idx === q.c;
+            const qid = _qidFromItem(q);
 
-            // Registrar stat de esta pregunta en Firestore
+            // Registrar stat en Firestore (global)
             trackQuestionStat(q.q || q.dish, isCorrect, state.local, state.dni);
+            // Registrar stat local (para orden adaptativo en próximas sesiones)
+            recordQStat(state.dni, qid, isCorrect);
 
             if (isCorrect) {
                 if (btn) btn.classList.add('correct');
@@ -4298,6 +4494,19 @@ const app = (() => {
                 if (state.streak >= 3) { showCombo(`🔥 COMBO ×${state.streak}!`); playSound('combo'); }
                 else if (state.streak === 2) showCombo('¡Doble acierto!');
                 updateXpBar(Math.min(((state.step + 1) / state.ingrSelected.length) * 80 + 5, 85));
+
+                // ── Si era una pregunta de refuerzo, limpiar refuerzos pendientes del mismo tema ──
+                // Así el jugador vuelve al ranking global en lugar de quedarse en la categoría.
+                if (q._reinforcement) {
+                    const cat = q.category;
+                    for (let i = state.step + 1; i < state.ingrSelected.length; ) {
+                        if (state.ingrSelected[i]._reinforcement && state.ingrSelected[i].category === cat) {
+                            state.ingrSelected.splice(i, 1);
+                        } else {
+                            i++;
+                        }
+                    }
+                }
             } else {
                 if (btn) btn.classList.add('wrong');
                 state.streak = 0;
@@ -4312,6 +4521,19 @@ const app = (() => {
                     state.score -= 1;
                     state.xp = Math.max(0, (state.xp || 0) - 10);
                     showCombo('💀 -1 punto · -10 XP');
+                }
+
+                // ── REFUERZO ADAPTATIVO: inyectar preguntas del mismo tema usando stats GLOBALES ──
+                if (q.category && state.ingrFullBank) {
+                    injectCategoryReinforcement(
+                        state.ingrSelected,
+                        state.step,
+                        state.ingrFullBank,
+                        q.category,
+                        state.dni,
+                        2,              // hasta 2 preguntas de refuerzo por fallo
+                        state.globalStats  // stats globales de Firestore
+                    );
                 }
 
                 // Show explanation

@@ -520,6 +520,7 @@ async function loadDailyHard() {
 // PREGUNTAS EXTRA
 // ═══════════════════════════════════════════════════════
 let extraData = { trivia: [], sim: [], ingr: [] };
+let _bancoCache = {}; // fsKey → array de items cargados desde Firestore
 
 async function loadExtra() {
     try {
@@ -1146,6 +1147,7 @@ async function renderBancoUnified(mainTab, subKey) {
         const doc = await fsdb.collection(EXTRA_COL).doc('bank').get();
         const data = doc.exists ? doc.data() : {};
         firestoreItems = (data[fsKey] || []).map((item, idx) => ({...item, _fsKey: fsKey, _idx: idx}));
+        _bancoCache[fsKey] = data[fsKey] || [];
     } catch(e) { console.warn('renderBancoUnified:', e); }
 
     function renderCard(item) {
@@ -1228,7 +1230,8 @@ function bancoEditOne(fsKey, idx, type) {
 
     // Obtener item actual desde el DOM (data ya cargada en firestoreItems)
     // Re-leemos desde extraData que ya está en memoria tras el último loadExtra
-    const item = (extraData[fsKey] || [])[idx];
+    // Buscar en el cache cargado por renderBancoUnified (fuente de verdad)
+    const item = (_bancoCache[fsKey] || extraData[fsKey] || [])[idx];
     if (!item) { alert('No se encontró la pregunta'); return; }
 
     const body   = document.getElementById('edit-modal-body');
@@ -1311,7 +1314,8 @@ async function bancoSaveEdit() {
     const status = document.getElementById('edit-modal-status');
     status.textContent = 'Guardando…'; status.className = 'admin-status';
 
-    if (!extraData[_editFsKey] || !extraData[_editFsKey][_editIdx]) {
+    const sourceArr = _bancoCache[_editFsKey] || extraData[_editFsKey];
+    if (!sourceArr || !sourceArr[_editIdx]) {
         status.textContent = 'Error: pregunta no encontrada'; status.className = 'admin-status err'; return;
     }
 
@@ -1343,9 +1347,15 @@ async function bancoSaveEdit() {
         item = { q, o: [o0,o1,o2], c: 0, explanation: exp };
     }
 
-    extraData[_editFsKey][_editIdx] = item;
-    await saveExtra();
-    status.textContent = '✓ Guardado'; status.className = 'admin-status ok';
+    // Actualizar en cache y persistir a Firestore
+    sourceArr[_editIdx] = item;
+    _bancoCache[_editFsKey] = sourceArr;
+    try {
+        await fsdb.collection(EXTRA_COL).doc('bank').update({ [_editFsKey]: sourceArr });
+        status.textContent = '✓ Guardado'; status.className = 'admin-status ok';
+    } catch(e) {
+        status.textContent = 'Error al guardar: ' + e.message; status.className = 'admin-status err'; return;
+    }
     setTimeout(() => {
         closeEditModal();
         renderBancoUnified(_currentBancoTab, _currentBancoSub);

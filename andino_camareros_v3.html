@@ -3591,7 +3591,9 @@ function sortByErrorRate(bank, dni, globalStats) {
  * la partida siempre dura la misma cantidad de preguntas con la que arrancó.
  * Las preguntas insertadas reciben el flag _reinforcement = true para
  * que, al acertarse, el juego sepa que puede volver al flujo global.
- * Evita duplicar preguntas que ya están en la cola.
+ * Evita repetir preguntas que ya aparecieron en esta partida (jugadas
+ * antes o ya en cola). Si no quedan preguntas nuevas de ese tema en el
+ * banco, no se inyecta nada (no se repite ninguna pregunta).
  *
  * Si currentIdx es la última pregunta de la cola no hay lugar para
  * reforzar (no hay "próxima" que reemplazar) y la función no hace nada.
@@ -3627,16 +3629,13 @@ function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni,
     const toReplace = Math.min(maxReplace, slotsAvailable);
     if (toReplace <= 0) return;
 
-    // IDs ya presentes en la cola (a partir de la siguiente posición)
-    const queuedQids = new Set(
-        queue.slice(currentIdx + 1).map(_qidFromItem)
-    );
+    // IDs ya presentes en TODA la partida (jugadas antes Y en cola) —
+    // así no se repite una pregunta que ya respondiste antes en esta sesión
+    const queuedQids = new Set(queue.map(_qidFromItem));
 
-    // Candidatos: mismo category, no están ya en cola, no es la pregunta actual
-    const currentQid = _qidFromItem(queue[currentIdx]);
+    // Candidatos: mismo category, todavía no aparecieron en esta partida
     const candidates = fullBank.filter(q => {
         return q.category === category &&
-               _qidFromItem(q) !== currentQid &&
                !queuedQids.has(_qidFromItem(q));
     });
 

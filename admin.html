@@ -1311,7 +1311,6 @@ async function bancoSaveEdit() {
     const status = document.getElementById('edit-modal-status');
     status.textContent = 'Guardando…'; status.className = 'admin-status';
 
-    await loadExtra();
     if (!extraData[_editFsKey] || !extraData[_editFsKey][_editIdx]) {
         status.textContent = 'Error: pregunta no encontrada'; status.className = 'admin-status err'; return;
     }

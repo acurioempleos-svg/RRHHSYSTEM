@@ -3474,8 +3474,9 @@ function pickQuestionsAntiRepeat(dni, mode, local, bank, count, globalStats) {
 // Cómo funciona:
 //   1. Al iniciar sesión: carga stats GLOBALES de Firestore (andino_question_stats)
 //      y ordena el banco priorizando las preguntas con mayor tasa de error global.
-//   2. Al fallar: inserta preguntas del mismo tema (category) ordenadas
-//      por tasa de error GLOBAL justo después de la pregunta actual.
+//   2. Al fallar: REEMPLAZA las próximas preguntas en cola (mismo tema/
+//      category) por otras ordenadas por tasa de error GLOBAL. No agrega
+//      preguntas nuevas — la partida siempre dura la misma cantidad total.
 //      Las preguntas inyectadas se marcan con _reinforcement = true.
 //   3. Al acertar una pregunta de refuerzo: se limpia el flag y el flujo
 //      vuelve al ranking global (sin quedarse atascado en la categoría).
@@ -3584,26 +3585,35 @@ function sortByErrorRate(bank, dni, globalStats) {
 }
 
 /**
- * Inserta preguntas del mismo tema en la cola inmediatamente después
- * de la posición actual, ordenadas por mayor tasa de error GLOBAL.
+ * REEMPLAZA las próximas preguntas en cola (a partir de currentIdx+1) por
+ * preguntas del mismo tema (category), ordenadas por mayor tasa de error
+ * GLOBAL. No agrega preguntas — el largo total de la cola no cambia, así
+ * la partida siempre dura la misma cantidad de preguntas con la que arrancó.
  * Las preguntas insertadas reciben el flag _reinforcement = true para
  * que, al acertarse, el juego sepa que puede volver al flujo global.
  * Evita duplicar preguntas que ya están en la cola.
+ *
+ * Si currentIdx es la última pregunta de la cola no hay lugar para
+ * reforzar (no hay "próxima" que reemplazar) y la función no hace nada.
  *
  * @param {Array}  queue         - state.ingrSelected (se muta)
  * @param {number} currentIdx    - state.step (pregunta que acaba de fallar)
  * @param {Array}  fullBank      - banco completo de preguntas del local
  * @param {string} category      - category de la pregunta fallada
  * @param {string} dni           - DNI del jugador
- * @param {number} [maxInsert=2] - cuántas preguntas refuerzo insertar
+ * @param {number} [maxReplace=2] - cuántas preguntas de refuerzo como máximo
  * @param {Object} [globalStats] - stats globales precargadas (opcional)
  */
-function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni, maxInsert, globalStats) {
-    maxInsert = maxInsert || 2;
+function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni, maxReplace, globalStats) {
+    maxReplace = maxReplace || 2;
     if (!category || !fullBank) return;
 
-    // Antes de inyectar nuevo refuerzo: limpiar refuerzos pendientes anteriores
-    // de la misma categoría que siguen en cola sin resolver, para no acumular
+    // No hay próximas preguntas para reemplazar (currentIdx es la última)
+    if (currentIdx + 1 >= queue.length) return;
+
+    // Antes de inyectar nuevo refuerzo: sacar refuerzos pendientes anteriores
+    // de la misma categoría que sigan en cola sin resolver, para no acumular
+    // (esos lugares quedan libres para las nuevas preguntas de refuerzo)
     for (let i = currentIdx + 1; i < queue.length; ) {
         if (queue[i]._reinforcement && queue[i].category === category) {
             queue.splice(i, 1);
@@ -3611,6 +3621,11 @@ function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni,
             i++;
         }
     }
+
+    // Cuántos lugares hay disponibles para reemplazar sin alterar el total
+    const slotsAvailable = queue.length - (currentIdx + 1);
+    const toReplace = Math.min(maxReplace, slotsAvailable);
+    if (toReplace <= 0) return;
 
     // IDs ya presentes en la cola (a partir de la siguiente posición)
     const queuedQids = new Set(
@@ -3632,15 +3647,18 @@ function injectCategoryReinforcement(queue, currentIdx, fullBank, category, dni,
     const sorted = candidates
         .map(q => ({ q, rate: _errorRate(_qidFromItem(q), stats), rand: Math.random() }))
         .sort((a, b) => b.rate - a.rate || a.rand - b.rand)
-        .slice(0, maxInsert)
+        .slice(0, toReplace)
         .map(r => {
             // Clonar para no mutar el banco original; marcar como refuerzo
             const clone = { ...r.q, _reinforcement: true };
             return clone;
         });
 
-    // Insertar justo después de currentIdx
-    queue.splice(currentIdx + 1, 0, ...sorted);
+    if (!sorted.length) return;
+
+    // REEMPLAZAR las próximas sorted.length preguntas (no agregar) —
+    // el largo total de la cola queda igual.
+    queue.splice(currentIdx + 1, sorted.length, ...sorted);
 }
 
 // ── Emojis por categoría de carta ──────────────────────────
@@ -3665,21 +3683,18 @@ function getCategoryEmoji(cat) {
 // ── Selector de categoría para el juego de Carta ───────────
 let _ingrSelectedCategory = null; // null = todas
 
-function getIngrCategories() {
-    const extra = extraData != null ? [
-        ...(extraData.ingr || []),
-        ...(extraData['ingr-tanta'] || []),
-        ...(extraData['ingr-lamar'] || []),
-    ] : [];
-    const all = [...DATA.ingredientesBank, ...extra];
-    const cats = [...new Set(all.map(q => q.category).filter(Boolean))];
+function getIngrCategories(local) {
+    const bank = getLocalIngredientes(local);
+    const cats = [...new Set(bank.map(q => q.category).filter(Boolean))];
     return cats.sort();
 }
 
 function showCategoriasModal() {
     const modal = document.getElementById('ingr-category-modal');
     if (!modal) return;
-    const cats = getIngrCategories();
+    const localInput = document.getElementById('user-local');
+    const local = localInput ? localInput.value : '';
+    const cats = getIngrCategories(local);
     const grid = document.getElementById('ingr-cat-grid');
     grid.innerHTML = `
         <button class="ingr-cat-btn ${_ingrSelectedCategory === null ? 'active' : ''}" onclick="selectIngrCategory(null)">
@@ -4495,15 +4510,21 @@ const app = (() => {
                 else if (state.streak === 2) showCombo('¡Doble acierto!');
                 updateXpBar(Math.min(((state.step + 1) / state.ingrSelected.length) * 80 + 5, 85));
 
-                // ── Si era una pregunta de refuerzo, limpiar refuerzos pendientes del mismo tema ──
-                // Así el jugador vuelve al ranking global en lugar de quedarse en la categoría.
-                if (q._reinforcement) {
+                // ── Si era una pregunta de refuerzo, volver al flujo global ──
+                // En vez de borrar las preguntas de refuerzo pendientes del mismo
+                // tema (lo que achicaría el total), se REEMPLAZAN por otras
+                // preguntas que todavía no estén en la cola. Si no hay candidatos
+                // disponibles, se dejan como están (no se modifica el total).
+                if (q._reinforcement && state.ingrFullBank) {
                     const cat = q.category;
-                    for (let i = state.step + 1; i < state.ingrSelected.length; ) {
+                    const queuedQids = new Set(state.ingrSelected.map(_qidFromItem));
+                    for (let i = state.step + 1; i < state.ingrSelected.length; i++) {
                         if (state.ingrSelected[i]._reinforcement && state.ingrSelected[i].category === cat) {
-                            state.ingrSelected.splice(i, 1);
-                        } else {
-                            i++;
+                            const replacement = state.ingrFullBank.find(c => !queuedQids.has(_qidFromItem(c)));
+                            if (replacement) {
+                                state.ingrSelected[i] = { ...replacement };
+                                queuedQids.add(_qidFromItem(replacement));
+                            }
                         }
                     }
                 }
@@ -4518,7 +4539,7 @@ const app = (() => {
                 state._wrongFull.push(q);
                 state.wrongCount = (state.wrongCount || 0) + 1;
                 if (state.wrongCount > 2) {
-                    state.score -= 1;
+                    state.score = Math.max(0, state.score - 1);
                     state.xp = Math.max(0, (state.xp || 0) - 10);
                     showCombo('💀 -1 punto · -10 XP');
                 }
@@ -4599,7 +4620,7 @@ const app = (() => {
                         || DATA.trivia;
                     const rankTable = isTrivia ? RANKS.trivia : RANKS.ingredientes;
                     const rank = rankTable.find(r => state.score >= r.min) || rankTable[rankTable.length - 1];
-                    const total = isTrivia ? triviaData.length : 7;
+                    const total = isTrivia ? triviaData.length : (state.ingrSelected ? state.ingrSelected.length : 7);
                     if (resIcon) resIcon.textContent = rank.icon;
                     if (resRankLabel) resRankLabel.textContent = isTrivia ? 'RANGO TRIVIA' : 'RANGO CARTA';
                     if (resTitle) resTitle.textContent = rank.label;

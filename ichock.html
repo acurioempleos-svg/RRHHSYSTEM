@@ -91,6 +91,9 @@
       <div id="fr-icon" class="text-5xl"></div>
       <p id="fr-name" class="text-white font-bold text-xl"></p>
       <p id="fr-conf" class="text-slate-400 text-xs"></p>
+      <button onclick="rejectRecognition()" class="text-slate-400 hover:text-slate-200 text-xs underline cursor-pointer mt-1">
+        No soy yo
+      </button>
     </div>
   </div>
 
@@ -740,8 +743,27 @@ function showRecognized(emp, confidence) {
   document.getElementById('fr-conf').textContent  = `Confianza: ${confidence}% · ${emp.venueName || ''}`;
   resultOverlay.classList.remove('hidden');
   document.getElementById('face-status').textContent = `¡Hola ${emp.name.split(' ')[0]}! Elegí tu acción.`;
+  // Fix #12: re-enable punch buttons every time a new recognition is shown — previously they
+  // could stay disabled from a prior attempt since nothing reset them on this path.
+  const btnIn  = document.getElementById('face-btn-entrada');
+  const btnOut = document.getElementById('face-btn-salida');
+  btnIn.disabled  = false;
+  btnOut.disabled = false;
   document.getElementById('face-punch-buttons').classList.remove('hidden');
 }
+
+// Fix #12: lets the kiosk recover when the wrong person was matched or someone new steps up,
+// without closing the whole overlay/camera. Resumes the detection loop instead of staying stuck
+// showing the previous person indefinitely.
+window.rejectRecognition = function() {
+  recognizedEmployee = null;
+  faceDetectCooldown = false;
+  faceVoteBuffer = [];
+  document.getElementById('face-result-overlay').classList.add('hidden');
+  document.getElementById('face-punch-buttons').classList.add('hidden');
+  document.getElementById('face-status').textContent = 'Buscando cara...';
+  if (faceStream) tickFaceScan();
+};
 
 // ── FICHAR CON CARA RECONOCIDA ────────────────────────────────────────────
 window.submitFacePunch = async function(type) {

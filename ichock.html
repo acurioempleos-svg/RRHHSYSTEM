@@ -35,7 +35,7 @@
     #face-overlay:not(.hidden) { display: flex; }
     #face-video { width: 100%; max-width: 360px; border-radius: 1rem; border: 2px solid #6366f1; display: block; }
     #face-canvas { position: absolute; top: 0; left: 0; pointer-events: none; border-radius: 1rem; }
-    .face-frame { position: relative; width: 100%; max-width: 360px; }
+    .face-frame { position: relative; width: 100%; max-width: 360px; display: block; }
     /* Overlay de resultado post-reconocimiento */
     #face-result-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); border-radius: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; }
     /* Pulso de escaneo */
@@ -391,12 +391,12 @@
   <div id="tab-shifts" class="tab-content">
     <div class="flex gap-2 mb-4 items-end flex-wrap">
       <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Modo</label>
-        <select id="shift-mode" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <select id="shift-mode" onchange="safeRenderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
           <option value="week">Vista semanal</option><option value="day">Vista por día</option></select></div>
       <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Semana / Fecha</label>
-        <input type="date" id="shift-date" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+        <input type="date" id="shift-date" onchange="safeRenderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
       <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Local</label>
-        <select id="shift-filter-venue" onchange="renderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <select id="shift-filter-venue" onchange="safeRenderShiftGrid()" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
           <option value="">Todos los locales</option></select></div>
       <button onclick="saveAllShifts()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
         <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar turnos</button>
@@ -479,12 +479,12 @@ let hoursView   = 'byCollab';
 let shiftData   = {};
 let shiftDirty  = {};
 let shiftModalKey = '';
-const DAYS_ES   = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   startClock();
   await loadVenues();
+  await loadStaff();
   await loadModels();
   await loadKnownFaces();
   showRecentPunches();
@@ -524,13 +524,14 @@ async function loadModels() {
 }
 
 // ── CARGAR CARAS CONOCIDAS DESDE FIRESTORE ───────────────────────────────
+let cachedFaceMatcher = null; // Fix #2: build FaceMatcher once, not per-frame
+
 async function loadKnownFaces() {
   try {
     const snap = await getDocs(collection(db, "staff"));
     knownFaces = [];
     snap.docs.forEach(d => {
       const s = d.data();
-      // Soporte para múltiples descriptores (faceDescriptors[]) y descriptor único legacy (faceDescriptor)
       let descriptors = [];
       if (s.faceDescriptors && Array.isArray(s.faceDescriptors) && s.faceDescriptors.length > 0) {
         descriptors = s.faceDescriptors.map(raw => new Float32Array(Object.values(raw)));
@@ -541,11 +542,30 @@ async function loadKnownFaces() {
         knownFaces.push({ dni: s.dni, name: s.name, venueName: s.venueName, venueId: s.venueId, descriptors });
       }
     });
-  } catch (e) { /* silencio */ }
+    // Rebuild matcher cache whenever faces are (re)loaded
+    rebuildFaceMatcher();
+  } catch (e) {
+    // Fix #C: don't swallow errors silently
+    console.error('loadKnownFaces error:', e);
+    showToast('Error al cargar las caras registradas. El reconocimiento facial puede no funcionar.', 'error', 6000);
+  }
 }
 window.loadKnownFaces = loadKnownFaces;
 
+function rebuildFaceMatcher() {
+  if (knownFaces.length === 0) { cachedFaceMatcher = null; return; }
+  try {
+    const labeled = knownFaces.map(f => new faceapi.LabeledFaceDescriptors(f.dni, f.descriptors));
+    cachedFaceMatcher = new faceapi.FaceMatcher(labeled, MATCH_THRESHOLD);
+  } catch (e) {
+    console.error('rebuildFaceMatcher error:', e);
+    cachedFaceMatcher = null;
+  }
+}
+
 // ── ABRIR ESCÁNER FACIAL ──────────────────────────────────────────────────
+let faceRefreshTimer = null; // Fix #10: periodic refresh of knownFaces
+
 window.openFaceOverlay = async function() {
   if (!modelsLoaded) { showToast("Modelos aún cargando. Esperá un momento.", "warning"); return; }
   recognizedEmployee = null;
@@ -553,10 +573,19 @@ window.openFaceOverlay = async function() {
   document.getElementById('face-result-overlay').classList.add('hidden');
   document.getElementById('face-status').textContent = 'Iniciando cámara...';
   document.getElementById('face-overlay').classList.remove('hidden');
+  // Fix #10: refresh knownFaces when opening so any recently registered collaborator is included
+  await loadKnownFaces();
   await startFaceCamera();
+  // Fix #10: keep refreshing every 60s while overlay is open (catches remote registrations)
+  faceRefreshTimer = setInterval(async () => {
+    if (!faceStream) return;
+    await loadKnownFaces();
+  }, 60000);
 };
 
 window.closeFaceOverlay = function() {
+  // Fix #10: clear the refresh timer on close
+  if (faceRefreshTimer) { clearInterval(faceRefreshTimer); faceRefreshTimer = null; }
   stopFaceCamera();
   document.getElementById('face-overlay').classList.add('hidden');
   recognizedEmployee = null;
@@ -587,89 +616,105 @@ function stopFaceCamera() {
 }
 
 // ── LOOP DE RECONOCIMIENTO ────────────────────────────────────────────────
-// Sistema de votación: acumula N frames y solo confirma si la misma persona
-// gana en la mayoría — elimina falsos positivos por frames malos.
-const VOTE_FRAMES   = 6;   // cuántos frames analizar antes de confirmar
-const VOTE_MIN_WINS = 4;   // mínimo de frames que deben coincidir
-const MATCH_THRESHOLD = 0.42; // distancia máxima para considerar match válido
+const VOTE_FRAMES   = 6;
+const VOTE_MIN_WINS = 4;
+const MATCH_THRESHOLD = 0.42;
 
 let faceDetectCooldown = false;
-let faceVoteBuffer     = []; // historial de { label, distance } en los últimos frames
+let faceVoteBuffer     = [];
 
 async function tickFaceScan() {
+  // Fix #7: bail immediately if overlay was closed while a prior await was in flight
   if (faceDetectCooldown || !faceStream) return;
+
   const video  = document.getElementById('face-video');
   const canvas = document.getElementById('face-canvas');
+  if (!video || !canvas) return;
   if (video.readyState < 2) { faceAnimId = requestAnimationFrame(tickFaceScan); return; }
 
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
+  // Fix #1: wrap entire detection in try/catch so a single bad frame can't kill the loop
+  try {
+    // Fix #5: only resize canvas when dimensions actually change (avoids clearing on every frame)
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    faceapi.matchDimensions(canvas, { width: canvas.width, height: canvas.height });
 
-  const detections = await faceapi
-    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.55 }))
-    .withFaceLandmarks(true)
-    .withFaceDescriptors();
+    // Fix #9: use withFaceLandmarks() without argument = tiny 5-point model (faster, sufficient for descriptor)
+    const detections = await faceapi
+      .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.55 }))
+      .withFaceLandmarks()
+      .withFaceDescriptors();
 
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Fix #7: check again after the async detection — overlay may have been closed
+    if (!faceStream) return;
 
-  if (detections.length > 0) {
-    const resized = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
-    faceapi.draw.drawDetections(canvas, resized);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (knownFaces.length > 0) {
-      const labeledDescriptors = knownFaces.map(f =>
-        new faceapi.LabeledFaceDescriptors(f.dni, f.descriptors)
-      );
-      const matcher   = new faceapi.FaceMatcher(labeledDescriptors, MATCH_THRESHOLD);
-      const bestMatch = matcher.findBestMatch(detections[0].descriptor);
+    if (detections.length > 0) {
+      const resized = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
+      faceapi.draw.drawDetections(canvas, resized);
 
-      // Agregar resultado al buffer de votación
-      faceVoteBuffer.push({ label: bestMatch.label, distance: bestMatch.distance });
-      if (faceVoteBuffer.length > VOTE_FRAMES) faceVoteBuffer.shift();
+      // Fix #2: use cached FaceMatcher instead of rebuilding every frame
+      if (cachedFaceMatcher) {
+        const bestMatch = cachedFaceMatcher.findBestMatch(detections[0].descriptor);
 
-      if (faceVoteBuffer.length === VOTE_FRAMES) {
-        // Contar votos por label
-        const votes = {};
-        faceVoteBuffer.forEach(({ label }) => { votes[label] = (votes[label] || 0) + 1; });
-        const topLabel = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+        faceVoteBuffer.push({ label: bestMatch.label, distance: bestMatch.distance });
+        if (faceVoteBuffer.length > VOTE_FRAMES) faceVoteBuffer.shift();
 
-        if (topLabel[0] !== 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
-          // Confirmado: confianza promedio de los frames ganadores (snapshot antes de limpiar)
-          const winnerDni = topLabel[0];
-          const avgDistance = faceVoteBuffer
-            .filter(v => v.label === winnerDni)
-            .reduce((s, v) => s + v.distance, 0) / topLabel[1];
-          const conf = Math.round((1 - avgDistance) * 100);
-          faceDetectCooldown = true;
-          faceVoteBuffer = [];
-          const emp = knownFaces.find(f => f.dni === winnerDni);
-          recognizedEmployee = emp;
-          showRecognized(emp, conf);
-          return;
-        } else if (topLabel[0] === 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
-          // Mayoría desconocida confirmada
-          faceVoteBuffer = [];
-          document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
+        if (faceVoteBuffer.length === VOTE_FRAMES) {
+          const votes = {};
+          faceVoteBuffer.forEach(({ label }) => { votes[label] = (votes[label] || 0) + 1; });
+          const topLabel = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+
+          if (topLabel[0] !== 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
+            const winnerDni  = topLabel[0];
+            const avgDistance = faceVoteBuffer
+              .filter(v => v.label === winnerDni)
+              .reduce((s, v) => s + v.distance, 0) / topLabel[1];
+            // Fix #8: clamp confidence to 0–100
+            const conf = Math.max(0, Math.min(100, Math.round((1 - avgDistance) * 100)));
+
+            // Fix #6: guard against emp being undefined (e.g. deleted since faces were loaded)
+            const emp = knownFaces.find(f => f.dni === winnerDni);
+            if (!emp) {
+              faceVoteBuffer = [];
+              document.getElementById('face-status').textContent = 'Colaborador no encontrado. Recargá la página.';
+              faceAnimId = requestAnimationFrame(tickFaceScan);
+              return;
+            }
+
+            faceDetectCooldown = true;
+            faceVoteBuffer = [];
+            recognizedEmployee = emp;
+            showRecognized(emp, conf);
+            return;
+
+          } else if (topLabel[0] === 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
+            faceVoteBuffer = [];
+            document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
+          } else {
+            const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
+            document.getElementById('face-status').textContent =
+              filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Buscando cara...';
+          }
         } else {
-          // Buffer lleno pero sin mayoría clara: seguir escaneando
           const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
           document.getElementById('face-status').textContent =
-            filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Buscando cara...';
+            filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Cara detectada, analizando...';
         }
       } else {
-        // Buffer acumulando
-        const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
-        document.getElementById('face-status').textContent =
-          filled > 0 ? `Verificando identidad... (${filled}/${VOTE_FRAMES})` : 'Cara detectada, analizando...';
+        document.getElementById('face-status').textContent = 'Cara detectada. Sin colaboradores registrados aún.';
       }
     } else {
-      document.getElementById('face-status').textContent = 'Cara detectada. Sin colaboradores registrados aún.';
+      faceVoteBuffer = [];
+      document.getElementById('face-status').textContent = 'Buscando cara...';
     }
-  } else {
-    faceVoteBuffer = []; // resetear si pierde la cara
-    document.getElementById('face-status').textContent = 'Buscando cara...';
+  } catch (e) {
+    // Fix #1: log the error but keep the loop alive
+    console.warn('tickFaceScan error (frame skipped):', e);
   }
 
   faceAnimId = requestAnimationFrame(tickFaceScan);
@@ -696,6 +741,24 @@ window.submitFacePunch = async function(type) {
   try {
     const emp = recognizedEmployee;
     const now = new Date();
+    // Check for duplicate: same employee, same type, same day
+    const today = now.toISOString().slice(0, 10);
+    const dupQ = query(collection(db, "attendance_logs"),
+      where("dni", "==", emp.dni),
+      where("type", "==", type),
+      orderBy("timestamp", "desc"),
+      limit(1));
+    const dupSnap = await getDocs(dupQ);
+    if (!dupSnap.empty) {
+      const last = dupSnap.docs[0].data();
+      if ((last.timestamp || '').startsWith(today)) {
+        const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
+        btnIn.disabled  = false;
+        btnOut.disabled = false;
+        return;
+      }
+    }
     await addDoc(collection(db, "attendance_logs"), {
       name:      emp.name,
       dni:       emp.dni,
@@ -707,7 +770,7 @@ window.submitFacePunch = async function(type) {
     });
     // Éxito: cerrar overlay (resetea todo internamente) y mostrar confirmación
     closeFaceOverlay();
-    showPunchConfirm(type, emp.name, emp.venueName || '', now);
+    showPunchConfirm(type, emp.name, emp.venueName || '', now, false, emp);
     showRecentPunches();
   } catch (e) {
     showToast("Error al registrar fichaje. Intentá de nuevo.", "error");
@@ -727,7 +790,7 @@ window.submitFacePunch = async function(type) {
 // ── FALLBACK DNI ──────────────────────────────────────────────────────────
 window.fallbackToDNI = function() {
   closeFaceOverlay();
-  document.getElementById('kiosk-view').querySelector('#view-kiosk-ready').classList.add('hidden');
+  document.getElementById('view-kiosk-ready').classList.add('hidden');
   document.getElementById('view-dni-fallback').classList.remove('hidden');
   document.getElementById('fallback-dni').value = '';
   document.getElementById('fallback-result').classList.add('hidden');
@@ -773,6 +836,22 @@ window.submitDNIFallback = async function(type) {
   try {
     const emp = fallbackEmployee;
     const now = new Date();
+    // Check for duplicate: same employee, same type, same day
+    const today = now.toISOString().slice(0, 10);
+    const dupQ = query(collection(db, "attendance_logs"),
+      where("dni", "==", emp.dni),
+      where("type", "==", type),
+      orderBy("timestamp", "desc"),
+      limit(1));
+    const dupSnap = await getDocs(dupQ);
+    if (!dupSnap.empty) {
+      const last = dupSnap.docs[0].data();
+      if ((last.timestamp || '').startsWith(today)) {
+        const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
+        return;
+      }
+    }
     await addDoc(collection(db, "attendance_logs"), {
       name:      emp.name,
       dni:       emp.dni,
@@ -783,13 +862,13 @@ window.submitDNIFallback = async function(type) {
       method:    'manual_dni'  // marcado para revisión RRHH
     });
     backToKiosk();
-    showPunchConfirm(type, emp.name, emp.venueName || '', now, true);
+    showPunchConfirm(type, emp.name, emp.venueName || '', now, true, emp);
     showRecentPunches();
   } catch (e) { showToast("Error al registrar fichaje.", "error"); }
 };
 
 // ── OVERLAY CONFIRMACIÓN ──────────────────────────────────────────────────
-function showPunchConfirm(type, name, venueName, date, isManual = false) {
+function showPunchConfirm(type, name, venueName, date, isManual = false, emp = null) {
   const overlay = document.getElementById('punch-confirm');
   document.getElementById('pc-icon').textContent  = type === 'ENTRADA' ? '✅' : '👋';
   const typeEl = document.getElementById('pc-type');
@@ -798,6 +877,14 @@ function showPunchConfirm(type, name, venueName, date, isManual = false) {
   document.getElementById('pc-name').textContent  = name;
   document.getElementById('pc-venue').textContent = venueName ? `📍 ${venueName}` : '';
   document.getElementById('pc-time').textContent  = date.toLocaleTimeString('es-AR', { hour12: false });
+  // Load employee photo if available
+  const avatarEl = document.getElementById('pc-avatar');
+  const photoUrl = emp?.photoUrl || emp?.photo || null;
+  if (photoUrl) {
+    avatarEl.innerHTML = `<img src="${photoUrl}" alt="${name}" class="w-full h-full object-cover">`;
+  } else {
+    avatarEl.innerHTML = `<i class="fa-solid fa-user text-4xl text-slate-500"></i>`;
+  }
   overlay.classList.remove('hidden');
   const close = () => { clearTimeout(t); overlay.classList.add('hidden'); };
   const t = setTimeout(close, 3000);
@@ -808,7 +895,7 @@ function showPunchConfirm(type, name, venueName, date, isManual = false) {
 async function showRecentPunches() {
   try {
     const today = new Date().toISOString().slice(0,10);
-    const q = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"), limit(8));
+    const q = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"), limit(50));
     const snap = await getDocs(q);
     const list = document.getElementById('recent-list');
     const logs = snap.docs.map(d => d.data()).filter(l => l.timestamp?.startsWith(today));
@@ -819,8 +906,10 @@ async function showRecentPunches() {
     list.innerHTML = logs.map(l => {
       const ts = new Date(l.timestamp).toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
       const isManual = l.method === 'manual_dni';
+      // Fix #9: escape name to prevent HTML injection
+      const safeName = (l.name || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return `<div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-700/40 text-xs">
-        <span class="font-medium text-slate-300">${l.name}</span>
+        <span class="font-medium text-slate-300">${safeName}</span>
         <div class="flex items-center gap-2">
           ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
           <span class="${l.type==='ENTRADA' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${l.type}</span>
@@ -828,7 +917,12 @@ async function showRecentPunches() {
         </div>
       </div>`;
     }).join('');
-  } catch (e) { /* silencio */ }
+  } catch (e) {
+    // Fix #6: show error instead of silencing
+    console.error('showRecentPunches error:', e);
+    const list = document.getElementById('recent-list');
+    if (list) list.innerHTML = '<p class="text-slate-600 text-xs">Error al cargar fichajes recientes.</p>';
+  }
 }
 
 // ── REGISTRO DE CARA (multi-ángulo) ─────────────────────────────────────
@@ -903,19 +997,22 @@ async function tickRegDetect() {
   const canvas = document.getElementById('reg-canvas');
   if (!regStream || video.readyState < 2) { regAnimId = requestAnimationFrame(tickRegDetect); return; }
 
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
+  // Fix #5: only resize when dimensions actually changed
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  }
+  faceapi.matchDimensions(canvas, { width: canvas.width, height: canvas.height });
 
   const detection = await faceapi
     .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
-    .withFaceLandmarks(true)
+    .withFaceLandmarks()
     .withFaceDescriptor();
 
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if (detection) {
-    const resized = faceapi.resizeResults(detection, { width: video.videoWidth, height: video.videoHeight });
+    const resized = faceapi.resizeResults(detection, { width: canvas.width, height: canvas.height });
     faceapi.draw.drawDetections(canvas, [resized]);
     const step = regCapturedDescriptors.length;
     document.getElementById('reg-status').textContent = step === 0
@@ -938,6 +1035,12 @@ window.captureDescriptor = async function() {
   const status = document.getElementById('reg-status');
   btn.disabled = true;
 
+  // Fix #4: snapshot the descriptor at click time before any awaits
+  const descriptorAtClick = window._lastRegDescriptor.slice(); // copy the Float32Array
+
+  // Fix #4: pause the detection loop during sampling to prevent _lastRegDescriptor from being overwritten
+  if (regAnimId) { cancelAnimationFrame(regAnimId); regAnimId = null; }
+
   // Flash visual de captura
   const flash = document.getElementById('reg-flash');
   flash.style.opacity = '0.7';
@@ -945,23 +1048,28 @@ window.captureDescriptor = async function() {
 
   // Capturar 3 muestras rápidas de este ángulo y promediarlas
   const video = document.getElementById('reg-video');
-  const samples = [];
+  const samples = [descriptorAtClick]; // Fix #3: start with the click-time snapshot
   for (let i = 0; i < 3; i++) {
     await new Promise(r => setTimeout(r, 200));
+    if (!regStream) break; // user may have cancelled
     const det = await faceapi
       .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
-      .withFaceLandmarks(true)
+      .withFaceLandmarks()
       .withFaceDescriptor();
     if (det) samples.push(det.descriptor);
   }
-  // Incluir el descriptor del momento del click también
-  samples.push(window._lastRegDescriptor);
 
-  if (samples.length === 0) {
-    status.textContent = 'No se detectó cara. Intentá de nuevo.';
+  // Fix #3: guard is now meaningful — if only the click snapshot exists and all 3 live samples failed
+  if (samples.length < 2) {
+    status.textContent = 'No se detectó cara durante el muestreo. Intentá de nuevo.';
     btn.disabled = false;
+    // Resume detection loop
+    if (regStream) tickRegDetect();
     return;
   }
+
+  // Fix #4: resume detection loop after sampling
+  if (regStream) tickRegDetect();
 
   // Promediar muestras de este ángulo
   const avg = new Float32Array(128);
@@ -1007,9 +1115,10 @@ async function loadVenues() {
     allVenues = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderVenuesList();
     populateVenueSelects();
-  } catch (e) { /* silencio */ }
-}
-window.loadVenues = loadVenues;
+  } catch (e) {
+    console.error('loadVenues error:', e);
+    showToast('Error al cargar los locales. Revisá la conexión.', 'error');
+  }
 
 function populateVenueSelects() {
   ['staff-venue','filter-venue','hours-filter-venue','shift-filter-venue'].forEach(id => {
@@ -1123,12 +1232,34 @@ window.saveStaff = async function() {
   if (!name)    { showToast("Ingresá el nombre.", "error"); return; }
   if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
   const venue = allVenues.find(v => v.id === venueId);
+  const venueName = venue?.name || '';
   try {
-    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName: venue?.name || '', addedAt: new Date().toISOString() }, { merge: true });
-    showToast(`${name} guardado/a.`, "success");
+    // Check if venue changed for an existing collaborator
+    const existing = allStaff.find(s => s.dni === dni);
+    const venueChanged = existing && (existing.venueId !== venueId);
+
+    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName, addedAt: new Date().toISOString() }, { merge: true });
+
+    // Fix #12: if venue changed, propagate to existing shifts and logs (batches of 500)
+    if (venueChanged) {
+      const [shiftsSnap, logsSnap] = await Promise.all([
+        getDocs(query(collection(db, "shifts"), where("dni", "==", dni))),
+        getDocs(query(collection(db, "attendance_logs"), where("dni", "==", dni)))
+      ]);
+      const allDocs = [...shiftsSnap.docs, ...logsSnap.docs];
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        allDocs.slice(i, i + BATCH_SIZE).forEach(d => batch.update(d.ref, { venueId, venueName }));
+        await batch.commit();
+      }
+      showToast(`${name} guardado/a. Local actualizado en ${allDocs.length} registro(s).`, "success");
+    } else {
+      showToast(`${name} guardado/a.`, "success");
+    }
     clearStaffForm();
     await loadStaff();
-  } catch (e) { showToast("Error al guardar.", "error"); }
+  } catch (e) { console.error(e); showToast("Error al guardar.", "error"); }
 };
 window.editStaff = function(id) {
   const s = allStaff.find(x => x.id === id);
@@ -1140,8 +1271,30 @@ window.editStaff = function(id) {
   switchTab('tab-staff');
 };
 window.deleteStaff = async function(id, name) {
-  if (!confirm(`¿Eliminar a ${name}?`)) return;
-  try { await deleteDoc(doc(db, "staff", id)); await loadStaff(); } catch (e) { showToast("Error.", "error"); }
+  if (!confirm(`¿Eliminar a ${name}? También se eliminarán sus turnos y registros de asistencia.`)) return;
+  try {
+    // Find the DNI — id === dni in this system but be explicit
+    const staffSnap = await getDoc(doc(db, "staff", id));
+    const dni = staffSnap.exists() ? (staffSnap.data().dni || id) : id;
+
+    // Collect all related docs: shifts and attendance_logs for this DNI
+    const [shiftsSnap, logsSnap] = await Promise.all([
+      getDocs(query(collection(db, "shifts"), where("dni", "==", dni))),
+      getDocs(query(collection(db, "attendance_logs"), where("dni", "==", dni)))
+    ]);
+    const allDocs = [staffSnap.ref, ...shiftsSnap.docs.map(d => d.ref), ...logsSnap.docs.map(d => d.ref)];
+
+    // Delete in batches of 500 (Firestore limit)
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      allDocs.slice(i, i + BATCH_SIZE).forEach(ref => batch.delete(ref));
+      await batch.commit();
+    }
+    await loadStaff();
+    await loadKnownFaces();
+    showToast(`${name} eliminado junto a sus registros.`, "success");
+  } catch (e) { console.error(e); showToast("Error al eliminar colaborador.", "error"); }
 };
 window.clearStaffForm = function() {
   ['staff-dni','staff-name'].forEach(id => document.getElementById(id).value = '');
@@ -1150,6 +1303,20 @@ window.clearStaffForm = function() {
 };
 
 // ── ADMIN AUTH ────────────────────────────────────────────────────────────
+let adminSessionTimer = null;
+const ADMIN_SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+function startAdminSessionTimer() {
+  clearAdminSessionTimer();
+  adminSessionTimer = setTimeout(() => {
+    showToast("Sesión admin expirada por inactividad.", "warning", 5000);
+    window.closeAdmin();
+  }, ADMIN_SESSION_TIMEOUT_MS);
+}
+function clearAdminSessionTimer() {
+  if (adminSessionTimer) { clearTimeout(adminSessionTimer); adminSessionTimer = null; }
+}
+
 async function hashPin(pin) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -1160,16 +1327,25 @@ window.requestAdminAccess = async function() {
   try {
     const cfgSnap = await getDoc(doc(db, "config", "admin"));
     let storedHash = cfgSnap.exists() ? cfgSnap.data().pinHash : null;
-    if (!storedHash) { storedHash = await hashPin("1234"); await setDoc(doc(db, "config", "admin"), { pinHash: storedHash }); }
+    if (!storedHash) { storedHash = await hashPin("1234"); await setDoc(doc(db, "config", "admin"), { pinHash: storedHash }); showToast("⚠️ PIN por defecto '1234' activado. Cambialo en Firestore cuanto antes.", "warning", 8000); }
     if (await hashPin(pin) === storedHash) {
       document.getElementById('kiosk-view').classList.add('hidden');
       document.getElementById('admin-view').classList.remove('hidden');
       await loadVenues(); switchTab('tab-venues');
+      startAdminSessionTimer();
+      // Fix #14: reset inactivity timer on any interaction inside admin panel
+      const adminEl = document.getElementById('admin-view');
+      adminEl.addEventListener('click',   startAdminSessionTimer);
+      adminEl.addEventListener('keydown', startAdminSessionTimer);
     } else { showToast("PIN incorrecto.", "error"); }
   } catch (e) { showToast("Error al verificar PIN.", "error"); }
 };
 window.closeAdmin = function() {
-  document.getElementById('admin-view').classList.add('hidden');
+  clearAdminSessionTimer();
+  const adminEl = document.getElementById('admin-view');
+  adminEl.removeEventListener('click',   startAdminSessionTimer);
+  adminEl.removeEventListener('keydown', startAdminSessionTimer);
+  adminEl.classList.add('hidden');
   document.getElementById('kiosk-view').classList.remove('hidden');
 };
 
@@ -1202,6 +1378,10 @@ window.clearFilters = function() {
   applyFilters();
 };
 
+function escHtml(str) {
+  return (str || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderAdminTable(logs) {
   const tbody = document.getElementById('admin-table-body');
   if (!logs.length) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Sin registros.</td></tr>`; return; }
@@ -1213,11 +1393,11 @@ function renderAdminTable(logs) {
       : `<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-face-smile mr-1"></i>Facial</span>`;
     return `
       <tr class="hover:bg-slate-800/80 transition-colors">
-        <td class="px-4 py-3 font-medium text-slate-200">${l.name || '—'}</td>
-        <td class="px-4 py-3 text-slate-400 text-xs font-mono">${l.dni || '—'}</td>
-        <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${l.venueName || '—'}</span></td>
+        <td class="px-4 py-3 font-medium text-slate-200">${escHtml(l.name)}</td>
+        <td class="px-4 py-3 text-slate-400 text-xs font-mono">${escHtml(l.dni)}</td>
+        <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(l.venueName)}</span></td>
         <td class="px-4 py-3">${methodBadge}</td>
-        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase font-bold ${l.type==='ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">${l.type}</span></td>
+        <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase font-bold ${l.type==='ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">${escHtml(l.type)}</span></td>
         <td class="px-4 py-3 text-slate-400 text-xs">${ts}</td>
       </tr>`;
   }).join('');
@@ -1239,14 +1419,18 @@ window.clearRecords = async function() {
   if (!confirm("¿Eliminar TODOS los registros? No se puede deshacer.")) return;
   try {
     const snap = await getDocs(collection(db, "attendance_logs"));
-    const batch = writeBatch(db);
-    snap.docs.forEach(d => batch.delete(d.ref));
-    await batch.commit();
+    // Fix #1: chunk into batches of 500 (Firestore limit)
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
     allLogs = [];
     renderAdminTable([]);
     document.getElementById('filter-count').textContent = '0 registros en total';
     showToast("Historial eliminado.", "success");
-  } catch (e) { showToast("Error.", "error"); }
+  } catch (e) { showToast("Error al eliminar registros.", "error"); console.error(e); }
 };
 
 // ── TABS ──────────────────────────────────────────────────────────────────
@@ -1273,10 +1457,16 @@ async function initHoursTab() {
   if (!allStaff.length) await loadStaff();
   const staffSel = document.getElementById('hours-filter-staff');
   const venueSel = document.getElementById('hours-filter-venue');
+  // Fix #8: preserve current selections before rebuilding options
+  const savedStaff = staffSel.value;
+  const savedVenue = venueSel.value;
   staffSel.innerHTML = '<option value="">Todos</option>';
   venueSel.innerHTML = '<option value="">Todos</option>';
   allStaff.forEach(s  => staffSel.innerHTML += `<option value="${s.dni}">${s.name}</option>`);
   allVenues.forEach(v => venueSel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
+  // Restore selections if they still exist in the updated list
+  if (savedStaff) staffSel.value = savedStaff;
+  if (savedVenue) venueSel.value = savedVenue;
 }
 
 window.setHoursView = function(view) {
@@ -1299,54 +1489,75 @@ window.loadHours = async function() {
   const tbody = document.getElementById('hours-table-body');
   tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Calculando...</td></tr>`;
   try {
-    const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp","asc")));
+    // Fix #2: filter by date range in Firestore — avoids downloading entire history
+    const fromTs = from + 'T00:00:00.000Z';
+    const toTs   = to   + 'T23:59:59.999Z';
+    const snap = await getDocs(query(
+      collection(db, "attendance_logs"),
+      where("timestamp", ">=", fromTs),
+      where("timestamp", "<=", toTs),
+      orderBy("timestamp", "asc")
+    ));
     const allL = snap.docs.map(d => d.data());
     const filtered = allL.filter(l => {
-      const ds = (l.timestamp || '').slice(0,10);
-      if (ds < from || ds > to) return false;
       if (staff && l.dni !== staff) return false;
       if (venue && l.venueId !== venue) return false;
       return true;
     });
-    // Agrupar ENTRADA/SALIDA por (dni, date)
-    const map = {};
-    filtered.filter(l => l.type === 'ENTRADA').forEach(l => {
-      const date = l.timestamp.slice(0,10);
-      const key  = `${l.dni}__${date}`;
-      if (!map[key]) map[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date, entries: [], exits: [] };
-      map[key].entries.push(l.timestamp);
-    });
-    const entriesByDni = {};
-    filtered.filter(l => l.type === 'ENTRADA').forEach(l => {
-      if (!entriesByDni[l.dni]) entriesByDni[l.dni] = [];
-      entriesByDni[l.dni].push({ ts: l.timestamp, date: l.timestamp.slice(0,10) });
-    });
-    filtered.filter(l => l.type === 'SALIDA').forEach(l => {
-      const candidates = (entriesByDni[l.dni] || []).filter(e => e.ts < l.timestamp);
-      if (!candidates.length) return;
-      const closest = candidates.reduce((a, b) => a.ts > b.ts ? a : b);
-      const key = `${l.dni}__${closest.date}`;
-      if (!map[key]) map[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date: closest.date, entries: [], exits: [] };
-      map[key].exits.push(l.timestamp);
-    });
-    // Calcular horas
+    // Build per-(dni,date) buckets — handled below in the hoursData mapping
+    // Calcular horas — soporta múltiples entradas/salidas en el mismo día
+    // Estrategia: para cada SALIDA, buscar la ENTRADA más reciente previa no usada
     const shiftsSnap = await getDocs(query(collection(db, "shifts"), where("date", ">=", from), where("date", "<=", to)));
     const shiftsMap = {};
     shiftsSnap.docs.forEach(d => { const s = d.data(); shiftsMap[`${s.dni}__${s.date}`] = s; });
-    hoursData = Object.values(map).filter(r => r.date >= from && r.date <= to).map(r => {
-      const entrada = r.entries[0] ? new Date(r.entries[0]).toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'}) : '—';
-      const salida  = r.exits[0]   ? new Date(r.exits[0]).toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'})   : '—';
-      const mins = r.entries[0] && r.exits[0] ? Math.round((new Date(r.exits[0]) - new Date(r.entries[0])) / 60000) : 0;
+
+    // Build per-(dni,date) buckets of sorted entries & exits
+    const buckets = {};
+    filtered.forEach(l => {
+      const date = l.timestamp.slice(0, 10);
+      const key  = `${l.dni}__${date}`;
+      if (!buckets[key]) buckets[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date, entries: [], exits: [] };
+      if (l.type === 'ENTRADA') buckets[key].entries.push(l.timestamp);
+      else if (l.type === 'SALIDA') buckets[key].exits.push(l.timestamp);
+    });
+
+    hoursData = Object.values(buckets).filter(r => r.date >= from && r.date <= to).map(r => {
+      // Sort chronologically
+      r.entries.sort(); r.exits.sort();
+      // Greedily pair each exit with the most recent unpaired entry before it
+      const usedEntries = new Set();
+      let totalMins = 0;
+      const pairs = [];
+      r.exits.forEach(exit => {
+        // Find latest entry before this exit that hasn't been used
+        const candidates = r.entries.filter((e, i) => e < exit && !usedEntries.has(i));
+        if (!candidates.length) return;
+        const bestIdx = r.entries.reduce((bestI, e, i) => {
+          if (e < exit && !usedEntries.has(i) && (bestI === -1 || e > r.entries[bestI])) return i;
+          return bestI;
+        }, -1);
+        if (bestIdx === -1) return;
+        usedEntries.add(bestIdx);
+        const mins = Math.round((new Date(exit) - new Date(r.entries[bestIdx])) / 60000);
+        totalMins += mins;
+        pairs.push({ entry: r.entries[bestIdx], exit });
+      });
+      // Display: first entry and last exit for readability
+      const firstEntry = r.entries[0] || null;
+      const lastExit   = r.exits.length ? r.exits[r.exits.length - 1] : null;
+      const entrada = firstEntry ? new Date(firstEntry).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—';
+      const salida  = lastExit   ? new Date(lastExit).toLocaleTimeString('es-AR',  { hour: '2-digit', minute: '2-digit' }) : '—';
+      const paresExtra = pairs.length > 1 ? ` (${pairs.length} turnos)` : '';
       const shift = shiftsMap[`${r.dni}__${r.date}`];
       let shiftMins = 0, diffMins = null;
       if (shift && !shift.free && shift.in && shift.out) {
         let outD = new Date(`2000-01-01T${shift.out}`), inD = new Date(`2000-01-01T${shift.in}`);
         if (outD <= inD) outD.setDate(outD.getDate() + 1);
         shiftMins = Math.round((outD - inD) / 60000);
-        if (mins > 0) diffMins = mins - shiftMins;
+        if (totalMins > 0) diffMins = totalMins - shiftMins;
       }
-      const status = !r.entries[0] ? 'sin_entrada' : !r.exits[0] ? 'sin_salida' : mins < 60 ? 'alerta' : 'ok';
-      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada, salida, mins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, status };
+      const status = !firstEntry ? 'sin_entrada' : !lastExit ? 'sin_salida' : totalMins < 60 ? 'alerta' : 'ok';
+      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada: entrada + paresExtra, salida, mins: totalMins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, status };
     });
     const totalMins  = hoursData.reduce((s,r) => s + r.mins, 0);
     const totalDays  = hoursData.filter(r => r.mins > 0).length;
@@ -1419,11 +1630,25 @@ function renderHoursTable() {
 
 window.exportHoursCSV = function() {
   if (!hoursData.length) { showToast("Calculá primero.", "info"); return; }
+  const fmtM = m => m > 0 ? `${Math.floor(m/60)}:${String(Math.round(m%60)).padStart(2,'0')}` : '0:00';
+  const fmtDiff = dm => {
+    if (dm === null || dm === undefined) return '';
+    const sign = dm >= 0 ? '+' : '-';
+    const abs = Math.abs(dm);
+    return `${sign}${Math.floor(abs/60)}:${String(Math.round(abs%60)).padStart(2,'0')}`;
+  };
   const rows = hoursData.map(r => ({
-    "Colaborador": r.name, "DNI": r.dni, "Local": r.venueName||'', "Fecha": r.date,
-    "Entrada": r.entrada, "Salida": r.salida,
-    "Hs.Realizadas": r.mins>0?`${Math.floor(r.mins/60)}:${String(Math.round(r.mins%60)).padStart(2,'0')}`:'0:00',
-    "Estado": r.status
+    "Colaborador":    r.name,
+    "DNI":            r.dni,
+    "Local":          r.venueName || '',
+    "Fecha":          r.date,
+    "Entrada":        r.entrada,
+    "Salida":         r.salida,
+    "Hs.Realizadas":  fmtM(r.mins),
+    "Turno asig.":    r.shiftIn && r.shiftOut ? `${r.shiftIn}–${r.shiftOut}` : '',
+    "Hs.Turno":       fmtM(r.shiftMins || 0),
+    "Diferencia":     fmtDiff(r.diffMins),
+    "Estado":         r.status
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -1437,12 +1662,22 @@ function initShiftsTab() {
   const sel = document.getElementById('shift-filter-venue');
   sel.innerHTML = '<option value="">Todos los locales</option>';
   allVenues.forEach(v => sel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
-  renderShiftGrid();
+  safeRenderShiftGrid();
 }
 
 function getMondayOf(ds) { const d = new Date(ds+'T12:00:00'), day = d.getDay()||7; d.setDate(d.getDate()-day+1); return d; }
 function fmtDate(d) { return d.toISOString().slice(0,10); }
 function fmtDayLabel(d) { return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'}); }
+
+// Wrapper seguro: awaita renderShiftGrid y captura errores visibles
+window.safeRenderShiftGrid = function() {
+  renderShiftGrid().catch(e => {
+    console.error('Error en renderShiftGrid:', e);
+    showToast('Error al cargar la grilla de turnos.', 'error');
+    const grid = document.getElementById('shift-grid');
+    if (grid) grid.innerHTML = '<p class="text-rose-400 text-xs px-4 py-6">Error al cargar turnos. Revisá la conexión.</p>';
+  });
+};
 
 window.renderShiftGrid = async function() {
   const mode  = document.getElementById('shift-mode').value;
@@ -1457,11 +1692,16 @@ window.renderShiftGrid = async function() {
   const grid = document.getElementById('shift-grid');
   grid.innerHTML = `<div class="px-4 py-6 text-center text-slate-500 text-xs"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</div>`;
   try {
-    const q = query(collection(db, "shifts"), where("date","in",dayKeys));
-    const snap = await getDocs(q);
+    // Firestore limits 'in' queries to 10 elements — chunk to support fortnights/months
+    const CHUNK = 10;
     shiftData = {};
-    snap.docs.forEach(d => { const s=d.data(); shiftData[`${s.dni}__${s.date}`]=s; });
-  } catch (e) { /* continúa */ }
+    for (let i = 0; i < dayKeys.length; i += CHUNK) {
+      const chunk = dayKeys.slice(i, i + CHUNK);
+      const q = query(collection(db, "shifts"), where("date", "in", chunk));
+      const snap = await getDocs(q);
+      snap.docs.forEach(d => { const s = d.data(); shiftData[`${s.dni}__${s.date}`] = s; });
+    }
+  } catch (e) { showToast('Error al cargar turnos desde Firestore.', 'error'); }
   if (!staff.length) { grid.innerHTML='<p class="text-slate-500 text-xs px-4 py-6">Sin colaboradores.</p>'; return; }
   const colW = mode==='week' ? 'min-w-[100px]' : 'min-w-[200px]';
   let html = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-900 text-slate-400 uppercase text-[10px] sticky top-0 z-10"><tr><th class="px-3 py-3 text-left sticky left-0 bg-slate-900 z-20 min-w-[130px]">Colaborador</th>`;
@@ -1482,7 +1722,7 @@ window.renderShiftGrid = async function() {
         cellHtml=`<div class="flex flex-col items-center gap-0.5"><span class="font-mono text-emerald-400 text-[11px]">${shift.in||'—'}</span><span class="font-mono text-rose-400 text-[11px]">${shift.out||'—'}</span>${hrsStr?`<span class="text-[9px] text-slate-500">${hrsStr}</span>`:''}</div>`;
       }
       const dirtyDot = isDirty ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400"></span>` : '';
-      html+=`<td class="px-1 py-1.5 text-center cursor-pointer relative hover:bg-indigo-950/30 transition-colors border border-slate-700/20 rounded" onclick="openShiftModal('${s.dni}','${s.name}','${dk}')">${dirtyDot}${cellHtml}</td>`;
+      html+=`<td class="px-1 py-1.5 text-center cursor-pointer relative hover:bg-indigo-950/30 transition-colors border border-slate-700/20 rounded" onclick="openShiftModal('${s.dni}','${s.name.replace(/'/g,"\\'")}','${dk}')">${dirtyDot}${cellHtml}</td>`;
     });
     html+='</tr>';
   });
@@ -1518,10 +1758,10 @@ window.applyShiftModal = function() {
   if (!isFree && inVal && outVal && inVal===outVal) { showToast("Entrada y salida iguales.", "warning"); return; }
   const [dni, date] = shiftModalKey.split('__');
   shiftDirty[shiftModalKey] = { dni, date, in: isFree?'':inVal, out: isFree?'':outVal, note: isFree?'':note, free: isFree };
-  closeShiftModal(); renderShiftGrid();
+  closeShiftModal(); safeRenderShiftGrid();
   showToast("Turno actualizado (pendiente guardar).", "info");
 };
-window.clearShiftCell = function() { delete shiftDirty[shiftModalKey]; delete shiftData[shiftModalKey]; closeShiftModal(); renderShiftGrid(); };
+window.clearShiftCell = function() { delete shiftDirty[shiftModalKey]; delete shiftData[shiftModalKey]; closeShiftModal(); safeRenderShiftGrid(); };
 window.saveAllShifts = async function() {
   const pending = Object.entries(shiftDirty).filter(([,v]) => v!==null);
   if (!pending.length) { showToast("Sin cambios pendientes.", "info"); return; }
@@ -1530,13 +1770,13 @@ window.saveAllShifts = async function() {
     pending.forEach(([key, shift]) => {
       const [dni, date] = key.split('__');
       const sr = allStaff.find(s => s.dni===dni);
-      batch.set(doc(db, "shifts", key.replace('__','_')), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
+      batch.set(doc(db, "shifts", key), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
       shiftData[key] = shift;
     });
     await batch.commit();
     shiftDirty = {};
     showToast(`${pending.length} turno(s) guardado(s).`, "success");
-    renderShiftGrid();
+    safeRenderShiftGrid();
   } catch (e) { showToast("Error al guardar.", "error"); }
 };
 window.exportShiftsPDF = function() {
@@ -1570,6 +1810,7 @@ window.exportShiftsPDF = function() {
   });
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Turnos</title><style>body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}table{border-collapse:collapse;width:100%}@media print{@page{size:landscape;margin:12mm}}</style></head><body><h1>📅 ${venueName}</h1><h2>${periodLabel}</h2><table><thead>${thead}</thead><tbody>${tbody}</tbody></table><script>window.onload=()=>{window.print()}<\/script></body></html>`;
   const win=window.open('','_blank','width=900,height=600');
+  if (!win) { showToast("El navegador bloqueó el popup. Permitilo para exportar el PDF.", "warning", 5000); return; }
   win.document.write(html); win.document.close();
 };
 

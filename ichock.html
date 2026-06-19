@@ -776,15 +776,18 @@ window.submitFacePunch = async function(type) {
     const emp = recognizedEmployee;
     const now = new Date();
     // Check for duplicate: same employee, same type, same day
+    // Fix #14: removed orderBy("timestamp") from the Firestore query — combined with the two
+    // where() filters it required a composite index that wasn't created, which is what threw
+    // on every Entrada/Salida click. Now we just fetch matches and sort in JS.
     const today = now.toISOString().slice(0, 10);
     const dupQ = query(collection(db, "attendance_logs"),
       where("dni", "==", emp.dni),
-      where("type", "==", type),
-      orderBy("timestamp", "desc"),
-      limit(1));
+      where("type", "==", type));
     const dupSnap = await getDocs(dupQ);
     if (!dupSnap.empty) {
-      const last = dupSnap.docs[0].data();
+      const last = dupSnap.docs
+        .map(d => d.data())
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))[0];
       if ((last.timestamp || '').startsWith(today)) {
         const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
         showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
@@ -807,6 +810,8 @@ window.submitFacePunch = async function(type) {
     showPunchConfirm(type, emp.name, emp.venueName || '', now, false, emp);
     showRecentPunches();
   } catch (e) {
+    // Fix #13: log the real error — was swallowed silently, making this impossible to diagnose
+    console.error('submitFacePunch error:', e);
     showToast("Error al registrar fichaje. Intentá de nuevo.", "error");
     // Solo en error: rehabilitar botones y resetear cooldown para que el usuario pueda reintentar
     // Solo si el overlay sigue abierto (el usuario no lo cerró mientras tanto)
@@ -871,15 +876,16 @@ window.submitDNIFallback = async function(type) {
     const emp = fallbackEmployee;
     const now = new Date();
     // Check for duplicate: same employee, same type, same day
+    // Fix #14: same composite-index fix as submitFacePunch — sort in JS instead of orderBy()
     const today = now.toISOString().slice(0, 10);
     const dupQ = query(collection(db, "attendance_logs"),
       where("dni", "==", emp.dni),
-      where("type", "==", type),
-      orderBy("timestamp", "desc"),
-      limit(1));
+      where("type", "==", type));
     const dupSnap = await getDocs(dupQ);
     if (!dupSnap.empty) {
-      const last = dupSnap.docs[0].data();
+      const last = dupSnap.docs
+        .map(d => d.data())
+        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))[0];
       if ((last.timestamp || '').startsWith(today)) {
         const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
         showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
@@ -898,7 +904,11 @@ window.submitDNIFallback = async function(type) {
     backToKiosk();
     showPunchConfirm(type, emp.name, emp.venueName || '', now, true, emp);
     showRecentPunches();
-  } catch (e) { showToast("Error al registrar fichaje.", "error"); }
+  } catch (e) {
+    // Fix #13: log the real error for diagnosis
+    console.error('submitDNIFallback error:', e);
+    showToast("Error al registrar fichaje.", "error");
+  }
 };
 
 // ── OVERLAY CONFIRMACIÓN ──────────────────────────────────────────────────

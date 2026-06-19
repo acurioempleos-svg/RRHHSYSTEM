@@ -651,10 +651,12 @@ async function tickFaceScan() {
     }
     faceapi.matchDimensions(canvas, { width: canvas.width, height: canvas.height });
 
-    // Fix #9: use withFaceLandmarks() without argument = tiny 5-point model (faster, sufficient for descriptor)
+    // Fix #11: withFaceLandmarks(true) = tiny 5-point model — matches faceLandmark68TinyNet,
+    // the only landmark model actually loaded. withFaceLandmarks() (no arg) requires the full
+    // faceLandmark68Net, which is never loaded, so detection silently failed every frame.
     const detections = await faceapi
       .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.55 }))
-      .withFaceLandmarks()
+      .withFaceLandmarks(true)
       .withFaceDescriptors();
 
     // Fix #7: check again after the async detection — overlay may have been closed
@@ -1041,49 +1043,57 @@ async function tickRegDetect() {
   const canvas = document.getElementById('reg-canvas');
   if (!regStream || video.readyState < 2) { regAnimId = requestAnimationFrame(tickRegDetect); return; }
 
-  // Fix #5: only resize when dimensions actually changed
-  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  }
-  faceapi.matchDimensions(canvas, { width: canvas.width, height: canvas.height });
-
-  const detection = await faceapi
-    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
-    .withFaceLandmarks()
-    .withFaceDescriptor();
-
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (detection) {
-    const resized = faceapi.resizeResults(detection, { width: canvas.width, height: canvas.height });
-    faceapi.draw.drawDetections(canvas, [resized]);
-    const step = regCapturedDescriptors.length;
-    window._lastRegDescriptor = detection.descriptor;
-    document.getElementById('reg-capture-btn').disabled = false;
-
-    if (!regAutoCapturePending) {
-      // Captura automática tras 1.2 s con cara estable
-      regAutoCapturePending = true;
-      const countdownMsgs = ['📸 Capturando en 3…', '📸 Capturando en 2…', '📸 Capturando en 1…'];
-      const statusEl = document.getElementById('reg-status');
-      let c = 0;
-      const tick = setInterval(() => {
-        if (!regStream || regCapturedDescriptors.length !== step) { clearInterval(tick); regAutoCapturePending = false; return; }
-        statusEl.textContent = countdownMsgs[c] || '';
-        c++;
-        if (c >= countdownMsgs.length) {
-          clearInterval(tick);
-          if (regStream && regCapturedDescriptors.length === step) captureDescriptor();
-          else regAutoCapturePending = false;
-        }
-      }, 400);
+  try {
+    // Fix #5: only resize when dimensions actually changed
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     }
-  } else {
-    document.getElementById('reg-status').textContent = 'No se detecta cara. Centrá tu rostro.';
-    document.getElementById('reg-capture-btn').disabled = true;
-    window._lastRegDescriptor = null;
-    regAutoCapturePending = false;
+    faceapi.matchDimensions(canvas, { width: canvas.width, height: canvas.height });
+
+    // Fix #11: withFaceLandmarks(true) = tiny model, matches faceLandmark68TinyNet (the only
+    // landmark model loaded). Without true, face-api needs faceLandmark68Net, never loaded,
+    // so detection threw on every frame and the face was never picked up here.
+    const detection = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
+      .withFaceLandmarks(true)
+      .withFaceDescriptor();
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (detection) {
+      const resized = faceapi.resizeResults(detection, { width: canvas.width, height: canvas.height });
+      faceapi.draw.drawDetections(canvas, [resized]);
+      const step = regCapturedDescriptors.length;
+      window._lastRegDescriptor = detection.descriptor;
+      document.getElementById('reg-capture-btn').disabled = false;
+
+      if (!regAutoCapturePending) {
+        // Captura automática tras 1.2 s con cara estable
+        regAutoCapturePending = true;
+        const countdownMsgs = ['📸 Capturando en 3…', '📸 Capturando en 2…', '📸 Capturando en 1…'];
+        const statusEl = document.getElementById('reg-status');
+        let c = 0;
+        const tick = setInterval(() => {
+          if (!regStream || regCapturedDescriptors.length !== step) { clearInterval(tick); regAutoCapturePending = false; return; }
+          statusEl.textContent = countdownMsgs[c] || '';
+          c++;
+          if (c >= countdownMsgs.length) {
+            clearInterval(tick);
+            if (regStream && regCapturedDescriptors.length === step) captureDescriptor();
+            else regAutoCapturePending = false;
+          }
+        }, 400);
+      }
+    } else {
+      document.getElementById('reg-status').textContent = 'No se detecta cara. Centrá tu rostro.';
+      document.getElementById('reg-capture-btn').disabled = true;
+      window._lastRegDescriptor = null;
+      regAutoCapturePending = false;
+    }
+  } catch (e) {
+    // Fix #11: a thrown detection error no longer kills the loop silently — log and keep retrying
+    console.error('tickRegDetect error:', e);
   }
 
   regAnimId = requestAnimationFrame(tickRegDetect);
@@ -1115,7 +1125,7 @@ window.captureDescriptor = async function() {
     if (!regStream) break; // user may have cancelled
     const det = await faceapi
       .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
-      .withFaceLandmarks()
+      .withFaceLandmarks(true) // Fix #11: tiny model, matches the only landmark net loaded
       .withFaceDescriptor();
     if (det) samples.push(det.descriptor);
   }

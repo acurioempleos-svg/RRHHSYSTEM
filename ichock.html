@@ -425,11 +425,25 @@
           <button onclick="closeShiftModal()" class="text-slate-500 hover:text-slate-300 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <p id="shift-modal-info" class="text-xs text-slate-400 mb-3"></p>
+        <p class="text-[10px] text-indigo-400 uppercase font-medium" id="shift-modal-tramo1-label">Tramo 1</p>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora entrada</label>
             <input type="time" id="shift-modal-in" onchange="checkMidnightCross()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
           <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora salida <span id="shift-modal-out-label" class="text-amber-400 normal-case hidden">(día sig.)</span></label>
             <input type="time" id="shift-modal-out" onchange="checkMidnightCross()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="shift-modal-split" onchange="toggleSplitShift()" class="accent-amber-500">
+          <label for="shift-modal-split" class="text-xs text-slate-400 cursor-pointer">Turno cortado (agregar 2º tramo)</label>
+        </div>
+        <div id="shift-modal-split-wrap" class="hidden space-y-1">
+          <p class="text-[10px] text-amber-400 uppercase font-medium">Tramo 2</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora entrada</label>
+              <input type="time" id="shift-modal-in2" onchange="checkMidnightCross2()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
+            <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Hora salida <span id="shift-modal-out2-label" class="text-amber-400 normal-case hidden">(día sig.)</span></label>
+              <input type="time" id="shift-modal-out2" onchange="checkMidnightCross2()" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"></div>
+          </div>
         </div>
         <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Nota (opcional)</label>
           <input type="text" id="shift-modal-note" placeholder="Ej. Cubrir a Juan, franco, etc." class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
@@ -440,6 +454,22 @@
         <div class="flex gap-2">
           <button onclick="applyShiftModal()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Confirmar</button>
           <button onclick="clearShiftCell()" class="bg-slate-700 text-slate-400 px-4 py-2 rounded-lg text-sm cursor-pointer">Borrar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Modal copiar día -->
+    <div id="copy-day-modal" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4">
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm p-5 space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-indigo-300 text-sm"><i class="fa-solid fa-copy mr-2"></i>Copiar horario del día</h3>
+          <button onclick="closeCopyDayModal()" class="text-slate-500 hover:text-slate-300 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p id="copy-day-info" class="text-xs text-slate-400"></p>
+        <p class="text-[10px] text-slate-500 uppercase">Pegar en:</p>
+        <div id="copy-day-targets" class="space-y-1.5 max-h-52 overflow-y-auto"></div>
+        <div class="flex gap-2">
+          <button onclick="applyCopyDay()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Copiar</button>
+          <button onclick="closeCopyDayModal()" class="bg-slate-700 text-slate-400 px-4 py-2 rounded-lg text-sm cursor-pointer">Cancelar</button>
         </div>
       </div>
     </div>
@@ -488,6 +518,9 @@ let hoursView   = 'byCollab';
 let shiftData   = {};
 let shiftDirty  = {};
 let shiftModalKey = '';
+let lastShiftDays  = [];   // últimas fechas (YYYY-MM-DD) renderizadas en la grilla de turnos
+let lastShiftStaff = [];   // últimos colaboradores renderizados en la grilla de turnos
+let copySourceDate = '';   // fecha origen al copiar un día
 
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1658,10 +1691,15 @@ window.loadHours = async function() {
         let outD = new Date(`2000-01-01T${shift.out}`), inD = new Date(`2000-01-01T${shift.in}`);
         if (outD <= inD) outD.setDate(outD.getDate() + 1);
         shiftMins = Math.round((outD - inD) / 60000);
+        if (shift.split && shift.in2 && shift.out2) {
+          let out2D = new Date(`2000-01-01T${shift.out2}`), in2D = new Date(`2000-01-01T${shift.in2}`);
+          if (out2D <= in2D) out2D.setDate(out2D.getDate() + 1);
+          shiftMins += Math.round((out2D - in2D) / 60000);
+        }
         if (totalMins > 0) diffMins = totalMins - shiftMins;
       }
       const status = !firstEntry ? 'sin_entrada' : !lastExit ? 'sin_salida' : totalMins < 60 ? 'alerta' : 'ok';
-      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada: entrada + paresExtra, salida, mins: totalMins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, status };
+      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada: entrada + paresExtra, salida, mins: totalMins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, shiftSplit: shift?.split||false, shiftIn2: shift?.in2, shiftOut2: shift?.out2, status };
     });
     const totalMins  = hoursData.reduce((s,r) => s + r.mins, 0);
     const totalDays  = hoursData.filter(r => r.mins > 0).length;
@@ -1686,7 +1724,8 @@ function renderHoursTable() {
   };
   const shiftCell = r => {
     if (!r.shiftIn) return `<td class="px-4 py-2 text-[11px] text-slate-600">—</td>`;
-    return `<td class="px-4 py-2 text-[11px]"><span class="font-mono text-indigo-300">${r.shiftIn}</span>–<span class="font-mono text-indigo-300">${r.shiftOut}</span></td>`;
+    const tramo2 = r.shiftSplit && r.shiftIn2 && r.shiftOut2 ? ` <span class="text-slate-500">+</span> <span class="font-mono text-indigo-300/70">${r.shiftIn2}</span>–<span class="font-mono text-indigo-300/70">${r.shiftOut2}</span>` : '';
+    return `<td class="px-4 py-2 text-[11px]"><span class="font-mono text-indigo-300">${r.shiftIn}</span>–<span class="font-mono text-indigo-300">${r.shiftOut}</span>${tramo2}</td>`;
   };
   const statusMap = { ok: '<i class="fa-solid fa-circle-check text-emerald-400"></i>', sin_salida: '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>', sin_entrada: '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>', alerta: '<i class="fa-solid fa-clock text-amber-400"></i>' };
   if (hoursView === 'byCollab') {
@@ -1749,7 +1788,7 @@ window.exportHoursCSV = function() {
     "Entrada":        r.entrada,
     "Salida":         r.salida,
     "Hs.Realizadas":  fmtM(r.mins),
-    "Turno asig.":    r.shiftIn && r.shiftOut ? `${r.shiftIn}–${r.shiftOut}` : '',
+    "Turno asig.":    r.shiftIn && r.shiftOut ? `${r.shiftIn}–${r.shiftOut}${r.shiftSplit && r.shiftIn2 && r.shiftOut2 ? ' + '+r.shiftIn2+'–'+r.shiftOut2 : ''}` : '',
     "Hs.Turno":       fmtM(r.shiftMins || 0),
     "Diferencia":     fmtDiff(r.diffMins),
     "Estado":         r.status
@@ -1807,9 +1846,15 @@ window.renderShiftGrid = async function() {
     }
   } catch (e) { showToast('Error al cargar turnos desde Firestore.', 'error'); }
   if (!staff.length) { grid.innerHTML='<p class="text-slate-500 text-xs px-4 py-6">Sin colaboradores.</p>'; return; }
+  lastShiftDays  = dayKeys;
+  lastShiftStaff = staff;
   const colW = mode==='week' ? 'min-w-[100px]' : 'min-w-[200px]';
   let html = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-900 text-slate-400 uppercase text-[10px] sticky top-0 z-10"><tr><th class="px-3 py-3 text-left sticky left-0 bg-slate-900 z-20 min-w-[130px]">Colaborador</th>`;
-  days.forEach(d => { const isToday = fmtDate(d)===new Date().toISOString().slice(0,10); html+=`<th class="px-2 py-3 text-center ${colW} ${isToday?'text-indigo-400':''}">${fmtDayLabel(d)}</th>`; });
+  days.forEach(d => {
+    const isToday = fmtDate(d)===new Date().toISOString().slice(0,10);
+    const copyBtn = mode==='week' ? `<i class="fa-solid fa-copy ml-1.5 text-slate-500 hover:text-indigo-400 cursor-pointer" title="Copiar este día a otro" onclick="event.stopPropagation();openCopyDayModal('${fmtDate(d)}')"></i>` : '';
+    html+=`<th class="px-2 py-3 text-center ${colW} ${isToday?'text-indigo-400':''}">${fmtDayLabel(d)}${copyBtn}</th>`;
+  });
   html+=`</tr></thead><tbody class="divide-y divide-slate-700/30">`;
   staff.forEach(s => {
     html+=`<tr class="hover:bg-slate-800/30"><td class="px-3 py-2.5 sticky left-0 bg-slate-800 font-medium text-slate-200 text-xs border-r border-slate-700"><div>${s.name}</div><div class="text-[10px] text-indigo-400/70">${s.venueName||'—'}</div></td>`;
@@ -1821,9 +1866,12 @@ window.renderShiftGrid = async function() {
       if (!shift) cellHtml=`<span class="text-slate-600">—</span>`;
       else if (shift.free) cellHtml=`<span class="px-1.5 py-0.5 bg-slate-700/60 text-slate-400 rounded text-[9px]">Franco</span>`;
       else {
-        const hrsMin = shift.in&&shift.out ? (()=>{ let o=new Date(`2000-01-01T${shift.out}`),i=new Date(`2000-01-01T${shift.in}`); if(o<=i)o.setDate(o.getDate()+1); return Math.round((o-i)/60000); })() : 0;
+        const segMins = (i,o) => { if(!i||!o) return 0; let od=new Date(`2000-01-01T${o}`),id=new Date(`2000-01-01T${i}`); if(od<=id)od.setDate(od.getDate()+1); return Math.round((od-id)/60000); };
+        const hrsMin = segMins(shift.in, shift.out) + (shift.split ? segMins(shift.in2, shift.out2) : 0);
         const hrsStr = hrsMin>0 ? `${Math.floor(hrsMin/60)}h${Math.round(hrsMin%60)>0?Math.round(hrsMin%60)+'m':''}` : '';
-        cellHtml=`<div class="flex flex-col items-center gap-0.5"><span class="font-mono text-emerald-400 text-[11px]">${shift.in||'—'}</span><span class="font-mono text-rose-400 text-[11px]">${shift.out||'—'}</span>${hrsStr?`<span class="text-[9px] text-slate-500">${hrsStr}</span>`:''}</div>`;
+        const tramo1 = `<span class="font-mono text-emerald-400 text-[11px]">${shift.in||'—'}</span><span class="font-mono text-rose-400 text-[11px]">${shift.out||'—'}</span>`;
+        const tramo2 = shift.split ? `<span class="font-mono text-emerald-400/70 text-[10px]">${shift.in2||'—'}</span><span class="font-mono text-rose-400/70 text-[10px]">${shift.out2||'—'}</span>` : '';
+        cellHtml=`<div class="flex flex-col items-center gap-0.5"><div class="flex gap-0.5">${tramo1}</div>${tramo2?`<div class="flex gap-0.5">${tramo2}</div>`:''}${hrsStr?`<span class="text-[9px] text-slate-500">${hrsStr}</span>`:''}</div>`;
       }
       const dirtyDot = isDirty ? `<span class="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400"></span>` : '';
       html+=`<td class="px-1 py-1.5 text-center cursor-pointer relative hover:bg-indigo-950/30 transition-colors border border-slate-700/20 rounded" onclick="openShiftModal('${s.dni}','${s.name.replace(/'/g,"\\'")}','${dk}')">${dirtyDot}${cellHtml}</td>`;
@@ -1840,9 +1888,12 @@ window.openShiftModal = function(dni, name, date) {
   document.getElementById('shift-modal-info').textContent = `${name} — ${new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'})}`;
   document.getElementById('shift-modal-in').value   = shift?.in   || '';
   document.getElementById('shift-modal-out').value  = shift?.out  || '';
+  document.getElementById('shift-modal-in2').value  = shift?.in2  || '';
+  document.getElementById('shift-modal-out2').value = shift?.out2 || '';
+  document.getElementById('shift-modal-split').checked = shift?.split || false;
   document.getElementById('shift-modal-note').value = shift?.note || '';
   document.getElementById('shift-modal-free').checked = shift?.free || false;
-  toggleFreeDay(); checkMidnightCross();
+  toggleFreeDay(); toggleSplitShift(); checkMidnightCross(); checkMidnightCross2();
   document.getElementById('shift-modal').classList.remove('hidden');
 };
 window.closeShiftModal = function() { document.getElementById('shift-modal').classList.add('hidden'); };
@@ -1850,18 +1901,37 @@ window.checkMidnightCross = function() {
   const i=document.getElementById('shift-modal-in').value, o=document.getElementById('shift-modal-out').value;
   document.getElementById('shift-modal-out-label').classList.toggle('hidden', !(i&&o&&o<i));
 };
+window.checkMidnightCross2 = function() {
+  const i=document.getElementById('shift-modal-in2').value, o=document.getElementById('shift-modal-out2').value;
+  document.getElementById('shift-modal-out2-label').classList.toggle('hidden', !(i&&o&&o<i));
+};
+window.toggleSplitShift = function() {
+  const split = document.getElementById('shift-modal-split').checked;
+  document.getElementById('shift-modal-split-wrap').classList.toggle('hidden', !split);
+  if (!split) { document.getElementById('shift-modal-in2').value=''; document.getElementById('shift-modal-out2').value=''; }
+};
 window.toggleFreeDay = function() {
   const f=document.getElementById('shift-modal-free').checked;
-  ['shift-modal-in','shift-modal-out','shift-modal-note'].forEach(id=>document.getElementById(id).disabled=f);
+  ['shift-modal-in','shift-modal-out','shift-modal-in2','shift-modal-out2','shift-modal-note','shift-modal-split'].forEach(id=>document.getElementById(id).disabled=f);
 };
 window.applyShiftModal = function() {
   const isFree=document.getElementById('shift-modal-free').checked;
   const inVal=document.getElementById('shift-modal-in').value, outVal=document.getElementById('shift-modal-out').value;
+  const isSplit=document.getElementById('shift-modal-split').checked;
+  const in2Val=document.getElementById('shift-modal-in2').value, out2Val=document.getElementById('shift-modal-out2').value;
   const note=document.getElementById('shift-modal-note').value.trim();
   if (!isFree && !inVal && !outVal) { showToast("Ingresá horario o marcá franco.", "warning"); return; }
   if (!isFree && inVal && outVal && inVal===outVal) { showToast("Entrada y salida iguales.", "warning"); return; }
+  if (!isFree && isSplit && (!in2Val || !out2Val)) { showToast("Completá el 2º tramo o desmarcá turno cortado.", "warning"); return; }
+  if (!isFree && isSplit && in2Val===out2Val) { showToast("Entrada y salida del 2º tramo iguales.", "warning"); return; }
   const [dni, date] = shiftModalKey.split('__');
-  shiftDirty[shiftModalKey] = { dni, date, in: isFree?'':inVal, out: isFree?'':outVal, note: isFree?'':note, free: isFree };
+  shiftDirty[shiftModalKey] = {
+    dni, date,
+    in:  isFree?'':inVal,  out:  isFree?'':outVal,
+    split: isFree?false:isSplit,
+    in2: (isFree||!isSplit)?'':in2Val, out2: (isFree||!isSplit)?'':out2Val,
+    note: isFree?'':note, free: isFree
+  };
   closeShiftModal(); safeRenderShiftGrid();
   showToast("Turno actualizado (pendiente guardar).", "info");
 };
@@ -1874,7 +1944,7 @@ window.saveAllShifts = async function() {
     pending.forEach(([key, shift]) => {
       const [dni, date] = key.split('__');
       const sr = allStaff.find(s => s.dni===dni);
-      batch.set(doc(db, "shifts", key), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
+      batch.set(doc(db, "shifts", key), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', split: shift.split||false, in2: shift.in2||'', out2: shift.out2||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
       shiftData[key] = shift;
     });
     await batch.commit();
@@ -1882,6 +1952,43 @@ window.saveAllShifts = async function() {
     showToast(`${pending.length} turno(s) guardado(s).`, "success");
     safeRenderShiftGrid();
   } catch (e) { showToast("Error al guardar.", "error"); }
+};
+// ── COPIAR HORARIO DE UN DÍA A OTRO ─────────────────────────────────────
+window.openCopyDayModal = function(sourceDate) {
+  copySourceDate = sourceDate;
+  const label = new Date(sourceDate+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('copy-day-info').textContent = `Vas a copiar el horario de TODOS los colaboradores visibles del ${label} a los días que elijas. Se pisa lo que ya esté cargado en el día destino.`;
+  const wrap = document.getElementById('copy-day-targets');
+  const targets = lastShiftDays.filter(dk => dk !== sourceDate);
+  if (!targets.length) {
+    wrap.innerHTML = '<p class="text-slate-500 text-xs">No hay otros días visibles para copiar (cambiá a vista semanal).</p>';
+  } else {
+    wrap.innerHTML = targets.map(dk => {
+      const lbl = new Date(dk+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'});
+      return `<label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer bg-slate-900/60 rounded-lg px-3 py-2"><input type="checkbox" class="copy-day-target accent-indigo-500" value="${dk}"> ${lbl}</label>`;
+    }).join('');
+  }
+  document.getElementById('copy-day-modal').classList.remove('hidden');
+};
+window.closeCopyDayModal = function() { document.getElementById('copy-day-modal').classList.add('hidden'); };
+window.applyCopyDay = function() {
+  const targets = Array.from(document.querySelectorAll('.copy-day-target:checked')).map(el => el.value);
+  if (!targets.length) { showToast("Elegí al menos un día destino.", "warning"); return; }
+  let copied = 0;
+  lastShiftStaff.forEach(s => {
+    const sourceKey = `${s.dni}__${copySourceDate}`;
+    const sourceShift = shiftDirty[sourceKey] || shiftData[sourceKey];
+    if (!sourceShift) return;
+    targets.forEach(dk => {
+      const targetKey = `${s.dni}__${dk}`;
+      shiftDirty[targetKey] = { ...sourceShift, date: dk };
+      copied++;
+    });
+  });
+  closeCopyDayModal();
+  if (!copied) { showToast("No había turnos cargados ese día para copiar.", "warning"); return; }
+  safeRenderShiftGrid();
+  showToast(`${copied} turno(s) copiado(s) a ${targets.length} día(s) (pendiente guardar).`, "success");
 };
 window.exportShiftsPDF = function() {
   const mode=document.getElementById('shift-mode').value, dateV=document.getElementById('shift-date').value;
@@ -1904,9 +2011,11 @@ window.exportShiftsPDF = function() {
       if (!shift) cell='<span style="color:#94a3b8">—</span>';
       else if (shift.free) cell='<span style="color:#64748b;font-size:10px">Franco</span>';
       else {
-        const m=shift.in&&shift.out?(()=>{let o=new Date(`2000-01-01T${shift.out}`),i=new Date(`2000-01-01T${shift.in}`);if(o<=i)o.setDate(o.getDate()+1);return Math.round((o-i)/60000);})():0;
+        const segMins=(i,o)=>{ if(!i||!o) return 0; let od=new Date(`2000-01-01T${o}`),id=new Date(`2000-01-01T${i}`); if(od<=id)od.setDate(od.getDate()+1); return Math.round((od-id)/60000); };
+        const m=segMins(shift.in,shift.out)+(shift.split?segMins(shift.in2,shift.out2):0);
         totalMins+=m;
-        cell=`<div style="font-size:11px;line-height:1.4"><span style="color:#16a34a">${shift.in||'—'}</span><br><span style="color:#dc2626">${shift.out||'—'}</span></div>`;
+        const tramo2=shift.split?`<br><span style="color:#16a34a;opacity:.6">${shift.in2||'—'}</span><span style="color:#94a3b8">–</span><span style="color:#dc2626;opacity:.6">${shift.out2||'—'}</span>`:'';
+        cell=`<div style="font-size:11px;line-height:1.4"><span style="color:#16a34a">${shift.in||'—'}</span><br><span style="color:#dc2626">${shift.out||'—'}</span>${tramo2}</div>`;
       }
       cells+=`<td style="padding:5px 6px;text-align:center;border:1px solid #e2e8f0;background:${idx%2===0?'#fff':'#f8fafc'}">${cell}</td>`;
     });

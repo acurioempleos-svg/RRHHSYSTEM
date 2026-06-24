@@ -522,6 +522,11 @@ let lastShiftDays  = [];   // últimas fechas (YYYY-MM-DD) renderizadas en la gr
 let lastShiftStaff = [];   // últimos colaboradores renderizados en la grilla de turnos
 let copySourceDate = '';   // fecha origen al copiar un día
 
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return (str || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   startClock();
@@ -590,6 +595,7 @@ async function loadKnownFaces() {
     // Rebuild matcher — pequeño yield para que faceapi haya procesado cualquier tarea pendiente
     await new Promise(r => setTimeout(r, 0));
     rebuildFaceMatcher();
+    window._knownFacesLoadedAt = Date.now();
   } catch (e) {
     // Fix #C: don't swallow errors silently
     console.error('loadKnownFaces error:', e);
@@ -619,8 +625,12 @@ window.openFaceOverlay = async function() {
   document.getElementById('face-result-overlay').classList.add('hidden');
   document.getElementById('face-status').textContent = 'Iniciando cámara...';
   document.getElementById('face-overlay').classList.remove('hidden');
-  // Fix #10: refresh knownFaces when opening so any recently registered collaborator is included
-  await loadKnownFaces();
+  // Refresh knownFaces when opening — skip if already loaded in the last 30s to avoid
+  // a redundant read when openFaceOverlay is called right after the init sequence.
+  const now_ms = Date.now();
+  if (!window._knownFacesLoadedAt || (now_ms - window._knownFacesLoadedAt) > 30000) {
+    await loadKnownFaces();
+  }
   await startFaceCamera();
   // Fix #10: keep refreshing every 60s while overlay is open (catches remote registrations)
   faceRefreshTimer = setInterval(async () => {
@@ -1275,8 +1285,8 @@ function renderVenuesList() {
   container.innerHTML = allVenues.map(v => `
     <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex items-center justify-between">
       <div>
-        <p class="font-semibold text-slate-200 text-sm">${v.name}</p>
-        <p class="text-xs text-slate-500">${v.address || '—'}</p>
+        <p class="font-semibold text-slate-200 text-sm">${escHtml(v.name)}</p>
+        <p class="text-xs text-slate-500">${escHtml(v.address)}</p>
       </div>
       <div class="flex gap-2">
         <button onclick="editVenue('${v.id}')" class="text-indigo-400 hover:text-indigo-300 text-xs cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1348,9 +1358,9 @@ function renderStaffTable() {
          </button>`;
     return `
     <tr class="collab-row transition-colors">
-      <td class="px-4 py-3 font-medium text-slate-200">${s.name}</td>
-      <td class="px-4 py-3 text-slate-400 font-mono text-xs">${s.dni}</td>
-      <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${s.venueName || '—'}</span></td>
+      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}</td>
+      <td class="px-4 py-3 text-slate-400 font-mono text-xs">${escHtml(s.dni)}</td>
+      <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(s.venueName)}</span></td>
       <td class="px-4 py-3">${faceBadge}</td>
       <td class="px-4 py-3 text-right flex justify-end gap-2">
         <button onclick="editStaff('${s.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1515,10 +1525,6 @@ window.clearFilters = function() {
   applyFilters();
 };
 
-function escHtml(str) {
-  return (str || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function renderAdminTable(logs) {
   const tbody = document.getElementById('admin-table-body');
   if (!logs.length) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Sin registros.</td></tr>`; return; }
@@ -1591,7 +1597,8 @@ async function initHoursTab() {
   const fmt   = d => d.toISOString().slice(0,10);
   if (!document.getElementById('hours-date-from').value) document.getElementById('hours-date-from').value = fmt(mon);
   if (!document.getElementById('hours-date-to').value)   document.getElementById('hours-date-to').value   = fmt(sun);
-  if (!allStaff.length) await loadStaff();
+  if (!allStaff.length)  await loadStaff();
+  if (!allVenues.length) await loadVenues();
   const staffSel = document.getElementById('hours-filter-staff');
   const venueSel = document.getElementById('hours-filter-venue');
   // Fix #8: preserve current selections before rebuilding options
@@ -1627,8 +1634,9 @@ window.loadHours = async function() {
   tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Calculando...</td></tr>`;
   try {
     // Fix #2: filter by date range in Firestore — avoids downloading entire history
-    const fromTs = from + 'T00:00:00.000Z';
-    const toTs   = to   + 'T23:59:59.999Z';
+    // Offset UTC-3 (BsAs): medianoche local = 03:00Z; fin del día local = +1 día 02:59:59Z
+    const fromTs = from + 'T03:00:00.000Z';
+    const toTs   = new Date(new Date(to + 'T03:00:00.000Z').getTime() + 86400000 - 1).toISOString();
     const snap = await getDocs(query(
       collection(db, "attendance_logs"),
       where("timestamp", ">=", fromTs),

@@ -1420,6 +1420,12 @@ function normalizeKey(str) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+// Igual que normalizeKey pero además ignora numeración inicial tipo "2. Tanta" o "4) BCB",
+// porque en la planilla los locales suelen venir numerados y en iCheck no.
+function normalizeVenueName(str) {
+  return normalizeKey(str).replace(/^\d+\s*[.)-]\s*/, '');
+}
+
 function showColumnMappingPanel(headers) {
   const panel = document.getElementById('nomina-mapping-panel');
   if (!panel || !headers?.length) return;
@@ -1521,7 +1527,7 @@ window.syncNomina = async function(manual) {
 
     for (const r of rows) {
       sheetDnis.add(r.dni);
-      const venue = allVenues.find(v => normalizeKey(v.name) === normalizeKey(r.venueText));
+      const venue = allVenues.find(v => normalizeVenueName(v.name) === normalizeVenueName(r.venueText));
       const pendingVenueMatch = !!r.venueText && !venue;
       if (pendingVenueMatch) unmatchedVenues++;
       await setDoc(doc(db, "staff", r.dni), {

@@ -310,6 +310,21 @@
           Mostrar inactivos (dados de baja de la planilla)
         </label>
       </div>
+
+      <div id="nomina-mapping-panel" class="hidden mt-3 pt-3 border-t border-slate-700">
+        <p class="text-[11px] text-amber-400 mb-2"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
+          No reconocí las columnas automáticamente. Elegí manualmente cuál es cuál (se guarda y no hay que repetirlo):</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el DNI</label>
+            <select id="map-col-dni" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
+          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el Nombre</label>
+            <select id="map-col-nombre" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
+          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el Local (opcional)</label>
+            <select id="map-col-local" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
+        </div>
+        <button onclick="saveColumnMapping()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+          <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar mapeo y sincronizar</button>
+      </div>
     </div>
 
     <div class="overflow-x-auto rounded-lg border border-slate-700">
@@ -535,6 +550,8 @@ let lastShiftStaff = [];   // últimos colaboradores renderizados en la grilla d
 let copySourceDate = '';   // fecha origen al copiar un día
 let nominaCsvUrl   = '';   // URL publicada del Google Sheet (CSV)
 let nominaSyncing  = false;
+let nominaColumnMap = null; // { dni, nombre, local } — mapeo manual de columnas, si hizo falta
+let nominaLastCsvText = ''; // último CSV crudo recibido, para poder re-mapear sin refetch
 const NOMINA_AUTOSYNC_MS = 5 * 60 * 1000; // resincroniza cada 5 minutos
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -1352,6 +1369,7 @@ async function loadNominaConfig() {
     if (snap.exists()) {
       const cfg = snap.data();
       nominaCsvUrl = cfg.csvUrl || '';
+      nominaColumnMap = cfg.columnMap || null;
       document.getElementById('nomina-csv-url').value = cfg.rawUrl || nominaCsvUrl;
       updateNominaSyncStatus(cfg.lastSync, cfg.lastCount, cfg.lastError);
     }
@@ -1386,8 +1404,10 @@ window.saveNominaConfig = async function() {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv${gidMatch ? '&gid=' + gidMatch[1] : ''}`;
 
   try {
-    await setDoc(doc(db, "config", "nomina"), { rawUrl: rawInput, csvUrl }, { merge: true });
+    const urlChanged = csvUrl !== nominaCsvUrl;
+    await setDoc(doc(db, "config", "nomina"), { rawUrl: rawInput, csvUrl, columnMap: urlChanged ? null : (nominaColumnMap || null) }, { merge: true });
     nominaCsvUrl = csvUrl;
+    if (urlChanged) { nominaColumnMap = null; hideColumnMappingPanel(); }
     showToast("URL guardada. Sincronizando...", "info");
     await syncNomina(true);
   } catch (e) { console.error(e); showToast("Error al guardar la URL.", "error"); }
@@ -1399,6 +1419,38 @@ function normalizeKey(str) {
   return (str || '').toString().trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+
+function showColumnMappingPanel(headers) {
+  const panel = document.getElementById('nomina-mapping-panel');
+  if (!panel || !headers?.length) return;
+  const opts = '<option value="">-- Elegí una columna --</option>' +
+    headers.map(h => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join('');
+  document.getElementById('map-col-dni').innerHTML    = opts;
+  document.getElementById('map-col-nombre').innerHTML = opts;
+  document.getElementById('map-col-local').innerHTML  = '<option value="">-- (ninguna) --</option>' +
+    headers.map(h => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join('');
+  if (nominaColumnMap?.dni)    document.getElementById('map-col-dni').value    = nominaColumnMap.dni;
+  if (nominaColumnMap?.nombre) document.getElementById('map-col-nombre').value = nominaColumnMap.nombre;
+  if (nominaColumnMap?.local)  document.getElementById('map-col-local').value  = nominaColumnMap.local;
+  panel.classList.remove('hidden');
+}
+
+function hideColumnMappingPanel() {
+  document.getElementById('nomina-mapping-panel')?.classList.add('hidden');
+}
+
+window.saveColumnMapping = async function() {
+  const dniCol    = document.getElementById('map-col-dni').value;
+  const nombreCol = document.getElementById('map-col-nombre').value;
+  const localCol  = document.getElementById('map-col-local').value;
+  if (!dniCol || !nombreCol) { showToast("Elegí al menos la columna de DNI y la de Nombre.", "error"); return; }
+  nominaColumnMap = { dni: dniCol, nombre: nombreCol, local: localCol || null };
+  try {
+    await setDoc(doc(db, "config", "nomina"), { columnMap: nominaColumnMap }, { merge: true });
+    showToast("Mapeo guardado. Sincronizando...", "info");
+    await syncNomina(true);
+  } catch (e) { console.error(e); showToast("Error al guardar el mapeo.", "error"); }
+};
 
 window.syncNomina = async function(manual) {
   if (nominaSyncing) return;
@@ -1418,6 +1470,7 @@ window.syncNomina = async function(manual) {
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}: la hoja respondió con un error. Si es 404, revisá el link; si es 403, revisá los permisos de acceso.`);
     const csvText = await res.text();
+    nominaLastCsvText = csvText; // guardado para reusar si hace falta mapear columnas a mano
 
     // Si Google devuelve una página de login/HTML en vez de CSV, la hoja no es pública
     const looksLikeHtml = /^\s*<(!doctype|html)/i.test(csvText);
@@ -1427,21 +1480,33 @@ window.syncNomina = async function(manual) {
 
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
     if (parsed.errors?.length) console.warn('CSV parse warnings:', parsed.errors);
+    const headers = parsed.meta?.fields || Object.keys(parsed.data[0] || {});
 
-    // Mapea encabezados flexibles: DNI / Nombre / Nombre y Apellido / Local
-    const rows = parsed.data.map(row => {
-      const norm = {};
-      Object.keys(row).forEach(k => { norm[normalizeKey(k)] = row[k]; });
-      const dni = (norm['dni'] || '').toString().replace(/\D/g, '');
-      const name = (norm['nombre'] || norm['nombre y apellido'] || norm['colaborador'] || '').toString().trim();
-      const venueText = (norm['local'] || norm['local asignado'] || norm['sucursal'] || '').toString().trim();
-      return { dni, name, venueText };
-    }).filter(r => r.dni && r.name);
+    let rows;
+    if (nominaColumnMap?.dni && nominaColumnMap?.nombre) {
+      // Usa el mapeo manual guardado por el usuario
+      rows = parsed.data.map(row => ({
+        dni: (row[nominaColumnMap.dni] || '').toString().replace(/\D/g, ''),
+        name: (row[nominaColumnMap.nombre] || '').toString().trim(),
+        venueText: nominaColumnMap.local ? (row[nominaColumnMap.local] || '').toString().trim() : ''
+      })).filter(r => r.dni && r.name);
+    } else {
+      // Intenta detectar automáticamente por nombre de columna habitual
+      rows = parsed.data.map(row => {
+        const norm = {};
+        Object.keys(row).forEach(k => { norm[normalizeKey(k)] = row[k]; });
+        const dni = (norm['dni'] || '').toString().replace(/\D/g, '');
+        const name = (norm['nombre'] || norm['nombre y apellido'] || norm['colaborador'] || '').toString().trim();
+        const venueText = (norm['local'] || norm['local asignado'] || norm['sucursal'] || '').toString().trim();
+        return { dni, name, venueText };
+      }).filter(r => r.dni && r.name);
+    }
 
     if (!rows.length) {
-      const preview = csvText.slice(0, 200).replace(/\s+/g, ' ').trim();
-      throw new Error(`SIN_FILAS: se pudo leer el archivo pero no encontré columnas DNI/Nombre válidas. Encabezados detectados: ${Object.keys(parsed.data[0] || {}).join(', ') || '(ninguno)'}. Inicio del archivo: "${preview}"`);
+      showColumnMappingPanel(headers);
+      throw new Error(`SIN_FILAS: no reconocí automáticamente las columnas DNI/Nombre. Elegilas manualmente abajo. Encabezados detectados: ${headers.join(', ') || '(ninguno)'}`);
     }
+    hideColumnMappingPanel();
 
 
     if (!allVenues.length) await loadVenues();

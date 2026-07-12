@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <!-- face-api.js para reconocimiento facial en el navegador -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
@@ -287,21 +288,30 @@
   <!-- TAB: COLABORADORES -->
   <div id="tab-staff" class="tab-content">
     <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3">Planilla de Colaboradores</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">DNI</label>
-        <input type="text" id="staff-dni" placeholder="30123456" maxlength="10" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
-      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Nombre y Apellido</label>
-        <input type="text" id="staff-name" placeholder="Juan Pérez" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
-      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Local asignado</label>
-        <select id="staff-venue" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-          <option value="">-- Seleccioná un local --</option></select></div>
+
+    <div class="bg-slate-900/60 border border-slate-700 rounded-lg p-4 mb-5">
+      <p class="text-[11px] text-slate-400 mb-3"><i class="fa-solid fa-circle-info mr-1.5 text-indigo-400"></i>
+        La nómina se lee directamente de un Google Sheet. Abrí la hoja → botón <span class="text-slate-300 font-mono">Compartir</span> →
+        acceso general <span class="text-slate-300 font-mono">"Cualquier persona con el enlace"</span> → Lector, y pegá esa URL acá
+        (no uses "Publicar en la web", falla por CORS). Columnas esperadas: <span class="text-slate-300 font-mono">DNI</span>,
+        <span class="text-slate-300 font-mono">Nombre</span>, <span class="text-slate-300 font-mono">Local</span>.</p>
+      <div class="flex flex-col sm:flex-row gap-2 mb-2">
+        <input type="text" id="nomina-csv-url" placeholder="https://docs.google.com/spreadsheets/d/XXXXXXXXXXXX/edit#gid=0"
+          class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <button onclick="saveNominaConfig()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
+          <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y sincronizar</button>
+        <button onclick="syncNomina(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
+          <i class="fa-solid fa-rotate mr-2"></i>Sincronizar ahora</button>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+        <span id="nomina-sync-status">Todavía no se sincronizó.</span>
+        <label class="flex items-center gap-1.5 cursor-pointer select-none">
+          <input type="checkbox" id="staff-show-inactive" onchange="renderStaffTable()" class="cursor-pointer">
+          Mostrar inactivos (dados de baja de la planilla)
+        </label>
+      </div>
     </div>
-    <div class="flex gap-2 mb-5">
-      <button onclick="saveStaff()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
-        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar</button>
-      <button onclick="clearStaffForm()" class="bg-slate-700 text-slate-400 px-3 py-2 rounded-lg text-xs cursor-pointer">Limpiar</button>
-      <input type="hidden" id="staff-edit-id">
-    </div>
+
     <div class="overflow-x-auto rounded-lg border border-slate-700">
       <table class="w-full text-left text-xs text-slate-300">
         <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
@@ -494,9 +504,11 @@ const firebaseConfig = {
 };
 // Colecciones Firestore:
 // venues/{venueId}         → { name, address, qrToken }
-// staff/{dni}              → { name, dni, venueId, venueName, faceDescriptor: Float32Array serializado }
+// staff/{dni}              → { name, dni, venueId, venueName, faceDescriptor: Float32Array serializado,
+//                               source: 'sheet', activo: bool, pendingVenueMatch: bool, syncedAt }
 // attendance_logs/{autoId} → { name, dni, venueId, venueName, type, timestamp, method: 'face'|'manual_dni' }
 // config/admin             → { pinHash }
+// config/nomina            → { csvUrl, lastSync, lastCount }
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -521,6 +533,9 @@ let shiftModalKey = '';
 let lastShiftDays  = [];   // últimas fechas (YYYY-MM-DD) renderizadas en la grilla de turnos
 let lastShiftStaff = [];   // últimos colaboradores renderizados en la grilla de turnos
 let copySourceDate = '';   // fecha origen al copiar un día
+let nominaCsvUrl   = '';   // URL publicada del Google Sheet (CSV)
+let nominaSyncing  = false;
+const NOMINA_AUTOSYNC_MS = 5 * 60 * 1000; // resincroniza cada 5 minutos
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function escHtml(str) {
@@ -531,10 +546,13 @@ function escHtml(str) {
 window.addEventListener('DOMContentLoaded', async () => {
   startClock();
   await loadVenues();
+  await loadNominaConfig();
   await loadStaff();
+  if (nominaCsvUrl) await syncNomina(false); // sincroniza en silencio al abrir
   await loadModels();
   await loadKnownFaces();
   showRecentPunches();
+  setInterval(() => { if (nominaCsvUrl) syncNomina(false); }, NOMINA_AUTOSYNC_MS);
 });
 
 // ── RELOJ ─────────────────────────────────────────────────────────────────
@@ -579,6 +597,7 @@ async function loadKnownFaces() {
     knownFaces = [];
     snap.docs.forEach(d => {
       const s = d.data();
+      if (s.activo === false) return; // dado de baja de la planilla — no debe poder fichar
       let descriptors = [];
       if (s.faceDescriptors && Array.isArray(s.faceDescriptors) && s.faceDescriptors.length > 0) {
         descriptors = s.faceDescriptors
@@ -1268,7 +1287,7 @@ async function loadVenues() {
 }
 
 function populateVenueSelects() {
-  ['staff-venue','filter-venue','hours-filter-venue','shift-filter-venue'].forEach(id => {
+  ['filter-venue','hours-filter-venue','shift-filter-venue'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const saved = el.value;
@@ -1326,7 +1345,156 @@ window.clearVenueForm = function() {
   document.getElementById('venue-edit-id').value = '';
 };
 
-// ── COLABORADORES ─────────────────────────────────────────────────────────
+// ── COLABORADORES (nómina desde Google Sheets) ──────────────────────────────
+async function loadNominaConfig() {
+  try {
+    const snap = await getDoc(doc(db, "config", "nomina"));
+    if (snap.exists()) {
+      const cfg = snap.data();
+      nominaCsvUrl = cfg.csvUrl || '';
+      document.getElementById('nomina-csv-url').value = cfg.rawUrl || nominaCsvUrl;
+      updateNominaSyncStatus(cfg.lastSync, cfg.lastCount, cfg.lastError);
+    }
+  } catch (e) { console.error('loadNominaConfig error:', e); }
+}
+
+function updateNominaSyncStatus(lastSync, lastCount, lastError) {
+  const el = document.getElementById('nomina-sync-status');
+  if (!el) return;
+  if (lastError) {
+    el.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${escHtml(lastError)}</span>`;
+    return;
+  }
+  if (!lastSync) { el.textContent = 'Todavía no se sincronizó.'; return; }
+  const d = new Date(lastSync);
+  el.textContent = `Última sincronización: ${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR')} · ${lastCount ?? 0} colaborador(es) en la planilla.`;
+}
+
+window.saveNominaConfig = async function() {
+  const rawInput = document.getElementById('nomina-csv-url').value.trim();
+  if (!rawInput) { showToast("Pegá el link para compartir de la hoja.", "error"); return; }
+
+  if (/\/spreadsheets\/d\/e\//.test(rawInput)) {
+    showToast('Ese es el link de "Publicar en la web" — Google lo redirige a un dominio que bloquea la lectura automática (CORS) y por eso falla. Usá el link normal de "Compartir" en su lugar: abrí la hoja → Compartir → "Cualquier persona con el enlace" → Lector → copiá esa URL (empieza con docs.google.com/spreadsheets/d/... sin la "e/" después de "d/").', "error", 12000);
+    return;
+  }
+
+  const idMatch  = rawInput.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const gidMatch = rawInput.match(/[#&?]gid=([0-9]+)/);
+  const sheetId  = idMatch ? idMatch[1] : rawInput.replace(/[^a-zA-Z0-9-_]/g, '');
+  if (!sheetId) { showToast("No pude identificar la hoja en ese link.", "error"); return; }
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv${gidMatch ? '&gid=' + gidMatch[1] : ''}`;
+
+  try {
+    await setDoc(doc(db, "config", "nomina"), { rawUrl: rawInput, csvUrl }, { merge: true });
+    nominaCsvUrl = csvUrl;
+    showToast("URL guardada. Sincronizando...", "info");
+    await syncNomina(true);
+  } catch (e) { console.error(e); showToast("Error al guardar la URL.", "error"); }
+};
+
+// Normaliza texto para poder comparar encabezados de columnas y nombres de locales
+// sin que espacios, mayúsculas o tildes generen falsos negativos.
+function normalizeKey(str) {
+  return (str || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+window.syncNomina = async function(manual) {
+  if (nominaSyncing) return;
+  if (!nominaCsvUrl) {
+    if (manual) showToast("Primero guardá la URL del Google Sheet.", "error");
+    return;
+  }
+  nominaSyncing = true;
+  if (manual) showToast("Sincronizando nómina...", "info");
+  try {
+    let res;
+    try {
+      res = await fetch(nominaCsvUrl, { cache: 'no-store' });
+    } catch (fetchErr) {
+      // El fetch en sí fue bloqueado (CORS, sin conexión, origen file://, etc.)
+      throw new Error('BLOQUEADO_RED: el navegador impidió la conexión (revisá tu conexión a internet o si estás abriendo el archivo con file:// en vez de subido a un hosting).');
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}: la hoja respondió con un error. Si es 404, revisá el link; si es 403, revisá los permisos de acceso.`);
+    const csvText = await res.text();
+
+    // Si Google devuelve una página de login/HTML en vez de CSV, la hoja no es pública
+    const looksLikeHtml = /^\s*<(!doctype|html)/i.test(csvText);
+    if (looksLikeHtml) {
+      throw new Error('NO_PUBLICA: recibiste una página web en vez de datos. La hoja no está compartida como "Cualquier persona con el enlace → Lector" (o el link/gid está mal). Abrí la hoja → Compartir → Acceso general → Cualquier persona con el enlace → Lector.');
+    }
+
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    if (parsed.errors?.length) console.warn('CSV parse warnings:', parsed.errors);
+
+    // Mapea encabezados flexibles: DNI / Nombre / Nombre y Apellido / Local
+    const rows = parsed.data.map(row => {
+      const norm = {};
+      Object.keys(row).forEach(k => { norm[normalizeKey(k)] = row[k]; });
+      const dni = (norm['dni'] || '').toString().replace(/\D/g, '');
+      const name = (norm['nombre'] || norm['nombre y apellido'] || norm['colaborador'] || '').toString().trim();
+      const venueText = (norm['local'] || norm['local asignado'] || norm['sucursal'] || '').toString().trim();
+      return { dni, name, venueText };
+    }).filter(r => r.dni && r.name);
+
+    if (!rows.length) {
+      const preview = csvText.slice(0, 200).replace(/\s+/g, ' ').trim();
+      throw new Error(`SIN_FILAS: se pudo leer el archivo pero no encontré columnas DNI/Nombre válidas. Encabezados detectados: ${Object.keys(parsed.data[0] || {}).join(', ') || '(ninguno)'}. Inicio del archivo: "${preview}"`);
+    }
+
+
+    if (!allVenues.length) await loadVenues();
+    let unmatchedVenues = 0;
+    const nowISO = new Date().toISOString();
+    const sheetDnis = new Set();
+
+    for (const r of rows) {
+      sheetDnis.add(r.dni);
+      const venue = allVenues.find(v => normalizeKey(v.name) === normalizeKey(r.venueText));
+      const pendingVenueMatch = !!r.venueText && !venue;
+      if (pendingVenueMatch) unmatchedVenues++;
+      await setDoc(doc(db, "staff", r.dni), {
+        name: r.name,
+        dni: r.dni,
+        venueId: venue?.id || '',
+        venueName: venue?.name || r.venueText || '',
+        pendingVenueMatch,
+        source: 'sheet',
+        activo: true,
+        syncedAt: nowISO
+      }, { merge: true });
+    }
+
+    // Da de baja (sin borrar historial ni la cara registrada) a quienes salieron de la planilla
+    let deactivated = 0;
+    for (const s of allStaff) {
+      if (s.source === 'sheet' && s.activo !== false && !sheetDnis.has(s.dni)) {
+        await setDoc(doc(db, "staff", s.dni), { activo: false }, { merge: true });
+        deactivated++;
+      }
+    }
+
+    await setDoc(doc(db, "config", "nomina"), { csvUrl: nominaCsvUrl, lastSync: nowISO, lastCount: rows.length, lastError: null }, { merge: true });
+    updateNominaSyncStatus(nowISO, rows.length, null);
+    await loadStaff();
+    await loadKnownFaces();
+
+    let msg = `Nómina sincronizada: ${rows.length} colaborador(es).`;
+    if (deactivated) msg += ` ${deactivated} dado(s) de baja.`;
+    if (unmatchedVenues) msg += ` ⚠️ ${unmatchedVenues} sin local coincidente.`;
+    showToast(msg, unmatchedVenues ? "warning" : "success", 6000);
+  } catch (e) {
+    console.error('syncNomina error:', e);
+    const errMsg = e.message || 'Error desconocido';
+    showToast("Error al sincronizar: " + errMsg, "error", 10000);
+    try { await setDoc(doc(db, "config", "nomina"), { lastError: errMsg, lastErrorAt: new Date().toISOString() }, { merge: true }); } catch {}
+    updateNominaSyncStatus(null, null, errMsg);
+  } finally {
+    nominaSyncing = false;
+  }
+};
+
 async function loadStaff() {
   try {
     const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
@@ -1337,11 +1505,13 @@ async function loadStaff() {
 
 function renderStaffTable() {
   const tbody = document.getElementById('staff-table-body');
-  if (!allStaff.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores.</td></tr>';
+  const showInactive = document.getElementById('staff-show-inactive')?.checked;
+  const visibleStaff = allStaff.filter(s => showInactive || s.activo !== false);
+  if (!visibleStaff.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">Sin colaboradores. Sincronizá la planilla arriba.</td></tr>';
     return;
   }
-  tbody.innerHTML = allStaff.map(s => {
+  tbody.innerHTML = visibleStaff.map(s => {
     const hasFace = !!(s.faceDescriptors?.length || s.faceDescriptor);
     const faceCount = s.faceDescriptors?.length || (s.faceDescriptor ? 1 : 0);
     const faceBadge = hasFace
@@ -1356,69 +1526,28 @@ function renderStaffTable() {
            class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] cursor-pointer hover:bg-indigo-900/50 transition-colors">
            <i class="fa-solid fa-camera"></i>Registrar cara
          </button>`;
+    const inactiveBadge = s.activo === false
+      ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]"><i class="fa-solid fa-user-slash mr-1"></i>Inactivo</span>` : '';
+    const venueBadge = s.pendingVenueMatch
+      ? `<span class="px-2 py-1 bg-amber-950/50 text-amber-400 rounded text-[10px]" title="El local de la planilla no coincide con ningún local cargado">
+           <i class="fa-solid fa-triangle-exclamation mr-1"></i>${escHtml(s.venueName || 'Sin local')}
+         </span>`
+      : `<span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(s.venueName)}</span>`;
     return `
-    <tr class="collab-row transition-colors">
-      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}</td>
+    <tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
+      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${inactiveBadge}</td>
       <td class="px-4 py-3 text-slate-400 font-mono text-xs">${escHtml(s.dni)}</td>
-      <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(s.venueName)}</span></td>
+      <td class="px-4 py-3">${venueBadge}</td>
       <td class="px-4 py-3">${faceBadge}</td>
       <td class="px-4 py-3 text-right flex justify-end gap-2">
-        <button onclick="editStaff('${s.id}')" class="text-[10px] text-indigo-400 hover:text-indigo-300 cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteStaff('${s.id}','${s.name.replace(/'/g,"\\'")}' )" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2"><i class="fa-solid fa-trash"></i></button>
+        <button onclick="deleteStaff('${s.id}','${s.name.replace(/'/g,"\\'")}' )" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2" title="Eliminar definitivamente (incluye historial)"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');
 }
 
-window.saveStaff = async function() {
-  const dni     = document.getElementById('staff-dni').value.trim();
-  const name    = document.getElementById('staff-name').value.trim();
-  const venueId = document.getElementById('staff-venue').value;
-  const editId  = document.getElementById('staff-edit-id').value;
-  if (!dni || !/^\d{7,10}$/.test(dni)) { showToast("DNI inválido.", "error"); return; }
-  if (!name)    { showToast("Ingresá el nombre.", "error"); return; }
-  if (!venueId) { showToast("Seleccioná un local.", "error"); return; }
-  const venue = allVenues.find(v => v.id === venueId);
-  const venueName = venue?.name || '';
-  try {
-    // Check if venue changed for an existing collaborator
-    const existing = allStaff.find(s => s.dni === dni);
-    const venueChanged = existing && (existing.venueId !== venueId);
-
-    await setDoc(doc(db, "staff", dni), { name, dni, venueId, venueName, addedAt: new Date().toISOString() }, { merge: true });
-
-    // Fix #12: if venue changed, propagate to existing shifts and logs (batches of 500)
-    if (venueChanged) {
-      const [shiftsSnap, logsSnap] = await Promise.all([
-        getDocs(query(collection(db, "shifts"), where("dni", "==", dni))),
-        getDocs(query(collection(db, "attendance_logs"), where("dni", "==", dni)))
-      ]);
-      const allDocs = [...shiftsSnap.docs, ...logsSnap.docs];
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db);
-        allDocs.slice(i, i + BATCH_SIZE).forEach(d => batch.update(d.ref, { venueId, venueName }));
-        await batch.commit();
-      }
-      showToast(`${name} guardado/a. Local actualizado en ${allDocs.length} registro(s).`, "success");
-    } else {
-      showToast(`${name} guardado/a.`, "success");
-    }
-    clearStaffForm();
-    await loadStaff();
-  } catch (e) { console.error(e); showToast("Error al guardar.", "error"); }
-};
-window.editStaff = function(id) {
-  const s = allStaff.find(x => x.id === id);
-  if (!s) return;
-  document.getElementById('staff-dni').value   = s.dni;
-  document.getElementById('staff-name').value  = s.name;
-  document.getElementById('staff-venue').value = s.venueId;
-  document.getElementById('staff-edit-id').value = id;
-  switchTab('tab-staff');
-};
 window.deleteStaff = async function(id, name) {
-  if (!confirm(`¿Eliminar a ${name}? También se eliminarán sus turnos y registros de asistencia.`)) return;
+  if (!confirm(`¿Eliminar a ${name} definitivamente? También se eliminarán sus turnos y registros de asistencia.\n\nSi la persona sigue en la planilla de Google Sheets, va a volver a aparecer en la próxima sincronización (sin su cara registrada). Para dar de baja de forma permanente, quitala de la planilla.`)) return;
   try {
     // Find the DNI — id === dni in this system but be explicit
     const staffSnap = await getDoc(doc(db, "staff", id));
@@ -1442,11 +1571,6 @@ window.deleteStaff = async function(id, name) {
     await loadKnownFaces();
     showToast(`${name} eliminado junto a sus registros.`, "success");
   } catch (e) { console.error(e); showToast("Error al eliminar colaborador.", "error"); }
-};
-window.clearStaffForm = function() {
-  ['staff-dni','staff-name'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('staff-venue').value = '';
-  document.getElementById('staff-edit-id').value = '';
 };
 
 // ── ADMIN AUTH ────────────────────────────────────────────────────────────

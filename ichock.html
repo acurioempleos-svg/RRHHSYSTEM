@@ -1491,15 +1491,20 @@ window.syncNomina = async function(manual) {
         venueText: nominaColumnMap.local ? (row[nominaColumnMap.local] || '').toString().trim() : ''
       })).filter(r => r.dni && r.name);
     } else {
-      // Intenta detectar automáticamente por nombre de columna habitual
-      rows = parsed.data.map(row => {
-        const norm = {};
-        Object.keys(row).forEach(k => { norm[normalizeKey(k)] = row[k]; });
-        const dni = (norm['dni'] || '').toString().replace(/\D/g, '');
-        const name = (norm['nombre'] || norm['nombre y apellido'] || norm['colaborador'] || '').toString().trim();
-        const venueText = (norm['local'] || norm['local asignado'] || norm['sucursal'] || '').toString().trim();
-        return { dni, name, venueText };
-      }).filter(r => r.dni && r.name);
+      // Intenta detectar automáticamente por nombre de columna habitual (match flexible: contiene la palabra clave)
+      const findCol = (keys, needles) => keys.find(k => needles.some(n => k.includes(n)));
+      const normKeys = headers.map(h => ({ original: h, norm: normalizeKey(h) }));
+      const dniKey    = findCol(normKeys.map(k => k.norm), ['dni']);
+      const nombreKey = findCol(normKeys.map(k => k.norm), ['nombre', 'colaborador']);
+      const localKey  = findCol(normKeys.map(k => k.norm), ['local', 'sucursal']);
+      const dniOriginal    = normKeys.find(k => k.norm === dniKey)?.original;
+      const nombreOriginal = normKeys.find(k => k.norm === nombreKey)?.original;
+      const localOriginal  = normKeys.find(k => k.norm === localKey)?.original;
+      rows = parsed.data.map(row => ({
+        dni: dniOriginal ? (row[dniOriginal] || '').toString().replace(/\D/g, '') : '',
+        name: nombreOriginal ? (row[nombreOriginal] || '').toString().trim() : '',
+        venueText: localOriginal ? (row[localOriginal] || '').toString().trim() : ''
+      })).filter(r => r.dni && r.name);
     }
 
     if (!rows.length) {

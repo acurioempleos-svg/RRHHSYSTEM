@@ -328,6 +328,19 @@
       </div>
     </div>
 
+    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+      <input type="text" id="staff-search" placeholder="Buscar por nombre, DNI o local..."
+        class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
+        oninput="renderStaffTable()">
+      <select id="staff-filter-status" onchange="renderStaffTable()"
+        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <option value="">Todos los estados</option>
+        <option value="pending">Pendientes de revisión</option>
+        <option value="noface">Sin cara registrada</option>
+        <option value="novenue">Sin local asignado</option>
+      </select>
+    </div>
+    <p id="staff-count" class="text-xs text-slate-500 mb-2"></p>
     <div class="overflow-x-auto rounded-lg border border-slate-700">
       <table class="w-full text-left text-xs text-slate-300">
         <thead class="bg-slate-900 text-slate-400 uppercase text-[10px]">
@@ -1601,18 +1614,52 @@ async function loadStaff() {
   try {
     const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
     allStaff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    initStaffTableEvents();
     renderStaffTable();
   } catch (e) { showToast("Error al cargar colaboradores.", "error"); }
 }
 
 function renderStaffTable() {
   const tbody = document.getElementById('staff-table-body');
+  const countEl = document.getElementById('staff-count');
   const showInactive = document.getElementById('staff-show-inactive')?.checked;
-  const visibleStaff = allStaff.filter(s => showInactive || s.activo !== false);
+  const searchRaw = document.getElementById('staff-search')?.value || '';
+  const search = normalizeKey(searchRaw);
+  const statusFilter = document.getElementById('staff-filter-status')?.value || '';
+
+  let visibleStaff = allStaff.filter(s => showInactive || s.activo !== false);
+
+  if (search) {
+    const searchDigits = searchRaw.replace(/\D/g, '');
+    visibleStaff = visibleStaff.filter(s =>
+      normalizeKey(s.name).includes(search) ||
+      normalizeKey(s.venueName).includes(search) ||
+      (searchDigits && (s.dni || '').includes(searchDigits))
+    );
+  }
+  if (statusFilter === 'pending') {
+    visibleStaff = visibleStaff.filter(s => s.pendingReview || s.pendingVenueMatch);
+  } else if (statusFilter === 'noface') {
+    visibleStaff = visibleStaff.filter(s => !(s.faceDescriptors?.length || s.faceDescriptor));
+  } else if (statusFilter === 'novenue') {
+    visibleStaff = visibleStaff.filter(s => !s.venueId);
+  }
+
+  // Contador de estado general (sobre el total de activos, no sobre el filtrado)
+  const activeStaff = allStaff.filter(s => s.activo !== false);
+  const pendingCount = activeStaff.filter(s => s.pendingReview || s.pendingVenueMatch).length;
+  const noFaceCount  = activeStaff.filter(s => !(s.faceDescriptors?.length || s.faceDescriptor)).length;
+  if (countEl) {
+    countEl.textContent = `Mostrando ${visibleStaff.length} de ${allStaff.length} colaborador(es)` +
+      (pendingCount ? ` · ⚠️ ${pendingCount} pendiente(s) de revisión` : '') +
+      (noFaceCount ? ` · 📷 ${noFaceCount} sin cara registrada` : '');
+  }
+
   if (!visibleStaff.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">Sin colaboradores. Sincronizá la planilla arriba.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">${allStaff.length ? 'Ningún colaborador coincide con el filtro.' : 'Sin colaboradores. Sincronizá la planilla arriba.'}</td></tr>`;
     return;
   }
+
   tbody.innerHTML = visibleStaff.map(s => {
     const hasFace = !!(s.faceDescriptors?.length || s.faceDescriptor);
     const faceCount = s.faceDescriptors?.length || (s.faceDescriptor ? 1 : 0);
@@ -1620,40 +1667,107 @@ function renderStaffTable() {
       ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
            <i class="fa-solid fa-face-smile"></i>Registrada${faceCount > 1 ? ` (${faceCount} ángulos)` : ''}
          </span>
-         <button onclick="openRegisterFace('${s.dni}','${s.name.replace(/'/g,"\\'")}'); event.stopPropagation()"
+         <button data-action="register-face" data-dni="${escHtml(s.dni)}"
            class="ml-1 text-[10px] text-amber-400/60 hover:text-amber-400 cursor-pointer" title="Actualizar cara">
            <i class="fa-solid fa-rotate"></i>
          </button>`
-      : `<button onclick="openRegisterFace('${s.dni}','${s.name.replace(/'/g,"\\'")}'); event.stopPropagation()"
+      : `<button data-action="register-face" data-dni="${escHtml(s.dni)}"
            class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] cursor-pointer hover:bg-indigo-900/50 transition-colors">
            <i class="fa-solid fa-camera"></i>Registrar cara
          </button>`;
     const inactiveBadge = s.activo === false
       ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]"><i class="fa-solid fa-user-slash mr-1"></i>Inactivo</span>` : '';
-    const venueBadge = s.pendingVenueMatch
-      ? `<span class="px-2 py-1 bg-amber-950/50 text-amber-400 rounded text-[10px]" title="El local de la planilla no coincide con ningún local cargado">
-           <i class="fa-solid fa-triangle-exclamation mr-1"></i>${escHtml(s.venueName || 'Sin local')}
-         </span>`
-      : `<span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(s.venueName)}</span>`;
+    const pendingBadge = s.pendingReview
+      ? `<span class="ml-1.5 px-2 py-1 bg-amber-950/50 text-amber-400 rounded text-[10px]" title="Se registró desde el kiosko y todavía falta completar sus datos">
+           <i class="fa-solid fa-clock mr-1"></i>Pendiente
+         </span>` : '';
+
+    // Selector de local: reemplaza el badge estático para poder asignar/corregir
+    // el local manualmente, tanto para altas por kiosko como para desajustes
+    // de nombre entre la planilla de Sheets y los locales cargados en el sistema.
+    const venueOptions = allVenues.map(v =>
+      `<option value="${v.id}" ${s.venueId === v.id ? 'selected' : ''}>${escHtml(v.name)}</option>`).join('');
+    const venueSelectClasses = s.pendingVenueMatch || !s.venueId
+      ? 'bg-amber-950/40 border-amber-700/60 text-amber-300'
+      : 'bg-slate-900 border-slate-700 text-slate-300';
+    const venueSelect = `
+      <select data-action="set-venue" data-dni="${escHtml(s.dni)}"
+        class="${venueSelectClasses} border rounded-lg px-2 py-1.5 text-[10px] cursor-pointer focus:outline-none focus:border-indigo-500 max-w-[140px]"
+        title="${s.pendingVenueMatch ? 'El local de la planilla (\u201c' + escHtml(s.venueName || '') + '\u201d) no coincide con ninguno cargado. Asignalo manualmente.' : ''}">
+        <option value="" ${!s.venueId ? 'selected' : ''}>${s.pendingVenueMatch ? '⚠️ ' + escHtml(s.venueName || 'Sin local') : '— Sin local —'}</option>
+        ${venueOptions}
+      </select>`;
+
     const sectorSelect = `
-      <select onchange="setStaffSector('${s.dni}', this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-[10px] cursor-pointer focus:outline-none focus:border-indigo-500">
+      <select data-action="set-sector" data-dni="${escHtml(s.dni)}" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-[10px] cursor-pointer focus:outline-none focus:border-indigo-500">
         <option value="" ${!s.sector ? 'selected' : ''}>— Sin asignar —</option>
         <option value="cocina" ${s.sector === 'cocina' ? 'selected' : ''}>🍳 Cocina</option>
         <option value="salon" ${s.sector === 'salon' ? 'selected' : ''}>🍽️ Salón</option>
       </select>`;
     return `
     <tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
-      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${inactiveBadge}</td>
+      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${inactiveBadge}${pendingBadge}</td>
       <td class="px-4 py-3 text-slate-400 font-mono text-xs">${escHtml(s.dni)}</td>
-      <td class="px-4 py-3">${venueBadge}</td>
+      <td class="px-4 py-3">${venueSelect}</td>
       <td class="px-4 py-3">${sectorSelect}</td>
       <td class="px-4 py-3">${faceBadge}</td>
       <td class="px-4 py-3 text-right flex justify-end gap-2">
-        <button onclick="deleteStaff('${s.id}','${s.name.replace(/'/g,"\\'")}' )" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2" title="Eliminar definitivamente (incluye historial)"><i class="fa-solid fa-trash"></i></button>
+        <button data-action="delete-staff" data-dni="${escHtml(s.dni)}" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2" title="Eliminar definitivamente (incluye historial)"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
   }).join('');
 }
+
+// Delegación de eventos para la tabla de colaboradores: se engancha una sola vez
+// sobre el tbody (persiste aunque se reemplace su innerHTML en cada render) y
+// busca los datos siempre desde `allStaff` por DNI, evitando tener que inyectar
+// nombres con comillas/backslashes dentro de atributos onclick (lo cual podía
+// romper el HTML si venían caracteres especiales desde la planilla de Sheets).
+function initStaffTableEvents() {
+  const tbody = document.getElementById('staff-table-body');
+  if (!tbody || tbody.dataset.eventsBound) return;
+  tbody.dataset.eventsBound = '1';
+
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const dni = btn.dataset.dni;
+    const s = allStaff.find(x => x.dni === dni);
+    if (!s) return;
+    if (btn.dataset.action === 'register-face') {
+      e.stopPropagation();
+      openRegisterFace(s.dni, s.name);
+    } else if (btn.dataset.action === 'delete-staff') {
+      deleteStaff(s.id, s.name);
+    }
+  });
+
+  tbody.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const dni = el.dataset.dni;
+    if (el.dataset.action === 'set-sector') {
+      setStaffSector(dni, el.value);
+    } else if (el.dataset.action === 'set-venue') {
+      setStaffVenue(dni, el.value);
+    }
+  });
+}
+
+window.setStaffVenue = async function(dni, venueId) {
+  const venue = allVenues.find(v => v.id === venueId);
+  try {
+    await setDoc(doc(db, "staff", dni), {
+      venueId: venue?.id || '',
+      venueName: venue?.name || '',
+      pendingVenueMatch: false
+    }, { merge: true });
+    const s = allStaff.find(x => x.dni === dni);
+    if (s) { s.venueId = venue?.id || ''; s.venueName = venue?.name || ''; s.pendingVenueMatch = false; }
+    showToast(venue ? `Local asignado: ${venue.name}.` : 'Local quitado.', 'success', 2500);
+    renderStaffTable();
+  } catch (e) { showToast("Error al asignar el local.", "error"); console.error(e); }
+};
 
 window.setStaffSector = async function(dni, sector) {
   try {

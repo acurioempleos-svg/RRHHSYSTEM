@@ -4863,15 +4863,21 @@ function abrirVistaGlobal() {
 }
 function cerrarVistaGlobal() { closeSheet('vista-global'); }
 
-/* ══ ORGANIGRAMA POR LOCAL ══════════════════════════════════════ */
+/* ══ ORGANIGRAMA POR LOCAL ══════════════════════════════════════
+   Jerarquía en base a las relaciones "superior a" indicadas por el usuario:
+   Director > todos · Gerente General > Gerencia > Supervisión >
+   { Jefe de Barra > Barra · Chef > Sous Chef > equipo de cocina ·
+     Caja/Recepción/Camarero/Camarero Jr./Corredor/Limpieza/Almacén/Vigilancia/Valet Parking }
+   Director > Auditora Jefe > Auditora · Director > Gerente de Compras > Compras ·
+   Director > Jefa de Administración > Administración · Director > RR.HH. / Mantenimiento     ══ */
 const ORG_NIVELES = [
-  { label: 'Dirección',              puestos: ['Director','Gerente General'] },
-  { label: 'Gerencia',                puestos: ['Gerencia','Gerente de Compras','Jefa de Administración','Auditora Jefe','RR. HH.'] },
-  { label: 'Supervisión',             puestos: ['Supervisión','Chef','Jefe de Barra'] },
-  { label: 'Jefaturas / Mandos medios', puestos: ['Sous Chef','Compras','Administración','Auditora','Mantenimiento'] },
-  { label: 'Salón',                   puestos: ['Caja','Recepción','Camarero','Camarero Jr.','Corredor','Barra','Valet Parking'] },
-  { label: 'Cocina',                  puestos: ['Cocina','Volante','Sartenes','Wok','Causas','Frituras / Sanguches','Producción','Pastelería','Cebiche','Tiraditos','Bacha'] },
-  { label: 'Soporte',                 puestos: ['Limpieza','Almacén','Vigilancia'] },
+  { label: 'Dirección',            puestos: ['Director'] },
+  { label: 'Gerencia general',     puestos: ['Gerente General'] },
+  { label: 'Jefaturas',            puestos: ['Gerencia','Auditora Jefe','Gerente de Compras','Jefa de Administración','RR. HH.','Mantenimiento'] },
+  { label: 'Mandos medios',        puestos: ['Supervisión','Auditora','Compras','Administración'] },
+  { label: 'Jefaturas de área / operativo', puestos: ['Caja','Recepción','Camarero','Camarero Jr.','Corredor','Jefe de Barra','Chef','Limpieza','Almacén','Vigilancia','Valet Parking'] },
+  { label: 'Segundos de área',     puestos: ['Barra','Sous Chef'] },
+  { label: 'Equipo de cocina',     puestos: ['Cocina','Volante','Sartenes','Wok','Causas','Frituras / Sanguches','Producción','Pastelería','Cebiche','Tiraditos','Bacha'] },
 ];
 
 function abrirOrganigrama() {

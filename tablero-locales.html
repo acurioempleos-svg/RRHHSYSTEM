@@ -1204,24 +1204,13 @@ body {
 .fab-ico:active { transform:scale(.92); }
 .fab-ico-doc  { background:var(--s-dim); border:1px solid var(--s-brd); }
 .fab-ico-user { background:var(--s2); border:1px solid var(--b2); }
-
-/* Botón "Fusionar legajos" — fijo, justo arriba del FAB principal */
-#fusion-fab {
-  position:fixed; bottom:86px; right:16px; z-index:59;
-  width:40px; height:40px; border-radius:50%;
-  background:var(--s2); border:1px solid var(--b2);
-  box-shadow:0 4px 16px rgba(0,0,0,.4);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; color:var(--muted); transition:all var(--t);
-}
-#fusion-fab:hover { color:var(--text); border-color:var(--b3); transform:scale(1.06); }
-#fusion-fab:active { transform:scale(.92); }
-@media(min-width:900px){ #fusion-fab { bottom:96px; right:28px; } }
+.fab-ico-fus  { background:var(--s2); border:1px solid var(--b2); color:var(--muted); }
 
 /* ══ FUSIÓN DE LEGAJOS ══════════════════════════════════════════ */
 .fus-intro {
   font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:16px;
 }
+.fus-slots-wrap { display:flex; flex-direction:column; gap:0; }
 .fus-slot { margin-bottom:14px; }
 .fus-slot-label {
   font-family:'DM Mono',monospace; font-size:9px; color:var(--amber);
@@ -1260,6 +1249,12 @@ body {
 .fus-docs-note {
   font-size:11px; color:var(--muted); background:var(--s0); border:1px solid var(--b0);
   border-radius:9px; padding:10px 12px; margin-top:14px; line-height:1.5;
+}
+@media(min-width:760px){
+  #fusion-modal .sheet { width:min(720px,92vw); }
+  .fus-slots-wrap { flex-direction:row; gap:16px; }
+  .fus-slot { flex:1; margin-bottom:0; }
+  .fus-compare { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
 }
 
 /* ══ OVERLAYS / SHEETS ══════════════════════════════════════════ */
@@ -1920,14 +1915,6 @@ body {
   <div id="desv-scroll" style="display:none"></div>
 </div>
 
-<!-- ══ FUSIONAR LEGAJOS (arriba del FAB) ══════════════════════════ -->
-<button id="fusion-fab" onclick="abrirFusion()" title="Fusionar legajos duplicados">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/>
-    <path d="M8.5 7.5 15.5 10.5M8.5 16.5 15.5 13.5"/>
-  </svg>
-</button>
-
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
   <div class="fab-opt">
@@ -1941,6 +1928,15 @@ body {
   <div class="fab-opt">
     <span class="fab-lbl">Nuevo local</span>
     <button class="fab-ico" style="background:var(--i-dim);border:1px solid rgba(59,125,216,.28)" onclick="fabAbrirNuevoLocal()">🏠</button>
+  </div>
+  <div class="fab-opt">
+    <span class="fab-lbl">Fusionar legajos</span>
+    <button class="fab-ico fab-ico-fus" onclick="fabAbrirFusion()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/>
+        <path d="M8.5 7.5 15.5 10.5M8.5 16.5 15.5 13.5"/>
+      </svg>
+    </button>
   </div>
   <button id="fab" onclick="fabToggle()">
     <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
@@ -2282,27 +2278,29 @@ body {
     <div class="sheet-body" id="fusion-body" style="overflow-y:auto">
       <div class="fus-intro">Elegí los dos legajos que se cargaron duplicados. El primero se mantiene, el segundo se elimina — todos sus documentos y datos se combinan en uno solo.</div>
 
-      <div class="fus-slot" id="fus-slot-a">
-        <div class="fus-slot-label">Legajo que se mantiene</div>
-        <div id="fus-picked-a" style="display:none"></div>
-        <div id="fus-picker-a">
-          <input class="f-input" id="fus-search-a" placeholder="Buscar colaborador…" oninput="fusFiltrar('a',this.value)" style="width:100%;margin-bottom:8px">
-          <div class="colab-sel-list" id="fus-list-a"></div>
+      <div class="fus-slots-wrap">
+        <div class="fus-slot" id="fus-slot-a">
+          <div class="fus-slot-label">Legajo que se mantiene</div>
+          <div id="fus-picked-a" style="display:none"></div>
+          <div id="fus-picker-a">
+            <input class="f-input" id="fus-search-a" placeholder="Buscar colaborador…" oninput="fusFiltrar('a',this.value)" style="width:100%;margin-bottom:8px">
+            <div class="colab-sel-list" id="fus-list-a"></div>
+          </div>
         </div>
-      </div>
 
-      <div class="fus-slot" id="fus-slot-b">
-        <div class="fus-slot-label">Legajo duplicado a eliminar</div>
-        <div id="fus-picked-b" style="display:none"></div>
-        <div id="fus-picker-b">
-          <input class="f-input" id="fus-search-b" placeholder="Buscar colaborador…" oninput="fusFiltrar('b',this.value)" style="width:100%;margin-bottom:8px">
-          <div class="colab-sel-list" id="fus-list-b"></div>
+        <div class="fus-slot" id="fus-slot-b">
+          <div class="fus-slot-label">Legajo duplicado a eliminar</div>
+          <div id="fus-picked-b" style="display:none"></div>
+          <div id="fus-picker-b">
+            <input class="f-input" id="fus-search-b" placeholder="Buscar colaborador…" oninput="fusFiltrar('b',this.value)" style="width:100%;margin-bottom:8px">
+            <div class="colab-sel-list" id="fus-list-b"></div>
+          </div>
         </div>
       </div>
 
       <div id="fus-compare-wrap" style="display:none">
         <div class="fus-compare-title">Si hay diferencias, elegí qué dato conservar</div>
-        <div id="fus-compare"></div>
+        <div id="fus-compare" class="fus-compare"></div>
         <div class="fus-docs-note" id="fus-docs-note"></div>
       </div>
 
@@ -4319,6 +4317,9 @@ function fusElegirColab(slot, id) {
   </div>`;
   picked.style.display = '';
   document.getElementById(`fus-picker-${slot}`).style.display = 'none';
+  // Refrescar la otra lista para que este legajo ya no se pueda elegir dos veces
+  const otro = slot === 'a' ? 'b' : 'a';
+  fusFiltrar(otro, document.getElementById(`fus-search-${otro}`).value || '');
   fusActualizarComparacion();
 }
 
@@ -4327,6 +4328,9 @@ function fusQuitar(slot) {
   document.getElementById(`fus-picked-${slot}`).style.display = 'none';
   document.getElementById(`fus-picker-${slot}`).style.display = '';
   fusFiltrar(slot, document.getElementById(`fus-search-${slot}`).value || '');
+  // El legajo liberado puede volver a aparecer en la otra lista
+  const otro = slot === 'a' ? 'b' : 'a';
+  fusFiltrar(otro, document.getElementById(`fus-search-${otro}`).value || '');
   fusActualizarComparacion();
 }
 
@@ -4902,6 +4906,10 @@ function fabAbrirNuevoLocal() {
   document.getElementById('nl-nombre').value='';
   openSheet('nuevo-local-modal');
   setTimeout(()=>document.getElementById('nl-nombre').focus(),300);
+}
+function fabAbrirFusion() {
+  document.getElementById('fab-group').classList.remove('open');
+  abrirFusion();
 }
 async function guardarNuevoLocal() {
   const nombre = document.getElementById('nl-nombre').value.trim();
@@ -5999,7 +6007,7 @@ Object.assign(window, {
   mostrarPDFPrevio, _restoreImageModal,
   toggleDesvinculado, setLocalTab,
   abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
-  abrirFusion, fusFiltrar, fusElegirColab, fusQuitar, fusElegirCampo, confirmarFusion,
+  abrirFusion, fusFiltrar, fusElegirColab, fusQuitar, fusElegirCampo, confirmarFusion, fabAbrirFusion,
 });
 
 </script>

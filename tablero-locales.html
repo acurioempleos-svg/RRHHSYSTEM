@@ -211,20 +211,44 @@ body {
 .lb-face {
   position:relative; z-index:1;
   background:var(--s1); border:1px solid var(--b1);
-  border-radius:var(--r-xl); padding:18px 16px 16px;
+  border-radius:var(--r-xl);
   transition:background var(--t), border-color var(--t), transform var(--t-spring), box-shadow var(--t);
   aspect-ratio:1/1;
   display:flex; flex-direction:column;
+  overflow:hidden;
 }
 @media(min-width:520px){
-  .lb-face { aspect-ratio:auto; min-height:140px; padding:20px 18px; }
+  .lb-face { aspect-ratio:auto; min-height:140px; }
 }
 .local-block:hover .lb-face {
-  background:var(--s2); border-color:var(--b2);
+  border-color:var(--b2);
   transform:translateY(-2px);
   box-shadow:0 12px 32px rgba(0,0,0,.4);
 }
+.local-block:hover .lb-face:not(.has-image):not(.has-color) { background:var(--s2); }
 .local-block:active .lb-face { transform:translateY(1px) scale(.99); }
+
+/* Contenedor de contenido (queda por encima de imagen/color de fondo) */
+.lb-content {
+  position:relative; z-index:1; flex:1; min-height:0;
+  display:flex; flex-direction:column;
+  padding:18px 16px 16px;
+}
+@media(min-width:520px){ .lb-content { padding:20px 18px; } }
+
+/* Imagen de fondo del local, recortada a cuadrado/cover */
+.lb-bg-img {
+  position:absolute; inset:0; z-index:0;
+  width:100%; height:100%; object-fit:cover; object-position:center;
+}
+.lb-bg-overlay {
+  position:absolute; inset:0; z-index:0;
+  background:linear-gradient(175deg, rgba(0,0,0,.10) 0%, rgba(0,0,0,.62) 100%);
+}
+.lb-face.has-image .lb-code,
+.lb-face.has-image .lb-name,
+.lb-face.has-image .lb-count { color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.55); }
+.lb-face.has-image:not(:hover) { border-color:var(--b1); }
 
 /* Contenido del bloque de local */
 .lb-code {
@@ -284,6 +308,62 @@ body {
   transition:all var(--t);
 }
 .lb-edit-btn:hover { background:var(--amber-glow); border-color:var(--amber-brd); color:var(--amber-hi); }
+
+/* ── Selector de color del local (modal) ─────────────────────── */
+.color-swatch-row { display:flex; flex-wrap:wrap; gap:9px; }
+.color-swatch {
+  width:30px; height:30px; border-radius:50%; flex-shrink:0;
+  border:2px solid transparent; cursor:pointer; position:relative;
+  transition:transform var(--t-spring), border-color var(--t), box-shadow var(--t);
+}
+.color-swatch:hover { transform:scale(1.12); }
+.color-swatch.active {
+  border-color:var(--bg);
+  box-shadow:0 0 0 2px currentColor;
+}
+.color-swatch.active::after {
+  content:''; position:absolute; inset:0; margin:auto;
+  width:7px; height:7px; border-radius:50%;
+  background:#fff; box-shadow:0 0 3px rgba(0,0,0,.6);
+}
+.color-swatch.cs-none {
+  background:var(--s2); border:1px dashed var(--b2);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--faint); font-size:13px; line-height:1;
+}
+.color-swatch.cs-none.active { box-shadow:0 0 0 2px var(--muted); }
+.color-swatch.cs-none.active::after { display:none; }
+
+/* ── Carga de imagen del local (modal) ───────────────────────── */
+.rl-img-row { display:flex; align-items:flex-start; gap:12px; }
+.rl-img-upload {
+  position:relative; width:104px; height:104px; flex-shrink:0;
+  border-radius:var(--r-lg); overflow:hidden; cursor:pointer;
+  background:var(--s2); border:1px dashed var(--b2);
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color var(--t), background var(--t);
+}
+.rl-img-upload:hover { border-color:var(--amber-brd); background:var(--s3); }
+.rl-img-upload img { width:100%; height:100%; object-fit:cover; display:block; }
+.rl-img-placeholder {
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  color:var(--faint); text-align:center; padding:6px;
+}
+.rl-img-placeholder svg { width:18px; height:18px; }
+.rl-img-placeholder span {
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.rl-img-remove {
+  position:absolute; top:5px; right:5px; width:20px; height:20px; border-radius:6px;
+  background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.18); color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  font-size:11px; line-height:1; backdrop-filter:blur(4px);
+}
+.rl-img-hint {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--muted);
+  line-height:1.6; flex:1; padding-top:4px;
+}
 
 /* empty */
 #board-empty {
@@ -1877,7 +1957,7 @@ body {
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px">
         <div class="lv-title" id="lv-name"></div>
-        <button class="lb-edit-btn" style="width:22px;height:22px;border-radius:6px" onclick="abrirRenombrarLocal(currentLocal)" title="Renombrar local">
+        <button class="lb-edit-btn" style="width:22px;height:22px;border-radius:6px" onclick="abrirRenombrarLocal(currentLocal)" title="Editar local">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </div>
@@ -2427,24 +2507,43 @@ body {
   </div>
 </div>
 
-<!-- Renombrar local -->
+<!-- Editar local (nombre, color e imagen) -->
 <div id="renombrar-local-modal" class="overlay" onclick="closeSheet('renombrar-local-modal')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div style="display:flex;flex-direction:column;gap:3px">
-        <div class="sheet-title">Renombrar local</div>
-        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)" id="rl-subtitle">Se actualizan todos los colaboradores</div>
+        <div class="sheet-title">Editar local</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)" id="rl-subtitle">Nombre, color e imagen</div>
       </div>
       <div class="sheet-x" onclick="closeSheet('renombrar-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
     <div class="sheet-body">
       <input type="hidden" id="rl-original">
-      <div class="f-field" style="margin-bottom:14px">
-        <label class="f-label">Nuevo nombre</label>
+      <div class="f-field" style="margin-bottom:16px">
+        <label class="f-label">Nombre</label>
         <input class="f-input" id="rl-nombre" placeholder="Nombre del local…" onkeydown="if(event.key==='Enter')guardarRenombrarLocal()">
       </div>
-      <button class="btn btn-amber" id="rl-btn" onclick="guardarRenombrarLocal()">Guardar nombre</button>
+      <div class="f-field" style="margin-bottom:16px">
+        <label class="f-label">Color de la tarjeta</label>
+        <div class="color-swatch-row" id="rl-color-row"></div>
+      </div>
+      <div class="f-field" style="margin-bottom:16px">
+        <label class="f-label">Imagen de portada</label>
+        <div class="rl-img-row">
+          <div class="rl-img-upload" id="rl-img-preview" onclick="document.getElementById('rl-img-input').click()">
+            <img id="rl-img-preview-img" style="display:none" alt="">
+            <div class="rl-img-placeholder" id="rl-img-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Subir</span>
+            </div>
+            <button type="button" class="rl-img-remove" id="rl-img-remove-btn" style="display:none" onclick="event.stopPropagation();quitarImagenLocal()">✕</button>
+          </div>
+          <div class="rl-img-hint">Se recorta automáticamente al centro para que quede cuadrada. Si hay imagen, se muestra en vez del color.</div>
+        </div>
+        <input type="file" id="rl-img-input" accept="image/*" style="display:none" onchange="handleLocalImagePick(event)">
+      </div>
+      <button class="btn btn-amber" id="rl-btn" onclick="guardarRenombrarLocal()">Guardar cambios</button>
       <button class="btn btn-ghost" style="margin-top:6px" onclick="closeSheet('renombrar-local-modal')">Cancelar</button>
     </div>
   </div>
@@ -2828,10 +2927,29 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
     err  ? `<span class="lb-alert-dot dot-err">⚠ ${err}</span>` : '',
     warn ? `<span class="lb-alert-dot dot-warn">${warn} próx.</span>` : '',
   ].filter(Boolean).join('');
-  return `<div class="lb-face">
+
+  // Personalización visual del local (color de fondo o imagen de portada)
+  const locDoc  = locales.find(l => l.nombre === loc);
+  const color   = locDoc?.color  || '';
+  const imagen  = locDoc?.imagen || '';
+  let faceCls   = 'lb-face';
+  let faceStyle = '';
+  let bgLayers  = '';
+  if (imagen) {
+    faceCls += ' has-image';
+    bgLayers = `<img class="lb-bg-img" src="${esc(imagen)}" alt="" loading="lazy"><div class="lb-bg-overlay"></div>`;
+  } else if (color) {
+    faceCls += ' has-color';
+    faceStyle = ` style="background:color-mix(in srgb, ${color} 32%, var(--s1));border-color:color-mix(in srgb, ${color} 55%, transparent)"`;
+  }
+  const codeStyle = (color && !imagen) ? ` style="color:color-mix(in srgb, ${color} 75%, white)"` : '';
+
+  return `<div class="${faceCls}"${faceStyle}>
+    ${bgLayers}
+    <div class="lb-content">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0">
-      <div class="lb-code">${code}</div>
-      <button class="lb-edit-btn" onclick="event.stopPropagation();abrirRenombrarLocal('${esc(loc)}')" title="Renombrar local">
+      <div class="lb-code"${codeStyle}>${code}</div>
+      <button class="lb-edit-btn" onclick="event.stopPropagation();abrirRenombrarLocal('${esc(loc)}')" title="Editar local">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
     </div>
@@ -2840,6 +2958,7 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
     ${estadoHTML ? `<div class="lb-estados">${estadoHTML}</div>` : ''}
     <div class="lb-bottom">
       <div class="lb-alerts">${alerts}</div>
+    </div>
     </div>
   </div>`;
 }
@@ -4944,11 +5063,94 @@ async function guardarNuevoLocal() {
   finally { btn.disabled=false; btn.textContent='Crear local'; }
 }
 
-/* ══ RENOMBRAR LOCAL ════════════════════════════════════════════ */
+/* ══ EDITAR LOCAL (nombre, color, imagen) ═══════════════════════ */
+const LOCAL_COLORS = [
+  { hex:'#c9432f', name:'Rojo'      },
+  { hex:'#d97a1a', name:'Naranja'   },
+  { hex:'#c9a91a', name:'Dorado'    },
+  { hex:'#7fa832', name:'Verde'     },
+  { hex:'#1f9e78', name:'Esmeralda' },
+  { hex:'#1f9ec9', name:'Celeste'   },
+  { hex:'#3b6fd8', name:'Azul'      },
+  { hex:'#7b5fd9', name:'Violeta'   },
+  { hex:'#c9509e', name:'Rosa'      },
+  { hex:'#8a8f9e', name:'Gris'      },
+];
+let _rlColor          = '';   // color elegido (hex) o '' para ninguno
+let _rlImagenActual   = '';   // url ya guardada en el local (si había)
+let _rlImagenDataUrl  = null; // data URL nueva pendiente de subir (si el usuario eligió una)
+let _rlImagenRemovida = false; // true si el usuario sacó la imagen existente
+
+function renderColorSwatches(selected) {
+  const row = document.getElementById('rl-color-row');
+  if (!row) return;
+  row.innerHTML =
+    `<div class="color-swatch cs-none ${!selected?'active':''}" title="Sin color" onclick="setLocalColor('')">✕</div>` +
+    LOCAL_COLORS.map(c => `<div class="color-swatch ${selected===c.hex?'active':''}" style="background:${c.hex};color:${c.hex}" title="${c.name}" onclick="setLocalColor('${c.hex}')"></div>`).join('');
+}
+function setLocalColor(hex) {
+  _rlColor = hex;
+  renderColorSwatches(hex);
+}
+
+function mostrarPreviewImagenLocal(url) {
+  const img = document.getElementById('rl-img-preview-img');
+  const ph  = document.getElementById('rl-img-placeholder');
+  const rm  = document.getElementById('rl-img-remove-btn');
+  if (!img || !ph || !rm) return;
+  if (url) {
+    img.src = url; img.style.display = 'block';
+    ph.style.display = 'none';
+    rm.style.display = 'flex';
+  } else {
+    img.src = ''; img.style.display = 'none';
+    ph.style.display = 'flex';
+    rm.style.display = 'none';
+  }
+}
+/** Lee el archivo elegido, lo recorta al centro (cuadrado) y lo deja listo como data URL. */
+function handleLocalImagePick(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { toast('⚠ Elegí un archivo de imagen'); e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const size   = Math.min(img.width, img.height);
+      const sx     = (img.width  - size) / 2;
+      const sy     = (img.height - size) / 2;
+      const target = 480;
+      const canvas = document.createElement('canvas');
+      canvas.width = target; canvas.height = target;
+      canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, target, target);
+      _rlImagenDataUrl  = canvas.toDataURL('image/jpeg', 0.85);
+      _rlImagenRemovida = false;
+      mostrarPreviewImagenLocal(_rlImagenDataUrl);
+    };
+    img.onerror = () => toast('⚠ No se pudo leer la imagen');
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function quitarImagenLocal() {
+  _rlImagenDataUrl  = null;
+  _rlImagenRemovida = true;
+  mostrarPreviewImagenLocal('');
+}
+
 function abrirRenombrarLocal(nombreActual) {
   document.getElementById('rl-original').value = nombreActual;
   document.getElementById('rl-nombre').value   = nombreActual;
-  document.getElementById('rl-subtitle').textContent = `"${nombreActual}" → nuevo nombre`;
+  document.getElementById('rl-subtitle').textContent = 'Nombre, color e imagen';
+  const localDoc = locales.find(l => l.nombre === nombreActual);
+  _rlColor          = localDoc?.color  || '';
+  _rlImagenActual   = localDoc?.imagen || '';
+  _rlImagenDataUrl  = null;
+  _rlImagenRemovida = false;
+  renderColorSwatches(_rlColor);
+  mostrarPreviewImagenLocal(_rlImagenActual);
   openSheet('renombrar-local-modal');
   setTimeout(() => {
     const inp = document.getElementById('rl-nombre');
@@ -4958,30 +5160,47 @@ function abrirRenombrarLocal(nombreActual) {
 async function guardarRenombrarLocal() {
   const original = document.getElementById('rl-original').value;
   const nuevo    = document.getElementById('rl-nombre').value.trim();
-  if (!nuevo)           { document.getElementById('rl-nombre').focus(); return; }
-  if (nuevo === original) { closeSheet('renombrar-local-modal'); return; }
-  if (locales.some(l => l.nombre.toLowerCase() === nuevo.toLowerCase())) {
+  if (!nuevo) { document.getElementById('rl-nombre').focus(); return; }
+  const localDoc      = locales.find(l => l.nombre === original);
+  const colorActual   = localDoc?.color || '';
+  const nombreCambio  = nuevo !== original;
+  const colorCambio   = _rlColor !== colorActual;
+  const imagenCambio  = !!_rlImagenDataUrl || _rlImagenRemovida;
+  if (!nombreCambio && !colorCambio && !imagenCambio) { closeSheet('renombrar-local-modal'); return; }
+  if (nombreCambio && locales.some(l => l.nombre.toLowerCase() === nuevo.toLowerCase())) {
     toast('⚠ Ya existe un local con ese nombre'); return;
   }
   const btn = document.getElementById('rl-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    // 1. Renombrar en colección locales
-    const localDoc = locales.find(l => l.nombre === original);
-    if (localDoc) {
-      await updateDoc(doc(db,'locales',localDoc.id),{ nombre: nuevo });
+    const update = {};
+    if (nombreCambio) update.nombre = nuevo;
+    if (colorCambio)  update.color  = _rlColor ? _rlColor : deleteField();
+    if (_rlImagenDataUrl) {
+      update.imagen = await subirDataUrlAImgBB(_rlImagenDataUrl);
+    } else if (_rlImagenRemovida) {
+      update.imagen = deleteField();
     }
-    // 2. Actualizar todos los colaboradores de ese local
-    const batch = writeBatch(db);
-    const afectados = colabs.filter(c => c.local === original);
-    afectados.forEach(c => {
-      batch.update(doc(db,'colaboradores',c.id), { local: nuevo });
-    });
-    if (afectados.length) await batch.commit();
+    // 1. Guardar cambios en la colección locales
+    if (localDoc) {
+      await updateDoc(doc(db,'locales',localDoc.id), update);
+    } else {
+      await addDoc(collection(db,'locales'), { nombre: nuevo, at: Date.now(), ...update });
+    }
+    // 2. Si cambió el nombre, actualizar todos los colaboradores de ese local
+    let afectados = [];
+    if (nombreCambio) {
+      const batch = writeBatch(db);
+      afectados = colabs.filter(c => c.local === original);
+      afectados.forEach(c => batch.update(doc(db,'colaboradores',c.id), { local: nuevo }));
+      if (afectados.length) await batch.commit();
+    }
     closeSheet('renombrar-local-modal');
-    toast(`✓ "${original}" renombrado a "${nuevo}" (${afectados.length} colaboradores actualizados)`);
+    toast(nombreCambio
+      ? `✓ "${original}" renombrado a "${nuevo}" (${afectados.length} colaboradores actualizados)`
+      : `✓ "${original}" actualizado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
-  finally { btn.disabled = false; btn.textContent = 'Guardar nombre'; }
+  finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
 }
 
 /* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
@@ -6014,6 +6233,7 @@ Object.assign(window, {
   stopCamera, toggleColPanel, togglePerson, verFotoFull,
   resolveConfirm, resolveFecha, resolveRango,
   plSaveCell, plAgregarColab,
+  setLocalColor, handleLocalImagePick, quitarImagenLocal,
   abrirNuevaCarpetaLocal, guardarNuevaCarpetaLocal, eliminarCarpetaLocal,
   guardarMetaDoc, filtrarColabListDoc,
   handleLocalFolder, handleLocalFolderDrop, prevLocalGoto,

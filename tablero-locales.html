@@ -1059,32 +1059,60 @@ body {
 .vgr-rechazado{ background:var(--d-dim);  color:var(--danger); }
 
 /* ══ ORGANIGRAMA ═══════════════════════════════════════════════ */
-.org-wrap { padding:22px 16px 50px; min-height:100%; }
-.org-chart { display:flex; flex-direction:column; align-items:center; }
-.org-connector { width:1px; height:20px; background:var(--b2); }
-.org-level { display:flex; flex-direction:column; align-items:center; width:100%; }
-.org-level-label {
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase;
-  color:var(--amber-hi); margin:2px 0 12px; display:flex; align-items:center; gap:10px; white-space:nowrap;
+.org-wrap { padding:28px 20px 60px; min-height:100%; }
+.org-chart { display:flex; flex-direction:column; align-items:center; max-width:1200px; margin:0 auto; }
+.org-connector {
+  width:1px; height:26px;
+  background:linear-gradient(var(--amber-brd), var(--b1));
+  position:relative;
 }
-.org-level-label::before, .org-level-label::after { content:''; width:26px; height:1px; background:var(--b1); }
-.org-row { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:6px; max-width:1100px; }
+.org-connector::after {
+  content:''; position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+  width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent;
+  border-top:5px solid var(--b2);
+}
+.org-level { display:flex; flex-direction:column; align-items:center; width:100%; }
+.org-level-hdr { display:flex; align-items:center; gap:9px; margin:2px 0 14px; }
+.org-level-idx {
+  width:19px; height:19px; border-radius:50%; flex-shrink:0;
+  background:var(--amber-glow); border:1px solid var(--amber-brd); color:var(--amber-hi);
+  font-family:'DM Mono',monospace; font-size:9px; font-weight:600;
+  display:flex; align-items:center; justify-content:center;
+}
+.org-level-label {
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:700; letter-spacing:.02em;
+  color:var(--text);
+}
+.org-level-sub {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); margin-left:2px;
+}
+.org-row { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:8px; width:100%; }
 .org-card {
-  background:var(--s1); border:1px solid var(--b1); border-radius:10px;
-  padding:10px 13px; min-width:150px; max-width:230px;
+  background:var(--s1); border:1px solid var(--b1); border-left:3px solid var(--amber-brd);
+  border-radius:10px; padding:12px 15px; min-width:172px; max-width:250px;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
 }
 .org-card-title {
-  font-size:11px; font-weight:700; color:var(--text); letter-spacing:.01em;
-  margin-bottom:7px; padding-bottom:7px; border-bottom:1px solid var(--b0);
+  font-size:12px; font-weight:700; color:var(--text); letter-spacing:.01em;
+  margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--b0);
   display:flex; align-items:center; justify-content:space-between; gap:8px;
+  text-transform:uppercase; letter-spacing:.03em; font-size:10.5px;
 }
 .org-card-count {
   font-family:'DM Mono',monospace; font-size:8px; color:var(--amber-hi);
   background:var(--amber-glow); border:1px solid var(--amber-brd);
-  padding:1px 6px; border-radius:20px; flex-shrink:0;
+  padding:1px 7px; border-radius:20px; flex-shrink:0;
 }
-.org-person { font-size:11px; color:var(--muted); padding:2.5px 0; display:flex; align-items:center; gap:6px; }
+.org-person { font-size:12px; color:var(--muted); padding:3px 0; display:flex; align-items:center; gap:7px; }
 .org-person span.op-dot { width:4px; height:4px; border-radius:50%; background:var(--amber); flex-shrink:0; }
+.org-block-otros { margin-top:36px; padding-top:20px; border-top:1px dashed var(--b1); width:100%; display:flex; flex-direction:column; align-items:center; }
+.org-block-otros .org-level-label { color:var(--muted); }
+.org-block-otros .org-level-idx { background:var(--b0); border-color:var(--b2); color:var(--muted); }
+.org-block-otros .org-card { border-left-color:var(--b2); }
+.org-hint {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--muted);
+  text-align:center; margin-top:8px; max-width:420px; line-height:1.5;
+}
 .org-empty { text-align:center; padding:70px 20px; color:var(--muted); font-size:12px; }
 
 /* ══ FAB ════════════════════════════════════════════════════════ */
@@ -1877,8 +1905,11 @@ body {
       </div>
       <div class="sheet-x" onclick="cerrarOrganigrama()"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--b0)">
-      <select class="f-input" id="org-local-select" onchange="renderOrganigrama(this.value)"></select>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--b0);display:flex;gap:8px;align-items:center">
+      <select class="f-input" id="org-local-select" onchange="renderOrganigrama(this.value)" style="flex:1"></select>
+      <button class="lb-edit-btn" style="width:auto;padding:0 12px;height:34px;border-radius:8px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.04em;white-space:nowrap" onclick="corregirPuestosLegacy()" title="Corregir puestos viejos que no coinciden con la lista fija">
+        Corregir puestos
+      </button>
     </div>
     <div id="org-body" style="flex:1;overflow:auto"></div>
   </div>
@@ -4880,6 +4911,36 @@ const ORG_NIVELES = [
   { label: 'Equipo de cocina',     puestos: ['Cocina','Volante','Sartenes','Wok','Causas','Frituras / Sanguches','Producción','Pastelería','Cebiche','Tiraditos','Bacha'] },
 ];
 
+// Normaliza texto para comparar sin importar mayúsculas/acentos (datos viejos cargados a mano)
+function _orgNorm(s) {
+  return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+// Puesto canónico → clave normalizada (para matchear "CAMARERO" con "Camarero", etc.)
+const _ORG_CANON_MAP = {};
+PUESTOS.forEach(p => { _ORG_CANON_MAP[_orgNorm(p)] = p; });
+// Variantes/ocupaciones viejas frecuentes que no coinciden literal con la lista, mapeadas a su puesto canónico
+const ORG_ALIASES = {
+  'almacenero':'Almacén','almacenera':'Almacén',
+  'bachero':'Bacha','bachera':'Bacha',
+  'cocinero':'Cocina','cocinera':'Cocina',
+  'mozo':'Camarero','moza':'Camarero','mesero':'Camarero','mesera':'Camarero',
+  'cajero':'Caja','cajera':'Caja',
+  'recepcionista':'Recepción',
+  'limpiador':'Limpieza','limpiadora':'Limpieza',
+  'vigilante':'Vigilancia','seguridad':'Vigilancia',
+  'valet':'Valet Parking',
+};
+function _orgToTitleCase(s) {
+  return String(s||'').trim().toLowerCase().replace(/(^|\s|\/|\.)(\p{L})/gu, (m,p1,p2) => p1 + p2.toUpperCase());
+}
+// Resuelve el puesto de un colaborador contra la lista canónica (case-insensitive + alias)
+function _orgResolvePuesto(raw) {
+  const t = (raw||'').trim();
+  if (!t) return null;
+  const n = _orgNorm(t);
+  return _ORG_CANON_MAP[n] || ORG_ALIASES[n] || null;
+}
+
 function abrirOrganigrama() {
   const sel = document.getElementById('org-local-select');
   sel.innerHTML = locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
@@ -4889,6 +4950,46 @@ function abrirOrganigrama() {
   openSheet('organigrama-modal');
 }
 function cerrarOrganigrama() { closeSheet('organigrama-modal'); }
+
+/* Corrige en Firestore los puestos viejos que no coinciden literal con la lista fija
+   pero sí resuelven vía alias/mayúsculas (ej: "BACHERO" → "Bacha"). No toca los que
+   no se pueden resolver con certeza (esos quedan para editar a mano). */
+async function corregirPuestosLegacy() {
+  const cambios = [];
+  colabs.forEach(c => {
+    const raw = (c.puesto||'').trim();
+    if (!raw) return;
+    if (PUESTOS.includes(raw)) return; // ya está exacto, no hace falta tocarlo
+    const canon = _orgResolvePuesto(raw);
+    if (canon && canon !== raw) cambios.push({ id:c.id, nombre:c.nombre, local:c.local, from:raw, to:canon });
+  });
+
+  if (!cambios.length) { toast('✓ No hay puestos para corregir, ya están normalizados'); return; }
+
+  const ejemplos = cambios.slice(0,6).map(c => `"${c.from}"→"${c.to}"`).join(', ');
+  const extra = cambios.length > 6 ? ` y ${cambios.length-6} más` : '';
+  const ok = await confirmar(
+    `Se van a corregir ${cambios.length} colaborador${cambios.length!==1?'es':''}: ${ejemplos}${extra}. Esto actualiza el campo puesto directamente en la base. ¿Continuar?`,
+    'Corregir'
+  );
+  if (!ok) return;
+
+  showL();
+  try {
+    // Firestore permite máximo 500 operaciones por batch
+    for (let i = 0; i < cambios.length; i += 450) {
+      const lote = cambios.slice(i, i+450);
+      const batch = writeBatch(db);
+      lote.forEach(c => batch.update(doc(db,'colaboradores',c.id), { puesto: c.to }));
+      await batch.commit();
+    }
+    toast(`✓ ${cambios.length} puesto${cambios.length!==1?'s':''} corregido${cambios.length!==1?'s':''}`);
+  } catch(e) {
+    toast('Error: ' + (e.code||e.message));
+  } finally {
+    hideL();
+  }
+}
 
 function renderOrganigrama(local) {
   const el = document.getElementById('org-body');
@@ -4900,38 +5001,69 @@ function renderOrganigrama(local) {
     return;
   }
 
-  // Agrupar colaboradores por puesto
-  const porPuesto = {};
+  // Agrupar colaboradores por puesto canónico (resolviendo variantes/mayúsculas de datos viejos)
+  const grupos = {}; // key -> { label, personas[] }
   personas.forEach(c => {
-    const p = c.puesto || 'Sin puesto asignado';
-    (porPuesto[p] = porPuesto[p] || []).push(c);
+    const canon = _orgResolvePuesto(c.puesto);
+    if (canon) {
+      (grupos[canon] = grupos[canon] || { label: canon, personas: [] }).personas.push(c);
+    } else {
+      const raw = (c.puesto||'').trim();
+      const key = raw ? '#'+_orgNorm(raw) : '#sin-puesto';
+      const label = raw ? _orgToTitleCase(raw) : 'Sin puesto asignado';
+      (grupos[key] = grupos[key] || { label, personas: [] }).personas.push(c);
+    }
   });
 
   const usados = new Set();
-  const bloques = [];
+  const niveles = [];
   ORG_NIVELES.forEach(nivel => {
-    const puestosNivel = nivel.puestos.filter(p => porPuesto[p] && porPuesto[p].length);
-    if (!puestosNivel.length) return;
-    puestosNivel.forEach(p => usados.add(p));
-    bloques.push({ label: nivel.label, puestos: puestosNivel });
+    const items = nivel.puestos.filter(p => grupos[p] && grupos[p].personas.length).map(p => ({ key:p, ...grupos[p] }));
+    if (!items.length) return;
+    items.forEach(it => usados.add(it.key));
+    niveles.push({ label: nivel.label, items });
   });
-  const restantes = Object.keys(porPuesto).filter(p => !usados.has(p));
-  if (restantes.length) bloques.push({ label: 'Otros puestos', puestos: restantes.sort() });
+  const otrosItems = Object.keys(grupos).filter(k => !usados.has(k))
+    .map(k => ({ key:k, ...grupos[k] }))
+    .sort((a,b) => a.label.localeCompare(b.label));
 
   let html = '<div class="org-wrap"><div class="org-chart">';
-  bloques.forEach((bloque, i) => {
+  niveles.forEach((nivel, i) => {
     if (i > 0) html += '<div class="org-connector"></div>';
+    const totalPersonas = nivel.items.reduce((s,it)=>s+it.personas.length,0);
     html += `<div class="org-level">
-      <div class="org-level-label">${esc(bloque.label)}</div>
-      <div class="org-row">${bloque.puestos.map(p => {
-        const gente = porPuesto[p].slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+      <div class="org-level-hdr">
+        <span class="org-level-idx">${i+1}</span>
+        <span class="org-level-label">${esc(nivel.label)}</span>
+        <span class="org-level-sub">${totalPersonas} persona${totalPersonas!==1?'s':''}</span>
+      </div>
+      <div class="org-row">${nivel.items.map(it => {
+        const gente = it.personas.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
         return `<div class="org-card">
-          <div class="org-card-title"><span>${esc(p)}</span><span class="org-card-count">${gente.length}</span></div>
+          <div class="org-card-title"><span>${esc(it.label)}</span><span class="org-card-count">${gente.length}</span></div>
           ${gente.map(c => `<div class="org-person"><span class="op-dot"></span>${esc(c.nombre)}</div>`).join('')}
         </div>`;
       }).join('')}</div>
     </div>`;
   });
+
+  if (otrosItems.length) {
+    html += `<div class="org-block-otros">
+      <div class="org-level-hdr">
+        <span class="org-level-idx">?</span>
+        <span class="org-level-label">Puestos sin ubicar en la jerarquía</span>
+      </div>
+      <div class="org-row">${otrosItems.map(it => {
+        const gente = it.personas.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+        return `<div class="org-card">
+          <div class="org-card-title"><span>${esc(it.label)}</span><span class="org-card-count">${gente.length}</span></div>
+          ${gente.map(c => `<div class="org-person"><span class="op-dot"></span>${esc(c.nombre)}</div>`).join('')}
+        </div>`;
+      }).join('')}</div>
+      <div class="org-hint">Estos puestos no coinciden con ninguno de la lista fija. Editá el puesto de estas personas desde su ficha para que aparezcan en el nivel correcto.</div>
+    </div>`;
+  }
+
   html += '</div></div>';
   el.innerHTML = html;
 }
@@ -5446,7 +5578,7 @@ Object.assign(window, {
   filtrarFotoConfirmColab,
   mostrarPDFPrevio, _restoreImageModal,
   toggleDesvinculado, toggleDesvSection,
-  abrirOrganigrama, cerrarOrganigrama, renderOrganigrama,
+  abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy,
 });
 
 </script>

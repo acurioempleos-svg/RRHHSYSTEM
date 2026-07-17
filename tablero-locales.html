@@ -1058,6 +1058,35 @@ body {
 .vgr-revision { background:rgba(201,122,26,.12); color:var(--amber-hi); }
 .vgr-rechazado{ background:var(--d-dim);  color:var(--danger); }
 
+/* ══ ORGANIGRAMA ═══════════════════════════════════════════════ */
+.org-wrap { padding:22px 16px 50px; min-height:100%; }
+.org-chart { display:flex; flex-direction:column; align-items:center; }
+.org-connector { width:1px; height:20px; background:var(--b2); }
+.org-level { display:flex; flex-direction:column; align-items:center; width:100%; }
+.org-level-label {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--amber-hi); margin:2px 0 12px; display:flex; align-items:center; gap:10px; white-space:nowrap;
+}
+.org-level-label::before, .org-level-label::after { content:''; width:26px; height:1px; background:var(--b1); }
+.org-row { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom:6px; max-width:1100px; }
+.org-card {
+  background:var(--s1); border:1px solid var(--b1); border-radius:10px;
+  padding:10px 13px; min-width:150px; max-width:230px;
+}
+.org-card-title {
+  font-size:11px; font-weight:700; color:var(--text); letter-spacing:.01em;
+  margin-bottom:7px; padding-bottom:7px; border-bottom:1px solid var(--b0);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.org-card-count {
+  font-family:'DM Mono',monospace; font-size:8px; color:var(--amber-hi);
+  background:var(--amber-glow); border:1px solid var(--amber-brd);
+  padding:1px 6px; border-radius:20px; flex-shrink:0;
+}
+.org-person { font-size:11px; color:var(--muted); padding:2.5px 0; display:flex; align-items:center; gap:6px; }
+.org-person span.op-dot { width:4px; height:4px; border-radius:50%; background:var(--amber); flex-shrink:0; }
+.org-empty { text-align:center; padding:70px 20px; color:var(--muted); font-size:12px; }
+
 /* ══ FAB ════════════════════════════════════════════════════════ */
 #fab-group {
   position:fixed; bottom:22px; right:16px; z-index:60;
@@ -1687,6 +1716,9 @@ body {
   <button id="vista-global-btn" onclick="abrirVistaGlobal()" title="Vista por tipo de documento">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
   </button>
+  <button id="organigrama-btn" onclick="abrirOrganigrama()" title="Organigrama por local" style="margin-right:2px">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/></svg>
+  </button>
   <div id="notif-btn" onclick="abrirAlertas()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     <div id="notif-badge"></div>
@@ -1831,6 +1863,24 @@ body {
       <button class="lv-chip"        id="vgf-rechazado" onclick="setVgFilter('rechazado')"><span class="chip-dot" style="background:var(--danger)"></span>Rechazado</button>
     </div>
     <div id="vg-results" style="flex:1;overflow-y:auto;padding:12px 14px 30px"></div>
+  </div>
+</div>
+
+<!-- ══ ORGANIGRAMA POR LOCAL ═════════════════════════════════════ -->
+<div id="organigrama-modal" class="overlay" onclick="if(event.target===this)cerrarOrganigrama()">
+  <div class="sheet" style="height:92dvh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+        <div class="sheet-title">Organigrama</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">Estructura de puestos por local</div>
+      </div>
+      <div class="sheet-x" onclick="cerrarOrganigrama()"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--b0)">
+      <select class="f-input" id="org-local-select" onchange="renderOrganigrama(this.value)"></select>
+    </div>
+    <div id="org-body" style="flex:1;overflow:auto"></div>
   </div>
 </div>
 
@@ -2044,7 +2094,7 @@ body {
       <div class="f-field"><label class="f-label">Local</label>
         <select class="f-input" id="edit-local"></select>
       </div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="edit-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarEdicionColab()"></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="edit-puesto" onkeydown="if(event.key==='Enter')guardarEdicionColab()"></select></div>
       <button class="btn btn-amber" id="edit-colab-btn" onclick="guardarEdicionColab()">Guardar cambios</button>
       <button class="btn btn-ghost" onclick="closeSheet('edit-colab-modal')">Cancelar</button>
     </div>
@@ -2065,7 +2115,7 @@ body {
       <div class="f-field"><label class="f-label">Local</label>
         <select class="f-input" id="n-local" onkeydown="if(event.key==='Enter')document.getElementById('n-puesto').focus()"></select>
       </div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="n-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarNuevo()"></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="n-puesto" onkeydown="if(event.key==='Enter')guardarNuevo()"></select></div>
       <button class="btn btn-amber" onclick="guardarNuevo()">Crear colaborador</button>
     </div>
   </div>
@@ -2226,7 +2276,7 @@ body {
       <div class="f-field"><label class="f-label">Local</label>
         <select class="f-input" id="nco-local"></select>
       </div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><input class="f-input" id="nco-puesto" placeholder="Ej: Cocinero" onkeydown="if(event.key==='Enter')guardarNuevoColabOCR()"></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="nco-puesto" onkeydown="if(event.key==='Enter')guardarNuevoColabOCR()"></select></div>
       <button class="btn btn-amber" id="nco-btn" onclick="guardarNuevoColabOCR()">Crear y seleccionar</button>
       <button class="btn btn-ghost" onclick="closeSheet('nuevo-colab-ocr-modal');openSheet('ocr-modal')">Volver al listado</button>
     </div>
@@ -2250,7 +2300,6 @@ body {
 <div id="loading"><div class="spinner"></div></div>
 <div id="toast"></div>
 
-<datalist id="pl-puestos-list"></datalist>
 
 <!-- ══ VISTA PLANILLA ════════════════════════════════════════════ -->
 <div id="planilla-view">
@@ -2304,6 +2353,19 @@ const hideL = ()  => { const l=$('loading'); if(l) l.style.display='none'; };
 /* ── Sube a ImgBB con retry automático (1 reintento) ── */
 /* ── PDFs se guardan como data URL directamente (ImgBB no acepta PDF) ── */
 const IMGBB_KEY = '123d273a2cb8ffb8cd9861eff0c33f9b';
+
+const PUESTOS = [
+  'Gerencia','Supervisión','Caja','Recepción','Camarero','Camarero Jr.','Corredor',
+  'Jefe de Barra','Barra','Chef','Sous Chef','Cocina','Volante','Sartenes','Wok',
+  'Causas','Frituras / Sanguches','Producción','Pastelería','Bacha','Limpieza',
+  'Almacén','Vigilancia','Valet Parking','Cebiche','Tiraditos','Director',
+  'Auditora Jefe','Auditora','RR. HH.','Mantenimiento','Gerente General',
+  'Gerente de Compras','Compras','Jefa de Administración','Administración'
+];
+function puestoOptions(selected){
+  return '<option value="">Seleccionar puesto…</option>' +
+    PUESTOS.map(p => `<option value="${esc(p)}"${p===selected?' selected':''}>${esc(p)}</option>`).join('');
+}
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
   // Los PDFs no son aceptados por ImgBB → los guardamos como data URL directa
   if (dataUrl.startsWith('data:application/pdf')) {
@@ -4547,8 +4609,9 @@ async function guardarRenombrarLocal() {
 
 /* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
 function abrirNuevo() {
-  ['n-nombre','n-dni','n-puesto'].forEach(id=>document.getElementById(id).value='');
+  ['n-nombre','n-dni'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('n-local').value='';
+  document.getElementById('n-puesto').innerHTML = puestoOptions('');
   actualizarSelectsLocales();
   openSheet('nuevo-modal');
   setTimeout(()=>document.getElementById('n-nombre').focus(),300);
@@ -4573,7 +4636,8 @@ async function guardarNuevo() {
 // Abrir form de nuevo colab desde el selector OCR
 function abrirNuevoColabDesdeOCR() {
   closeSheet('ocr-modal');
-  ['nco-nombre','nco-dni','nco-puesto'].forEach(id=>document.getElementById(id).value='');
+  ['nco-nombre','nco-dni'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nco-puesto').innerHTML = puestoOptions('');
   actualizarSelectsLocales();
   setTimeout(()=>openSheet('nuevo-colab-ocr-modal'),220);
   setTimeout(()=>document.getElementById('nco-nombre').focus(),500);
@@ -4615,7 +4679,7 @@ function abrirEdicionColab(id) {
   $('edit-colab-id').value = id;
   $('edit-nombre').value   = c.nombre || '';
   $('edit-dni').value      = c.dni_nro || '';
-  $('edit-puesto').value   = c.puesto || '';
+  $('edit-puesto').innerHTML = puestoOptions(c.puesto || '');
   actualizarSelectsLocales();
   const sel = $('edit-local');
   if (sel) sel.value = c.local || '';
@@ -4798,6 +4862,73 @@ function abrirVistaGlobal() {
   openSheet('vista-global');
 }
 function cerrarVistaGlobal() { closeSheet('vista-global'); }
+
+/* ══ ORGANIGRAMA POR LOCAL ══════════════════════════════════════ */
+const ORG_NIVELES = [
+  { label: 'Dirección',              puestos: ['Director','Gerente General'] },
+  { label: 'Gerencia',                puestos: ['Gerencia','Gerente de Compras','Jefa de Administración','Auditora Jefe','RR. HH.'] },
+  { label: 'Supervisión',             puestos: ['Supervisión','Chef','Jefe de Barra'] },
+  { label: 'Jefaturas / Mandos medios', puestos: ['Sous Chef','Compras','Administración','Auditora','Mantenimiento'] },
+  { label: 'Salón',                   puestos: ['Caja','Recepción','Camarero','Camarero Jr.','Corredor','Barra','Valet Parking'] },
+  { label: 'Cocina',                  puestos: ['Cocina','Volante','Sartenes','Wok','Causas','Frituras / Sanguches','Producción','Pastelería','Cebiche','Tiraditos','Bacha'] },
+  { label: 'Soporte',                 puestos: ['Limpieza','Almacén','Vigilancia'] },
+];
+
+function abrirOrganigrama() {
+  const sel = document.getElementById('org-local-select');
+  sel.innerHTML = locales.map(l => `<option value="${esc(l.nombre)}">${esc(l.nombre)}</option>`).join('');
+  const pre = (currentLocal && locales.some(l=>l.nombre===currentLocal)) ? currentLocal : (locales[0] ? locales[0].nombre : '');
+  sel.value = pre;
+  renderOrganigrama(pre);
+  openSheet('organigrama-modal');
+}
+function cerrarOrganigrama() { closeSheet('organigrama-modal'); }
+
+function renderOrganigrama(local) {
+  const el = document.getElementById('org-body');
+  if (!local) { el.innerHTML = '<div class="org-empty">No hay locales cargados todavía</div>'; return; }
+
+  const personas = colabs.filter(c => c.local === local);
+  if (!personas.length) {
+    el.innerHTML = '<div class="org-empty">Este local todavía no tiene colaboradores cargados</div>';
+    return;
+  }
+
+  // Agrupar colaboradores por puesto
+  const porPuesto = {};
+  personas.forEach(c => {
+    const p = c.puesto || 'Sin puesto asignado';
+    (porPuesto[p] = porPuesto[p] || []).push(c);
+  });
+
+  const usados = new Set();
+  const bloques = [];
+  ORG_NIVELES.forEach(nivel => {
+    const puestosNivel = nivel.puestos.filter(p => porPuesto[p] && porPuesto[p].length);
+    if (!puestosNivel.length) return;
+    puestosNivel.forEach(p => usados.add(p));
+    bloques.push({ label: nivel.label, puestos: puestosNivel });
+  });
+  const restantes = Object.keys(porPuesto).filter(p => !usados.has(p));
+  if (restantes.length) bloques.push({ label: 'Otros puestos', puestos: restantes.sort() });
+
+  let html = '<div class="org-wrap"><div class="org-chart">';
+  bloques.forEach((bloque, i) => {
+    if (i > 0) html += '<div class="org-connector"></div>';
+    html += `<div class="org-level">
+      <div class="org-level-label">${esc(bloque.label)}</div>
+      <div class="org-row">${bloque.puestos.map(p => {
+        const gente = porPuesto[p].slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+        return `<div class="org-card">
+          <div class="org-card-title"><span>${esc(p)}</span><span class="org-card-count">${gente.length}</span></div>
+          ${gente.map(c => `<div class="org-person"><span class="op-dot"></span>${esc(c.nombre)}</div>`).join('')}
+        </div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  html += '</div></div>';
+  el.innerHTML = html;
+}
 
 function renderVgTabs() {
   document.getElementById('vg-tipo-tabs').innerHTML = ALL_DOCS.map(d => `
@@ -5133,10 +5264,6 @@ function renderPlanilla() {
     return va > vb ? _plSort.dir : va < vb ? -_plSort.dir : 0;
   });
 
-  // Actualizar datalist de puestos
-  const puestos = [...new Set(colabs.map(c => c.puesto).filter(Boolean))].sort();
-  document.getElementById('pl-puestos-list').innerHTML = puestos.map(p => `<option value="${esc(p)}">`).join('');
-
   document.getElementById('pl-count').textContent = `${rows.length} colaborador${rows.length!==1?'es':''}`;
 
   document.getElementById('pl-thead').innerHTML = `<tr>${vis.map(c => {
@@ -5172,8 +5299,8 @@ function renderPlanilla() {
           list="pl-locales-list" onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
       </div></td>`;
       if (col.key==='puesto') return `<td><div class="td-inner">
-        <input class="pl-cell-edit" value="${esc(c.puesto||'')}" data-id="${id}" data-field="puesto"
-          list="pl-puestos-list" onblur="plSaveCell(this)" onkeydown="if(event.key==='Enter')this.blur()">
+        <select class="pl-cell-edit" data-id="${id}" data-field="puesto"
+          onchange="plSaveCell(this)">${puestoOptions(c.puesto||'')}</select>
       </div></td>`;
       if (col.key==='dni_nro') return `<td><div class="td-inner">
         <input class="pl-cell-edit" value="${esc(c.dni_nro||'')}" data-id="${id}" data-field="dni_nro"
@@ -5224,15 +5351,6 @@ function plSaveCell(input) {
     const sub = input.closest('tr')?.querySelector('.pl-sub');
     if (sub) sub.textContent = val || '—';
   }
-  if (field === 'puesto') {
-    // Actualizar datalist por si es un puesto nuevo
-    const dl = document.getElementById('pl-puestos-list');
-    const vals = Array.from(dl.options).map(o => o.value);
-    if (val && !vals.includes(val)) {
-      dl.innerHTML += `<option value="${esc(val)}">`;
-    }
-  }
-
   updateDoc(doc(db,'colaboradores',id), { [field]: val })
     .catch(e => {
       if (idx !== -1 && prev) { colabs[idx] = prev; input.value = prev[field] || ''; }
@@ -5243,12 +5361,12 @@ function plSaveCell(input) {
 function plAgregarColab() {
   cerrarPlanilla();
   // Reusar el modal de nuevo colaborador
+  abrirNuevo();
   setTimeout(() => {
     if (_plLocal) {
       const sel = document.getElementById('n-local');
       if (sel) sel.value = _plLocal;
     }
-    openSheet('nuevo-modal');
   }, 250);
 }
 
@@ -5322,6 +5440,7 @@ Object.assign(window, {
   filtrarFotoConfirmColab,
   mostrarPDFPrevio, _restoreImageModal,
   toggleDesvinculado, toggleDesvSection,
+  abrirOrganigrama, cerrarOrganigrama, renderOrganigrama,
 });
 
 </script>

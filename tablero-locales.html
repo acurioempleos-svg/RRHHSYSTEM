@@ -1115,6 +1115,22 @@ body {
 }
 .org-empty { text-align:center; padding:70px 20px; color:var(--muted); font-size:12px; }
 
+/* Modal de organigrama: más grande que un sheet normal para que entre todo con menos scroll */
+.org-sheet { height:96dvh; }
+@media(min-width:640px){
+  .org-sheet { width:min(1240px,96vw); max-height:92dvh; }
+}
+@media(max-width:639px){
+  .org-wrap { padding:16px 12px 40px; }
+  .org-connector { height:14px; }
+  .org-level-hdr { margin:2px 0 8px; }
+  .org-row { gap:8px; margin-bottom:6px; }
+  .org-card { min-width:150px; padding:9px 11px; }
+  .org-card-title { margin-bottom:6px; padding-bottom:6px; }
+  .org-person { padding:2px 0; font-size:11px; }
+  .org-block-otros { margin-top:20px; padding-top:14px; }
+}
+
 /* ══ FAB ════════════════════════════════════════════════════════ */
 #fab-group {
   position:fixed; bottom:22px; right:16px; z-index:60;
@@ -1394,23 +1410,33 @@ body {
 }
 
 .pl-toolbar {
-  display:flex; align-items:center; gap:6px; padding:9px 14px;
+  display:flex; flex-direction:column; gap:8px; padding:9px 14px;
   border-bottom:1px solid var(--b0); flex-shrink:0;
+}
+
+/* Fila 1: buscador + botón columnas, siempre en una línea */
+.pl-toolbar-row1 { display:flex; align-items:center; gap:8px; }
+
+/* Fila 2: chips de local, scroll horizontal propio (nunca se apilan verticalmente) */
+.pl-chips-row {
+  display:flex; align-items:center; gap:6px;
   overflow-x:auto; scrollbar-width:none;
 }
-.pl-toolbar::-webkit-scrollbar { display:none; }
+.pl-chips-row::-webkit-scrollbar { display:none; }
+/* display:contents deja que los botones generados por JS sean ítems directos del flex de arriba */
+#pl-local-chips { display:contents; }
 
 .pl-search-wrap {
   display:flex; align-items:center; gap:7px;
   background:var(--s1); border:1px solid var(--b0);
-  border-radius:8px; padding:0 10px; height:30px; min-width:140px;
-  transition:border-color var(--t); flex-shrink:0;
+  border-radius:8px; padding:0 10px; height:30px; min-width:0; flex:1;
+  transition:border-color var(--t);
 }
 .pl-search-wrap:focus-within { border-color:var(--amber-brd); }
 .pl-search-wrap svg { width:11px; height:11px; color:var(--faint); flex-shrink:0; }
 .pl-search-wrap input {
   background:none; border:none; outline:none;
-  font-family:'DM Mono',monospace; font-size:10px; color:var(--text); width:100%;
+  font-family:'DM Mono',monospace; font-size:10px; color:var(--text); width:100%; min-width:0;
 }
 .pl-search-wrap input::placeholder { color:var(--faint); }
 
@@ -1424,12 +1450,9 @@ body {
 }
 .pl-chip.active { background:var(--amber-glow); border-color:var(--amber-brd); color:var(--amber-hi); }
 
-/* Separador en toolbar */
-.pl-sep { width:1px; height:20px; background:var(--b1); flex-shrink:0; margin:0 2px; }
-
 /* Columnas visibles toggle */
 .pl-col-toggle {
-  position:relative;
+  position:relative; flex-shrink:0;
 }
 .pl-col-toggle-btn {
   display:flex; align-items:center; gap:5px;
@@ -1896,7 +1919,7 @@ body {
 
 <!-- ══ ORGANIGRAMA POR LOCAL ═════════════════════════════════════ -->
 <div id="organigrama-modal" class="overlay" onclick="if(event.target===this)cerrarOrganigrama()">
-  <div class="sheet" style="height:92dvh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+  <div class="sheet org-sheet" style="display:flex;flex-direction:column" onclick="event.stopPropagation()">
     <div class="sheet-pill"></div>
     <div class="sheet-hdr">
       <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
@@ -2342,20 +2365,22 @@ body {
     <div class="pl-count" id="pl-count"></div>
   </div>
   <div class="pl-toolbar">
-    <div class="pl-search-wrap">
-      <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
-      <input id="pl-search" placeholder="Buscar…" oninput="renderPlanilla()">
+    <div class="pl-toolbar-row1">
+      <div class="pl-search-wrap">
+        <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
+        <input id="pl-search" placeholder="Buscar…" oninput="renderPlanilla()">
+      </div>
+      <div class="pl-col-toggle" id="pl-col-toggle">
+        <button class="pl-col-toggle-btn" onclick="toggleColPanel()">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 20V10M6 20V4M18 20v-4"/></svg>
+          Columnas
+        </button>
+        <div id="pl-col-panel"></div>
+      </div>
     </div>
-    <div class="pl-sep"></div>
-    <button class="pl-chip active" id="plf-todos"    onclick="plSetLocal('',this)">Todos</button>
-    <div id="pl-local-chips"></div>
-    <div class="pl-sep"></div>
-    <div class="pl-col-toggle" id="pl-col-toggle">
-      <button class="pl-col-toggle-btn" onclick="toggleColPanel()">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 20V10M6 20V4M18 20v-4"/></svg>
-        Columnas
-      </button>
-      <div id="pl-col-panel"></div>
+    <div class="pl-chips-row">
+      <button class="pl-chip active" id="plf-todos"    onclick="plSetLocal('',this)">Todos</button>
+      <div id="pl-local-chips"></div>
     </div>
   </div>
   <div id="planilla-scroll"><table id="planilla-table"><thead id="pl-thead"></thead><tbody id="pl-tbody"></tbody></table></div>

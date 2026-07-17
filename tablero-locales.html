@@ -1202,6 +1202,63 @@ body {
 .fab-ico-doc  { background:var(--s-dim); border:1px solid var(--s-brd); }
 .fab-ico-user { background:var(--s2); border:1px solid var(--b2); }
 
+/* Botón "Fusionar legajos" — fijo, justo arriba del FAB principal */
+#fusion-fab {
+  position:fixed; bottom:86px; right:16px; z-index:59;
+  width:40px; height:40px; border-radius:50%;
+  background:var(--s2); border:1px solid var(--b2);
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:var(--muted); transition:all var(--t);
+}
+#fusion-fab:hover { color:var(--text); border-color:var(--b3); transform:scale(1.06); }
+#fusion-fab:active { transform:scale(.92); }
+@media(min-width:900px){ #fusion-fab { bottom:96px; right:28px; } }
+
+/* ══ FUSIÓN DE LEGAJOS ══════════════════════════════════════════ */
+.fus-intro {
+  font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:16px;
+}
+.fus-slot { margin-bottom:14px; }
+.fus-slot-label {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--amber);
+  letter-spacing:.14em; text-transform:uppercase; margin-bottom:7px;
+}
+.fus-picked-item {
+  display:flex; align-items:center; gap:11px;
+  padding:11px 13px; border-radius:var(--r);
+  border:1px solid var(--amber-brd); background:var(--amber-glow);
+}
+.fus-picked-item .fus-x {
+  width:24px; height:24px; border-radius:7px; flex-shrink:0;
+  background:var(--s2); border:1px solid var(--b2);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:var(--muted);
+}
+.fus-picked-item .fus-x svg { width:10px; height:10px; }
+.fus-picked-item .fus-x:hover { color:var(--text); border-color:var(--b3); }
+.fus-compare-title {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--muted);
+  letter-spacing:.1em; text-transform:uppercase; margin:18px 0 10px;
+}
+.fus-field { margin-bottom:10px; }
+.fus-field-label {
+  font-family:'DM Mono',monospace; font-size:8px; color:var(--muted);
+  letter-spacing:.14em; text-transform:uppercase; margin-bottom:5px;
+}
+.fus-field-opts { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.fus-opt {
+  padding:9px 11px; border-radius:9px; border:1px solid var(--b1); background:var(--s1);
+  font-size:12px; cursor:pointer; transition:all var(--t);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fus-opt:hover { border-color:var(--b2); }
+.fus-opt.chosen { border-color:var(--amber-brd); background:var(--amber-glow); color:var(--text); }
+.fus-docs-note {
+  font-size:11px; color:var(--muted); background:var(--s0); border:1px solid var(--b0);
+  border-radius:9px; padding:10px 12px; margin-top:14px; line-height:1.5;
+}
+
 /* ══ OVERLAYS / SHEETS ══════════════════════════════════════════ */
 .overlay {
   position:fixed; inset:0; z-index:200;
@@ -1860,6 +1917,14 @@ body {
   <div id="desv-scroll" style="display:none"></div>
 </div>
 
+<!-- ══ FUSIONAR LEGAJOS (arriba del FAB) ══════════════════════════ -->
+<button id="fusion-fab" onclick="abrirFusion()" title="Fusionar legajos duplicados">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="12" r="3"/>
+    <path d="M8.5 7.5 15.5 10.5M8.5 16.5 15.5 13.5"/>
+  </svg>
+</button>
+
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
   <div class="fab-opt">
@@ -2199,6 +2264,47 @@ body {
       </div>
       <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="n-puesto" onkeydown="if(event.key==='Enter')guardarNuevo()"></select></div>
       <button class="btn btn-amber" onclick="guardarNuevo()">Crear colaborador</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fusionar legajos duplicados -->
+<div id="fusion-modal" class="overlay" onclick="if(event.target===this)closeSheet('fusion-modal')">
+  <div class="sheet" style="max-height:88dvh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Fusionar legajos duplicados</div>
+      <div class="sheet-x" onclick="closeSheet('fusion-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body" id="fusion-body" style="overflow-y:auto">
+      <div class="fus-intro">Elegí los dos legajos que se cargaron duplicados. El primero se mantiene, el segundo se elimina — todos sus documentos y datos se combinan en uno solo.</div>
+
+      <div class="fus-slot" id="fus-slot-a">
+        <div class="fus-slot-label">Legajo que se mantiene</div>
+        <div id="fus-picked-a" style="display:none"></div>
+        <div id="fus-picker-a">
+          <input class="f-input" id="fus-search-a" placeholder="Buscar colaborador…" oninput="fusFiltrar('a',this.value)" style="width:100%;margin-bottom:8px">
+          <div class="colab-sel-list" id="fus-list-a"></div>
+        </div>
+      </div>
+
+      <div class="fus-slot" id="fus-slot-b">
+        <div class="fus-slot-label">Legajo duplicado a eliminar</div>
+        <div id="fus-picked-b" style="display:none"></div>
+        <div id="fus-picker-b">
+          <input class="f-input" id="fus-search-b" placeholder="Buscar colaborador…" oninput="fusFiltrar('b',this.value)" style="width:100%;margin-bottom:8px">
+          <div class="colab-sel-list" id="fus-list-b"></div>
+        </div>
+      </div>
+
+      <div id="fus-compare-wrap" style="display:none">
+        <div class="fus-compare-title">Si hay diferencias, elegí qué dato conservar</div>
+        <div id="fus-compare"></div>
+        <div class="fus-docs-note" id="fus-docs-note"></div>
+      </div>
+
+      <button class="btn btn-amber" id="fus-confirm-btn" onclick="confirmarFusion()" disabled style="margin-top:16px">Fusionar legajos</button>
+      <button class="btn btn-ghost" onclick="closeSheet('fusion-modal')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -4148,6 +4254,170 @@ function fabClose(e) {
   const g = document.getElementById('fab-group');
   if (g && !g.contains(e.target)) g.classList.remove('open');
 }
+/* ══ FUSIÓN DE LEGAJOS DUPLICADOS ═══════════════════════════════
+   Combina dos legajos que se cargaron dos veces por error: se
+   eligen los datos a conservar campo por campo y se fusionan todos
+   los documentos/carpetas en un solo registro. El otro se elimina. */
+let _fusA = null;         // colaborador que se mantiene
+let _fusB = null;         // colaborador duplicado, se elimina
+let _fusChoices = {};     // { campo: 'a'|'b' } — qué valor conservar en cada diferencia
+
+const FUS_CAMPOS = [
+  { key:'nombre',            label:'Nombre y apellido' },
+  { key:'dni_nro',           label:'DNI' },
+  { key:'local',             label:'Local' },
+  { key:'puesto',            label:'Puesto' },
+  { key:'vencimiento_salud', label:'Vto. salud', fmt: v => v ? fmtFechaPl(v) : '—' },
+  { key:'desvinculado',      label:'Estado',      fmt: v => v ? 'Desvinculado' : 'Activo' },
+];
+
+function abrirFusion() {
+  document.getElementById('fab-group').classList.remove('open');
+  _fusA = null; _fusB = null; _fusChoices = {};
+  ['a','b'].forEach(slot => {
+    const picked = document.getElementById(`fus-picked-${slot}`);
+    picked.style.display = 'none';
+    picked.innerHTML = '';
+    document.getElementById(`fus-picker-${slot}`).style.display = '';
+    document.getElementById(`fus-search-${slot}`).value = '';
+  });
+  document.getElementById('fus-compare-wrap').style.display = 'none';
+  document.getElementById('fus-confirm-btn').disabled = true;
+  fusFiltrar('a','');
+  fusFiltrar('b','');
+  openSheet('fusion-modal');
+}
+
+function fusFiltrar(slot, q) {
+  const lq = q.toLowerCase();
+  const otroId = slot === 'a' ? _fusB?.id : _fusA?.id;
+  const fl = colabs
+    .filter(c => c.id !== otroId)
+    .filter(c => !lq || (c.nombre||'').toLowerCase().includes(lq) || (c.local||'').toLowerCase().includes(lq) || (c.dni_nro||'').includes(lq));
+  document.getElementById(`fus-list-${slot}`).innerHTML = fl.map(c => {
+    const init = (c.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="colab-sel-item" onclick="fusElegirColab('${slot}','${c.id}')">
+      <div class="csi-av">${init}</div>
+      <div><div class="csi-name">${esc(c.nombre)}</div><div class="csi-meta">${esc(c.puesto||'')} · ${esc(c.local||'Sin local')}</div></div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;padding:20px;font-family:'DM Mono',monospace;font-size:10px;color:var(--faint)">Sin resultados</div>`;
+}
+
+function fusElegirColab(slot, id) {
+  const c = getColab(id);
+  if (!c) return;
+  if (slot === 'a') _fusA = c; else _fusB = c;
+  const init = (c.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const picked = document.getElementById(`fus-picked-${slot}`);
+  picked.innerHTML = `<div class="fus-picked-item">
+    <div class="csi-av">${init}</div>
+    <div style="flex:1;min-width:0"><div class="csi-name">${esc(c.nombre)}</div><div class="csi-meta">${esc(c.puesto||'')} · ${esc(c.local||'Sin local')}</div></div>
+    <div class="fus-x" onclick="fusQuitar('${slot}')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+  </div>`;
+  picked.style.display = '';
+  document.getElementById(`fus-picker-${slot}`).style.display = 'none';
+  fusActualizarComparacion();
+}
+
+function fusQuitar(slot) {
+  if (slot === 'a') _fusA = null; else _fusB = null;
+  document.getElementById(`fus-picked-${slot}`).style.display = 'none';
+  document.getElementById(`fus-picker-${slot}`).style.display = '';
+  fusFiltrar(slot, document.getElementById(`fus-search-${slot}`).value || '');
+  fusActualizarComparacion();
+}
+
+function fusActualizarComparacion() {
+  const wrap = document.getElementById('fus-compare-wrap');
+  const btn  = document.getElementById('fus-confirm-btn');
+  if (!_fusA || !_fusB) { wrap.style.display = 'none'; btn.disabled = true; return; }
+
+  document.getElementById('fus-compare').innerHTML = FUS_CAMPOS.map(f => {
+    const va = _fusA[f.key], vb = _fusB[f.key];
+    const dva = f.fmt ? f.fmt(va) : (va || '—');
+    const dvb = f.fmt ? f.fmt(vb) : (vb || '—');
+    if (!_fusChoices[f.key]) _fusChoices[f.key] = va ? 'a' : (vb ? 'b' : 'a');
+    const ch = _fusChoices[f.key];
+    return `<div class="fus-field">
+      <div class="fus-field-label">${f.label}</div>
+      <div class="fus-field-opts">
+        <div class="fus-opt ${ch==='a'?'chosen':''}" onclick="fusElegirCampo('${f.key}','a')">${esc(String(dva))}</div>
+        <div class="fus-opt ${ch==='b'?'chosen':''}" onclick="fusElegirCampo('${f.key}','b')">${esc(String(dvb))}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const nCarpetasA = getCarpetas(_fusA).length;
+  const nCarpetasB = getCarpetas(_fusB).length;
+  document.getElementById('fus-docs-note').textContent =
+    `Se combinarán los documentos de ambos legajos (${nCarpetasA} carpeta${nCarpetasA!==1?'s':''} + ${nCarpetasB} carpeta${nCarpetasB!==1?'s':''}) en un solo legajo. Esta acción no se puede deshacer.`;
+
+  wrap.style.display = '';
+  btn.disabled = false;
+}
+
+function fusElegirCampo(key, slot) {
+  _fusChoices[key] = slot;
+  fusActualizarComparacion();
+}
+
+// Combina dos arrays de carpetas: si existe una carpeta con el mismo
+// nombre en ambos legajos, une sus fotos/urls (sin duplicar); si no,
+// la agrega como carpeta nueva.
+function fusMergeCarpetas(ca, cb) {
+  const result = ca.map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
+  cb.forEach(fb => {
+    const match = result.find(fa => (fa.nombre||'').trim().toLowerCase() === (fb.nombre||'').trim().toLowerCase());
+    if (match) {
+      const urlsB = fb.urls || [], metaB = fb.meta || [];
+      urlsB.forEach((u, i) => {
+        if (!match.urls.includes(u)) { match.urls.push(u); match.meta.push(metaB[i] || {}); }
+      });
+    } else {
+      result.push({ ...fb, urls:[...(fb.urls||[])], meta:[...(fb.meta||[])] });
+    }
+  });
+  return result;
+}
+
+async function confirmarFusion() {
+  if (!_fusA || !_fusB) return;
+  const ok = await confirmar(`¿Fusionar "${_fusA.nombre}" y "${_fusB.nombre}" en un solo legajo? Esta acción no se puede deshacer.`, 'Fusionar');
+  if (!ok) return;
+
+  const btn = document.getElementById('fus-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Fusionando…';
+
+  try {
+    const patch = {};
+    FUS_CAMPOS.forEach(f => {
+      const origen = _fusChoices[f.key] === 'b' ? _fusB : _fusA;
+      let val = origen[f.key];
+      if (f.key === 'desvinculado') val = !!val;
+      patch[f.key] = (val === undefined) ? null : val;
+    });
+
+    const atA = _fusA.at?.seconds ? _fusA.at.seconds*1000 : _fusA.at;
+    const atB = _fusB.at?.seconds ? _fusB.at.seconds*1000 : _fusB.at;
+    if (atA && atB) patch.at = Math.min(atA, atB);
+
+    patch.carpetas = fusMergeCarpetas(getCarpetas(_fusA), getCarpetas(_fusB));
+
+    const batch = writeBatch(db);
+    batch.update(doc(db,'colaboradores', _fusA.id), patch);
+    batch.delete(doc(db,'colaboradores', _fusB.id));
+    await batch.commit();
+
+    toast('Legajos fusionados correctamente');
+    closeSheet('fusion-modal');
+    _fusA = null; _fusB = null; _fusChoices = {};
+  } catch(e) {
+    toast('Error: ' + (e.code || e.message));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Fusionar legajos';
+  }
+}
+
 function fabAbrirNuevo() { document.getElementById('fab-group').classList.remove('open'); abrirNuevo(); }
 function fabAbrirDoc()   {
   document.getElementById('fab-group').classList.remove('open');
@@ -5726,6 +5996,7 @@ Object.assign(window, {
   mostrarPDFPrevio, _restoreImageModal,
   toggleDesvinculado, setLocalTab,
   abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
+  abrirFusion, fusFiltrar, fusElegirColab, fusQuitar, fusElegirCampo, confirmarFusion,
 });
 
 </script>

@@ -366,12 +366,38 @@ body {
 .chip-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 
 /* scroll de personas */
-#persons-scroll {
+#persons-scroll, #desv-scroll {
   flex:1; overflow-y:auto; padding:12px 14px 90px;
   display:flex; flex-direction:column; gap:12px;
 }
 @media(min-width:900px){
-  #persons-scroll { padding:14px 18px 60px; }
+  #persons-scroll, #desv-scroll { padding:14px 18px 60px; }
+}
+
+/* Pestañas Activos / Desvinculados dentro del panel del local */
+.lv-people-tabs {
+  display:flex; gap:6px; padding:10px 14px 0;
+  flex-shrink:0;
+}
+@media(min-width:900px){ .lv-people-tabs { padding:10px 18px 0; } }
+.lv-ptab {
+  display:flex; align-items:center; gap:7px;
+  padding:8px 13px; border-radius:9px 9px 0 0;
+  border:1px solid var(--b1); border-bottom:none;
+  background:none; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.04em;
+  color:var(--muted); cursor:pointer; transition:all var(--t);
+}
+.lv-ptab:hover { color:var(--text); }
+.lv-ptab.active { background:var(--s1); color:var(--text); border-color:var(--b2); }
+.lv-ptab-badge {
+  background:var(--s2); color:var(--muted);
+  border-radius:5px; padding:1px 6px; font-size:9px;
+}
+.lv-ptab.active .lv-ptab-badge { background:var(--amber-glow); color:var(--amber-hi); }
+.lv-ptab-badge-danger.lv-ptab-badge { }
+.lv-ptab.active #lvtab-desv-badge,
+.lv-ptab.active .lv-ptab-badge-danger {
+  background:var(--d-dim); color:var(--danger);
 }
 
 /* ── Bloque de persona — apilado ────────────────────────────── */
@@ -1822,17 +1848,16 @@ body {
       <div class="lf-empty" id="lf-empty">Sin carpetas aun</div>
     </div>
   </div>
-  <div id="persons-scroll"></div>
-  <div id="desv-section">
-    <button class="desv-section-btn" id="desv-section-btn" onclick="toggleDesvSection()" style="display:none">
-      <span style="display:flex;align-items:center;gap:6px">
-        <span>DESVINCULADOS</span>
-        <span class="desv-badge" id="desv-badge">0</span>
-      </span>
-      <svg class="desv-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+  <div class="lv-people-tabs" id="lv-people-tabs">
+    <button class="lv-ptab active" id="lvtab-activos" onclick="setLocalTab('activos')">
+      Activos <span class="lv-ptab-badge" id="lvtab-activos-badge">0</span>
     </button>
-    <div class="desv-list" id="desv-list" style="display:none"></div>
+    <button class="lv-ptab" id="lvtab-desv" onclick="setLocalTab('desvinculados')">
+      Desvinculados <span class="lv-ptab-badge lv-ptab-badge-danger" id="lvtab-desv-badge">0</span>
+    </button>
   </div>
+  <div id="persons-scroll"></div>
+  <div id="desv-scroll" style="display:none"></div>
 </div>
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
@@ -2669,14 +2694,6 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
     const d = (new Date(c.vencimiento_salud+'T00:00:00') - hoy)/86400000;
     if (d<0) err++; else if (d<30) warn++;
   });
-  let totalDocs = 0, cargDocs = 0;
-  list.forEach(colab => {
-    const carp = getCarpetas(colab);
-    totalDocs += carp.length;
-    cargDocs  += carp.filter(f=>f.urls&&f.urls.length).length;
-  });
-  const pct   = totalDocs ? Math.round((cargDocs/totalDocs)*100) : 0;
-  const fill  = pct===100?'var(--success)':pct>60?'var(--amber-hi)':'var(--danger)';
   const code  = loc.split(/\s+/).map(w=>w[0]).join('').slice(0,3).toUpperCase();
   const enVac  = list.filter(c => estadoActivo(c)?.key==='vacaciones').length;
   const enSusp = list.filter(c => estadoActivo(c)?.key==='suspension').length;
@@ -2698,9 +2715,7 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
     <div class="lb-name">${esc(loc)}</div>
     <div class="lb-count">${count} colaborador${count!==1?'es':''}</div>
     ${estadoHTML ? `<div class="lb-estados">${estadoHTML}</div>` : ''}
-    <div class="lb-prog-bar"><div class="lb-prog-fill" style="width:${pct}%;background:${fill}"></div></div>
     <div class="lb-bottom">
-      <div class="lb-pct">${pct}% docs</div>
       <div class="lb-alerts">${alerts}</div>
     </div>
   </div>`;
@@ -2775,6 +2790,7 @@ function abrirLocal(local) {
   localQ = '';
   renderLvFilters();
   renderLocalFolders(local);
+  setLocalTab('activos');
   renderLocal(local, '');
   const v = document.getElementById('view-local');
   document.getElementById('lv-backdrop').classList.add('open');
@@ -2782,11 +2798,6 @@ function abrirLocal(local) {
   requestAnimationFrame(() => v.classList.add('visible'));
 }
 function cerrarLocal() {
-  _desvOpen = false;
-  const desvList = document.getElementById('desv-list');
-  const desvBtn  = document.getElementById('desv-section-btn');
-  if (desvList) desvList.style.display = 'none';
-  if (desvBtn)  desvBtn.classList.remove('open');
   const v = document.getElementById('view-local');
   v.classList.remove('visible');
   document.getElementById('lv-backdrop').classList.remove('open');
@@ -2828,11 +2839,6 @@ function _buildPersonFace(c, hoy) {
   if (apCount > 0)
     chips.push(`<span class="pb-chip pb-chip-aper">⚠️ ${apCount} apercibimiento${apCount!==1?'s':''}`);
   const chipsHTML = chips.length ? `<div class="pb-chips">${chips.join('')}</div>` : '';
-  const carpetas = getCarpetas(c);
-  const carpCount = carpetas.filter(f=>f.urls&&f.urls.length).length;
-  const carpTotal = carpetas.length;
-  const carpPct   = carpTotal ? Math.round(carpCount/carpTotal*100) : 0;
-  const carpFill  = carpCount===carpTotal&&carpTotal>0?'var(--success)':carpPct>60?'var(--amber-hi)':'var(--danger)';
   return `<div class="pb-header">
     <div class="pb-avatar">${init}</div>
     <div class="pb-info">
@@ -2845,11 +2851,7 @@ function _buildPersonFace(c, hoy) {
       <svg class="pb-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
     </div>
   </div>
-  ${eaBadgeHTML}
-  <div class="pb-prog">
-    <div class="pb-prog-bar"><div class="pb-prog-fill" style="width:${carpPct}%;background:${carpFill}"></div></div>
-    <div class="pb-prog-lbl">${carpCount}/${carpTotal}</div>
-  </div>`;
+  ${eaBadgeHTML}`;
 }
 
 /** @param {object} c colaborador @returns {string} HTML de .pb-docs */
@@ -2926,24 +2928,39 @@ function renderLocal(local, q='') {
   });
   scroll.scrollTop = scrollTop;
 
-  // ── Desvinculados ─────────────────────────────────────────────
-  const desvBtn  = document.getElementById('desv-section-btn');
-  const desvBadge = document.getElementById('desv-badge');
-  const desvListEl = document.getElementById('desv-list');
+  // ── Desvinculados (pestaña aparte) ───────────────────────────────
+  const activosBadge = document.getElementById('lvtab-activos-badge');
+  const desvBadge     = document.getElementById('lvtab-desv-badge');
+  const desvScroll    = document.getElementById('desv-scroll');
+  if (activosBadge) activosBadge.textContent = list.length;
+  if (desvBadge)    desvBadge.textContent    = desvList.length;
 
-  if (desvBtn) desvBtn.style.display = desvList.length ? 'flex' : 'none';
-  if (desvBadge) desvBadge.textContent = desvList.length;
-
-  if (desvListEl) {
-    // Remover bloques que ya no son desvinculados
+  if (desvScroll) {
     const desvIds = new Set(desvList.map(c => c.id));
-    Array.from(desvListEl.querySelectorAll('.person-block[data-pid]')).forEach(el => {
+    Array.from(desvScroll.querySelectorAll('.person-block[data-pid]')).forEach(el => {
       if (!desvIds.has(el.dataset.pid)) el.remove();
     });
+    if (!desvList.length) {
+      if (!desvScroll.querySelector('.lv-empty'))
+        desvScroll.innerHTML = `<div class="lv-empty">Sin colaboradores desvinculados.</div>`;
+    } else {
+      desvScroll.querySelector('.lv-empty')?.remove();
+    }
     desvList.forEach((c, ci) => {
-      _renderPersonBlock(c, ci, desvListEl, hoy, true);
+      _renderPersonBlock(c, ci, desvScroll, hoy, true);
     });
   }
+}
+
+let _localTab = 'activos';
+function setLocalTab(tab) {
+  _localTab = tab;
+  document.getElementById('lvtab-activos')?.classList.toggle('active', tab==='activos');
+  document.getElementById('lvtab-desv')?.classList.toggle('active', tab==='desvinculados');
+  const scroll = document.getElementById('persons-scroll');
+  const desvScroll = document.getElementById('desv-scroll');
+  if (scroll)    scroll.style.display    = tab==='activos' ? 'flex' : 'none';
+  if (desvScroll) desvScroll.style.display = tab==='desvinculados' ? 'flex' : 'none';
 }
 
 function _renderPersonBlock(c, ci, container, hoy, isDesv) {
@@ -3024,15 +3041,6 @@ function togglePerson(id, event) {
 }
 
 /* ══ SECCIÓN DESVINCULADOS ═══════════════════════════════════════ */
-let _desvOpen = false;
-
-function toggleDesvSection() {
-  _desvOpen = !_desvOpen;
-  const btn  = document.getElementById('desv-section-btn');
-  const list = document.getElementById('desv-list');
-  if (btn)  btn.classList.toggle('open', _desvOpen);
-  if (list) list.style.display = _desvOpen ? 'flex' : 'none';
-}
 
 async function toggleDesvinculado(id, currentVal, event) {
   event.stopPropagation();
@@ -5472,7 +5480,6 @@ const PL_COLS = [
   { key:'dni_nro',  label:'DNI',         on:true },
   { key:'ingreso',  label:'Ingreso',     on:true },
   { key:'salud',    label:'Vto. Salud',  on:true },
-  { key:'legajo',   label:'Legajo %',    on:true },
   { key:'docs',     label:'Documentos',  on:false },
 ];
 
@@ -5547,7 +5554,6 @@ function renderPlanilla() {
     let va = a[_plSort.col] || '', vb = b[_plSort.col] || '';
     if (_plSort.col === 'ingreso') { va = a.at || ''; vb = b.at || ''; }
     if (_plSort.col === 'salud')   { va = a.vencimiento_salud || ''; vb = b.vencimiento_salud || ''; }
-    if (_plSort.col === 'legajo')  { va = calcLegajoPct(a); vb = calcLegajoPct(b); }
     return va > vb ? _plSort.dir : va < vb ? -_plSort.dir : 0;
   });
 
@@ -5567,7 +5573,6 @@ function renderPlanilla() {
 
   document.getElementById('pl-tbody').innerHTML = rows.map(c => {
     const init    = (c.nombre||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const pct     = calcLegajoPct(c);
     const ingreso = c.at ? new Date(c.at.seconds?c.at.seconds*1000:c.at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
     const salud   = c.vencimiento_salud ? fmtFechaPl(c.vencimiento_salud) : '—';
     const saludCls= saludEstado(c.vencimiento_salud);
@@ -5598,7 +5603,6 @@ function renderPlanilla() {
         <input class="pl-cell-edit" type="date" value="${c.vencimiento_salud||''}" data-id="${id}" data-field="vencimiento_salud"
           style="color-scheme:dark" onblur="plSaveCell(this)" onchange="plSaveCell(this)">
       </div></td>`;
-      if (col.key==='legajo') return `<td><div class="td-inner"><span class="pl-badge ${pct===100?'pl-ok':pct>60?'pl-warn':'pl-err'}">${pct}%</span></div></td>`;
       if (col.key==='docs')   return `<td><div class="td-inner">${renderDocsCell(c)}</div></td>`;
       return `<td><div class="td-inner">—</div></td>`;
     }).join('')}</tr>`;
@@ -5655,12 +5659,6 @@ function plAgregarColab() {
       if (sel) sel.value = _plLocal;
     }
   }, 250);
-}
-
-function calcLegajoPct(c) {
-  const carpetas = getCarpetas(c);
-  if (!carpetas.length) return 0;
-  return Math.round(carpetas.filter(f => f.urls && f.urls.length).length / carpetas.length * 100);
 }
 
 function fmtFechaPl(s) {
@@ -5726,7 +5724,7 @@ Object.assign(window, {
   eliminarContenidoCarpetaLocal, abrirReemplazoLocal,
   filtrarFotoConfirmColab,
   mostrarPDFPrevio, _restoreImageModal,
-  toggleDesvinculado, toggleDesvSection,
+  toggleDesvinculado, setLocalTab,
   abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
 });
 

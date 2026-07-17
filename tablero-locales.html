@@ -1928,10 +1928,13 @@ body {
       </div>
       <div class="sheet-x" onclick="cerrarOrganigrama()"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
     </div>
-    <div style="padding:12px 16px;border-bottom:1px solid var(--b0);display:flex;gap:8px;align-items:center">
-      <select class="f-input" id="org-local-select" onchange="renderOrganigrama(this.value)" style="flex:1"></select>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--b0);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select class="f-input" id="org-local-select" onchange="renderOrganigrama(this.value)" style="flex:1;min-width:140px"></select>
       <button class="lb-edit-btn" style="width:auto;padding:0 12px;height:34px;border-radius:8px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.04em;white-space:nowrap" onclick="corregirPuestosLegacy()" title="Corregir puestos viejos que no coinciden con la lista fija">
         Corregir puestos
+      </button>
+      <button class="lb-edit-btn" style="width:auto;padding:0 12px;height:34px;border-radius:8px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.04em;white-space:nowrap" onclick="migrarPdfsPesados()" title="Mover los PDFs viejos guardados adentro de la base a Firebase Storage, para que la página cargue más rápido">
+        Migrar PDFs pesados
       </button>
     </div>
     <div id="org-body" style="flex:1;overflow:auto"></div>
@@ -2388,7 +2391,8 @@ body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 /* ══ FIREBASE ═══════════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey:"AIzaSyDL4ezIawX3xryjkKyty82DrAQEizmjli8",
@@ -2400,6 +2404,12 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+const storage = getStorage(app);
+// Cache local (IndexedDB): la 2da vez que se abre la página, todo lo que ya se
+// bajó antes aparece instantáneo desde el disco mientras Firestore sincroniza
+// en segundo plano solo los cambios nuevos. No falla si hay otra pestaña abierta.
+enableIndexedDbPersistence(db).catch(() => {/* multi-tab u otro motivo: sigue andando sin cache */});
+
 
 /* ── Helpers UI ── */
 const $     = id => document.getElementById(id);
@@ -2423,9 +2433,15 @@ function puestoOptions(selected){
     PUESTOS.map(p => `<option value="${esc(p)}"${p===selected?' selected':''}>${esc(p)}</option>`).join('');
 }
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
-  // Los PDFs no son aceptados por ImgBB → los guardamos como data URL directa
+  // Los PDFs no son aceptados por ImgBB → van a Firebase Storage (ya está el
+  // bucket configurado). Antes se guardaba el data URL completo adentro del
+  // documento de Firestore, y eso es lo que hacía tan lenta la carga inicial:
+  // cada apertura de la página bajaba TODOS los PDFs de TODOS los colaboradores.
   if (dataUrl.startsWith('data:application/pdf')) {
-    return dataUrl; // se persiste la data URL en Firestore tal cual
+    const path = `carpetas-pdf/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.pdf`;
+    const ref  = storageRef(storage, path);
+    await uploadString(ref, dataUrl, 'data_url');
+    return await getDownloadURL(ref);
   }
   const base64 = dataUrl.split(',')[1];
   if (!base64) throw new Error('Imagen inválida');
@@ -5016,7 +5032,115 @@ async function corregirPuestosLegacy() {
   }
 }
 
+/* ══ MIGRACIÓN DE PDFs PESADOS ═══════════════════════════════════
+   Antes, los PDFs se guardaban como base64 completo adentro del propio
+   documento de Firestore (colaboradores/locales). Eso es lo que hacía tan
+   lenta la carga inicial: cada apertura de la página bajaba TODOS los PDFs
+   de TODA la gente de una sola vez, aunque no se fueran a mirar.
+   Esta función busca esos PDFs viejos, los sube a Firebase Storage y
+   reemplaza el campo por la URL (mucho más liviano). Se puede correr las
+   veces que haga falta: si no encuentra nada para migrar, no hace nada. ══ */
+function _contarPdfsPesados() {
+  let n = 0;
+  colabs.forEach(c => {
+    if (Array.isArray(c.carpetas) && c.carpetas.length) {
+      c.carpetas.forEach(f => (f.urls||[]).forEach(u => { if (typeof u==='string' && u.startsWith('data:application/pdf')) n++; }));
+    } else {
+      Object.values(CARPETA_LEGACY_KEY).forEach(k => {
+        const raw = c[k];
+        if (Array.isArray(raw)) raw.forEach(u => { if (typeof u==='string' && u.startsWith('data:application/pdf')) n++; });
+        else if (typeof raw === 'string' && raw.startsWith('data:application/pdf')) n++;
+      });
+    }
+  });
+  locales.forEach(l => {
+    (Array.isArray(l.carpetas)?l.carpetas:[]).forEach(f => (f.urls||[]).forEach(u => { if (typeof u==='string' && u.startsWith('data:application/pdf')) n++; }));
+  });
+  return n;
+}
+
+async function migrarPdfsPesados() {
+  const total = _contarPdfsPesados();
+  if (!total) { toast('✓ No hay PDFs pesados para migrar, ya están todos en Storage'); return; }
+
+  const ok = await confirmar(
+    `Se encontraron ${total} PDF${total!==1?'s':''} guardados adentro de la base (esto es lo que hace lenta la carga). Se van a subir a Firebase Storage y reemplazar por su URL. Puede tardar unos minutos según cuántos sean. ¿Continuar?`,
+    'Migrar'
+  );
+  if (!ok) return;
+
+  showL();
+  let hechos = 0, errores = 0;
+  try {
+    for (const c of colabs) {
+      try {
+        let changed = false;
+        let patch = null;
+        if (Array.isArray(c.carpetas) && c.carpetas.length) {
+          const nuevas = [];
+          for (const f of c.carpetas) {
+            const urls = Array.isArray(f.urls) ? f.urls : [];
+            const nuevasUrls = [];
+            for (const u of urls) {
+              if (typeof u === 'string' && u.startsWith('data:application/pdf')) {
+                nuevasUrls.push(await subirDataUrlAImgBB(u));
+                changed = true; hechos++;
+              } else nuevasUrls.push(u);
+            }
+            nuevas.push({ ...f, urls: nuevasUrls });
+          }
+          if (changed) patch = { carpetas: nuevas };
+        } else {
+          const p = {};
+          for (const legacyKey of Object.values(CARPETA_LEGACY_KEY)) {
+            const raw = c[legacyKey];
+            if (Array.isArray(raw) && raw.length) {
+              const nuevos = []; let ch = false;
+              for (const u of raw) {
+                if (typeof u === 'string' && u.startsWith('data:application/pdf')) { nuevos.push(await subirDataUrlAImgBB(u)); ch = true; hechos++; }
+                else nuevos.push(u);
+              }
+              if (ch) { p[legacyKey] = nuevos; changed = true; }
+            } else if (typeof raw === 'string' && raw.startsWith('data:application/pdf')) {
+              p[legacyKey] = await subirDataUrlAImgBB(raw);
+              changed = true; hechos++;
+            }
+          }
+          if (changed) patch = p;
+        }
+        if (patch) await updateDoc(doc(db,'colaboradores',c.id), patch);
+      } catch(e) { errores++; }
+    }
+
+    for (const l of locales) {
+      try {
+        const carpetas = Array.isArray(l.carpetas) ? l.carpetas : [];
+        if (!carpetas.length) continue;
+        let changed = false;
+        const nuevas = [];
+        for (const f of carpetas) {
+          const urls = Array.isArray(f.urls) ? f.urls : [];
+          const nuevasUrls = [];
+          for (const u of urls) {
+            if (typeof u === 'string' && u.startsWith('data:application/pdf')) {
+              nuevasUrls.push(await subirDataUrlAImgBB(u));
+              changed = true; hechos++;
+            } else nuevasUrls.push(u);
+          }
+          nuevas.push({ ...f, urls: nuevasUrls });
+        }
+        if (changed) await updateDoc(doc(db,'locales',l.id), { carpetas: nuevas });
+      } catch(e) { errores++; }
+    }
+
+    toast(`✓ ${hechos} PDF${hechos!==1?'s':''} migrado${hechos!==1?'s':''} a Storage${errores?` (${errores} con error, reintentá)`:''}`);
+  } finally {
+    hideL();
+  }
+}
+
 function renderOrganigrama(local) {
+
   const el = document.getElementById('org-body');
   if (!local) { el.innerHTML = '<div class="org-empty">No hay locales cargados todavía</div>'; return; }
 
@@ -5603,7 +5727,7 @@ Object.assign(window, {
   filtrarFotoConfirmColab,
   mostrarPDFPrevio, _restoreImageModal,
   toggleDesvinculado, toggleDesvSection,
-  abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy,
+  abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
 });
 
 </script>

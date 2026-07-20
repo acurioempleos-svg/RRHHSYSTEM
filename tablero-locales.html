@@ -3390,7 +3390,7 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
     const arr     = current ? (Array.isArray(current)?[...current]:[current]) : [];
     const metaRaw = colab ? colab[key+'_meta'] : null;
     const metaArr = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
-    if (arr.length >= 10) { toast('Límite de 10 fotos por documento alcanzado'); return; }
+    if (arr.length >= 50) { toast('Límite de 50 fotos por documento alcanzado'); return; }
     arr.push(urlToSave);
     metaArr.push({ cargado_en: new Date().toISOString(), estado:'ok' });
     const update = { [key]:arr, [key+'_meta']:metaArr };
@@ -3665,7 +3665,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
   const carpetas = deepCarpetas(colab);
   const folder   = carpetas[folderIdx];
   if (!folder) return;
-  if ((folder.urls||[]).length >= 10) { toast('Límite de 10 fotos por carpeta'); return; }
+  if ((folder.urls||[]).length >= 50) { toast('Límite de 50 fotos por carpeta'); return; }
 
   folder.urls = [...(folder.urls||[]), url];
   folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok' }];
@@ -3925,7 +3925,7 @@ async function guardarFotoEnCarpetaLocal(localId, folderIdx, url, metaExtra) {
   const carpetas = getLocalCarpetas(localDoc).map(f => ({ ...f, urls:[...(f.urls||[])], meta:[...(f.meta||[])] }));
   const folder   = carpetas[folderIdx];
   if (!folder) return;
-  if ((folder.urls || []).length >= 20) { toast('Limite de 20 fotos por carpeta'); return; }
+  if ((folder.urls || []).length >= 50) { toast('Limite de 50 fotos por carpeta'); return; }
   folder.urls.push(url);
   folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', ...(metaExtra || {}) });
   const idx  = locales.findIndex(x => x.id === localId);
@@ -4212,12 +4212,12 @@ function renderCarousel() {
   const btnAgregar = document.getElementById('btn-agregar-fotos');
   if (btnAgregar) {
     const count = _prevUrls.length;
-    if (count >= 10) {
-      btnAgregar.textContent = `Límite alcanzado (10/10)`;
+    if (count >= 50) {
+      btnAgregar.textContent = `Límite alcanzado (50/50)`;
       btnAgregar.disabled = true;
       btnAgregar.style.opacity = '0.45';
     } else {
-      btnAgregar.textContent = `Agregar más fotos (${count}/10)`;
+      btnAgregar.textContent = `Agregar más fotos (${count}/50)`;
       btnAgregar.disabled = false;
       btnAgregar.style.opacity = '';
     }
@@ -4349,8 +4349,8 @@ function filtrarColabListDoc(q) {
 }
 
 function abrirReemplazo() {
-  if (_prevUrls.length >= 10) {
-    toast('Límite de 10 fotos por documento alcanzado');
+  if (_prevUrls.length >= 50) {
+    toast('Límite de 50 fotos por documento alcanzado');
     return;
   }
   closeSheet('preview-modal');
@@ -4722,9 +4722,9 @@ async function ocrConfirmar() {
   const metaRaw  = colab ? colab[docKey+'_meta'] : null;
   const metaArr  = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
   while (metaArr.length < arr.length) metaArr.push({});
-  if (arr.length >= 10) {
+  if (arr.length >= 50) {
     hideL();
-    toast('Límite de 10 fotos por documento alcanzado');
+    toast('Límite de 50 fotos por documento alcanzado');
     return;
   }
   arr.push(ocrDataUrl);
@@ -4954,7 +4954,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
         folder.meta[replaceIdx] = newEntry;
         delete activeTask._reemplazarIdx;
       } else {
-        if ((folder.urls||[]).length >= 10) { toast('Límite de 10 fotos por carpeta'); return; }
+        if ((folder.urls||[]).length >= 50) { toast('Límite de 50 fotos por carpeta'); return; }
         folder.urls.push(urlToSave);
         folder.meta.push(newEntry);
       }
@@ -4987,8 +4987,8 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
       metaArr[replaceIdx]  = newEntry;
       delete activeTask._reemplazarIdx;
     } else {
-      if (arr.length >= 10) {
-        toast('Límite de 10 fotos por documento alcanzado');
+      if (arr.length >= 50) {
+        toast('Límite de 50 fotos por documento alcanzado');
         return;
       }
       arr.push(urlToSave);
@@ -6247,6 +6247,7 @@ Object.assign(window, {
   toggleDesvinculado, setLocalTab,
   abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
   abrirFusion, fusFiltrar, fusElegirColab, fusQuitar, fusElegirCampo, confirmarFusion, fabAbrirFusion,
+  abrirSearch, buscarGlobal,
 });
 
 </script>

@@ -1053,6 +1053,13 @@ body {
   color:var(--muted); cursor:pointer; transition:all var(--t);
 }
 #vista-global-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
+#volver-index-btn {
+  width:34px; height:34px; border-radius:9px; flex-shrink:0;
+  background:var(--s1); border:1px solid var(--b1);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted); cursor:pointer; transition:all var(--t);
+}
+#volver-index-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
 
 /* ── Carousel new elements ──────────────────────────────────── */
 .car-img-wrap {
@@ -1914,6 +1921,9 @@ body {
 
 <!-- ══ TOPBAR ═══════════════════════════════════════════════════ -->
 <div id="topbar">
+  <button id="volver-index-btn" onclick="window.location.href='index.html'" title="Volver al inicio" style="margin-right:2px">
+    <svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-back"/></svg>
+  </button>
   <div class="logo">BC</div>
   <div class="topbar-brand">BC <em>Gestión</em></div>
   <div id="gs-wrap">
@@ -3441,6 +3451,9 @@ const CARPETAS_DEFAULT = [
   { nombre:'Suspensión',           emoji:'🚫' },
   { nombre:'Distinción',           emoji:'⭐' },
   { nombre:'Sanciones',            emoji:'⚖️' },
+  { nombre:'RECIBI',               emoji:'🧾' },
+  { nombre:'ANTECEDENTES PENALES', emoji:'🚔' },
+  { nombre:'UNIFORMES',            emoji:'👕' },
 ];
 
 function uidCarpeta() {
@@ -5225,7 +5238,8 @@ async function guardarNuevo() {
   const btn = document.querySelector('#nuevo-modal .btn-amber');
   if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
-    await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now() });
+    const carpetas = CARPETAS_DEFAULT.map(d => ({ id: uidCarpeta(), nombre: d.nombre, emoji: d.emoji, urls: [], meta: [] }));
+    await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now(), carpetas });
     closeSheet('nuevo-modal');
     toast(`✓ ${nombre} agregado`);
   } catch(e) { toast('Error: '+(e.code||e.message)); }
@@ -5251,7 +5265,8 @@ async function guardarNuevoColabOCR() {
   const btn = document.getElementById('nco-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   try {
-    const ref = await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now() });
+    const carpetas = CARPETAS_DEFAULT.map(d => ({ id: uidCarpeta(), nombre: d.nombre, emoji: d.emoji, urls: [], meta: [] }));
+    const ref = await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now(), carpetas });
     closeSheet('nuevo-colab-ocr-modal');
     toast(`✓ ${nombre} agregado`);
     // Volver al selector OCR con el nuevo colab ya seleccionado

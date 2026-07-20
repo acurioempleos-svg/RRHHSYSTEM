@@ -2887,15 +2887,18 @@ onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
 function renderStats() {
   const locs = new Set(colabs.map(c => c.local||'Sin Local')).size;
   const hoy  = new Date();
-  const venc = colabs.filter(c => c.vencimiento_salud && new Date(c.vencimiento_salud+'T00:00:00') < hoy).length;
+  const activos = colabs.filter(c => !c.desvinculado).length;
+  const bajas   = colabs.filter(c => !!c.desvinculado).length;
+  const venc = colabs.filter(c => !c.desvinculado && c.vencimiento_salud && new Date(c.vencimiento_salud+'T00:00:00') < hoy).length;
   const prox = colabs.filter(c => {
-    if (!c.vencimiento_salud) return false;
+    if (c.desvinculado || !c.vencimiento_salud) return false;
     const d = (new Date(c.vencimiento_salud+'T00:00:00') - hoy)/86400000;
     return d >= 0 && d < 30;
   }).length;
   document.getElementById('stats-strip').innerHTML = `
     <div class="stat-pill"><div class="sp-dot" style="background:var(--amber-hi)"></div><strong>${locs}</strong> locales</div>
-    <div class="stat-pill"><div class="sp-dot" style="background:var(--success)"></div><strong>${colabs.length}</strong> personas</div>
+    <div class="stat-pill"><div class="sp-dot" style="background:var(--success)"></div><strong>${activos}</strong> activos</div>
+    <div class="stat-pill"><div class="sp-dot" style="background:var(--faint)"></div><strong>${bajas}</strong> de baja</div>
     ${venc?`<div class="stat-pill" style="border-color:var(--d-brd)"><div class="sp-dot" style="background:var(--danger)"></div><strong>${venc}</strong> examen vencido</div>`:''}
     ${prox?`<div class="stat-pill" style="border-color:var(--amber-brd)"><div class="sp-dot" style="background:var(--amber-hi)"></div><strong>${prox}</strong> vencen pronto</div>`:''}
   `;

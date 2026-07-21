@@ -3907,8 +3907,8 @@ function renderCamposFormList() {
   if (!_ptCamposDraft.length) { cont.innerHTML = '<div class="pt-campos-empty">Sin campos — se guardará solo con la fecha de carga. Agregá campos como "Fecha de firma" o "Vencimiento".</div>'; return; }
   cont.innerHTML = _ptCamposDraft.map((cf, i) => `
     <div class="pt-campo-row">
-      <input class="f-input pt-campo-nombre" placeholder="Ej: Fecha de firma" value="${esc(cf.nombre)}" oninput="_ptCamposDraft[${i}].nombre=this.value">
-      <select class="f-input pt-campo-tipo" onchange="_ptCamposDraft[${i}].tipo=this.value">
+      <input class="f-input pt-campo-nombre" placeholder="Ej: Fecha de firma" value="${esc(cf.nombre)}" oninput="editarCampoDraftNombre(${i},this.value)">
+      <select class="f-input pt-campo-tipo" onchange="editarCampoDraftTipo(${i},this.value)">
         <option value="texto" ${cf.tipo === 'texto' ? 'selected' : ''}>Texto / descripción</option>
         <option value="fecha" ${cf.tipo === 'fecha' ? 'selected' : ''}>Fecha</option>
         <option value="vencimiento" ${cf.tipo === 'vencimiento' ? 'selected' : ''}>Fecha de vencimiento</option>
@@ -3917,6 +3917,8 @@ function renderCamposFormList() {
       <div class="pt-campo-del" onclick="quitarCampoForm(${i})" title="Quitar campo">✕</div>
     </div>`).join('');
 }
+function editarCampoDraftNombre(i, val) { if (_ptCamposDraft[i]) _ptCamposDraft[i].nombre = val; }
+function editarCampoDraftTipo(i, val)   { if (_ptCamposDraft[i]) _ptCamposDraft[i].tipo = val; }
 async function guardarPlantillaForm() {
   const nombre = document.getElementById('pt-nombre').value.trim();
   if (!nombre) { document.getElementById('pt-nombre').focus(); return; }
@@ -6582,6 +6584,9 @@ Object.assign(window, {
   abrirOrganigrama, cerrarOrganigrama, renderOrganigrama, corregirPuestosLegacy, migrarPdfsPesados,
   abrirFusion, fusFiltrar, fusElegirColab, fusQuitar, fusElegirCampo, confirmarFusion, fabAbrirFusion,
   abrirSearch, buscarGlobal,
+  abrirPlantillas, abrirFormPlantilla, cerrarFormPlantilla,
+  agregarCampoForm, quitarCampoForm, guardarPlantillaForm, eliminarPlantilla,
+  filtrarColabListCampo, editarCampoDraftNombre, editarCampoDraftTipo,
 });
 
 </script>

@@ -1882,6 +1882,42 @@ body {
 .meta-field-input:focus { border-color:var(--amber-brd); }
 .meta-field-input[type=date] { color-scheme:dark; }
 
+/* ══ PLANTILLAS DE CARPETA ═══════════════════════════════════════ */
+.pt-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; margin-bottom:7px;
+  background:var(--s2); border:1px solid var(--b0); border-radius:var(--r);
+}
+.pt-item-ico { font-size:17px; flex:0 0 auto; }
+.pt-item-body { flex:1; min-width:0; }
+.pt-item-name { font-family:'Syne',sans-serif; font-size:12px; font-weight:600; color:var(--text); }
+.pt-item-sub  { font-family:'DM Mono',monospace; font-size:8.5px; color:var(--faint); margin-top:2px; }
+.pt-item-btn {
+  width:26px; height:26px; border-radius:7px; flex:0 0 auto;
+  background:var(--s3); border:1px solid var(--b1); color:var(--muted);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:all var(--t);
+}
+.pt-item-btn:hover { border-color:var(--amber-brd); color:var(--amber-hi); }
+.pt-item-btn-del:hover { border-color:var(--d-brd); color:var(--danger); background:var(--d-dim); }
+.pt-campos-empty {
+  font-family:'DM Mono',monospace; font-size:9px; color:var(--faint);
+  padding:8px 0;
+}
+.pt-campo-row {
+  display:flex; align-items:center; gap:6px; margin-bottom:6px;
+}
+.pt-campo-row .pt-campo-nombre { flex:1; min-width:0; margin-bottom:0; }
+.pt-campo-row .pt-campo-tipo { flex:0 0 128px; margin-bottom:0; }
+.pt-campo-del {
+  flex:0 0 auto; width:24px; height:24px; border-radius:6px;
+  background:var(--s3); border:1px solid var(--b1); color:var(--muted);
+  cursor:pointer; font-size:11px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:all var(--t);
+}
+.pt-campo-del:hover { border-color:var(--d-brd); color:var(--danger); background:var(--d-dim); }
+
 /* Celdas editables planilla */
 .pl-cell-edit {
   background: none; border: none; outline: none;
@@ -2185,18 +2221,8 @@ body {
     <div class="sheet-body">
       <div id="prev-carousel" style="margin-bottom:8px"></div>
       <div id="prev-nav" style="display:flex;gap:5px;justify-content:center;margin-bottom:10px"></div>
-      <!-- Metadata extendida: fecha recibido + colaborador -->
-      <div class="meta-fields" id="doc-meta-fields" style="display:none">
-        <div class="meta-field-row">
-          <span class="meta-field-lbl">FECHA RECIBIDO</span>
-          <input type="date" class="meta-field-input" id="dmf-fecha-recibido" style="color-scheme:dark" onchange="guardarMetaDoc()">
-        </div>
-        <div class="meta-field-row">
-          <span class="meta-field-lbl">COLABORADOR</span>
-          <input type="text" class="meta-field-input" id="dmf-colaborador" placeholder="Nombre o DNI" list="dmf-colab-list" onchange="guardarMetaDoc()" oninput="filtrarColabListDoc(this.value)">
-          <datalist id="dmf-colab-list"></datalist>
-        </div>
-      </div>
+      <!-- Metadata extendida: dinámica según los campos de la carpeta/plantilla -->
+      <div class="meta-fields" id="doc-meta-fields" style="display:none"></div>
       <button class="btn btn-amber" id="btn-agregar-fotos" style="margin-bottom:7px" onclick="abrirReemplazo()">Agregar más fotos</button>
       <button class="btn btn-danger" style="margin-bottom:7px" onclick="abrirConfirmDelete()">Eliminar todo el documento</button>
       <button class="btn btn-ghost" onclick="closeSheet('preview-modal')">Cerrar</button>
@@ -2214,6 +2240,8 @@ body {
     </div>
     <div class="sheet-body">
       <div class="f-field"><label class="f-label">Nombre de la carpeta</label><input class="f-input" id="nc-nombre" placeholder="Ej: DNI Frente, Contrato, Libreta2026" maxlength="60" onkeydown="if(event.key==='Enter')guardarNuevaCarpeta()"></div>
+      <div class="f-field"><label class="f-label">Plantilla (opcional)</label><select class="f-input" id="nc-plantilla"></select></div>
+      <button class="btn btn-ghost" style="margin-bottom:7px" onclick="closeSheet('nueva-carpeta-modal');abrirPlantillas()">⚙ Gestionar plantillas</button>
       <button class="btn btn-amber" id="nc-btn" onclick="guardarNuevaCarpeta()">Crear carpeta</button>
       <button class="btn btn-ghost" onclick="closeSheet('nueva-carpeta-modal')">Cancelar</button>
     </div>
@@ -2232,6 +2260,34 @@ body {
       <div class="f-field"><label class="f-label">Nombre de la carpeta</label><input class="f-input" id="ncl-nombre" placeholder="Ej: Contratos, Habilitaciones, Seguros" maxlength="60" onkeydown="if(event.key===&#39;Enter&#39;)guardarNuevaCarpetaLocal()"></div>
       <button class="btn btn-amber" id="ncl-btn" onclick="guardarNuevaCarpetaLocal()">Crear carpeta</button>
       <button class="btn btn-ghost" onclick="closeSheet('nueva-carpeta-local-modal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Plantillas de carpeta modal -->
+<div id="plantillas-modal" class="overlay" onclick="if(event.target===this)closeSheet('plantillas-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Plantillas de carpeta</div>
+      <div class="sheet-x" onclick="closeSheet('plantillas-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div id="pt-list-view">
+        <div id="pt-list"></div>
+        <button class="btn btn-amber" style="margin-top:2px" onclick="abrirFormPlantilla()">+ Nueva plantilla</button>
+      </div>
+      <div id="pt-form-view" style="display:none">
+        <div class="f-field"><label class="f-label">Nombre de la plantilla</label><input class="f-input" id="pt-nombre" placeholder="Ej: Contrato laboral" maxlength="60"></div>
+        <div class="f-field"><label class="f-label">Ícono (emoji)</label><input class="f-input" id="pt-emoji" placeholder="📁" maxlength="4" style="max-width:80px"></div>
+        <div class="f-field">
+          <label class="f-label">Campos por imagen cargada</label>
+          <div id="pt-campos-list"></div>
+          <button class="btn btn-ghost" style="margin-top:2px" onclick="agregarCampoForm()">+ Agregar campo</button>
+        </div>
+        <button class="btn btn-amber" id="pt-save-btn" style="margin-top:6px" onclick="guardarPlantillaForm()">Guardar plantilla</button>
+        <button class="btn btn-ghost" onclick="cerrarFormPlantilla()">Volver</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2640,7 +2696,7 @@ body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch, enableIndexedDbPersistence, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 /* ══ FIREBASE ═══════════════════════════════════════════════════ */
 const firebaseConfig = {
@@ -2897,6 +2953,16 @@ onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
   _renderScheduler.schedule('stats', 'board', 'alertas', 'local');
   _cargaInicialColabs = true;
   _chequearCargaInicial();
+});
+
+// Listener de plantillas de carpeta (diseños reutilizables de campos de metadata)
+let plantillasCarpeta = [];
+onSnapshot(doc(db,'config','carpetaPlantillas'), snap => {
+  plantillasCarpeta = (snap.exists() && Array.isArray(snap.data().lista)) ? snap.data().lista : [];
+  const ptModal = document.getElementById('plantillas-modal');
+  if (ptModal && ptModal.classList.contains('open') && document.getElementById('pt-form-view')?.style.display === 'none') {
+    renderPlantillasList();
+  }
 });
 
 /* ══ STATS ══════════════════════════════════════════════════════ */
@@ -3722,15 +3788,36 @@ let _nuevaCarpetaColabId = null;
 function abrirNuevaCarpeta(colabId) {
   _nuevaCarpetaColabId = colabId;
   $('nc-nombre').value = '';
+  poblarSelectPlantillas('nc-plantilla');
+  $('nc-plantilla').value = '';
   openSheet('nueva-carpeta-modal');
   requestAnimationFrame(() => $('nc-nombre')?.focus());
+}
+// Llena un <select> con las plantillas guardadas + opción "sin plantilla"
+function poblarSelectPlantillas(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Sin plantilla (carpeta simple)</option>' +
+    plantillasCarpeta.map(p => `<option value="${p.id}">${esc(p.emoji || '📁')} ${esc(p.nombre)}</option>`).join('');
+  sel.onchange = () => {
+    const p = plantillasCarpeta.find(x => x.id === sel.value);
+    if (p && !$('nc-nombre').value.trim()) $('nc-nombre').value = p.nombre;
+  };
 }
 async function guardarNuevaCarpeta() {
   const nombre = document.getElementById('nc-nombre').value.trim();
   if (!nombre) { document.getElementById('nc-nombre').focus(); return; }
+  const plantillaId = document.getElementById('nc-plantilla')?.value || '';
+  const plantilla    = plantillaId ? plantillasCarpeta.find(p => p.id === plantillaId) : null;
   const colab = getColab(_nuevaCarpetaColabId);
   const carpetas = [...getCarpetas(colab)];
-  carpetas.push({ id: uidCarpeta(), nombre, emoji: '📁', urls: [], meta: [] });
+  carpetas.push({
+    id: uidCarpeta(), nombre,
+    emoji: plantilla?.emoji || '📁',
+    urls: [], meta: [],
+    campos: plantilla ? plantilla.campos.map(c => ({ ...c })) : [],
+    plantillaId: plantilla?.id || null,
+  });
   const idx = colabs.findIndex(x => x.id === _nuevaCarpetaColabId);
   const prev = idx !== -1 ? { ...colabs[idx] } : null;
   if (idx !== -1) colabs[idx] = { ...colabs[idx], carpetas };
@@ -3760,6 +3847,104 @@ async function eliminarCarpeta(colabId, folderIdx) {
       if (idx !== -1 && prev) { colabs[idx] = prev; if (currentLocal) renderLocal(currentLocal, localQ); }
       toast('Error al eliminar: ' + (e.code || e.message));
     });
+}
+
+/* ══ PLANTILLAS DE CARPETA (diseños reutilizables) ══════════════ */
+let _ptEditId = null;
+let _ptCamposDraft = [];
+
+function abrirPlantillas() {
+  document.getElementById('pt-list-view').style.display = 'block';
+  document.getElementById('pt-form-view').style.display = 'none';
+  renderPlantillasList();
+  openSheet('plantillas-modal');
+}
+function renderPlantillasList() {
+  const cont = document.getElementById('pt-list');
+  if (!cont) return;
+  if (!plantillasCarpeta.length) { cont.innerHTML = '<div class="lf-empty">Sin plantillas aún.</div>'; return; }
+  cont.innerHTML = plantillasCarpeta.map(p => `
+    <div class="pt-item">
+      <div class="pt-item-ico">${esc(p.emoji || '📁')}</div>
+      <div class="pt-item-body">
+        <div class="pt-item-name">${esc(p.nombre)}</div>
+        <div class="pt-item-sub">${(p.campos || []).length} campo${(p.campos || []).length === 1 ? '' : 's'}</div>
+      </div>
+      <div class="pt-item-btn" onclick="abrirFormPlantilla('${p.id}')" title="Editar">
+        <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-edit"/></svg>
+      </div>
+      <div class="pt-item-btn pt-item-btn-del" onclick="eliminarPlantilla('${p.id}')" title="Eliminar">
+        <svg width="12" height="12" viewBox="0 0 24 24"><use href="#ic-trash"/></svg>
+      </div>
+    </div>`).join('');
+}
+function abrirFormPlantilla(id) {
+  _ptEditId = id || null;
+  const p = id ? plantillasCarpeta.find(x => x.id === id) : null;
+  document.getElementById('pt-nombre').value = p ? p.nombre : '';
+  document.getElementById('pt-emoji').value  = p ? (p.emoji || '') : '';
+  _ptCamposDraft = p ? p.campos.map(c => ({ ...c })) : [];
+  renderCamposFormList();
+  document.getElementById('pt-list-view').style.display = 'none';
+  document.getElementById('pt-form-view').style.display = 'block';
+}
+function cerrarFormPlantilla() {
+  document.getElementById('pt-form-view').style.display = 'none';
+  document.getElementById('pt-list-view').style.display = 'block';
+  renderPlantillasList();
+}
+function agregarCampoForm() {
+  _ptCamposDraft.push({ id: uidCarpeta(), nombre: '', tipo: 'texto' });
+  renderCamposFormList();
+}
+function quitarCampoForm(i) {
+  _ptCamposDraft.splice(i, 1);
+  renderCamposFormList();
+}
+function renderCamposFormList() {
+  const cont = document.getElementById('pt-campos-list');
+  if (!cont) return;
+  if (!_ptCamposDraft.length) { cont.innerHTML = '<div class="pt-campos-empty">Sin campos — se guardará solo con la fecha de carga. Agregá campos como "Fecha de firma" o "Vencimiento".</div>'; return; }
+  cont.innerHTML = _ptCamposDraft.map((cf, i) => `
+    <div class="pt-campo-row">
+      <input class="f-input pt-campo-nombre" placeholder="Ej: Fecha de firma" value="${esc(cf.nombre)}" oninput="_ptCamposDraft[${i}].nombre=this.value">
+      <select class="f-input pt-campo-tipo" onchange="_ptCamposDraft[${i}].tipo=this.value">
+        <option value="texto" ${cf.tipo === 'texto' ? 'selected' : ''}>Texto / descripción</option>
+        <option value="fecha" ${cf.tipo === 'fecha' ? 'selected' : ''}>Fecha</option>
+        <option value="vencimiento" ${cf.tipo === 'vencimiento' ? 'selected' : ''}>Fecha de vencimiento</option>
+        <option value="colaborador" ${cf.tipo === 'colaborador' ? 'selected' : ''}>Colaborador (@)</option>
+      </select>
+      <div class="pt-campo-del" onclick="quitarCampoForm(${i})" title="Quitar campo">✕</div>
+    </div>`).join('');
+}
+async function guardarPlantillaForm() {
+  const nombre = document.getElementById('pt-nombre').value.trim();
+  if (!nombre) { document.getElementById('pt-nombre').focus(); return; }
+  const emoji  = document.getElementById('pt-emoji').value.trim() || '📁';
+  const campos = _ptCamposDraft.filter(c => c.nombre.trim()).map(c => ({ id: c.id, nombre: c.nombre.trim(), tipo: c.tipo }));
+  const btn = document.getElementById('pt-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    let lista = [...plantillasCarpeta];
+    if (_ptEditId) lista = lista.map(p => p.id === _ptEditId ? { ...p, nombre, emoji, campos } : p);
+    else            lista.push({ id: uidCarpeta(), nombre, emoji, campos });
+    await setDoc(doc(db, 'config', 'carpetaPlantillas'), { lista });
+    toast('✓ Plantilla guardada');
+    cerrarFormPlantilla();
+  } catch (e) { toast('Error: ' + (e.code || e.message)); }
+  finally { btn.disabled = false; btn.textContent = 'Guardar plantilla'; }
+}
+async function eliminarPlantilla(id) {
+  const p = plantillasCarpeta.find(x => x.id === id);
+  if (!p) return;
+  const ok = await confirmar(`¿Eliminar la plantilla "${p.nombre}"? Las carpetas ya creadas con ella no se modifican.`, 'Eliminar');
+  if (!ok) return;
+  try {
+    const lista = plantillasCarpeta.filter(x => x.id !== id);
+    await setDoc(doc(db, 'config', 'carpetaPlantillas'), { lista });
+    toast('Plantilla eliminada');
+    renderPlantillasList();
+  } catch (e) { toast('Error: ' + (e.code || e.message)); }
 }
 
 /* ══ CARPETAS DEL LOCAL ══════════════════════════════════════════ */
@@ -4246,16 +4431,81 @@ function renderCarousel() {
   if (metaFields) {
     const isFolder = activeTask?.type === '__folder__';
     metaFields.style.display = isFolder ? 'flex' : 'none';
-    if (isFolder) {
-      const m = _prevMeta[_prevIdx] || {};
-      const fecEl = document.getElementById('dmf-fecha-recibido');
-      const colEl = document.getElementById('dmf-colaborador');
-      if (fecEl) fecEl.value = m.fecha_recibido || '';
-      if (colEl) colEl.value = m.colaborador || '';
-      const dl = document.getElementById('dmf-colab-list');
-      if (dl && !dl.children.length) dl.innerHTML = colabs.map(c => '<option value="' + esc(c.nombre) + '">').join('');
-    }
+    if (isFolder) renderMetaFieldsUI();
   }
+}
+
+// Devuelve la definición de campos (de la plantilla) de la carpeta actualmente abierta
+function getActiveFolderCampos() {
+  if (!activeTask || activeTask.type !== '__folder__') return [];
+  const colab = getColab(activeTask.id);
+  if (!colab) return [];
+  const f = getCarpetas(colab)[activeTask.folderIdx];
+  return (f && Array.isArray(f.campos)) ? f.campos : [];
+}
+
+// Renderiza los inputs de metadata según los campos definidos en la carpeta.
+// Si la carpeta no tiene campos (carpeta "simple", sin plantilla) usa el par legacy
+// fecha recibido + colaborador, tal cual funcionaba antes.
+function renderMetaFieldsUI() {
+  const cont = document.getElementById('doc-meta-fields');
+  if (!cont) return;
+  const campos = getActiveFolderCampos();
+  const m = _prevMeta[_prevIdx] || {};
+
+  if (!campos.length) {
+    cont.innerHTML = `
+      <div class="meta-field-row">
+        <span class="meta-field-lbl">FECHA RECIBIDO</span>
+        <input type="date" class="meta-field-input" id="dmf-fecha-recibido" style="color-scheme:dark" onchange="guardarMetaDoc()">
+      </div>
+      <div class="meta-field-row">
+        <span class="meta-field-lbl">COLABORADOR</span>
+        <input type="text" class="meta-field-input" id="dmf-colaborador" placeholder="Nombre o DNI" list="dmf-colab-list" onchange="guardarMetaDoc()" oninput="filtrarColabListDoc(this.value)">
+        <datalist id="dmf-colab-list"></datalist>
+      </div>`;
+    document.getElementById('dmf-fecha-recibido').value = m.fecha_recibido || '';
+    document.getElementById('dmf-colaborador').value = m.colaborador || '';
+    const dl = document.getElementById('dmf-colab-list');
+    if (dl) dl.innerHTML = colabs.map(c => '<option value="' + esc(c.nombre) + '">').join('');
+    return;
+  }
+
+  const valores = m.valores || {};
+  cont.innerHTML = campos.map(cf => {
+    const lbl = esc((cf.nombre || '').toUpperCase()) + (cf.tipo === 'vencimiento' ? ' ⏰' : '');
+    if (cf.tipo === 'colaborador') {
+      return `<div class="meta-field-row">
+        <span class="meta-field-lbl">${lbl}</span>
+        <input type="text" class="meta-field-input" data-campo="${cf.id}" placeholder="Nombre o DNI" list="dmf-colab-list-${cf.id}" onchange="guardarMetaDoc()" oninput="filtrarColabListCampo('${cf.id}',this.value)">
+        <datalist id="dmf-colab-list-${cf.id}"></datalist>
+      </div>`;
+    }
+    if (cf.tipo === 'fecha' || cf.tipo === 'vencimiento') {
+      return `<div class="meta-field-row">
+        <span class="meta-field-lbl">${lbl}</span>
+        <input type="date" class="meta-field-input" data-campo="${cf.id}" style="color-scheme:dark" onchange="guardarMetaDoc()">
+      </div>`;
+    }
+    return `<div class="meta-field-row">
+      <span class="meta-field-lbl">${lbl}</span>
+      <input type="text" class="meta-field-input" data-campo="${cf.id}" onchange="guardarMetaDoc()">
+    </div>`;
+  }).join('');
+
+  campos.forEach(cf => {
+    const el = cont.querySelector(`[data-campo="${cf.id}"]`);
+    if (el) el.value = valores[cf.id] || '';
+    if (cf.tipo === 'colaborador') filtrarColabListCampo(cf.id, '');
+  });
+}
+
+function filtrarColabListCampo(campoId, q) {
+  const dl = document.getElementById('dmf-colab-list-' + campoId);
+  if (!dl) return;
+  const lq = q.toLowerCase();
+  const filtered = lq ? colabs.filter(c => (c.nombre || '').toLowerCase().includes(lq) || (c.dni_nro || '').includes(lq)) : colabs;
+  dl.innerHTML = filtered.slice(0, 30).map(c => '<option value="' + esc(c.nombre) + '">').join('');
 }
 function prevGoto(i) {
   _prevIdx = i;
@@ -4343,13 +4593,25 @@ async function ciclarEstadoDoc() {
   } catch(e) { toast('Error: '+(e.code||e.message)); }
 }
 
-// Guardar metadata (fecha_recibido + colaborador) en carpeta de colaborador
+// Guardar metadata en carpeta de colaborador — legacy (fecha_recibido/colaborador)
+// o dinámica según los campos de la plantilla de la carpeta
 async function guardarMetaDoc() {
   if (!activeTask || activeTask.type !== '__folder__') return;
-  const fechaRec = document.getElementById('dmf-fecha-recibido')?.value || '';
-  const colab_nm = document.getElementById('dmf-colaborador')?.value.trim() || '';
-  const newMeta  = [..._prevMeta];
-  newMeta[_prevIdx] = { ...newMeta[_prevIdx], fecha_recibido: fechaRec, colaborador: colab_nm };
+  const campos  = getActiveFolderCampos();
+  const newMeta = [..._prevMeta];
+  let entry = { ...(newMeta[_prevIdx] || {}) };
+  if (!campos.length) {
+    entry.fecha_recibido = document.getElementById('dmf-fecha-recibido')?.value || '';
+    entry.colaborador    = document.getElementById('dmf-colaborador')?.value.trim() || '';
+  } else {
+    const valores = { ...(entry.valores || {}) };
+    campos.forEach(cf => {
+      const el = document.querySelector(`#doc-meta-fields [data-campo="${cf.id}"]`);
+      valores[cf.id] = el ? el.value.trim() : '';
+    });
+    entry.valores = valores;
+  }
+  newMeta[_prevIdx] = entry;
   _prevMeta = newMeta;
   try {
     const colab    = getColab(activeTask.id);
@@ -5339,6 +5601,23 @@ function buildAlertas() {
     const carg=ALL_DOCS.filter(d=>c[d.key]).length;
     if (carg===0)                   alerts.push({ type:'warn', icon:'📂', title:`Legajo vacío · ${c.nombre}`, sub:`${c.puesto||''} · ${c.local||''}`, pill:'Incompleto' });
     else if (carg<ALL_DOCS.length*.5) alerts.push({ type:'info', icon:'📋', title:`Legajo incompleto · ${c.nombre}`, sub:`${carg}/${ALL_DOCS.length} docs · ${c.local||''}`, pill:'Info' });
+
+    // Vencimientos definidos en campos de plantilla dentro de las carpetas del colaborador
+    getCarpetas(c).forEach(f => {
+      const camposVenc = (f.campos || []).filter(cf => cf.tipo === 'vencimiento');
+      if (!camposVenc.length) return;
+      (f.meta || []).forEach(m => {
+        camposVenc.forEach(cf => {
+          const val = m.valores && m.valores[cf.id];
+          if (!val) return;
+          const d = (new Date(val + 'T00:00:00') - hoy) / 86400000;
+          const etiqueta = `${f.nombre} · ${cf.nombre}`;
+          if (d < 0)       alerts.push({ type:'crit', icon:'⏰', title:`${etiqueta} vencido · ${c.nombre}`, sub:`Hace ${Math.abs(Math.ceil(d))} días · ${c.local||''}`, pill:'Crítico' });
+          else if (d < 7)  alerts.push({ type:'crit', icon:'⚠️', title:`${etiqueta} vence en ${Math.ceil(d)}d · ${c.nombre}`, sub:c.local||'', pill:'Urgente' });
+          else if (d < 30) alerts.push({ type:'warn', icon:'⏰', title:`${etiqueta} próximo · ${c.nombre}`, sub:`${Math.ceil(d)} días · ${c.local||''}`, pill:'Próximo' });
+        });
+      });
+    });
   });
   return alerts;
 }

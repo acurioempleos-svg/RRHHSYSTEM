@@ -5016,6 +5016,10 @@ function stopCamera() {
 }
 function capturePhoto() {
   const v = document.getElementById('video');
+  if (!v.videoWidth || !v.videoHeight) {
+    toast('⏳ La cámara todavía está iniciando, esperá un segundo e intentá de nuevo');
+    return;
+  }
   const canvas = document.getElementById('canvas');
   const ratio  = Math.min(1, 1200/Math.max(v.videoWidth, v.videoHeight));
   canvas.width = Math.round(v.videoWidth*ratio); canvas.height = Math.round(v.videoHeight*ratio);
@@ -5047,9 +5051,14 @@ function procesarArchivo(e) {
     reader.readAsDataURL(file);
   } else {
     comprimirImagenDataUrl(file).then(dataUrl => {
-      _pendingDataUrl = dataUrl;
-      _pendingSource  = 'direct';
-      mostrarFotoPrevia(dataUrl);
+      // Verificar que el navegador realmente pueda decodificar/mostrar
+      // el resultado (ej. fotos HEIC de iPhone que a veces no se pueden
+      // ni previsualizar en Android/Chrome). Si falla, avisar en vez de
+      // dejar la pantalla en blanco sin explicación.
+      const test = new Image();
+      test.onload  = () => { _pendingDataUrl = dataUrl; _pendingSource = 'direct'; mostrarFotoPrevia(dataUrl); };
+      test.onerror = () => toast('⚠ Este formato de foto no es compatible con este navegador. Probá sacarla directo con la cámara de la app, o convertirla a JPG antes de subirla.');
+      test.src = dataUrl;
     }).catch(() => toast('⚠ No se pudo leer la imagen'));
   }
   document.getElementById('file-input').value = '';
@@ -6546,4 +6555,3 @@ Object.assign(window, {
 </script>
 </body>
 </html>
-  

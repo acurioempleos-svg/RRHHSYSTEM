@@ -6283,6 +6283,15 @@ function toast(msg) {
   el.textContent=msg; el.classList.add('on');
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('on'),2800);
 }
+// ── Atrapa-errores temporal para diagnóstico ──
+// Muestra cualquier error inesperado en un alert (no un toast que
+// desaparece solo) para poder leerlo/sacarle foto sin usar consola.
+window.addEventListener('error', (e) => {
+  alert('ERROR JS: ' + (e.message || e.error) + '\n' + (e.filename ? `(${e.filename}:${e.lineno})` : ''));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  alert('ERROR PROMESA: ' + (e.reason?.message || e.reason));
+});
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }

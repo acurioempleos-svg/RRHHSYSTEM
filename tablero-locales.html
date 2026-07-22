@@ -2765,6 +2765,41 @@ async function subirDataUrlAImgBB(dataUrl, intento = 0) {
   }
 }
 
+/* ── Comprime una imagen a data URL, con fallback robusto ──
+   Antes: si el navegador no podía decodificar la imagen (formato raro,
+   HEIC no soportado, canvas que sale de 0x0 por alguna falla del
+   decoder, etc.) el data URL quedaba vacío y ImgBB tiraba "Imagen
+   inválida" sin subir nada. Ahora, ante cualquier falla de compresión,
+   se usa la imagen original sin comprimir en vez de fallar. */
+function comprimirImagenDataUrl(file, maxDim = 1200, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.onload = ev => {
+      const original = ev.target.result;
+      const img = new Image();
+      img.onerror = () => resolve(original); // no se pudo decodificar → usar original
+      img.onload = () => {
+        try {
+          if (!img.width || !img.height) { resolve(original); return; }
+          const canvas = document.createElement('canvas');
+          const ratio  = Math.min(1, maxDim / Math.max(img.width, img.height));
+          canvas.width  = Math.round(img.width * ratio);
+          canvas.height = Math.round(img.height * ratio);
+          if (!canvas.width || !canvas.height) { resolve(original); return; }
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const out = canvas.toDataURL('image/jpeg', quality);
+          resolve((out && out.split(',')[1]) ? out : original);
+        } catch (e) {
+          resolve(original); // canvas tainted u otro error → usar original
+        }
+      };
+      img.src = original;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /* ══ STORE — estado centralizado ════════════════════════════════
    Un objeto con getters/setters.  Toda mutación pasa por aquí, lo
    que hace que sea fácil rastrear quién cambia qué y agregar lógica
@@ -3413,27 +3448,9 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
   activeTask = { id, type:key, label, askFecha, askRangoFechas };
 
   // 1. Comprimir imagen (los PDF se leen directo, sin canvas)
-  const dataUrl = await new Promise(res => {
-    const reader = new FileReader();
-    if (file.type === 'application/pdf') {
-      reader.onload = ev => res(ev.target.result);
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = ev => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-          canvas.width  = Math.round(img.width*ratio);
-          canvas.height = Math.round(img.height*ratio);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          res(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+  const dataUrl = file.type === 'application/pdf'
+    ? await new Promise(res => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.readAsDataURL(file); })
+    : await comprimirImagenDataUrl(file);
 
   // 2. Preview optimista inmediato
   if (blk) {
@@ -3681,27 +3698,9 @@ async function handleFolderDrop(event, colabId, folderIdx) {
   activeTask = { id: colabId, type: '__folder__', folderIdx };
 
   // Comprimir (los PDF se leen directo, sin canvas)
-  const dataUrl = await new Promise(res => {
-    const reader = new FileReader();
-    if (file.type === 'application/pdf') {
-      reader.onload = ev => res(ev.target.result);
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = ev => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-          canvas.width  = Math.round(img.width*ratio);
-          canvas.height = Math.round(img.height*ratio);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          res(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+  const dataUrl = file.type === 'application/pdf'
+    ? await new Promise(res => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.readAsDataURL(file); })
+    : await comprimirImagenDataUrl(file);
 
   // Preview optimista
   if (blk) {
@@ -4095,27 +4094,9 @@ async function handleLocalFolderDrop(event, localId, folderIdx) {
   if (!localDoc) return;
   activeTask = { id: '__local__', localId, folderIdx, type: '__local_folder__', label: '' };
 
-  const dataUrl = await new Promise(res => {
-    const reader = new FileReader();
-    if (file.type === 'application/pdf') {
-      reader.onload = ev => res(ev.target.result);
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = ev => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-          canvas.width  = Math.round(img.width*ratio);
-          canvas.height = Math.round(img.height*ratio);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          res(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+  const dataUrl = file.type === 'application/pdf'
+    ? await new Promise(res => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.readAsDataURL(file); })
+    : await comprimirImagenDataUrl(file);
   try {
     showL();
     const urlToSave = await subirDataUrlAImgBB(dataUrl);
@@ -4859,23 +4840,12 @@ function procesarArchivoOCR(e) {
   const file = e.target.files[0];
   if (!file) return;
   closeSheet('choice-ocr-modal');
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('file-input-ocr').value = '';
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.getElementById('canvas');
-      const ratio  = Math.min(1, 1600/Math.max(img.width, img.height));
-      canvas.width  = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
-      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-      _pendingDataUrl = dataUrl;
-      _pendingSource  = 'ocr';
-      mostrarFotoPrevia(dataUrl);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  document.getElementById('file-input-ocr').value = '';
+  comprimirImagenDataUrl(file, 1600, 0.88).then(dataUrl => {
+    _pendingDataUrl = dataUrl;
+    _pendingSource  = 'ocr';
+    mostrarFotoPrevia(dataUrl);
+  }).catch(() => toast('⚠ No se pudo leer la imagen'));
 }
 function lanzarCamaraOCR() {
   closeSheet('choice-ocr-modal');
@@ -5082,21 +5052,11 @@ function procesarArchivo(e) {
     };
     reader.readAsDataURL(file);
   } else {
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.getElementById('canvas');
-        const ratio  = Math.min(1, 1200/Math.max(img.width, img.height));
-        canvas.width = Math.round(img.width*ratio); canvas.height = Math.round(img.height*ratio);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-        _pendingDataUrl = dataUrl;
-        _pendingSource  = 'direct';
-        mostrarFotoPrevia(dataUrl);
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+    comprimirImagenDataUrl(file).then(dataUrl => {
+      _pendingDataUrl = dataUrl;
+      _pendingSource  = 'direct';
+      mostrarFotoPrevia(dataUrl);
+    }).catch(() => toast('⚠ No se pudo leer la imagen'));
   }
   document.getElementById('file-input').value = '';
   closeSheet('choice-modal');

@@ -2738,27 +2738,21 @@ function puestoOptions(selected){
     PUESTOS.map(p => `<option value="${esc(p)}"${p===selected?' selected':''}>${esc(p)}</option>`).join('');
 }
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
-  // Los PDFs no son aceptados por ImgBB → van a Firebase Storage (ya está el
-  // bucket configurado). Antes se guardaba el data URL completo adentro del
-  // documento de Firestore, y eso es lo que hacía tan lenta la carga inicial:
-  // cada apertura de la página bajaba TODOS los PDFs de TODOS los colaboradores.
-  if (dataUrl.startsWith('data:application/pdf')) {
-    const path = `carpetas-pdf/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.pdf`;
-    const ref  = storageRef(storage, path);
+  // Antes las imágenes se subían a ImgBB (servicio externo con API key
+  // expuesta en el código) y solo los PDFs iban a Firebase Storage. La key
+  // de ImgBB empezó a fallar ("Imagen inválida" / rechazos), así que ahora
+  // TODO (imágenes y PDFs) va directo a Firebase Storage, que ya está
+  // configurado y funcionando para los PDFs.
+  const esPdf   = dataUrl.startsWith('data:application/pdf');
+  const base64  = dataUrl.split(',')[1];
+  if (!base64) throw new Error('Imagen inválida');
+  const carpeta = esPdf ? 'carpetas-pdf' : 'carpetas-fotos';
+  const ext     = esPdf ? 'pdf' : 'jpg';
+  const path    = `${carpeta}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  try {
+    const ref = storageRef(storage, path);
     await uploadString(ref, dataUrl, 'data_url');
     return await getDownloadURL(ref);
-  }
-  const base64 = dataUrl.split(',')[1];
-  if (!base64) throw new Error('Imagen inválida');
-  const form = new FormData();
-  form.append('key', IMGBB_KEY);
-  form.append('image', base64);
-  try {
-    const res  = await fetch('https://api.imgbb.com/1/upload', { method:'POST', body:form });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error?.message || 'ImgBB falló');
-    return json.data.url;
   } catch(e) {
     if (intento === 0) return subirDataUrlAImgBB(dataUrl, 1); // 1 reintento
     throw e;
@@ -6552,3 +6546,4 @@ Object.assign(window, {
 </script>
 </body>
 </html>
+  

@@ -2737,22 +2737,24 @@ function puestoOptions(selected){
   return '<option value="">Seleccionar puesto…</option>' +
     PUESTOS.map(p => `<option value="${esc(p)}"${p===selected?' selected':''}>${esc(p)}</option>`).join('');
 }
+/* Firebase Storage requiere ahora plan Blaze (con tarjeta) para escribir,
+   así que las subidas van a Cloudinary (unsigned upload, plan gratis). */
+const CLOUDINARY_CLOUD_NAME = 'dqar21few';
+const CLOUDINARY_PRESET     = 'rrhhsystem2.0';
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
-  // Antes las imágenes se subían a ImgBB (servicio externo con API key
-  // expuesta en el código) y solo los PDFs iban a Firebase Storage. La key
-  // de ImgBB empezó a fallar ("Imagen inválida" / rechazos), así que ahora
-  // TODO (imágenes y PDFs) va directo a Firebase Storage, que ya está
-  // configurado y funcionando para los PDFs.
-  const esPdf   = dataUrl.startsWith('data:application/pdf');
-  const base64  = dataUrl.split(',')[1];
+  const base64 = dataUrl.split(',')[1];
   if (!base64) throw new Error('Imagen inválida');
-  const carpeta = esPdf ? 'carpetas-pdf' : 'carpetas-fotos';
-  const ext     = esPdf ? 'pdf' : 'jpg';
-  const path    = `${carpeta}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.${ext}`;
   try {
-    const ref = storageRef(storage, path);
-    await uploadString(ref, dataUrl, 'data_url');
-    return await getDownloadURL(ref);
+    const fd = new FormData();
+    fd.append('file', dataUrl);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    const resp = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+      method: 'POST',
+      body: fd
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.secure_url) throw new Error(data?.error?.message || 'Error al subir a Cloudinary');
+    return data.secure_url;
   } catch(e) {
     if (intento === 0) return subirDataUrlAImgBB(dataUrl, 1); // 1 reintento
     throw e;

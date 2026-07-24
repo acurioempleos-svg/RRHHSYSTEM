@@ -3415,7 +3415,7 @@ async function toggleDesvinculado(id, currentVal, event) {
     await updateDoc(doc(db, 'colaboradores', id), { desvinculado: nuevoEstado });
     toast(nuevoEstado ? `↓ ${nombre} movido a desvinculados` : `↑ ${nombre} reincorporado`);
   } catch(e) {
-    toast('Error: ' + (e.code || e.message));
+    manejarError(e, 'desvincular/reincorporar colaborador');
   }
 }
 
@@ -3516,7 +3516,7 @@ async function handleDocDrop(event, id, key, label, askFecha, askRangoFechas) {
       const bar = blk.querySelector('.doc-blk-upload-bar'); if(bar) bar.remove();
       const tagTxtEl = blk.querySelector('.doc-blk-tag-txt'); if(tagTxtEl) tagTxtEl.textContent='Error — reintentar';
     }
-    toast('Error al subir: '+(e.code||e.message));
+    manejarError(e, 'subir archivo');
   }
 }
 
@@ -3735,7 +3735,7 @@ async function handleFolderDrop(event, colabId, folderIdx) {
       const bar = blk.querySelector('.folder-upload-bar'); if(bar) bar.remove();
       const tagTxtEl = blk.querySelector('.folder-blk-tag-txt'); if(tagTxtEl) tagTxtEl.textContent='Error — reintentar';
     }
-    toast('Error al subir: '+(e.code||e.message));
+    manejarError(e, 'subir foto');
   }
 }
 
@@ -3774,7 +3774,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
       const bar = blkEl.querySelector('.folder-upload-bar'); if (bar) bar.remove();
       const tagTxtEl = blkEl.querySelector('.folder-blk-tag-txt'); if (tagTxtEl) tagTxtEl.textContent = 'Error — reintentar';
     }
-    toast('Error al guardar: ' + (e.code||e.message));
+    manejarError(e, 'guardar foto en carpeta');
   }
 }
 
@@ -3821,7 +3821,7 @@ async function guardarNuevaCarpeta() {
   updateDoc(doc(db,'colaboradores',_nuevaCarpetaColabId), { carpetas })
     .catch(e => {
       if (idx !== -1 && prev) { colabs[idx] = prev; if (currentLocal) renderLocal(currentLocal, localQ); }
-      toast('Error al guardar: ' + (e.code || e.message));
+      manejarError(e, 'guardar carpeta nueva');
     });
 }
 
@@ -3840,7 +3840,7 @@ async function eliminarCarpeta(colabId, folderIdx) {
   updateDoc(doc(db,'colaboradores',colabId), { carpetas: newCarpetas })
     .catch(e => {
       if (idx !== -1 && prev) { colabs[idx] = prev; if (currentLocal) renderLocal(currentLocal, localQ); }
-      toast('Error al eliminar: ' + (e.code || e.message));
+      manejarError(e, 'eliminar carpeta');
     });
 }
 
@@ -3928,7 +3928,7 @@ async function guardarPlantillaForm() {
     await setDoc(doc(db, 'config', 'carpetaPlantillas'), { lista });
     toast('✓ Plantilla guardada');
     cerrarFormPlantilla();
-  } catch (e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'guardar plantilla'); }
   finally { btn.disabled = false; btn.textContent = 'Guardar plantilla'; }
 }
 async function eliminarPlantilla(id) {
@@ -3941,7 +3941,7 @@ async function eliminarPlantilla(id) {
     await setDoc(doc(db, 'config', 'carpetaPlantillas'), { lista });
     toast('Plantilla eliminada');
     renderPlantillasList();
-  } catch (e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'eliminar plantilla'); }
 }
 
 /* ══ CARPETAS DEL LOCAL ══════════════════════════════════════════ */
@@ -4029,7 +4029,7 @@ async function guardarNuevaCarpetaLocal() {
   updateDoc(doc(db, 'locales', localDoc.id), { carpetas })
     .catch(e => {
       if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
-      toast('Error: ' + (e.code || e.message));
+      manejarError(e, 'guardar carpeta del local');
     });
 }
 
@@ -4049,7 +4049,7 @@ async function eliminarCarpetaLocal(localId, folderIdx) {
   updateDoc(doc(db, 'locales', localId), { carpetas: newCarpetas })
     .catch(e => {
       if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
-      toast('Error: ' + (e.code || e.message));
+      manejarError(e, 'eliminar carpeta del local');
     });
 }
 
@@ -4098,7 +4098,7 @@ async function handleLocalFolderDrop(event, localId, folderIdx) {
     const urlToSave = await subirDataUrlAImgBB(dataUrl);
     await guardarFotoEnCarpetaLocal(localId, folderIdx, urlToSave);
     toast('Foto guardada');
-  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'subir archivo a carpeta del local'); }
   finally { hideL(); }
 }
 
@@ -4119,7 +4119,7 @@ async function guardarFotoEnCarpetaLocal(localId, folderIdx, url, metaExtra) {
     await updateDoc(doc(db, 'locales', localId), { carpetas });
   } catch(e) {
     if (idx !== -1 && prev) { locales[idx] = prev; renderLocalFolders(currentLocal); }
-    toast('Error al guardar: ' + (e.code || e.message));
+    manejarError(e, 'guardar carpeta del local');
   }
 }
 
@@ -4206,7 +4206,7 @@ async function guardarMetaLocalDoc() {
   carpetas[folderIdx].meta = newMeta;
   try {
     await updateDoc(doc(db, 'locales', localId), { carpetas });
-  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'guardar datos del documento'); }
 }
 
 function filtrarColabListLocal(q) {
@@ -4237,7 +4237,7 @@ async function borrarFotoLocal() {
     document.getElementById('preview-local-title').textContent = _localFolderTask.folderName + (newUrls.length > 1 ? ' · ' + newUrls.length + ' fotos' : '');
     renderLocalCarousel();
     toast('Foto eliminada');
-  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'borrar foto'); }
 }
 
 async function eliminarContenidoCarpetaLocal() {
@@ -4254,7 +4254,7 @@ async function eliminarContenidoCarpetaLocal() {
     await updateDoc(doc(db, 'locales', localId), { carpetas });
     closeSheet('preview-local-modal');
     toast('Carpeta vaciada');
-  } catch(e) { toast('Error: ' + (e.code || e.message)); }
+  } catch(e) { manejarError(e, 'vaciar carpeta'); }
 }
 
 function abrirReemplazoLocal() {
@@ -4548,7 +4548,7 @@ async function borrarEstaFoto() {
     document.getElementById('preview-title').textContent = activeTask.label + (newUrls.length>1?` · ${newUrls.length} fotos`:'');
     renderCarousel();
     toast('Foto eliminada');
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'borrar foto'); }
 }
 
 async function ciclarEstadoDoc() {
@@ -4569,7 +4569,7 @@ async function ciclarEstadoDoc() {
     _prevMeta = newMeta;
     renderCarousel();
     toast(`Estado: ${next==='ok'?'OK ✓':next==='revision'?'Requiere revisión':'Rechazado'}`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'cambiar estado del documento'); }
 }
 
 // Guardar metadata en carpeta de colaborador — legacy (fecha_recibido/colaborador)
@@ -4597,7 +4597,7 @@ async function guardarMetaDoc() {
     const carpetas = (getCarpetas(colab)).map(f=>({...f,urls:[...(f.urls||[])],meta:[...(f.meta||[])]}));
     carpetas[activeTask.folderIdx].meta = newMeta;
     await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar datos del documento'); }
 }
 
 function filtrarColabListDoc(q) {
@@ -4640,7 +4640,7 @@ async function borrarDoc() {
     }
     closeSheet('preview-modal');
     toast('Contenido eliminado');
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'borrar documento'); }
 }
 
 /* ══ FAB ════════════════════════════════════════════════════════ */
@@ -4817,7 +4817,7 @@ async function confirmarFusion() {
     closeSheet('fusion-modal');
     _fusA = null; _fusB = null; _fusChoices = {};
   } catch(e) {
-    toast('Error: ' + (e.code || e.message));
+    manejarError(e, 'fusionar legajos');
   } finally {
     btn.disabled = false; btn.textContent = 'Fusionar legajos';
   }
@@ -4998,7 +4998,7 @@ async function ocrConfirmar() {
   try {
     await updateDoc(doc(db,'colaboradores',ocrSelectedId),update);
     toast(`✓ Guardado en legajo de ${colab?.nombre||'colaborador'}`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar documento escaneado'); }
   finally { hideL(); ocrDataUrl=null; ocrDocKey=null; closeSheet('ocr-modal'); }
 }
 
@@ -5172,7 +5172,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
       if (dataUrl.startsWith('data:')) urlToSave = await subirDataUrlAImgBB(dataUrl);
       await guardarFotoEnCarpetaLocal(activeTask.localId, activeTask.folderIdx, urlToSave, metaExtra);
       toast('Guardado en carpeta del local');
-    } catch(e) { toast('Error: '+(e.code||e.message)); }
+    } catch(e) { manejarError(e, 'guardar foto'); }
     finally { hideL(); }
     return;
   }
@@ -5199,7 +5199,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
       }
       await updateDoc(doc(db,'colaboradores',activeTask.id),{ carpetas });
       toast(`✓ Guardado (${folder.urls.length} foto${folder.urls.length>1?'s':''})`);
-    } catch(e) { console.error(e); toast('Error: '+(e.code||e.message)); }
+    } catch(e) { manejarError(e, 'guardar foto'); }
     finally { hideL(); }
     return;
   }
@@ -5256,8 +5256,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
     await updateDoc(doc(db,'colaboradores',activeTask.id),update);
     toast(`✓ Guardado (${arr.length} foto${arr.length>1?'s':''})`);
   } catch(e) {
-    console.error(e);
-    toast('Error: '+(e.code||e.message));
+    manejarError(e, 'guardar documento pendiente');
   } finally {
     hideL();
   }
@@ -5301,7 +5300,7 @@ async function guardarNuevoLocal() {
     await addDoc(collection(db,'locales'),{ nombre, at: Date.now() });
     closeSheet('nuevo-local-modal');
     toast(`✓ Local "${nombre}" creado`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar local nuevo'); }
   finally { btn.disabled=false; btn.textContent='Crear local'; }
 }
 
@@ -5441,7 +5440,7 @@ async function guardarRenombrarLocal() {
     toast(nombreCambio
       ? `✓ "${original}" renombrado a "${nuevo}" (${afectados.length} colaboradores actualizados)`
       : `✓ "${original}" actualizado`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'renombrar local'); }
   finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
 }
 
@@ -5468,7 +5467,7 @@ async function guardarNuevo() {
     await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now(), carpetas });
     closeSheet('nuevo-modal');
     toast(`✓ ${nombre} agregado`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar colaborador nuevo'); }
   finally { if (btn) { btn.disabled=false; btn.textContent='Crear colaborador'; } }
 }
 
@@ -5501,7 +5500,7 @@ async function guardarNuevoColabOCR() {
     abrirSelectorColab(); // reabre con la nueva lista (el snapshot ya actualizó colabs)
     // Si el nuevo colab ya está en colabs, seleccionarlo automáticamente
     setTimeout(()=>{ ocrSelectCand(ref.id); }, 400);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar colaborador (OCR)'); }
   finally { btn.disabled=false; btn.textContent='Crear y seleccionar'; }
 }
 
@@ -5509,7 +5508,7 @@ async function eliminarColab(id, nombre) {
   try {
     await deleteDoc(doc(db,'colaboradores',id));
     toast(`${nombre} eliminado`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'eliminar colaborador'); }
 }
 
 /* ══ EDICIÓN DE COLABORADOR ════════════════════════════════════════ */
@@ -5542,7 +5541,7 @@ async function guardarEdicionColab() {
     if (c && c.local !== local && currentLocal === c.local) cerrarLocal();
     closeSheet('edit-colab-modal');
     toast(`✓ ${nombre} actualizado`);
-  } catch(e) { toast('Error: '+(e.code||e.message)); }
+  } catch(e) { manejarError(e, 'guardar edición de colaborador'); }
   finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
 }
 
@@ -5811,7 +5810,7 @@ async function corregirPuestosLegacy() {
     }
     toast(`✓ ${cambios.length} puesto${cambios.length!==1?'s':''} corregido${cambios.length!==1?'s':''}`);
   } catch(e) {
-    toast('Error: ' + (e.code||e.message));
+    manejarError(e, 'corregir puestos');
   } finally {
     hideL();
   }
@@ -5894,7 +5893,7 @@ async function migrarPdfsPesados() {
           if (changed) patch = p;
         }
         if (patch) await updateDoc(doc(db,'colaboradores',c.id), patch);
-      } catch(e) { errores++; }
+      } catch(e) { console.error(e); errores++; }
     }
 
     for (const l of locales) {
@@ -5915,7 +5914,7 @@ async function migrarPdfsPesados() {
           nuevas.push({ ...f, urls: nuevasUrls });
         }
         if (changed) await updateDoc(doc(db,'locales',l.id), { carpetas: nuevas });
-      } catch(e) { errores++; }
+      } catch(e) { console.error(e); errores++; }
     }
 
     toast(`✓ ${hechos} PDF${hechos!==1?'s':''} migrado${hechos!==1?'s':''} a Storage${errores?` (${errores} con error, reintentá)`:''}`);
@@ -6138,7 +6137,7 @@ async function exportarPDF(id, btn) {
         dataUrl = await urlToDataURL(url);
         const m = /^data:image\/(\w+);/.exec(dataUrl);
         if (m) fmt = m[1].toUpperCase()==='PNG' ? 'PNG' : 'JPEG';
-      } catch(e) { fallos++; continue; }
+      } catch(e) { console.error(e); fallos++; continue; }
       pdf.addPage();
       pdf.setFillColor(245,246,248); pdf.rect(0,0,W,H,'F');
       pdf.setFillColor(201,122,26); pdf.rect(0,0,3.5,H,'F');
@@ -6151,7 +6150,7 @@ async function exportarPDF(id, btn) {
       const fechaCarga = f.meta?.[ui]?.cargado_en;
       if (fechaCarga) pdf.text(`Fecha: ${new Date(fechaCarga).toLocaleDateString('es-AR')}`,11,37);
       pdf.setDrawColor(226,229,237); pdf.setLineWidth(.3); pdf.line(11,42,W-11,42);
-      try { pdf.addImage(dataUrl,fmt,11,48,W-22,0); } catch(e){ fallos++; }
+      try { pdf.addImage(dataUrl,fmt,11,48,W-22,0); } catch(e){ console.error(e); fallos++; }
     }
   }
   pdf.save(`Legajo_${(c.nombre||'colab').replace(/\s+/g,'_')}.pdf`);
@@ -6276,6 +6275,23 @@ function toast(msg) {
   el.textContent=msg; el.classList.add('on');
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('on'),2800);
 }
+/* ══ MANEJO DE ERRORES CENTRALIZADO ═══════════════════════════════
+   Un solo lugar para loguear y avisar al usuario cuando algo falla.
+   contexto: texto corto que dice qué se estaba haciendo (aparece en consola). */
+function manejarError(e, contexto) {
+  const detalle = (e && (e.code || e.message)) || String(e);
+  console.error(`[${contexto || 'Error'}]`, e);
+  toast(`Error${contexto ? ' al ' + contexto : ''}: ${detalle}`);
+}
+/* Red de seguridad: cualquier error o promesa rechazada que se haya
+   escapado sin try/catch también queda logueado y avisado, en vez de
+   fallar en silencio. */
+window.addEventListener('error', (ev) => {
+  console.error('[Error no capturado]', ev.error || ev.message);
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  console.error('[Promesa rechazada sin capturar]', ev.reason);
+});
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
@@ -6456,7 +6472,7 @@ function plSaveCell(input) {
   updateDoc(doc(db,'colaboradores',id), { [field]: val })
     .catch(e => {
       if (idx !== -1 && prev) { colabs[idx] = prev; input.value = prev[field] || ''; }
-      toast('Error: ' + (e.code||e.message));
+      manejarError(e, 'guardar campo');
     });
 }
 

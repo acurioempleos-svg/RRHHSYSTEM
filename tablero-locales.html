@@ -127,6 +127,38 @@ body {
 }
 #notif-badge.vis { display:flex; }
 
+/* ══ NAV DE SECCIONES ═══════════════════════════════════════════ */
+#app-nav {
+  display:flex; gap:2px; background:var(--s1); border:1px solid var(--b1);
+  border-radius:10px; padding:3px; margin:0 8px;
+}
+.app-nav-btn {
+  font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:.05em;
+  background:none; border:none; color:var(--muted); cursor:pointer;
+  padding:7px 11px; border-radius:7px; transition:all var(--t); white-space:nowrap;
+}
+.app-nav-btn:hover { color:var(--text); }
+.app-nav-btn.active { background:var(--amber-glow); color:var(--amber-hi); }
+@media(max-width:760px){
+  #app-nav { display:none; } /* en mobile el nav va abajo, ver #app-nav-mobile */
+}
+#app-nav-mobile {
+  display:none; position:fixed; left:0; right:0; bottom:0; z-index:60;
+  background:var(--s0); border-top:1px solid var(--b1);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  gap:4px;
+}
+@media(max-width:760px){
+  #app-nav-mobile { display:flex; }
+  body { padding-bottom:54px; }
+}
+.app-nav-mobile-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background:none; border:none; color:var(--muted); cursor:pointer;
+  padding:5px 2px; border-radius:8px; font-family:'DM Mono',monospace; font-size:8.5px;
+}
+.app-nav-mobile-btn.active { color:var(--amber-hi); }
+
 /* ══ VISTA PRINCIPAL — LOCALES ══════════════════════════════════ */
 #view-main {
   padding:20px 14px 100px;
@@ -138,6 +170,92 @@ body {
     padding:28px 32px 80px;
   }
 }
+
+/* ══ SELECCIÓN DE CANDIDATOS ═════════════════════════════════════ */
+#view-seleccion { padding:20px 14px 100px; animation:fadeUp .35s ease; }
+@media(min-width:900px){ #view-seleccion { max-width:1400px; margin:0 auto; padding:28px 32px 80px; } }
+.sel-filters { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.sel-filt {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.05em;
+  background:var(--s1); border:1px solid var(--b1); color:var(--muted);
+  padding:7px 12px; border-radius:20px; cursor:pointer; transition:all var(--t);
+}
+.sel-filt.active { background:var(--amber-glow); border-color:var(--amber-brd); color:var(--amber-hi); }
+#sel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+.sel-card {
+  background:var(--s1); border:1px solid var(--b1); border-radius:var(--r-lg);
+  padding:14px; cursor:pointer; transition:all var(--t);
+}
+.sel-card:hover { border-color:var(--b2); background:var(--s2); }
+.sel-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+.sel-card-name { font-weight:700; font-size:14px; }
+.sel-card-sub { font-family:'DM Mono',monospace; font-size:9.5px; color:var(--muted); margin-top:2px; }
+.status-pill {
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 8px; border-radius:20px; white-space:nowrap;
+}
+.status-pill.Pendiente { background:var(--i-dim); color:var(--info); }
+.status-pill.Aprobado  { background:var(--s-dim); color:var(--success); }
+.status-pill.Rechazado { background:var(--d-dim); color:var(--danger); }
+.sel-empty { text-align:center; color:var(--muted); font-size:12px; padding:60px 20px; }
+#sel-fab {
+  position:fixed; right:20px; bottom:76px; z-index:40;
+  width:52px; height:52px; border-radius:50%; background:var(--amber);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; box-shadow:0 8px 24px rgba(201,122,26,.35); transition:all var(--t);
+}
+#sel-fab:hover { background:var(--amber-hi); transform:scale(1.05); }
+@media(min-width:761px){ #sel-fab { bottom:24px; } }
+.cd-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--b0); font-size:12.5px; }
+.cd-row b { color:var(--muted); font-weight:500; font-size:11px; }
+.decision-actions { display:flex; gap:8px; margin:14px 0; }
+.decision-actions button {
+  flex:1; padding:10px; border-radius:10px; border:1px solid var(--b1); background:var(--s1);
+  color:var(--text); font-family:'Syne',sans-serif; font-weight:600; font-size:12px; cursor:pointer; transition:all var(--t);
+}
+.decision-actions button.aprobar.selected { background:var(--s-dim); border-color:var(--s-brd); color:var(--success); }
+.decision-actions button.rechazar.selected { background:var(--d-dim); border-color:var(--d-brd); color:var(--danger); }
+.cd-historial-item { font-size:11.5px; color:var(--muted); padding:6px 0; border-bottom:1px solid var(--b0); }
+
+/* ══ TRAZABILIDAD ═════════════════════════════════════════════════ */
+#view-trazabilidad { padding:20px 14px 100px; animation:fadeUp .35s ease; }
+@media(min-width:900px){ #view-trazabilidad { max-width:1000px; margin:0 auto; padding:28px 32px 80px; } }
+.traza-search { display:flex; gap:8px; margin-bottom:22px; }
+.traza-search .f-input { flex:1; }
+.traza-empty { text-align:center; color:var(--muted); font-size:12px; padding:60px 20px; }
+.traza-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+.traza-header-name { font-weight:700; font-size:17px; }
+.traza-header-sub { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-top:2px; }
+.traza-line-wrap { overflow-x:auto; padding:20px 4px 6px; }
+.traza-line {
+  position:relative; display:flex; align-items:center; min-width:max-content; padding:30px 20px 0;
+}
+.traza-line::before {
+  content:''; position:absolute; left:20px; right:20px; top:50%; height:2px;
+  background:var(--b2); transform:translateY(-50%); z-index:0;
+}
+.traza-node { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; }
+.traza-node-dot {
+  width:18px; height:18px; border-radius:50%; background:var(--amber); border:3px solid var(--bg);
+  box-shadow:0 0 0 1px var(--amber-brd); flex-shrink:0;
+}
+.traza-node.endpoint .traza-node-dot { width:26px; height:26px; background:var(--s0); border:2px solid var(--amber-hi); box-shadow:none; }
+.traza-node.secundario .traza-node-dot { width:8px; height:8px; background:var(--muted); box-shadow:none; }
+.traza-node-label {
+  position:absolute; top:26px; width:120px; text-align:center; font-size:10.5px; font-weight:600;
+  color:var(--text); left:50%; transform:translateX(-50%);
+}
+.traza-node.secundario .traza-node-label { display:none; }
+.traza-node-date {
+  position:absolute; bottom:26px; width:110px; text-align:center; font-family:'DM Mono',monospace;
+  font-size:8.5px; color:var(--muted); left:50%; transform:translateX(-50%);
+}
+.traza-node.secundario .traza-node-date { display:none; }
+.traza-spacer { width:56px; flex-shrink:0; }
+.traza-legend { display:flex; gap:18px; margin-top:70px; flex-wrap:wrap; }
+.traza-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+.traza-legend-dot { width:9px; height:9px; border-radius:50%; background:var(--amber); }
+.traza-legend-dot.sec { width:5px; height:5px; background:var(--muted); }
 .view-label {
   font-family:'DM Mono',monospace; font-size:9px;
   color:var(--amber); letter-spacing:.22em; text-transform:uppercase;
@@ -1968,6 +2086,11 @@ body {
   </button>
   <div class="logo">BC</div>
   <div class="topbar-brand">BC <em>Gestión</em></div>
+  <div id="app-nav">
+    <button class="app-nav-btn active" id="nav-locales" onclick="mostrarSeccion('locales')">Locales</button>
+    <button class="app-nav-btn" id="nav-seleccion" onclick="mostrarSeccion('seleccion')">Selección</button>
+    <button class="app-nav-btn" id="nav-trazabilidad" onclick="mostrarSeccion('trazabilidad')">Trazabilidad</button>
+  </div>
   <div id="gs-wrap">
     <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
     <input id="gs-input" placeholder="Buscar persona, local, DNI…" onfocus="abrirSearch()" readonly>
@@ -1986,6 +2109,13 @@ body {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     <div id="notif-badge"></div>
   </div>
+</div>
+
+<!-- ══ NAV MOBILE ═══════════════════════════════════════════════ -->
+<div id="app-nav-mobile">
+  <button class="app-nav-mobile-btn active" id="navm-locales" onclick="mostrarSeccion('locales')">🏠<span>Locales</span></button>
+  <button class="app-nav-mobile-btn" id="navm-seleccion" onclick="mostrarSeccion('seleccion')">🧑‍💼<span>Selección</span></button>
+  <button class="app-nav-mobile-btn" id="navm-trazabilidad" onclick="mostrarSeccion('trazabilidad')">📍<span>Trazabilidad</span></button>
 </div>
 
 <!-- ══ VISTA PRINCIPAL ══════════════════════════════════════════ -->
@@ -2044,6 +2174,63 @@ body {
   </div>
   <div id="persons-scroll"></div>
   <div id="desv-scroll" style="display:none"></div>
+</div>
+
+<!-- ══ VISTA SELECCIÓN DE CANDIDATOS ═════════════════════════════ -->
+<div id="view-seleccion" style="display:none">
+  <div class="view-label">Selección de candidatos</div>
+  <div class="sel-filters" id="sel-filters">
+    <button class="sel-filt active" onclick="filtrarCandidatos('Todos',this)">Todos</button>
+    <button class="sel-filt" onclick="filtrarCandidatos('Pendiente',this)">Pendientes</button>
+    <button class="sel-filt" onclick="filtrarCandidatos('Aprobado',this)">Aprobados</button>
+    <button class="sel-filt" onclick="filtrarCandidatos('Rechazado',this)">Rechazados</button>
+  </div>
+  <div id="sel-grid"></div>
+  <div id="sel-empty" class="sel-empty" style="display:none">Todavía no hay candidatos cargados.</div>
+</div>
+<div id="sel-fab" onclick="abrirNuevoCandidato()">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</div>
+
+<!-- Nuevo candidato -->
+<div id="candidato-modal" class="overlay" onclick="if(event.target===this)closeSheet('candidato-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">Nuevo candidato</div>
+      <div class="sheet-x" onclick="closeSheet('candidato-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="cand-nombre" placeholder="Ej: Juan Pérez"></div>
+      <div class="f-field"><label class="f-label">DNI</label><input class="f-input" id="cand-dni" type="text" inputmode="numeric" placeholder="Ej: 38123456"></div>
+      <div class="f-field"><label class="f-label">Puesto al que aplica</label><select class="f-input" id="cand-puesto"></select></div>
+      <div class="f-field"><label class="f-label">Local</label><select class="f-input" id="cand-local"></select></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Comentario (opcional)</label><input class="f-input" id="cand-comentario" placeholder="Notas del selector"></div>
+      <button class="btn btn-amber" id="cand-btn" onclick="guardarCandidato()">Agregar candidato</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ficha de candidato -->
+<div id="candidato-detalle-modal" class="overlay" onclick="if(event.target===this)closeSheet('candidato-detalle-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title" id="cd-nombre">Candidato</div>
+      <div class="sheet-x" onclick="closeSheet('candidato-detalle-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body" id="cd-body"></div>
+  </div>
+</div>
+
+<!-- ══ VISTA TRAZABILIDAD ═════════════════════════════════════════ -->
+<div id="view-trazabilidad" style="display:none">
+  <div class="view-label">Trazabilidad</div>
+  <div class="traza-search">
+    <input id="traza-dni-input" class="f-input" placeholder="Buscar por DNI…" inputmode="numeric" onkeydown="if(event.key==='Enter')buscarTraza()">
+    <button class="btn btn-amber" style="width:auto;padding:11px 18px" onclick="buscarTraza()">Buscar</button>
+  </div>
+  <div id="traza-resultado"></div>
 </div>
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
@@ -2391,7 +2578,8 @@ body {
       <div class="f-field"><label class="f-label">Local</label>
         <select class="f-input" id="edit-local"></select>
       </div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="edit-puesto" onkeydown="if(event.key==='Enter')guardarEdicionColab()"></select></div>
+      <div class="f-field"><label class="f-label">Puesto</label><select class="f-input" id="edit-puesto" onkeydown="if(event.key==='Enter')document.getElementById('edit-remuneracion').focus()"></select></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Remuneración</label><input class="f-input" id="edit-remuneracion" type="number" inputmode="numeric" placeholder="Ej: 850000" onkeydown="if(event.key==='Enter')guardarEdicionColab()"></div>
       <button class="btn btn-amber" id="edit-colab-btn" onclick="guardarEdicionColab()">Guardar cambios</button>
       <button class="btn btn-ghost" onclick="closeSheet('edit-colab-modal')">Cancelar</button>
     </div>
@@ -2412,7 +2600,8 @@ body {
       <div class="f-field"><label class="f-label">Local</label>
         <select class="f-input" id="n-local" onkeydown="if(event.key==='Enter')document.getElementById('n-puesto').focus()"></select>
       </div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Puesto</label><select class="f-input" id="n-puesto" onkeydown="if(event.key==='Enter')guardarNuevo()"></select></div>
+      <div class="f-field"><label class="f-label">Puesto</label><select class="f-input" id="n-puesto" onkeydown="if(event.key==='Enter')document.getElementById('n-remuneracion').focus()"></select></div>
+      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Remuneración</label><input class="f-input" id="n-remuneracion" type="number" inputmode="numeric" placeholder="Ej: 850000" onkeydown="if(event.key==='Enter')guardarNuevo()"></div>
       <button class="btn btn-amber" onclick="guardarNuevo()">Crear colaborador</button>
     </div>
   </div>
@@ -2696,7 +2885,7 @@ body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, deleteField, writeBatch, enableIndexedDbPersistence, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, orderBy, query, where, getDocs, deleteField, writeBatch, enableIndexedDbPersistence, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 /* ══ FIREBASE ═══════════════════════════════════════════════════ */
 const firebaseConfig = {
@@ -2979,11 +3168,106 @@ onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
 });
 
 onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
-  colabs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  const nuevos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  detectarEventosColaborador(colabs, nuevos);
+  colabs = nuevos;
   actualizarDatalist();
   _renderScheduler.schedule('stats', 'board', 'alertas', 'local');
   _cargaInicialColabs = true;
   _chequearCargaInicial();
+});
+
+/* ══ TRAZABILIDAD ═══════════════════════════════════════════════
+   Colección 'trazabilidad' en Firebase, un doc por evento.
+   Código de seguimiento = DNI de la persona (candidato o colaborador).
+   { dni, tipo, primario, detalle, fecha, colaboradorId, candidatoId } */
+async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId }) {
+  if (!dni) return; // sin DNI no hay forma de rastrear el evento
+  try {
+    await addDoc(collection(db,'trazabilidad'), {
+      dni: String(dni).trim(),
+      tipo, primario: !!primario, detalle: detalle || '',
+      colaboradorId: colaboradorId || null,
+      candidatoId: candidatoId || null,
+      fecha: Date.now(),
+    });
+  } catch(e) { console.error('No se pudo registrar evento de trazabilidad', e); }
+}
+
+// Compara el snapshot anterior de colaboradores contra el nuevo y genera
+// automáticamente los eventos primarios de trazabilidad correspondientes.
+let _trazaInicializada = false;
+function detectarEventosColaborador(prevList, nuevosList) {
+  if (!_trazaInicializada) { _trazaInicializada = true; return; } // no re-generar historial al cargar la página
+  const prevMap = new Map((prevList||[]).map(c => [c.id, c]));
+  nuevosList.forEach(c => {
+    const dni = c.dni_nro;
+    if (!dni) return;
+    const antes = prevMap.get(c.id);
+    if (!antes) {
+      // Colaborador nuevo → Alta como colaborador
+      registrarEvento({ dni, tipo:'Alta como colaborador', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
+      return;
+    }
+    // Cambio de puesto o local
+    if ((c.puesto||'') !== (antes.puesto||'') || (c.local||'') !== (antes.local||'')) {
+      const cambios = [];
+      if ((c.local||'') !== (antes.local||'')) cambios.push(`Local: ${antes.local||'—'} → ${c.local||'—'}`);
+      if ((c.puesto||'') !== (antes.puesto||'')) cambios.push(`Puesto: ${antes.puesto||'—'} → ${c.puesto||'—'}`);
+      registrarEvento({ dni, tipo:'Cambio de puesto/local', primario:true, detalle:cambios.join(' · '), colaboradorId:c.id });
+    }
+    // Aumento de remuneración
+    const rAntes = Number(antes.remuneracion)||0, rNuevo = Number(c.remuneracion)||0;
+    if (rNuevo > 0 && rNuevo !== rAntes) {
+      registrarEvento({ dni, tipo:'Aumento de remuneración', primario:true, detalle:`${rAntes ? '$'+rAntes.toLocaleString('es-AR') : '—'} → $${rNuevo.toLocaleString('es-AR')}`, colaboradorId:c.id });
+    }
+    // Documentación completa (pasa de incompleta a completa)
+    const completaAntes = ALL_DOCS.every(d => antes[d.key]);
+    const completaAhora = ALL_DOCS.every(d => c[d.key]);
+    if (completaAhora && !completaAntes) {
+      registrarEvento({ dni, tipo:'Documentación completa', primario:true, detalle:'Todos los documentos del legajo cargados', colaboradorId:c.id });
+    }
+    // Egreso / Desvinculación
+    if (!!c.desvinculado && !antes.desvinculado) {
+      registrarEvento({ dni, tipo:'Egreso / Desvinculación', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
+    }
+
+    /* ── Eventos secundarios ── */
+    // Edición de ficha (nombre) — no cuenta si ya se generó un evento primario por el mismo cambio
+    if ((c.nombre||'') !== (antes.nombre||'')) {
+      registrarEvento({ dni, tipo:'Edición de ficha', primario:false, detalle:`Nombre: ${antes.nombre||'—'} → ${c.nombre||'—'}`, colaboradorId:c.id });
+    }
+    // Carga de un documento individual (uno por cada doc que pasó de vacío a cargado)
+    ALL_DOCS.forEach(d => {
+      if (c[d.key] && !antes[d.key]) {
+        registrarEvento({ dni, tipo:'Documento cargado', primario:false, detalle:d.name, colaboradorId:c.id });
+      }
+    });
+    // Vencimiento de salud actualizado
+    if ((c.vencimiento_salud||'') !== (antes.vencimiento_salud||'')) {
+      registrarEvento({ dni, tipo:'Vencimiento de salud actualizado', primario:false, detalle:c.vencimiento_salud||'—', colaboradorId:c.id });
+    }
+    // Reincorporación (vuelve de desvinculado a activo) — secundario, no reabre el Ingreso
+    if (!c.desvinculado && antes.desvinculado) {
+      registrarEvento({ dni, tipo:'Reincorporación', primario:false, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
+    }
+  });
+}
+
+// Trae la línea de trazabilidad completa de un DNI, ordenada por fecha
+async function buscarTrazabilidadPorDni(dni) {
+  const dniLimpio = String(dni||'').trim();
+  if (!dniLimpio) return [];
+  const snap = await getDocs(query(collection(db,'trazabilidad'), where('dni','==',dniLimpio)));
+  return snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => a.fecha - b.fecha);
+}
+
+/* ══ SELECCIÓN DE CANDIDATOS (ex Portal RRHH, migrado a Firebase) ══ */
+let candidatos = [];
+let _selFiltro = 'Todos';
+onSnapshot(query(collection(db,'candidatos'), orderBy('at','desc')), snap => {
+  candidatos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  renderCandidatos();
 });
 
 // Listener de plantillas de carpeta (diseños reutilizables de campos de metadata)
@@ -5270,9 +5554,11 @@ function actualizarSelectsLocales() {
   const selN  = document.getElementById('n-local');
   const selNO = document.getElementById('nco-local');
   const selE  = document.getElementById('edit-local');
+  const selC  = document.getElementById('cand-local');
   if (selN)  selN.innerHTML  = opts;
   if (selNO) selNO.innerHTML = opts;
   if (selE)  selE.innerHTML  = opts;
+  if (selC)  selC.innerHTML  = opts;
 }
 // Mantener el datalist legacy (por si algo lo usa internamente)
 function actualizarDatalist() { actualizarSelectsLocales(); }
@@ -5446,7 +5732,7 @@ async function guardarRenombrarLocal() {
 
 /* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
 function abrirNuevo() {
-  ['n-nombre','n-dni'].forEach(id=>document.getElementById(id).value='');
+  ['n-nombre','n-dni','n-remuneracion'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('n-local').value='';
   document.getElementById('n-puesto').innerHTML = puestoOptions('');
   actualizarSelectsLocales();
@@ -5458,13 +5744,14 @@ async function guardarNuevo() {
   const dni=document.getElementById('n-dni').value.trim();
   const local=document.getElementById('n-local').value.trim();
   const puesto=document.getElementById('n-puesto').value.trim();
+  const remuneracion = parseFloat(document.getElementById('n-remuneracion').value) || null;
   if (!nombre) { document.getElementById('n-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
   const btn = document.querySelector('#nuevo-modal .btn-amber');
   if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
     const carpetas = CARPETAS_DEFAULT.map(d => ({ id: uidCarpeta(), nombre: d.nombre, emoji: d.emoji, urls: [], meta: [] }));
-    await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, at: Date.now(), carpetas });
+    await addDoc(collection(db,'colaboradores'),{ nombre, dni_nro:dni, local, puesto, remuneracion, at: Date.now(), carpetas });
     closeSheet('nuevo-modal');
     toast(`✓ ${nombre} agregado`);
   } catch(e) { manejarError(e, 'guardar colaborador nuevo'); }
@@ -5519,6 +5806,7 @@ function abrirEdicionColab(id) {
   $('edit-nombre').value   = c.nombre || '';
   $('edit-dni').value      = c.dni_nro || '';
   $('edit-puesto').innerHTML = puestoOptions(c.puesto || '');
+  $('edit-remuneracion').value = c.remuneracion || '';
   actualizarSelectsLocales();
   const sel = $('edit-local');
   if (sel) sel.value = c.local || '';
@@ -5531,12 +5819,13 @@ async function guardarEdicionColab() {
   const dni    = $('edit-dni').value.trim();
   const local  = $('edit-local').value.trim();
   const puesto = $('edit-puesto').value.trim();
+  const remuneracion = parseFloat($('edit-remuneracion').value) || null;
   if (!nombre) { $('edit-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
   const btn = $('edit-colab-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await updateDoc(doc(db,'colaboradores',id),{ nombre, dni_nro:dni, local, puesto });
+    await updateDoc(doc(db,'colaboradores',id),{ nombre, dni_nro:dni, local, puesto, remuneracion });
     const c = getColab(id);
     if (c && c.local !== local && currentLocal === c.local) cerrarLocal();
     closeSheet('edit-colab-modal');
@@ -6526,6 +6815,226 @@ function irAColab(id) {
 }
 
 
+/* ══ NAV DE SECCIONES ═══════════════════════════════════════════ */
+function mostrarSeccion(seccion) {
+  const secciones = { locales:'view-main', seleccion:'view-seleccion', trazabilidad:'view-trazabilidad' };
+  Object.entries(secciones).forEach(([key,elId]) => {
+    const el = document.getElementById(elId);
+    if (el) el.style.display = (key===seccion) ? '' : 'none';
+  });
+  document.getElementById('sel-fab').style.display = (seccion==='seleccion') ? 'flex' : 'none';
+  ['locales','seleccion','trazabilidad'].forEach(key=>{
+    document.getElementById('nav-'+key)?.classList.toggle('active', key===seccion);
+    document.getElementById('navm-'+key)?.classList.toggle('active', key===seccion);
+  });
+  if (currentLocal && seccion!=='locales') cerrarLocal();
+}
+// Ocultar FAB de candidatos al arrancar (la vista principal es Locales)
+document.addEventListener('DOMContentLoaded', ()=>{ const f=document.getElementById('sel-fab'); if (f) f.style.display='none'; });
+
+/* ══ CANDIDATOS — UI ═══════════════════════════════════════════════ */
+function renderCandidatos() {
+  const grid = document.getElementById('sel-grid');
+  const empty = document.getElementById('sel-empty');
+  if (!grid) return;
+  const lista = candidatos.filter(c => !c.archivado && (_selFiltro==='Todos' || (c.estado||'Pendiente')===_selFiltro));
+  if (!lista.length) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = lista.map(c => `
+    <div class="sel-card" onclick="abrirCandidatoDetalle('${c.id}')">
+      <div class="sel-card-top">
+        <div>
+          <div class="sel-card-name">${esc(c.nombre||'')}</div>
+          <div class="sel-card-sub">${esc(c.puesto||'')}${c.local ? ' · '+esc(c.local) : ''}</div>
+        </div>
+        <span class="status-pill ${c.estado||'Pendiente'}">${c.estado||'Pendiente'}</span>
+      </div>
+      <div class="sel-card-sub">DNI ${esc(c.dni||'—')}</div>
+    </div>
+  `).join('');
+}
+function filtrarCandidatos(f, btn) {
+  _selFiltro = f;
+  document.querySelectorAll('.sel-filt').forEach(b=>b.classList.remove('active'));
+  btn?.classList.add('active');
+  renderCandidatos();
+}
+function abrirNuevoCandidato() {
+  ['cand-nombre','cand-dni','cand-comentario'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cand-puesto').innerHTML = puestoOptions('');
+  actualizarSelectsLocales();
+  openSheet('candidato-modal');
+  setTimeout(()=>document.getElementById('cand-nombre').focus(),300);
+}
+async function guardarCandidato() {
+  const nombre = document.getElementById('cand-nombre').value.trim().toUpperCase();
+  const dni = document.getElementById('cand-dni').value.trim();
+  const puesto = document.getElementById('cand-puesto').value.trim();
+  const local = document.getElementById('cand-local').value.trim();
+  const comentario = document.getElementById('cand-comentario').value.trim();
+  if (!nombre) { document.getElementById('cand-nombre').focus(); return; }
+  if (!dni)    { toast('El DNI es obligatorio — es el código de seguimiento'); document.getElementById('cand-dni').focus(); return; }
+  const btn = document.getElementById('cand-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await addDoc(collection(db,'candidatos'), {
+      nombre, dni, puesto, local, comentario, estado:'Pendiente',
+      historial: [], convertido:false, at: Date.now(),
+    });
+    await registrarEvento({ dni, tipo:'Candidatura cargada', primario:true, detalle:`${puesto||''} · ${local||''}`.trim() });
+    closeSheet('candidato-modal');
+    toast(`✓ ${nombre} agregado como candidato`);
+  } catch(e) { manejarError(e, 'guardar candidato'); }
+  finally { btn.disabled = false; btn.textContent = 'Agregar candidato'; }
+}
+function abrirCandidatoDetalle(id) {
+  const c = candidatos.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('cd-nombre').textContent = c.nombre;
+  const puedeConvertir = c.estado==='Aprobado' && !c.convertido;
+  document.getElementById('cd-body').innerHTML = `
+    <div class="cd-row"><b>DNI</b><span>${esc(c.dni||'—')}</span></div>
+    <div class="cd-row"><b>Puesto</b><span>${esc(c.puesto||'—')}</span></div>
+    <div class="cd-row"><b>Local</b><span>${esc(c.local||'—')}</span></div>
+    <div class="f-field" style="margin-top:10px"><label class="f-label">Notas</label><input class="f-input" id="cd-comentario-input" value="${esc(c.comentario||'')}" placeholder="Agregar comentario…"></div>
+    <button class="btn btn-ghost" style="margin-bottom:10px" onclick="guardarComentarioCandidato('${c.id}')">Guardar nota</button>
+    ${!c.archivado ? `
+    <div class="decision-actions">
+      <button class="aprobar${c.estado==='Aprobado'?' selected':''}" onclick="decidirCandidato('${c.id}','Aprobado')">✓ Aprobar</button>
+      <button class="rechazar${c.estado==='Rechazado'?' selected':''}" onclick="decidirCandidato('${c.id}','Rechazado')">✕ Rechazar</button>
+    </div>
+    ${puedeConvertir ? `<button class="btn btn-amber" onclick="convertirEnColaborador('${c.id}')">Convertir en colaborador</button>` : ''}
+    ${c.convertido ? `<div class="sel-card-sub" style="text-align:center;margin-top:6px">Ya convertido en colaborador ✓</div>` : ''}
+    <button class="btn btn-ghost" onclick="archivarCandidato('${c.id}')">Archivar candidato</button>
+    ` : `
+    <div class="sel-card-sub" style="text-align:center;margin:10px 0">Candidato archivado</div>
+    <button class="btn btn-amber" onclick="restaurarCandidato('${c.id}')">Restaurar candidato</button>
+    `}
+    <button class="btn btn-ghost" onclick="closeSheet('candidato-detalle-modal')">Cerrar</button>
+    ${(c.historial||[]).length ? `<div style="margin-top:10px">${c.historial.map(h=>`<div class="cd-historial-item">${esc(h.estado)} · ${new Date(h.fecha).toLocaleString('es-AR')}</div>`).join('')}</div>` : ''}
+  `;
+  openSheet('candidato-detalle-modal');
+}
+async function guardarComentarioCandidato(id) {
+  const c = candidatos.find(x=>x.id===id);
+  const nuevo = document.getElementById('cd-comentario-input').value.trim();
+  if (!c || nuevo === (c.comentario||'')) return;
+  try {
+    await updateDoc(doc(db,'candidatos',id), { comentario: nuevo });
+    await registrarEvento({ dni:c.dni, tipo:'Comentario agregado', primario:false, detalle:nuevo, candidatoId:id });
+    toast('✓ Nota guardada');
+  } catch(e) { manejarError(e, 'guardar comentario del candidato'); }
+}
+async function archivarCandidato(id) {
+  const c = candidatos.find(x=>x.id===id);
+  if (!c) return;
+  const ok = await confirmar(`¿Archivar a ${c.nombre}? No aparece más en el listado activo, pero se conserva el registro.`, 'Archivar');
+  if (!ok) return;
+  try {
+    await updateDoc(doc(db,'candidatos',id), { archivado:true });
+    closeSheet('candidato-detalle-modal');
+    toast('Candidato archivado');
+  } catch(e) { manejarError(e, 'archivar candidato'); }
+}
+async function restaurarCandidato(id) {
+  const c = candidatos.find(x=>x.id===id);
+  if (!c) return;
+  try {
+    await updateDoc(doc(db,'candidatos',id), { archivado:false });
+    await registrarEvento({ dni:c.dni, tipo:'Restauración desde archivado', primario:false, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), candidatoId:id });
+    abrirCandidatoDetalle(id);
+    toast('Candidato restaurado');
+  } catch(e) { manejarError(e, 'restaurar candidato'); }
+}
+async function decidirCandidato(id, estado) {
+  const c = candidatos.find(x=>x.id===id);
+  if (!c) return;
+  const nuevoEstado = c.estado===estado ? 'Pendiente' : estado;
+  try {
+    const historial = [...(c.historial||[]), { estado:nuevoEstado, fecha:Date.now() }];
+    await updateDoc(doc(db,'candidatos',id), { estado:nuevoEstado, historial });
+    await registrarEvento({ dni:c.dni, tipo:'Decisión del gerente', primario:true, detalle:nuevoEstado, candidatoId:id });
+    abrirCandidatoDetalle(id);
+    toast(`Candidato marcado como ${nuevoEstado}`);
+  } catch(e) { manejarError(e, 'actualizar decisión del candidato'); }
+}
+async function convertirEnColaborador(id) {
+  const c = candidatos.find(x=>x.id===id);
+  if (!c) return;
+  if (!c.local) { toast('Este candidato no tiene local asignado — asignalo antes de convertirlo'); return; }
+  const ok = await confirmar(`¿Dar de alta a ${c.nombre} como colaborador?`, 'Convertir');
+  if (!ok) return;
+  try {
+    const carpetas = CARPETAS_DEFAULT.map(d => ({ id: uidCarpeta(), nombre: d.nombre, emoji: d.emoji, urls: [], meta: [] }));
+    const ref = await addDoc(collection(db,'colaboradores'), { nombre:c.nombre, dni_nro:c.dni, local:c.local, puesto:c.puesto, remuneracion:null, at: Date.now(), carpetas });
+    await updateDoc(doc(db,'candidatos',id), { convertido:true, colaboradorId:ref.id });
+    closeSheet('candidato-detalle-modal');
+    toast(`✓ ${c.nombre} ahora es colaborador`);
+  } catch(e) { manejarError(e, 'convertir candidato en colaborador'); }
+}
+
+/* ══ TRAZABILIDAD — UI ══════════════════════════════════════════════ */
+const TRAZA_ORDEN = [
+  'Candidatura cargada','Decisión del gerente','Alta como colaborador',
+  'Documentación completa','Cambio de puesto/local','Aumento de remuneración',
+  'Egreso / Desvinculación',
+];
+async function buscarTraza() {
+  const dni = document.getElementById('traza-dni-input').value.trim();
+  const cont = document.getElementById('traza-resultado');
+  if (!dni) { toast('Ingresá un DNI'); return; }
+  cont.innerHTML = '<div class="traza-empty">Buscando…</div>';
+  try {
+    const eventos = await buscarTrazabilidadPorDni(dni);
+    if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
+    const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
+    const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
+    renderTrazaLine(cont, eventos, persona, !!egreso);
+  } catch(e) { manejarError(e, 'buscar trazabilidad'); }
+}
+function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
+  const primarios = eventos.filter(e=>e.primario);
+  const secundarios = eventos.filter(e=>!e.primario);
+  // Todos los eventos ya vienen ordenados por fecha — armamos la línea
+  // intercalando primarios (puntos grandes) y secundarios (marcas chicas)
+  // en el mismo orden cronológico en el que ocurrieron.
+  const nodos = [];
+  nodos.push({ tipo:'endpoint', label:'Ingreso' });
+  eventos.forEach(e => {
+    if (e.tipo === 'Egreso / Desvinculación') return; // se agrega al final como endpoint
+    nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle });
+  });
+  if (tieneEgreso) nodos.push({ tipo:'endpoint', label:'Egreso' });
+  const html = `
+    <div class="traza-header">
+      <div>
+        <div class="traza-header-name">${esc(persona?.nombre || 'DNI '+eventos[0].dni)}</div>
+        <div class="traza-header-sub">DNI ${esc(eventos[0].dni)} · ${primarios.length} eventos primarios · ${secundarios.length} secundarios</div>
+      </div>
+    </div>
+    <div class="traza-line-wrap">
+      <div class="traza-line">
+        ${nodos.map(n => `
+          <div class="traza-node ${n.tipo==='endpoint'?'endpoint':''} ${n.tipo==='secundario'?'secundario':''}" ${n.tipo==='secundario' ? `title="${esc(n.label)}${n.fecha ? ' · '+new Date(n.fecha).toLocaleDateString('es-AR') : ''}"` : ''}>
+            <div class="traza-node-date">${n.fecha ? new Date(n.fecha).toLocaleDateString('es-AR') : ''}</div>
+            <div class="traza-node-dot"></div>
+            <div class="traza-node-label">${esc(n.label)}</div>
+          </div>
+          <div class="traza-spacer"></div>
+        `).join('').replace(/<div class="traza-spacer"><\/div>$/,'')}
+      </div>
+    </div>
+    <div class="traza-legend">
+      <div class="traza-legend-item"><span class="traza-legend-dot"></span>Eventos primarios</div>
+      <div class="traza-legend-item"><span class="traza-legend-dot sec"></span>Eventos secundarios (pasá el mouse por la marca)</div>
+    </div>
+    <div style="margin-top:20px">
+      ${eventos.map(e=>`<div class="cd-historial-item"><b style="color:${e.primario?'var(--text)':'var(--muted)'}">${esc(e.tipo)}</b> — ${esc(e.detalle||'')} · ${new Date(e.fecha).toLocaleString('es-AR')}</div>`).join('')}
+    </div>
+  `;
+  cont.innerHTML = html;
+}
+
 // Exponer funciones globales para onclick handlers del HTML
 Object.assign(window, {
   abrirAlertas, abrirConfirmDelete, abrirEdicionColab, abrirLocal,
@@ -6560,6 +7069,9 @@ Object.assign(window, {
   agregarCampoForm, quitarCampoForm, guardarPlantillaForm, eliminarPlantilla,
   filtrarColabListCampo, editarCampoDraftNombre, editarCampoDraftTipo,
   procesarArchivo, procesarArchivoOCR, filtrarSelectorColab, renderPlanilla, togglePlCol,
+  mostrarSeccion, filtrarCandidatos, abrirNuevoCandidato, guardarCandidato,
+  abrirCandidatoDetalle, decidirCandidato, convertirEnColaborador, buscarTraza,
+  guardarComentarioCandidato, archivarCandidato, restaurarCandidato,
 });
 
 </script>

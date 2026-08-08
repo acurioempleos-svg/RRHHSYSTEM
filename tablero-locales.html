@@ -256,6 +256,17 @@ body {
 .traza-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
 .traza-legend-dot { width:9px; height:9px; border-radius:50%; background:var(--amber); }
 .traza-legend-dot.sec { width:5px; height:5px; background:var(--muted); }
+.traza-node-dot { cursor:pointer; }
+#traza-tooltip {
+  position:fixed; z-index:200; pointer-events:none; opacity:0; transform:translate(-50%,-8px);
+  transition:opacity .12s ease; background:var(--s1); border:1px solid var(--b2);
+  border-radius:10px; padding:10px 12px; max-width:220px; box-shadow:0 10px 30px rgba(0,0,0,.4);
+}
+#traza-tooltip.vis { opacity:1; }
+#traza-tooltip .tt-tipo { font-weight:700; font-size:12px; margin-bottom:2px; }
+#traza-tooltip .tt-detalle { font-size:11px; color:var(--muted); margin-bottom:4px; }
+#traza-tooltip .tt-fecha { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); }
+#traza-tooltip img { display:block; width:100%; max-height:120px; object-fit:cover; border-radius:7px; margin-top:6px; }
 .view-label {
   font-family:'DM Mono',monospace; font-size:9px;
   color:var(--amber); letter-spacing:.22em; text-transform:uppercase;
@@ -2227,11 +2238,12 @@ body {
 <div id="view-trazabilidad" style="display:none">
   <div class="view-label">Trazabilidad</div>
   <div class="traza-search">
-    <input id="traza-dni-input" class="f-input" placeholder="Buscar por DNI…" inputmode="numeric" onkeydown="if(event.key==='Enter')buscarTraza()">
+    <input id="traza-dni-input" class="f-input" placeholder="Buscar por DNI o nombre…" onkeydown="if(event.key==='Enter')buscarTraza()">
     <button class="btn btn-amber" style="width:auto;padding:11px 18px" onclick="buscarTraza()">Buscar</button>
   </div>
   <div id="traza-resultado"></div>
 </div>
+<div id="traza-tooltip"></div>
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
@@ -3181,7 +3193,7 @@ onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
    Colección 'trazabilidad' en Firebase, un doc por evento.
    Código de seguimiento = DNI de la persona (candidato o colaborador).
    { dni, tipo, primario, detalle, fecha, colaboradorId, candidatoId } */
-async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId }) {
+async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId, imagen }) {
   if (!dni) return; // sin DNI no hay forma de rastrear el evento
   try {
     await addDoc(collection(db,'trazabilidad'), {
@@ -3189,6 +3201,7 @@ async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, ca
       tipo, primario: !!primario, detalle: detalle || '',
       colaboradorId: colaboradorId || null,
       candidatoId: candidatoId || null,
+      imagen: imagen || null,
       fecha: Date.now(),
     });
   } catch(e) { console.error('No se pudo registrar evento de trazabilidad', e); }
@@ -3240,7 +3253,9 @@ function detectarEventosColaborador(prevList, nuevosList) {
     // Carga de un documento individual (uno por cada doc que pasó de vacío a cargado)
     ALL_DOCS.forEach(d => {
       if (c[d.key] && !antes[d.key]) {
-        registrarEvento({ dni, tipo:'Documento cargado', primario:false, detalle:d.name, colaboradorId:c.id });
+        const urls = Array.isArray(c[d.key]) ? c[d.key] : [];
+        const imagen = urls.length ? urls[urls.length-1] : null;
+        registrarEvento({ dni, tipo:'Documento cargado', primario:false, detalle:d.name, colaboradorId:c.id, imagen });
       }
     });
     // Vencimiento de salud actualizado
@@ -3506,6 +3521,10 @@ function _buildPersonDocs(c) {
     <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Editar datos
+    </button>
+    <button class="pba-btn" style="background:var(--amber-glow);color:var(--amber-hi);border:1px solid var(--amber-brd)" onclick="verTrazabilidadDe('${c.dni_nro||''}','${esc(c.nombre)}');event.stopPropagation()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+      Trazabilidad
     </button>
     <button class="pba-btn amber" onclick="exportarPDF('${c.id}',this);event.stopPropagation()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -5747,6 +5766,7 @@ async function guardarNuevo() {
   const remuneracion = parseFloat(document.getElementById('n-remuneracion').value) || null;
   if (!nombre) { document.getElementById('n-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
+  if (dni && colabs.some(x => x.dni_nro === dni)) { toast('Ya existe un colaborador con ese DNI'); document.getElementById('n-dni').focus(); return; }
   const btn = document.querySelector('#nuevo-modal .btn-amber');
   if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
@@ -5774,6 +5794,7 @@ async function guardarNuevoColabOCR() {
   const puesto=document.getElementById('nco-puesto').value.trim();
   if (!nombre) { document.getElementById('nco-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
+  if (dni && colabs.some(x => x.dni_nro === dni)) { toast('Ya existe un colaborador con ese DNI'); document.getElementById('nco-dni').focus(); return; }
   const btn = document.getElementById('nco-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   try {
@@ -5822,6 +5843,7 @@ async function guardarEdicionColab() {
   const remuneracion = parseFloat($('edit-remuneracion').value) || null;
   if (!nombre) { $('edit-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
+  if (dni && colabs.some(x => x.dni_nro === dni && x.id !== id)) { toast('Ya existe otro colaborador con ese DNI'); $('edit-dni').focus(); return; }
   const btn = $('edit-colab-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
@@ -6874,6 +6896,8 @@ async function guardarCandidato() {
   const comentario = document.getElementById('cand-comentario').value.trim();
   if (!nombre) { document.getElementById('cand-nombre').focus(); return; }
   if (!dni)    { toast('El DNI es obligatorio — es el código de seguimiento'); document.getElementById('cand-dni').focus(); return; }
+  if (candidatos.some(x => !x.archivado && x.dni === dni)) { toast('Ya hay un candidato activo con ese DNI'); document.getElementById('cand-dni').focus(); return; }
+  if (colabs.some(x => x.dni_nro === dni && !x.desvinculado)) { toast('Ese DNI ya pertenece a un colaborador activo'); document.getElementById('cand-dni').focus(); return; }
   const btn = document.getElementById('cand-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
@@ -6896,6 +6920,7 @@ function abrirCandidatoDetalle(id) {
     <div class="cd-row"><b>DNI</b><span>${esc(c.dni||'—')}</span></div>
     <div class="cd-row"><b>Puesto</b><span>${esc(c.puesto||'—')}</span></div>
     <div class="cd-row"><b>Local</b><span>${esc(c.local||'—')}</span></div>
+    <button class="btn btn-ghost" style="margin-bottom:6px" onclick="verTrazabilidadDe('${esc(c.dni)}','${esc(c.nombre)}')">Ver trazabilidad</button>
     <div class="f-field" style="margin-top:10px"><label class="f-label">Notas</label><input class="f-input" id="cd-comentario-input" value="${esc(c.comentario||'')}" placeholder="Agregar comentario…"></div>
     <button class="btn btn-ghost" style="margin-bottom:10px" onclick="guardarComentarioCandidato('${c.id}')">Guardar nota</button>
     ${!c.archivado ? `
@@ -6980,18 +7005,56 @@ const TRAZA_ORDEN = [
   'Egreso / Desvinculación',
 ];
 async function buscarTraza() {
-  const dni = document.getElementById('traza-dni-input').value.trim();
+  const valor = document.getElementById('traza-dni-input').value.trim();
   const cont = document.getElementById('traza-resultado');
-  if (!dni) { toast('Ingresá un DNI'); return; }
+  if (!valor) { toast('Ingresá un DNI o un nombre'); return; }
   cont.innerHTML = '<div class="traza-empty">Buscando…</div>';
+  const esNumerico = /^\d+$/.test(valor);
   try {
-    const eventos = await buscarTrazabilidadPorDni(dni);
-    if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
-    const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
-    const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
-    renderTrazaLine(cont, eventos, persona, !!egreso);
+    if (esNumerico) {
+      await ejecutarBusquedaPorDni(valor, cont);
+      return;
+    }
+    // Búsqueda por nombre → buscamos coincidencias entre colaboradores y candidatos
+    const texto = valor.toLowerCase();
+    const matches = [
+      ...colabs.filter(c => (c.nombre||'').toLowerCase().includes(texto) && c.dni_nro).map(c => ({ dni:c.dni_nro, nombre:c.nombre, tipo:'Colaborador' })),
+      ...candidatos.filter(c => (c.nombre||'').toLowerCase().includes(texto) && c.dni).map(c => ({ dni:c.dni, nombre:c.nombre, tipo:'Candidato' })),
+    ];
+    // Deduplicar por DNI
+    const porDni = new Map();
+    matches.forEach(m => { if (!porDni.has(m.dni)) porDni.set(m.dni, m); });
+    const unicos = [...porDni.values()];
+    if (!unicos.length) { cont.innerHTML = `<div class="traza-empty">No encontré a nadie con el nombre "${esc(valor)}".</div>`; return; }
+    if (unicos.length === 1) { await ejecutarBusquedaPorDni(unicos[0].dni, cont); return; }
+    // Varias coincidencias → mostrar para elegir
+    cont.innerHTML = `
+      <div class="traza-empty" style="padding:16px 0 10px">Encontré ${unicos.length} personas con ese nombre — elegí una:</div>
+      <div id="sel-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+        ${unicos.map(m => `
+          <div class="sel-card" onclick="document.getElementById('traza-dni-input').value='${esc(m.dni)}';buscarTraza()">
+            <div class="sel-card-name">${esc(m.nombre)}</div>
+            <div class="sel-card-sub">DNI ${esc(m.dni)} · ${m.tipo}</div>
+          </div>
+        `).join('')}
+      </div>`;
   } catch(e) { manejarError(e, 'buscar trazabilidad'); }
 }
+async function ejecutarBusquedaPorDni(dni, cont) {
+  const eventos = await buscarTrazabilidadPorDni(dni);
+  if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
+  const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
+  const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
+  renderTrazaLine(cont, eventos, persona, !!egreso);
+}
+function verTrazabilidadDe(dni, nombre) {
+  if (!dni) { toast(`${nombre} todavía no tiene DNI cargado`); return; }
+  document.querySelectorAll('.overlay.open').forEach(el => closeSheet(el.id));
+  mostrarSeccion('trazabilidad');
+  document.getElementById('traza-dni-input').value = dni;
+  buscarTraza();
+}
+let _trazaTooltipData = [];
 function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
   const primarios = eventos.filter(e=>e.primario);
   const secundarios = eventos.filter(e=>!e.primario);
@@ -7002,9 +7065,10 @@ function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
   nodos.push({ tipo:'endpoint', label:'Ingreso' });
   eventos.forEach(e => {
     if (e.tipo === 'Egreso / Desvinculación') return; // se agrega al final como endpoint
-    nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle });
+    nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle, imagen:e.imagen });
   });
   if (tieneEgreso) nodos.push({ tipo:'endpoint', label:'Egreso' });
+  _trazaTooltipData = nodos;
   const html = `
     <div class="traza-header">
       <div>
@@ -7014,10 +7078,10 @@ function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
     </div>
     <div class="traza-line-wrap">
       <div class="traza-line">
-        ${nodos.map(n => `
-          <div class="traza-node ${n.tipo==='endpoint'?'endpoint':''} ${n.tipo==='secundario'?'secundario':''}" ${n.tipo==='secundario' ? `title="${esc(n.label)}${n.fecha ? ' · '+new Date(n.fecha).toLocaleDateString('es-AR') : ''}"` : ''}>
+        ${nodos.map((n,i) => `
+          <div class="traza-node ${n.tipo==='endpoint'?'endpoint':''} ${n.tipo==='secundario'?'secundario':''}">
             <div class="traza-node-date">${n.fecha ? new Date(n.fecha).toLocaleDateString('es-AR') : ''}</div>
-            <div class="traza-node-dot"></div>
+            <div class="traza-node-dot" onmouseenter="mostrarTrazaTooltip(event,${i})" onmousemove="moverTrazaTooltip(event)" onmouseleave="ocultarTrazaTooltip()"></div>
             <div class="traza-node-label">${esc(n.label)}</div>
           </div>
           <div class="traza-spacer"></div>
@@ -7026,13 +7090,39 @@ function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
     </div>
     <div class="traza-legend">
       <div class="traza-legend-item"><span class="traza-legend-dot"></span>Eventos primarios</div>
-      <div class="traza-legend-item"><span class="traza-legend-dot sec"></span>Eventos secundarios (pasá el mouse por la marca)</div>
+      <div class="traza-legend-item"><span class="traza-legend-dot sec"></span>Eventos secundarios — pasá el mouse por un punto para ver el detalle</div>
     </div>
     <div style="margin-top:20px">
       ${eventos.map(e=>`<div class="cd-historial-item"><b style="color:${e.primario?'var(--text)':'var(--muted)'}">${esc(e.tipo)}</b> — ${esc(e.detalle||'')} · ${new Date(e.fecha).toLocaleString('es-AR')}</div>`).join('')}
     </div>
   `;
   cont.innerHTML = html;
+}
+function mostrarTrazaTooltip(ev, idx) {
+  const n = _trazaTooltipData[idx];
+  if (!n) return;
+  const tt = document.getElementById('traza-tooltip');
+  tt.innerHTML = `
+    <div class="tt-tipo">${esc(n.label)}</div>
+    ${n.detalle ? `<div class="tt-detalle">${esc(n.detalle)}</div>` : ''}
+    ${n.fecha ? `<div class="tt-fecha">${new Date(n.fecha).toLocaleString('es-AR')}</div>` : ''}
+    ${n.imagen ? `<img src="${n.imagen}" alt="">` : ''}
+  `;
+  posicionarTrazaTooltip(ev);
+  tt.classList.add('vis');
+}
+function moverTrazaTooltip(ev) { posicionarTrazaTooltip(ev); }
+function posicionarTrazaTooltip(ev) {
+  const tt = document.getElementById('traza-tooltip');
+  const pad = 12;
+  let x = ev.clientX, y = ev.clientY - pad;
+  const w = tt.offsetWidth || 200;
+  x = Math.min(Math.max(x, w/2 + 8), window.innerWidth - w/2 - 8);
+  tt.style.left = x + 'px';
+  tt.style.top  = y + 'px';
+}
+function ocultarTrazaTooltip() {
+  document.getElementById('traza-tooltip').classList.remove('vis');
 }
 
 // Exponer funciones globales para onclick handlers del HTML
@@ -7072,6 +7162,8 @@ Object.assign(window, {
   mostrarSeccion, filtrarCandidatos, abrirNuevoCandidato, guardarCandidato,
   abrirCandidatoDetalle, decidirCandidato, convertirEnColaborador, buscarTraza,
   guardarComentarioCandidato, archivarCandidato, restaurarCandidato,
+  verTrazabilidadDe, ejecutarBusquedaPorDni,
+  mostrarTrazaTooltip, moverTrazaTooltip, ocultarTrazaTooltip,
 });
 
 </script>

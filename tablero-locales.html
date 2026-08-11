@@ -2263,19 +2263,19 @@ body {
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
-  <div class="fab-opt">
+  <div class="fab-opt fab-opt-locales">
     <span class="fab-lbl">Cargar documento</span>
     <button class="fab-ico fab-ico-doc" onclick="fabAbrirDoc()">📷</button>
   </div>
-  <div class="fab-opt">
+  <div class="fab-opt fab-opt-locales">
     <span class="fab-lbl">Nuevo colaborador</span>
     <button class="fab-ico fab-ico-user" onclick="fabAbrirNuevo()">👤</button>
   </div>
-  <div class="fab-opt">
+  <div class="fab-opt fab-opt-locales">
     <span class="fab-lbl">Nuevo local</span>
     <button class="fab-ico" style="background:var(--i-dim);border:1px solid rgba(59,125,216,.28)" onclick="fabAbrirNuevoLocal()">🏠</button>
   </div>
-  <div class="fab-opt">
+  <div class="fab-opt fab-opt-locales">
     <span class="fab-lbl">Fusionar legajos</span>
     <button class="fab-ico fab-ico-fus" onclick="fabAbrirFusion()">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2284,8 +2284,13 @@ body {
       </svg>
     </button>
   </div>
+  <div class="fab-opt fab-opt-seleccion" style="display:none">
+    <span class="fab-lbl">Nuevo candidato</span>
+    <button class="fab-ico fab-ico-user" onclick="fabAbrirNuevoCandidato()">🧑‍💼</button>
+  </div>
   <button id="fab" onclick="fabToggle()">
     <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
+
   </button>
 </div>
 
@@ -5293,6 +5298,7 @@ async function confirmarFusion() {
 }
 
 function fabAbrirNuevo() { document.getElementById('fab-group').classList.remove('open'); abrirNuevo(); }
+function fabAbrirNuevoCandidato() { document.getElementById('fab-group').classList.remove('open'); abrirNuevoCandidato(); }
 function fabAbrirDoc()   {
   document.getElementById('fab-group').classList.remove('open');
   activeTask = { id:null, type:'dni_frente', label:'Documento', askFecha:false };
@@ -7104,6 +7110,9 @@ function mostrarSeccion(seccion) {
     document.getElementById('nav-'+key)?.classList.toggle('active', key===seccion);
     document.getElementById('navm-'+key)?.classList.toggle('active', key===seccion);
   });
+  document.querySelectorAll('.fab-opt-locales').forEach(el => el.style.display = (seccion==='locales') ? '' : 'none');
+  document.querySelectorAll('.fab-opt-seleccion').forEach(el => el.style.display = (seccion==='seleccion') ? '' : 'none');
+  document.getElementById('fab-group').style.display = (seccion==='trazabilidad') ? 'none' : '';
   if (currentLocal && seccion!=='locales') cerrarLocal();
 }
 
@@ -7418,7 +7427,7 @@ Object.assign(window, {
   verTrazabilidadDe, ejecutarBusquedaPorDni,
   mostrarTrazaTooltip, moverTrazaTooltip, ocultarTrazaTooltip,
   abrirAuditoria, cerrarAuditoria, filtrarAuditoria,
-  abrirUsuarioModal, guardarUsuario,
+  abrirUsuarioModal, guardarUsuario, fabAbrirNuevoCandidato,
 });
 
 </script>

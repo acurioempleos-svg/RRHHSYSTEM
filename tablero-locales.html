@@ -3193,8 +3193,17 @@ onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
    Colección 'trazabilidad' en Firebase, un doc por evento.
    Código de seguimiento = DNI de la persona (candidato o colaborador).
    { dni, tipo, primario, detalle, fecha, colaboradorId, candidatoId } */
-async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId, imagen }) {
+async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId, imagen, fecha }) {
   if (!dni) return; // sin DNI no hay forma de rastrear el evento
+  // `fecha` es la fecha REAL en que ocurrió el hecho (ej: c.at para el ingreso,
+  // cargado_en del archivo puntual para una carga de documento). Si no se
+  // provee una fecha real, se usa el momento de detección como último recurso.
+  let fechaFinal = Date.now();
+  if (fecha) {
+    const f = (typeof fecha === 'object' && fecha.seconds) ? fecha.seconds*1000 : fecha;
+    const t = new Date(f).getTime();
+    if (!isNaN(t)) fechaFinal = t;
+  }
   try {
     await addDoc(collection(db,'trazabilidad'), {
       dni: String(dni).trim(),
@@ -3202,7 +3211,7 @@ async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, ca
       colaboradorId: colaboradorId || null,
       candidatoId: candidatoId || null,
       imagen: imagen || null,
-      fecha: Date.now(),
+      fecha: fechaFinal,
     });
   } catch(e) { console.error('No se pudo registrar evento de trazabilidad', e); }
 }
@@ -3210,6 +3219,17 @@ async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, ca
 // Compara el snapshot anterior de colaboradores contra el nuevo y genera
 // automáticamente los eventos primarios de trazabilidad correspondientes.
 let _trazaInicializada = false;
+// Legajo completo = todas las carpetas por defecto (CARPETAS_DEFAULT) tienen
+// al menos un archivo cargado. Usa el sistema vigente de carpetas (con fallback
+// a campos legacy vía getCarpetas) en vez de mirar solo ALL_DOCS.
+function tieneDocsCompletos(c) {
+  if (!c) return false;
+  const carpetas = getCarpetas(c);
+  return CARPETAS_DEFAULT.every(d => {
+    const f = carpetas.find(x => x.nombre === d.nombre);
+    return !!(f && Array.isArray(f.urls) && f.urls.length);
+  });
+}
 function detectarEventosColaborador(prevList, nuevosList) {
   if (!_trazaInicializada) { _trazaInicializada = true; return; } // no re-generar historial al cargar la página
   const prevMap = new Map((prevList||[]).map(c => [c.id, c]));
@@ -3218,8 +3238,10 @@ function detectarEventosColaborador(prevList, nuevosList) {
     if (!dni) return;
     const antes = prevMap.get(c.id);
     if (!antes) {
-      // Colaborador nuevo → Alta como colaborador
-      registrarEvento({ dni, tipo:'Alta como colaborador', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
+      // Colaborador nuevo → Alta como colaborador.
+      // Usamos c.at (fecha real de alta del legajo) como fecha de inicio,
+      // en vez del momento en que este cliente detectó el cambio.
+      registrarEvento({ dni, tipo:'Alta como colaborador', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.at });
       return;
     }
     // Cambio de puesto o local
@@ -3234,9 +3256,11 @@ function detectarEventosColaborador(prevList, nuevosList) {
     if (rNuevo > 0 && rNuevo !== rAntes) {
       registrarEvento({ dni, tipo:'Aumento de remuneración', primario:true, detalle:`${rAntes ? '$'+rAntes.toLocaleString('es-AR') : '—'} → $${rNuevo.toLocaleString('es-AR')}`, colaboradorId:c.id });
     }
-    // Documentación completa (pasa de incompleta a completa)
-    const completaAntes = ALL_DOCS.every(d => antes[d.key]);
-    const completaAhora = ALL_DOCS.every(d => c[d.key]);
+    // Documentación completa (pasa de incompleta a completa) — usa el sistema
+    // vigente de carpetas (nombre por nombre) para no depender de campos legacy
+    // que hoy ya no se actualizan.
+    const completaAntes = tieneDocsCompletos(antes);
+    const completaAhora = tieneDocsCompletos(c);
     if (completaAhora && !completaAntes) {
       registrarEvento({ dni, tipo:'Documentación completa', primario:true, detalle:'Todos los documentos del legajo cargados', colaboradorId:c.id });
     }
@@ -3250,14 +3274,54 @@ function detectarEventosColaborador(prevList, nuevosList) {
     if ((c.nombre||'') !== (antes.nombre||'')) {
       registrarEvento({ dni, tipo:'Edición de ficha', primario:false, detalle:`Nombre: ${antes.nombre||'—'} → ${c.nombre||'—'}`, colaboradorId:c.id });
     }
-    // Carga de un documento individual (uno por cada doc que pasó de vacío a cargado)
+    // Carga de un documento individual — sistema LEGACY por campo fijo
+    // (dni_frente, salud, etc.). Hoy casi ningún colaborador escribe en estos
+    // campos (ver bloque de carpetas más abajo, que es el sistema vigente),
+    // pero se deja como red de contención por si algún dato viejo aún los usa.
     ALL_DOCS.forEach(d => {
-      if (c[d.key] && !antes[d.key]) {
-        const urls = Array.isArray(c[d.key]) ? c[d.key] : [];
-        const imagen = urls.length ? urls[urls.length-1] : null;
-        registrarEvento({ dni, tipo:'Documento cargado', primario:false, detalle:d.name, colaboradorId:c.id, imagen });
+      const arrAntes = Array.isArray(antes[d.key]) ? antes[d.key] : (antes[d.key] ? [antes[d.key]] : []);
+      const arrAhora = Array.isArray(c[d.key]) ? c[d.key] : (c[d.key] ? [c[d.key]] : []);
+      if (arrAhora.length <= arrAntes.length) return; // sin archivos nuevos
+      const metaAhora = Array.isArray(c[d.key+'_meta']) ? c[d.key+'_meta'] : [];
+      for (let i = arrAntes.length; i < arrAhora.length; i++) {
+        const metaItem = metaAhora[i] || {};
+        // Fecha real del hecho: si el documento pide una fecha propia (ej. fecha
+        // del estudio médico, fecha de sanción, rango de vacaciones), esa es la
+        // fecha correcta del evento; si no, se usa cuándo se cargó ese archivo puntual.
+        let fechaReal = metaItem.cargado_en;
+        if (d.askFecha && c[d.key+'_fecha']) fechaReal = c[d.key+'_fecha'];
+        else if (d.askRangoFechas && c[d.key+'_fecha_inicio']) fechaReal = c[d.key+'_fecha_inicio'];
+        registrarEvento({
+          dni, tipo:'Documento cargado', primario:false,
+          detalle: arrAhora.length>1 ? `${d.name} (${i+1}/${arrAhora.length})` : d.name,
+          colaboradorId:c.id, imagen:arrAhora[i], fecha:fechaReal
+        });
       }
     });
+    // Carga de un documento individual — sistema VIGENTE de carpetas (📂).
+    // Solo se compara si antes YA existía carpetas[] real: si esta es la
+    // primera vez que aparece (recién migrado desde campos legacy al abrir/
+    // tocar una carpeta), NO se generan eventos, porque esos archivos ya
+    // pueden tener su evento histórico del bloque legacy de arriba — evita
+    // duplicar todo el legajo de golpe el día de la migración.
+    if (Array.isArray(antes.carpetas) && antes.carpetas.length && Array.isArray(c.carpetas)) {
+      const carpMapAntes = new Map(antes.carpetas.map(f => [f.id, f]));
+      c.carpetas.forEach(f => {
+        const fAntes = carpMapAntes.get(f.id);
+        const urlsAntes = fAntes && Array.isArray(fAntes.urls) ? fAntes.urls : [];
+        const urlsAhora = Array.isArray(f.urls) ? f.urls : [];
+        if (urlsAhora.length <= urlsAntes.length) return; // sin archivos nuevos en esta carpeta
+        const metaAhora = Array.isArray(f.meta) ? f.meta : [];
+        for (let i = urlsAntes.length; i < urlsAhora.length; i++) {
+          const metaItem = metaAhora[i] || {};
+          registrarEvento({
+            dni, tipo:'Documento cargado', primario:false,
+            detalle: urlsAhora.length>1 ? `${f.nombre} (${i+1}/${urlsAhora.length})` : f.nombre,
+            colaboradorId:c.id, imagen:urlsAhora[i], fecha:metaItem.cargado_en
+          });
+        }
+      });
+    }
     // Vencimiento de salud actualizado
     if ((c.vencimiento_salud||'') !== (antes.vencimiento_salud||'')) {
       registrarEvento({ dni, tipo:'Vencimiento de salud actualizado', primario:false, detalle:c.vencimiento_salud||'—', colaboradorId:c.id });

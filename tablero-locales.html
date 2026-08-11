@@ -198,14 +198,6 @@ body {
 .status-pill.Aprobado  { background:var(--s-dim); color:var(--success); }
 .status-pill.Rechazado { background:var(--d-dim); color:var(--danger); }
 .sel-empty { text-align:center; color:var(--muted); font-size:12px; padding:60px 20px; }
-#sel-fab {
-  position:fixed; right:20px; bottom:76px; z-index:40;
-  width:52px; height:52px; border-radius:50%; background:var(--amber);
-  color:#fff; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; box-shadow:0 8px 24px rgba(201,122,26,.35); transition:all var(--t);
-}
-#sel-fab:hover { background:var(--amber-hi); transform:scale(1.05); }
-@media(min-width:761px){ #sel-fab { bottom:24px; } }
 .cd-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--b0); font-size:12.5px; }
 .cd-row b { color:var(--muted); font-weight:500; font-size:11px; }
 .decision-actions { display:flex; gap:8px; margin:14px 0; }
@@ -2225,9 +2217,6 @@ body {
   </div>
   <div id="sel-grid"></div>
   <div id="sel-empty" class="sel-empty" style="display:none">Todavía no hay candidatos cargados.</div>
-</div>
-<div id="sel-fab" onclick="abrirNuevoCandidato()">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </div>
 
 <!-- Nuevo candidato -->
@@ -7111,15 +7100,12 @@ function mostrarSeccion(seccion) {
     const el = document.getElementById(elId);
     if (el) el.style.display = (key===seccion) ? '' : 'none';
   });
-  document.getElementById('sel-fab').style.display = (seccion==='seleccion') ? 'flex' : 'none';
   ['locales','seleccion','trazabilidad'].forEach(key=>{
     document.getElementById('nav-'+key)?.classList.toggle('active', key===seccion);
     document.getElementById('navm-'+key)?.classList.toggle('active', key===seccion);
   });
   if (currentLocal && seccion!=='locales') cerrarLocal();
 }
-// Ocultar FAB de candidatos al arrancar (la vista principal es Locales)
-document.addEventListener('DOMContentLoaded', ()=>{ const f=document.getElementById('sel-fab'); if (f) f.style.display='none'; });
 
 /* ══ CANDIDATOS — UI ═══════════════════════════════════════════════ */
 function renderCandidatos() {
@@ -7431,6 +7417,8 @@ Object.assign(window, {
   guardarComentarioCandidato, archivarCandidato, restaurarCandidato,
   verTrazabilidadDe, ejecutarBusquedaPorDni,
   mostrarTrazaTooltip, moverTrazaTooltip, ocultarTrazaTooltip,
+  abrirAuditoria, cerrarAuditoria, filtrarAuditoria,
+  abrirUsuarioModal, guardarUsuario,
 });
 
 </script>

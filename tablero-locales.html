@@ -1044,6 +1044,11 @@ body {
   .alerts-drawer { width:380px; }
 }
 #alerts-panel.open .alerts-drawer { transform:none; }
+#auditoria-panel {
+  position:fixed; inset:0; z-index:200; display:none;
+}
+#auditoria-panel.open { display:block; }
+#auditoria-panel.open .alerts-drawer { transform:none; }
 .alerts-bar {
   padding:16px 18px; border-bottom:1px solid var(--b0);
   display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
@@ -1182,6 +1187,21 @@ body {
   color:var(--muted); cursor:pointer; transition:all var(--t);
 }
 #vista-global-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
+
+#auditoria-btn, #organigrama-btn {
+  width:34px; height:34px; border-radius:9px; flex-shrink:0;
+  background:var(--s1); border:1px solid var(--b1);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted); cursor:pointer; transition:all var(--t);
+}
+#auditoria-btn:hover, #organigrama-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
+
+#usuario-chip {
+  height:34px; border-radius:9px; flex-shrink:0;
+  background:var(--s1); border:1px solid var(--b1);
+  color:var(--muted); cursor:pointer; transition:all var(--t);
+}
+#usuario-chip:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
 
 /* ── Nombres de locales y colaboradores siempre en mayúscula ── */
 .lb-name, .pb-name, .sr-name, .vg-row-name, .org-person, .csi-name, .pl-name,
@@ -2116,6 +2136,13 @@ body {
   <button id="organigrama-btn" onclick="abrirOrganigrama()" title="Organigrama por local" style="margin-right:2px">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2" y="16" width="6" height="5" rx="1"/><rect x="16" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/></svg>
   </button>
+  <button id="auditoria-btn" onclick="abrirAuditoria()" title="Auditoría de metadatos" style="margin-right:2px">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6M11 8v6" stroke-width="1.5"/></svg>
+  </button>
+  <button id="usuario-chip" onclick="abrirUsuarioModal()" title="¿Quién sos? (para registrar quién carga cada documento)" style="margin-right:2px;display:flex;align-items:center;gap:4px;padding:0 8px;width:auto;font-family:'DM Mono',monospace;font-size:10px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span id="usuario-chip-txt">Identificarme</span>
+  </button>
   <div id="notif-btn" onclick="abrirAlertas()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     <div id="notif-badge"></div>
@@ -2290,6 +2317,48 @@ body {
       <button class="af-btn" onclick="filtrarAlertas('info',this)">Info</button>
     </div>
     <div class="alerts-list" id="alerts-list"></div>
+  </div>
+</div>
+
+<!-- ══ IDENTIFICACIÓN DE USUARIO ═══════════════════════════════════ -->
+<div id="usuario-modal" class="overlay" onclick="closeSheet('usuario-modal')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-pill"></div>
+    <div class="sheet-hdr">
+      <div class="sheet-title">¿Quién sos?</div>
+      <div class="sheet-x" onclick="closeSheet('usuario-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="sheet-body">
+      <p style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
+        Se guarda en este dispositivo/navegador y queda registrado en cada documento que subas de ahora en más.
+      </p>
+      <div class="f-field" style="margin-bottom:14px">
+        <label class="f-label">Tu nombre</label>
+        <input class="f-input" id="usuario-input" type="text" placeholder="Ej: María" onkeydown="if(event.key==='Enter')guardarUsuario()">
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUDITORÍA DE METADATOS ═══════════════════════════════════════ -->
+<div id="auditoria-panel">
+  <div class="alerts-backdrop" onclick="cerrarAuditoria()"></div>
+  <div class="alerts-drawer">
+    <div class="alerts-bar">
+      <div class="alerts-bar-title">Auditoría de metadatos</div>
+      <div class="alerts-close" onclick="cerrarAuditoria()">
+        <svg viewBox="0 0 24 24"><use href="#ic-x24"/></svg>
+      </div>
+    </div>
+    <div id="auditoria-resumen" style="padding:12px 16px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);border-bottom:1px solid var(--b2)"></div>
+    <div class="alerts-filt">
+      <button class="af-btn active" onclick="filtrarAuditoria('all',this)">Todas</button>
+      <button class="af-btn" onclick="filtrarAuditoria('sinfecha',this)">Sin fecha</button>
+      <button class="af-btn" onclick="filtrarAuditoria('estimado',this)">Estimadas</button>
+      <button class="af-btn" onclick="filtrarAuditoria('sinautor',this)">Sin autor</button>
+    </div>
+    <div class="alerts-list" id="auditoria-list"></div>
   </div>
 </div>
 
@@ -2921,6 +2990,39 @@ enableIndexedDbPersistence(db).catch(() => {/* multi-tab u otro motivo: sigue an
 const $     = id => document.getElementById(id);
 const showL = (msg) => { const l=$('loading'); if(l) l.style.display='flex'; const t=$('loading-txt'); if(t) t.textContent = msg || 'Cargando…'; };
 const hideL = ()  => { const l=$('loading'); if(l) l.style.display='none'; };
+
+/* ── Identificación liviana del usuario (sin login formal) ──────────
+   Se guarda en localStorage por navegador/dispositivo. Se usa para
+   dejar registrado quién cargó cada documento (campo subido_por). ── */
+let usuarioActual = (localStorage.getItem('bc_usuario') || '').trim();
+function nombreUsuarioTag() { return usuarioActual || null; }
+function abrirUsuarioModal() {
+  $('usuario-input').value = usuarioActual;
+  openSheet('usuario-modal');
+  requestAnimationFrame(() => $('usuario-input')?.focus());
+}
+function guardarUsuario() {
+  const v = ($('usuario-input').value || '').trim();
+  usuarioActual = v;
+  localStorage.setItem('bc_usuario', v);
+  renderUsuarioChip();
+  closeSheet('usuario-modal');
+  toast(v ? `✓ Identificado como ${v}` : 'Identificación borrada');
+}
+function renderUsuarioChip() {
+  const el = $('usuario-chip-txt');
+  if (el) el.textContent = usuarioActual || 'Identificarme';
+}
+renderUsuarioChip();
+
+/* ── Normaliza fechas heterogéneas (ISO string, Firestore Timestamp, Date) ── */
+function normalizarFecha(v) {
+  if (!v) return null;
+  if (typeof v === 'string') return v;
+  if (v?.seconds) return new Date(v.seconds * 1000).toISOString();
+  if (v instanceof Date) return v.toISOString();
+  return null;
+}
 
 /* ── Sube a ImgBB con retry automático (1 reintento) ── */
 /* ── PDFs se guardan como data URL directamente (ImgBB no acepta PDF) ── */
@@ -3935,10 +4037,15 @@ function migrarCarpetasLegacy(c) {
     const raw  = legacyKey ? c[legacyKey] : null;
     const urls = raw ? (Array.isArray(raw) ? raw : [raw]) : [];
     const metaRaw = legacyKey ? c[legacyKey + '_meta'] : null;
+    // Fallback cuando nunca se guardó _meta: usamos la fecha de alta del
+    // legajo (c.at) como estimación y lo marcamos explícitamente como tal,
+    // en vez de dejar el documento sin fecha para siempre.
+    const fechaEstimada = normalizarFecha(c.at);
+    const metaFallback  = () => ({ estado: 'ok', cargado_en: fechaEstimada, estimado: true });
     let meta = Array.isArray(metaRaw) ? metaRaw
              : (metaRaw && typeof metaRaw === 'object') ? [metaRaw]
-             : urls.map(() => ({ estado: 'ok' }));
-    while (meta.length < urls.length) meta.push({ estado: 'ok' });
+             : urls.map(metaFallback);
+    while (meta.length < urls.length) meta.push(metaFallback());
     return {
       id:     uidCarpeta(),
       nombre: d.nombre,
@@ -4115,7 +4222,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
   if ((folder.urls||[]).length >= 50) { toast('Límite de 50 fotos por carpeta'); return; }
 
   folder.urls = [...(folder.urls||[]), url];
-  folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok' }];
+  folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag() }];
 
   // Optimistic local
   const idx = colabs.findIndex(x => x.id === colabId);
@@ -4477,7 +4584,7 @@ async function guardarFotoEnCarpetaLocal(localId, folderIdx, url, metaExtra) {
   if (!folder) return;
   if ((folder.urls || []).length >= 50) { toast('Limite de 50 fotos por carpeta'); return; }
   folder.urls.push(url);
-  folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', ...(metaExtra || {}) });
+  folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', subido_por: nombreUsuarioTag(), ...(metaExtra || {}) });
   const idx  = locales.findIndex(x => x.id === localId);
   const prev = idx !== -1 ? { ...locales[idx] } : null;
   if (idx !== -1) locales[idx] = { ...locales[idx], carpetas };
@@ -4515,7 +4622,10 @@ function renderLocalCarousel() {
   }).join('');
 
   const fechaCarga = meta.cargado_en
-    ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}</span></div>`
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}${meta.estimado?' <em style="opacity:.6;font-style:italic">(estimado)</em>':''}</span></div>`
+    : `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val" style="opacity:.6">Sin fecha registrada</span></div>`;
+  const subidoPor = meta.subido_por
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Por</span><span class="car-meta-val">${esc(meta.subido_por)}</span></div>`
     : '';
   const fotoNum = hasMulti
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevLocalIdx+1} de ${_prevLocalUrls.length}</span></div>`
@@ -4528,7 +4638,7 @@ function renderLocalCarousel() {
         <div class="car-slide-inner" style="transform:translateX(-${_prevLocalIdx*100}%)">${slides}</div>
       </div>
     </div>
-    <div class="car-meta">${fechaCarga}${fotoNum}</div>
+    <div class="car-meta">${fechaCarga}${subidoPor}${fotoNum}</div>
     <div class="car-actions">
       <button class="car-btn" onclick="descargarFoto('${curUrl}','${fname}',${_prevLocalIdx+1})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -4690,7 +4800,10 @@ function renderCarousel() {
   }).join('');
 
   const fechaCarga = meta.cargado_en
-    ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}</span></div>`
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}${meta.estimado?' <em style="opacity:.6;font-style:italic">(estimado)</em>':''}</span></div>`
+    : `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val" style="opacity:.6">Sin fecha registrada</span></div>`;
+  const subidoPor = meta.subido_por
+    ? `<div class="car-meta-row"><span class="car-meta-lbl">Por</span><span class="car-meta-val">${esc(meta.subido_por)}</span></div>`
     : '';
   const fotoNum = hasMulti
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevIdx+1} de ${_prevUrls.length}</span></div>`
@@ -4709,7 +4822,7 @@ function renderCarousel() {
       ${estadoBadge}
     </div>
     <div class="car-meta">
-      ${fechaCarga}${fotoNum}
+      ${fechaCarga}${subidoPor}${fotoNum}
     </div>
     <div class="car-actions">
       <button class="car-btn" onclick="descargarFoto('${currentUrl}','${activeTask?.label||'doc'}',${_prevIdx+1})" title="Descargar">
@@ -5554,7 +5667,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
       const folder = carpetas[activeTask.folderIdx];
       if (!folder) return;
       const replaceIdx = activeTask._reemplazarIdx;
-      const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', ...(metaExtra||{}) };
+      const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag(), ...(metaExtra||{}) };
       if (replaceIdx !== undefined && replaceIdx !== null && replaceIdx >= 0) {
         folder.urls[replaceIdx] = urlToSave;
         folder.meta[replaceIdx] = newEntry;
@@ -5578,7 +5691,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
   const metaRaw  = colab ? colab[activeTask.type+'_meta'] : null;
   const metaArr  = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
   while (metaArr.length < arr.length) metaArr.push({});
-  const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', ...(metaExtra||{}) };
+  const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag(), ...(metaExtra||{}) };
 
   const replaceIdx = activeTask._reemplazarIdx;
 
@@ -5983,6 +6096,96 @@ function renderAlertsList() {
         <div class="alert-title">${esc(a.title)}</div>
         ${a.sub?`<div class="alert-sub">${esc(a.sub)}</div>`:''}
         <span class="alert-pill">${a.pill}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ══ AUDITORÍA DE METADATOS ═══════════════════════════════════════
+   Recorre colaboradores y locales ya cargados en memoria (vía
+   onSnapshot) y detecta documentos cuya metadata está incompleta:
+   sin fecha de carga, con fecha estimada (migración legacy), o sin
+   autor registrado. No hace lecturas extra a Firestore.        ── */
+let _auditFilter = 'all';
+function buildAuditoria() {
+  const items = [];
+
+  colabs.forEach(c => {
+    getCarpetas(c).forEach(f => {
+      (f.meta || []).forEach((m, i) => {
+        if (!m) return;
+        const problemas = [];
+        if (!m.cargado_en) problemas.push('sinfecha');
+        else if (m.estimado) problemas.push('estimado');
+        if (!m.subido_por) problemas.push('sinautor');
+        if (!problemas.length) return;
+        items.push({
+          origen: 'Colaborador', nombre: c.nombre || '(sin nombre)', sub: `${f.nombre || 'Carpeta'} · foto ${i+1}`,
+          problemas, fecha: m.cargado_en || null
+        });
+      });
+    });
+  });
+
+  locales.forEach(l => {
+    getLocalCarpetas(l).forEach(f => {
+      (f.meta || []).forEach((m, i) => {
+        if (!m) return;
+        const problemas = [];
+        if (!m.cargado_en) problemas.push('sinfecha');
+        else if (m.estimado) problemas.push('estimado');
+        if (!m.subido_por) problemas.push('sinautor');
+        if (!problemas.length) return;
+        items.push({
+          origen: 'Local', nombre: l.nombre || '(sin nombre)', sub: `${f.nombre || 'Carpeta'} · foto ${i+1}`,
+          problemas, fecha: m.cargado_en || null
+        });
+      });
+    });
+  });
+
+  return items;
+}
+function abrirAuditoria() {
+  document.getElementById('auditoria-panel').classList.add('open');
+  _auditFilter = 'all';
+  renderAuditoriaList();
+}
+function cerrarAuditoria() { document.getElementById('auditoria-panel').classList.remove('open'); }
+function filtrarAuditoria(key, btn) {
+  _auditFilter = key;
+  document.querySelectorAll('#auditoria-panel .af-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderAuditoriaList();
+}
+function renderAuditoriaList() {
+  const all = buildAuditoria();
+  const totalSinFecha = all.filter(x=>x.problemas.includes('sinfecha')).length;
+  const totalEstimado = all.filter(x=>x.problemas.includes('estimado')).length;
+  const totalSinAutor = all.filter(x=>x.problemas.includes('sinautor')).length;
+
+  const resumen = document.getElementById('auditoria-resumen');
+  if (resumen) {
+    resumen.innerHTML = `${all.length} documento${all.length===1?'':'s'} con metadata incompleta &nbsp;·&nbsp; `
+      + `<span style="color:var(--danger)">${totalSinFecha} sin fecha</span> &nbsp;·&nbsp; `
+      + `<span style="color:var(--amber-hi)">${totalEstimado} con fecha estimada</span> &nbsp;·&nbsp; `
+      + `<span style="color:var(--muted)">${totalSinAutor} sin autor</span>`;
+  }
+
+  let items = all;
+  if (_auditFilter !== 'all') items = items.filter(x => x.problemas.includes(_auditFilter));
+
+  const list = document.getElementById('auditoria-list');
+  if (!list) return;
+  if (!items.length) { list.innerHTML = '<div class="alerts-empty">Sin resultados en esta categoría.</div>'; return; }
+
+  const pillLabel = { sinfecha:'Sin fecha', estimado:'Estimada', sinautor:'Sin autor' };
+  list.innerHTML = items.map(it => `
+    <div class="alert-item alert-${it.problemas.includes('sinfecha')?'crit':'warn'}">
+      <div class="alert-ico">${it.origen==='Local'?'🏬':'👤'}</div>
+      <div class="alert-body">
+        <div class="alert-title">${esc(it.nombre)}</div>
+        <div class="alert-sub">${esc(it.sub)}${it.fecha ? ' · '+fmtDateTime(it.fecha) : ''}</div>
+        ${it.problemas.map(p=>`<span class="alert-pill">${pillLabel[p]}</span>`).join(' ')}
       </div>
     </div>`).join('');
 }

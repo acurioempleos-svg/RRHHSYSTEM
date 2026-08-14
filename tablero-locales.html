@@ -2350,7 +2350,6 @@ body {
       <button class="af-btn active" onclick="filtrarAuditoria('all',this)">Todas</button>
       <button class="af-btn" onclick="filtrarAuditoria('sinfecha',this)">Sin fecha</button>
       <button class="af-btn" onclick="filtrarAuditoria('estimado',this)">Estimadas</button>
-      <button class="af-btn" onclick="filtrarAuditoria('sinautor',this)">Sin autor</button>
     </div>
     <div class="alerts-list" id="auditoria-list"></div>
   </div>
@@ -3484,7 +3483,8 @@ function renderStats() {
 /** Genera el HTML interno de una tarjeta de local (sin el wrapper .local-block) */
 function _buildLocalCardInner(loc, li, mapa, hoy) {
   const list  = mapa[loc];
-  const count = list.length;
+  const activos = list.filter(c => !c.desvinculado).length;
+  const bajas   = list.filter(c => !!c.desvinculado).length;
   let warn=0, err=0;
   list.forEach(c => {
     if (!c.vencimiento_salud) return;
@@ -3529,7 +3529,7 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
       </button>
     </div>
     <div class="lb-name">${esc(loc)}</div>
-    <div class="lb-count">${count} colaborador${count!==1?'es':''}</div>
+    <div class="lb-count">${activos} activo${activos!==1?'s':''}${bajas ? ` · <span style="color:var(--muted)">${bajas} de baja</span>` : ''}</div>
     ${estadoHTML ? `<div class="lb-estados">${estadoHTML}</div>` : ''}
     <div class="lb-bottom">
       <div class="lb-alerts">${alerts}</div>
@@ -6111,7 +6111,6 @@ function buildAuditoria() {
         const problemas = [];
         if (!m.cargado_en) problemas.push('sinfecha');
         else if (m.estimado) problemas.push('estimado');
-        if (!m.subido_por) problemas.push('sinautor');
         if (!problemas.length) return;
         items.push({
           origen: 'Colaborador', nombre: c.nombre || '(sin nombre)', sub: `${f.nombre || 'Carpeta'} · foto ${i+1}`,
@@ -6128,7 +6127,6 @@ function buildAuditoria() {
         const problemas = [];
         if (!m.cargado_en) problemas.push('sinfecha');
         else if (m.estimado) problemas.push('estimado');
-        if (!m.subido_por) problemas.push('sinautor');
         if (!problemas.length) return;
         items.push({
           origen: 'Local', nombre: l.nombre || '(sin nombre)', sub: `${f.nombre || 'Carpeta'} · foto ${i+1}`,
@@ -6156,14 +6154,12 @@ function renderAuditoriaList() {
   const all = buildAuditoria();
   const totalSinFecha = all.filter(x=>x.problemas.includes('sinfecha')).length;
   const totalEstimado = all.filter(x=>x.problemas.includes('estimado')).length;
-  const totalSinAutor = all.filter(x=>x.problemas.includes('sinautor')).length;
 
   const resumen = document.getElementById('auditoria-resumen');
   if (resumen) {
     resumen.innerHTML = `${all.length} documento${all.length===1?'':'s'} con metadata incompleta &nbsp;·&nbsp; `
       + `<span style="color:var(--danger)">${totalSinFecha} sin fecha</span> &nbsp;·&nbsp; `
-      + `<span style="color:var(--amber-hi)">${totalEstimado} con fecha estimada</span> &nbsp;·&nbsp; `
-      + `<span style="color:var(--muted)">${totalSinAutor} sin autor</span>`;
+      + `<span style="color:var(--amber-hi)">${totalEstimado} con fecha estimada</span>`;
   }
 
   let items = all;
@@ -6173,7 +6169,7 @@ function renderAuditoriaList() {
   if (!list) return;
   if (!items.length) { list.innerHTML = '<div class="alerts-empty">Sin resultados en esta categoría.</div>'; return; }
 
-  const pillLabel = { sinfecha:'Sin fecha', estimado:'Estimada', sinautor:'Sin autor' };
+  const pillLabel = { sinfecha:'Sin fecha', estimado:'Estimada' };
   list.innerHTML = items.map(it => `
     <div class="alert-item alert-${it.problemas.includes('sinfecha')?'crit':'warn'}">
       <div class="alert-ico">${it.origen==='Local'?'🏬':'👤'}</div>
@@ -6501,9 +6497,9 @@ function renderOrganigrama(local) {
   const el = document.getElementById('org-body');
   if (!local) { el.innerHTML = '<div class="org-empty">No hay locales cargados todavía</div>'; return; }
 
-  const personas = colabs.filter(c => c.local === local);
+  const personas = colabs.filter(c => c.local === local && !c.desvinculado);
   if (!personas.length) {
-    el.innerHTML = '<div class="org-empty">Este local todavía no tiene colaboradores cargados</div>';
+    el.innerHTML = '<div class="org-empty">Este local todavía no tiene colaboradores activos cargados</div>';
     return;
   }
 
@@ -7307,7 +7303,13 @@ async function ejecutarBusquedaPorDni(dni, cont) {
   if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
   const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
   const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
-  renderTrazaLine(cont, eventos, persona, !!egreso);
+  // Fecha de alta: preferimos c.at del colaborador (fecha real del legajo);
+  // si no está disponible, usamos la fecha del evento "Alta como colaborador"
+  // y, en último caso, la del primer evento registrado (para no dejarlo vacío).
+  const altaEvento = eventos.find(e=>e.tipo==='Alta como colaborador');
+  let fechaAlta = persona?.at || altaEvento?.fecha || eventos[0]?.fecha || null;
+  if (fechaAlta && typeof fechaAlta === 'object' && fechaAlta.seconds) fechaAlta = fechaAlta.seconds*1000;
+  renderTrazaLine(cont, eventos, persona, egreso || null, fechaAlta);
 }
 function verTrazabilidadDe(dni, nombre) {
   if (!dni) { toast(`${nombre} todavía no tiene DNI cargado`); return; }
@@ -7317,19 +7319,19 @@ function verTrazabilidadDe(dni, nombre) {
   buscarTraza();
 }
 let _trazaTooltipData = [];
-function renderTrazaLine(cont, eventos, persona, tieneEgreso) {
+function renderTrazaLine(cont, eventos, persona, egreso, fechaAlta) {
   const primarios = eventos.filter(e=>e.primario);
   const secundarios = eventos.filter(e=>!e.primario);
   // Todos los eventos ya vienen ordenados por fecha — armamos la línea
   // intercalando primarios (puntos grandes) y secundarios (marcas chicas)
   // en el mismo orden cronológico en el que ocurrieron.
   const nodos = [];
-  nodos.push({ tipo:'endpoint', label:'Ingreso' });
+  nodos.push({ tipo:'endpoint', label:'Ingreso', fecha:fechaAlta });
   eventos.forEach(e => {
     if (e.tipo === 'Egreso / Desvinculación') return; // se agrega al final como endpoint
     nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle, imagen:e.imagen });
   });
-  if (tieneEgreso) nodos.push({ tipo:'endpoint', label:'Egreso' });
+  if (egreso) nodos.push({ tipo:'endpoint', label:'Egreso', fecha:egreso.fecha });
   _trazaTooltipData = nodos;
   const html = `
     <div class="traza-header">

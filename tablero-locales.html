@@ -3698,7 +3698,7 @@ function _buildPersonDocs(c) {
   <div class="desv-toggle-row" onclick="event.stopPropagation()">
     <span class="desv-toggle-lbl">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M16 17l5-5-5-5"/><path d="M8 7l-5 5 5 5"/></svg>
-      ${isDesv ? 'REINCORPORAR' : 'DESVINCULAR'}
+      ${isDesv ? 'REINCORPORAR' : 'DESVINCULAR'}${isDesv && c.desvinculado_en ? ` · de baja desde ${new Date(c.desvinculado_en).toLocaleDateString('es-AR')}` : ''}
     </span>
     <label class="toggle-sw" title="${isDesv ? 'Reincorporar' : 'Marcar como desvinculado'}">
       <input type="checkbox" ${isDesv ? 'checked' : ''} onchange="toggleDesvinculado('${c.id}', ${isDesv}, event)">
@@ -3875,7 +3875,10 @@ async function toggleDesvinculado(id, currentVal, event) {
   const ok = await confirmar(msg, nuevoEstado ? 'Desvincular' : 'Reincorporar');
   if (!ok) return;
   try {
-    await updateDoc(doc(db, 'colaboradores', id), { desvinculado: nuevoEstado });
+    await updateDoc(doc(db, 'colaboradores', id), {
+      desvinculado: nuevoEstado,
+      desvinculado_en: nuevoEstado ? Date.now() : deleteField()
+    });
     toast(nuevoEstado ? `↓ ${nombre} movido a desvinculados` : `↑ ${nombre} reincorporado`);
   } catch(e) {
     manejarError(e, 'desvincular/reincorporar colaborador');
@@ -5922,6 +5925,25 @@ async function guardarRenombrarLocal() {
 }
 
 /* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
+// Busca si ya existe un colaborador con ese DNI. Devuelve el colaborador
+// encontrado (activo o desvinculado) o null. Se usa antes de crear un
+// colaborador nuevo para evitar legajos duplicados.
+function buscarColabPorDni(dni) {
+  if (!dni) return null;
+  return colabs.find(x => x.dni_nro === dni) || null;
+}
+// Muestra el toast adecuado según si el duplicado está activo o de baja.
+// Devuelve true si hay que bloquear el alta (siempre bloquea; para reincorporar
+// hay que usar el switch de ese colaborador, no crear uno nuevo).
+function avisarDniDuplicado(existente) {
+  if (!existente) return false;
+  if (existente.desvinculado) {
+    toast(`Ya existe ${existente.nombre} con ese DNI (de baja, ${existente.local||'sin local'}). Reincorporalo en vez de crear uno nuevo.`);
+  } else {
+    toast(`Ya existe un colaborador activo con ese DNI: ${existente.nombre} (${existente.local||'sin local'})`);
+  }
+  return true;
+}
 function abrirNuevo() {
   ['n-nombre','n-dni','n-remuneracion'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('n-local').value='';
@@ -5938,7 +5960,7 @@ async function guardarNuevo() {
   const remuneracion = parseFloat(document.getElementById('n-remuneracion').value) || null;
   if (!nombre) { document.getElementById('n-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
-  if (dni && colabs.some(x => x.dni_nro === dni)) { toast('Ya existe un colaborador con ese DNI'); document.getElementById('n-dni').focus(); return; }
+  if (dni && avisarDniDuplicado(buscarColabPorDni(dni))) { document.getElementById('n-dni').focus(); return; }
   const btn = document.querySelector('#nuevo-modal .btn-amber');
   if (btn) { btn.disabled=true; btn.textContent='Guardando…'; }
   try {
@@ -5966,7 +5988,7 @@ async function guardarNuevoColabOCR() {
   const puesto=document.getElementById('nco-puesto').value.trim();
   if (!nombre) { document.getElementById('nco-nombre').focus(); return; }
   if (!local)  { toast('Seleccioná un local'); return; }
-  if (dni && colabs.some(x => x.dni_nro === dni)) { toast('Ya existe un colaborador con ese DNI'); document.getElementById('nco-dni').focus(); return; }
+  if (dni && avisarDniDuplicado(buscarColabPorDni(dni))) { document.getElementById('nco-dni').focus(); return; }
   const btn = document.getElementById('nco-btn');
   btn.disabled=true; btn.textContent='Guardando…';
   try {
@@ -6032,15 +6054,33 @@ async function guardarEdicionColab() {
 function buildAlertas() {
   const hoy=new Date(), alerts=[];
   colabs.forEach(c => {
+    if (c.desvinculado) return; // de baja: no generan alertas de vencimiento ni de legajo
+
     if (c.vencimiento_salud) {
       const d = (new Date(c.vencimiento_salud+'T00:00:00')-hoy)/86400000;
-      if (d<0)        alerts.push({ type:'crit', icon:'🏥', title:`Libreta vencida · ${c.nombre}`, sub:`Hace ${Math.abs(Math.ceil(d))} días · ${c.local||''}`, pill:'Crítico' });
-      else if (d<7)   alerts.push({ type:'crit', icon:'⚠️', title:`Libreta vence en ${Math.ceil(d)}d · ${c.nombre}`, sub:c.local||'', pill:'Urgente' });
-      else if (d<30)  alerts.push({ type:'warn', icon:'🏥', title:`Libreta próxima · ${c.nombre}`, sub:`${Math.ceil(d)} días · ${c.local||''}`, pill:'Próximo' });
+      if (d<0)        alerts.push({ type:'crit', dias:d, icon:'🏥', title:`Libreta vencida · ${c.nombre}`, sub:`Hace ${Math.abs(Math.ceil(d))} días · ${c.local||''}`, pill:'Crítico' });
+      else if (d<7)   alerts.push({ type:'crit', dias:d, icon:'⚠️', title:`Libreta vence en ${Math.ceil(d)}d · ${c.nombre}`, sub:c.local||'', pill:'Urgente' });
+      else if (d<30)  alerts.push({ type:'warn', dias:d, icon:'🏥', title:`Libreta próxima · ${c.nombre}`, sub:`${Math.ceil(d)} días · ${c.local||''}`, pill:'Próximo' });
     }
-    const carg=ALL_DOCS.filter(d=>c[d.key]).length;
-    if (carg===0)                   alerts.push({ type:'warn', icon:'📂', title:`Legajo vacío · ${c.nombre}`, sub:`${c.puesto||''} · ${c.local||''}`, pill:'Incompleto' });
-    else if (carg<ALL_DOCS.length*.5) alerts.push({ type:'info', icon:'📋', title:`Legajo incompleto · ${c.nombre}`, sub:`${carg}/${ALL_DOCS.length} docs · ${c.local||''}`, pill:'Info' });
+
+    // Legajo incompleto — sistema vigente de carpetas (CARPETAS_DEFAULT),
+    // no los campos legacy (ver tieneDocsCompletos, usado también en trazabilidad).
+    const carpetas = getCarpetas(c);
+    const faltantes = CARPETAS_DEFAULT.filter(d => {
+      const f = carpetas.find(x => x.nombre === d.nombre);
+      return !(f && Array.isArray(f.urls) && f.urls.length);
+    });
+    if (faltantes.length) {
+      const diasDesdeAlta = c.at ? (hoy - new Date(c.at.seconds ? c.at.seconds*1000 : c.at))/86400000 : 0;
+      const nombresFaltantes = faltantes.slice(0,3).map(d=>d.nombre).join(', ') + (faltantes.length>3 ? ` +${faltantes.length-3}` : '');
+      if (faltantes.length === CARPETAS_DEFAULT.length) {
+        alerts.push({ type:'warn', dias:0, icon:'📂', title:`Legajo vacío · ${c.nombre}`, sub:`${c.puesto||''} · ${c.local||''}`, pill:'Incompleto' });
+      } else if (diasDesdeAlta > 30) {
+        alerts.push({ type:'warn', dias:0, icon:'📋', title:`Legajo incompleto hace ${Math.floor(diasDesdeAlta)}d · ${c.nombre}`, sub:`Falta: ${nombresFaltantes} · ${c.local||''}`, pill:'Reclamar' });
+      } else {
+        alerts.push({ type:'info', dias:0, icon:'📋', title:`Legajo incompleto · ${c.nombre}`, sub:`Falta: ${nombresFaltantes} · ${c.local||''}`, pill:'Info' });
+      }
+    }
 
     // Vencimientos definidos en campos de plantilla dentro de las carpetas del colaborador
     getCarpetas(c).forEach(f => {
@@ -6052,13 +6092,17 @@ function buildAlertas() {
           if (!val) return;
           const d = (new Date(val + 'T00:00:00') - hoy) / 86400000;
           const etiqueta = `${f.nombre} · ${cf.nombre}`;
-          if (d < 0)       alerts.push({ type:'crit', icon:'⏰', title:`${etiqueta} vencido · ${c.nombre}`, sub:`Hace ${Math.abs(Math.ceil(d))} días · ${c.local||''}`, pill:'Crítico' });
-          else if (d < 7)  alerts.push({ type:'crit', icon:'⚠️', title:`${etiqueta} vence en ${Math.ceil(d)}d · ${c.nombre}`, sub:c.local||'', pill:'Urgente' });
-          else if (d < 30) alerts.push({ type:'warn', icon:'⏰', title:`${etiqueta} próximo · ${c.nombre}`, sub:`${Math.ceil(d)} días · ${c.local||''}`, pill:'Próximo' });
+          if (d < 0)       alerts.push({ type:'crit', dias:d, icon:'⏰', title:`${etiqueta} vencido · ${c.nombre}`, sub:`Hace ${Math.abs(Math.ceil(d))} días · ${c.local||''}`, pill:'Crítico' });
+          else if (d < 7)  alerts.push({ type:'crit', dias:d, icon:'⚠️', title:`${etiqueta} vence en ${Math.ceil(d)}d · ${c.nombre}`, sub:c.local||'', pill:'Urgente' });
+          else if (d < 30) alerts.push({ type:'warn', dias:d, icon:'⏰', title:`${etiqueta} próximo · ${c.nombre}`, sub:`${Math.ceil(d)} días · ${c.local||''}`, pill:'Próximo' });
         });
       });
     });
   });
+  // Orden: críticas primero, luego warn, luego info; dentro de cada grupo,
+  // lo más urgente (menos días, o ya vencido) arriba.
+  const orden = { crit:0, warn:1, info:2 };
+  alerts.sort((a,b) => (orden[a.type]-orden[b.type]) || ((a.dias??0)-(b.dias??0)));
   return alerts;
 }
 function renderAlertas() {
@@ -7245,6 +7289,7 @@ async function convertirEnColaborador(id) {
   const c = candidatos.find(x=>x.id===id);
   if (!c) return;
   if (!c.local) { toast('Este candidato no tiene local asignado — asignalo antes de convertirlo'); return; }
+  if (avisarDniDuplicado(buscarColabPorDni(c.dni))) return;
   const ok = await confirmar(`¿Dar de alta a ${c.nombre} como colaborador?`, 'Convertir');
   if (!ok) return;
   try {
@@ -7303,13 +7348,16 @@ async function ejecutarBusquedaPorDni(dni, cont) {
   if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
   const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
   const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
+  const tieneEgreso = !!(persona?.desvinculado && (persona?.desvinculado_en || egreso));
+  let fechaEgreso = persona?.desvinculado_en || egreso?.fecha || null;
+  if (fechaEgreso && typeof fechaEgreso === 'object' && fechaEgreso.seconds) fechaEgreso = fechaEgreso.seconds*1000;
   // Fecha de alta: preferimos c.at del colaborador (fecha real del legajo);
   // si no está disponible, usamos la fecha del evento "Alta como colaborador"
   // y, en último caso, la del primer evento registrado (para no dejarlo vacío).
   const altaEvento = eventos.find(e=>e.tipo==='Alta como colaborador');
   let fechaAlta = persona?.at || altaEvento?.fecha || eventos[0]?.fecha || null;
   if (fechaAlta && typeof fechaAlta === 'object' && fechaAlta.seconds) fechaAlta = fechaAlta.seconds*1000;
-  renderTrazaLine(cont, eventos, persona, egreso || null, fechaAlta);
+  renderTrazaLine(cont, eventos, persona, tieneEgreso ? {fecha:fechaEgreso} : null, fechaAlta);
 }
 function verTrazabilidadDe(dni, nombre) {
   if (!dni) { toast(`${nombre} todavía no tiene DNI cargado`); return; }

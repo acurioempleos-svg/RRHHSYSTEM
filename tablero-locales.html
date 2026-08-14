@@ -3325,6 +3325,27 @@ function tieneDocsCompletos(c) {
     return !!(f && Array.isArray(f.urls) && f.urls.length);
   });
 }
+// Registra un evento "único por hecho" (alta o baja) evitando duplicados
+// cuando dos o más clientes (pestañas, celulares) tienen el tablero abierto
+// al mismo tiempo y ambos detectan el mismo cambio en Firestore. Antes de
+// escribir, chequea si ya existe un evento equivalente para ese colaborador.
+// - Alta: solo puede haber UNA en la vida del legajo (colaboradorId + tipo).
+// - Egreso: puede repetirse legítimamente (reincorporaciones), así que solo
+//   se descarta si ya hay un evento con una fecha muy cercana (mismo hecho).
+async function registrarEventoUnico({ dni, tipo, detalle, colaboradorId, fecha }) {
+  try {
+    const snap = await getDocs(query(collection(db,'trazabilidad'),
+      where('colaboradorId','==',colaboradorId), where('tipo','==',tipo)));
+    const fechaNum = (typeof fecha === 'object' && fecha?.seconds) ? fecha.seconds*1000 : fecha;
+    const yaExiste = snap.docs.some(d => {
+      const f = d.data().fecha;
+      const fNum = (typeof f === 'object' && f?.seconds) ? f.seconds*1000 : f;
+      return Math.abs((fNum||0) - (fechaNum||Date.now())) < 5*60*1000; // mismo hecho: fechas a <5min
+    });
+    if (yaExiste) return;
+  } catch(e) { console.error('No se pudo chequear duplicados de trazabilidad', e); }
+  registrarEvento({ dni, tipo, primario:true, detalle, colaboradorId, fecha });
+}
 function detectarEventosColaborador(prevList, nuevosList) {
   if (!_trazaInicializada) { _trazaInicializada = true; return; } // no re-generar historial al cargar la página
   const prevMap = new Map((prevList||[]).map(c => [c.id, c]));
@@ -3336,7 +3357,7 @@ function detectarEventosColaborador(prevList, nuevosList) {
       // Colaborador nuevo → Alta como colaborador.
       // Usamos c.at (fecha real de alta del legajo) como fecha de inicio,
       // en vez del momento en que este cliente detectó el cambio.
-      registrarEvento({ dni, tipo:'Alta como colaborador', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.at });
+      registrarEventoUnico({ dni, tipo:'Alta como colaborador', detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.at });
       return;
     }
     // Cambio de puesto o local
@@ -3361,7 +3382,7 @@ function detectarEventosColaborador(prevList, nuevosList) {
     }
     // Egreso / Desvinculación
     if (!!c.desvinculado && !antes.desvinculado) {
-      registrarEvento({ dni, tipo:'Egreso / Desvinculación', primario:true, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
+      registrarEventoUnico({ dni, tipo:'Egreso / Desvinculación', detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.desvinculado_en });
     }
 
     /* ── Eventos secundarios ── */
@@ -7343,8 +7364,25 @@ async function buscarTraza() {
       </div>`;
   } catch(e) { manejarError(e, 'buscar trazabilidad'); }
 }
+// Colapsa eventos duplicados que quedaron grabados en Firestore por tener
+// varios clientes (pestañas/dispositivos) abiertos al mismo tiempo cuando
+// ocurrió el hecho: mismo tipo + mismo detalle + fecha a menos de 5 minutos
+// de diferencia se consideran el mismo evento y se muestra solo el primero.
+function dedupeEventos(eventos) {
+  const out = [];
+  eventos.forEach(e => {
+    const fE = (typeof e.fecha === 'object' && e.fecha?.seconds) ? e.fecha.seconds*1000 : e.fecha;
+    const dup = out.find(o => {
+      if (o.tipo !== e.tipo || (o.detalle||'') !== (e.detalle||'')) return false;
+      const fO = (typeof o.fecha === 'object' && o.fecha?.seconds) ? o.fecha.seconds*1000 : o.fecha;
+      return Math.abs((fO||0) - (fE||0)) < 5*60*1000;
+    });
+    if (!dup) out.push(e);
+  });
+  return out;
+}
 async function ejecutarBusquedaPorDni(dni, cont) {
-  const eventos = await buscarTrazabilidadPorDni(dni);
+  const eventos = dedupeEventos(await buscarTrazabilidadPorDni(dni));
   if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
   const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
   const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
@@ -7376,7 +7414,7 @@ function renderTrazaLine(cont, eventos, persona, egreso, fechaAlta) {
   const nodos = [];
   nodos.push({ tipo:'endpoint', label:'Ingreso', fecha:fechaAlta });
   eventos.forEach(e => {
-    if (e.tipo === 'Egreso / Desvinculación') return; // se agrega al final como endpoint
+    if (e.tipo === 'Egreso / Desvinculación' || e.tipo === 'Alta como colaborador') return; // ya representados en los extremos Ingreso/Egreso
     nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle, imagen:e.imagen });
   });
   if (egreso) nodos.push({ tipo:'endpoint', label:'Egreso', fecha:egreso.fecha });

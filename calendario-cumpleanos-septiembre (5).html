@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cumpleaños de Septiembre — Acurio Restaurantes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
+
+/* ============ SWITCHER ============ */
+.switcher-bar{
+  position: sticky; top:0; z-index: 50;
+  background: #0B2E4F;
+  display:flex; align-items:center; justify-content:center;
+  gap: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+.switcher-bar button{
+  font-family:'Anton', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,0.12);
+  color: #F4E9D4;
+  padding: 9px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.switcher-bar button.active{
+  background: #F2B705;
+  color: #0B2E4F;
+  border-color: #F4E9D4;
+}
+.switcher-bar button:not(.active):hover{ background: rgba(255,255,255,0.22); }
+
+.page{ display:none; }
+.page.active{ display:block; }
+
+/* ======================================================= */
+/* ================= THEME 1: BARRA CHALACA ================ */
+/* ======================================================= */
+.theme-barra{
+  --navy: #0B2E4F;
+  --navy-deep: #072038;
+  --ocean: #145C82;
+  --coral: #E8492B;
+  --sand: #F4E9D4;
+  --gold: #F2B705;
+  --wood-a: #E4D2A6;
+  --wood-b: #D8C293;
+  --ink: #0B2E4F;
+
+  background-color: var(--wood-a);
+  background-image:
+    repeating-linear-gradient(180deg, var(--wood-a) 0px, var(--wood-a) 46px, var(--wood-b) 46px, var(--wood-b) 48px),
+    radial-gradient(circle at 10% 5%, rgba(255,255,255,0.25) 0%, transparent 45%),
+    radial-gradient(circle at 90% 95%, rgba(0,0,0,0.06) 0%, transparent 45%);
+  color: var(--ink);
+  padding: 36px 16px 60px;
+}
+.theme-barra .wrap{max-width: 1040px; margin: 0 auto;}
+.theme-barra .navbar{
+  background: var(--sand);
+  border-radius: 14px;
+  padding: 16px 26px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap: wrap; gap: 14px;
+  box-shadow: 0 8px 0 rgba(7,32,56,0.12), 0 14px 26px rgba(11,46,79,0.18);
+  border: 2px solid var(--navy);
+}
+.theme-barra .brand{display:flex; flex-direction:column; line-height: 1;}
+.theme-barra .brand .logo{
+  font-family:'Alfa Slab One', serif;
+  font-size: clamp(24px, 3.4vw, 34px);
+  color: var(--coral);
+  text-shadow: 2px 2px 0 var(--navy);
+  letter-spacing: 0.5px;
+}
+.theme-barra .brand .sub{margin-top: 8px; font-size: 11px; letter-spacing: 3px; color: var(--ocean); font-weight: 700;}
+.theme-barra .stamp{
+  font-family:'Anton', sans-serif; font-size: 15px; letter-spacing: 1.5px;
+  color: var(--sand); background: var(--coral); padding: 10px 22px;
+  border-radius: 999px; transform: rotate(-3deg); border: 2px dashed var(--sand);
+  box-shadow: 3px 3px 0 var(--navy); white-space: nowrap;
+}
+.theme-barra .stripe{
+  height: 8px; margin: 22px 0 20px; border-radius: 4px;
+  background: repeating-linear-gradient(90deg, var(--navy) 0 22px, var(--coral) 22px 26px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+}
+.theme-barra .doodle-row{display:flex; align-items:center; justify-content:center; gap: 26px; margin-bottom: 6px; opacity: 0.94;}
+.theme-barra .doodle-row svg{ height: 58px; width:auto; }
+.theme-barra .doodle-title{font-family:'Anton',sans-serif; font-size:22px; color:var(--navy); letter-spacing:1px; text-transform:uppercase;}
+.theme-barra .legend{display:flex; gap: 20px; justify-content:center; margin: 18px 0 18px; font-size: 12.5px; color: var(--navy); flex-wrap: wrap;}
+.theme-barra .legend span{display:flex; align-items:center; gap:7px; background: rgba(255,255,255,0.55); padding: 5px 12px; border-radius: 999px; border: 1.5px solid var(--navy); font-weight: 600;}
+.theme-barra .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+.theme-barra .dot.gold{background: var(--gold);}
+.theme-barra .dot.coral{background: var(--coral);}
+.theme-barra .grid{
+  display:grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 98px;
+  background: var(--navy); gap: 2px; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 12px 0 rgba(7,32,56,0.10), 0 18px 30px rgba(11,46,79,0.22);
+  border: 2px solid var(--navy);
+}
+.theme-barra .dow{background: var(--navy); color: var(--sand); font-family:'Anton', sans-serif; font-size: 12px; letter-spacing: 1.5px; text-align: center; padding: 12px 4px;}
+.theme-barra .cell{background: #FFFDF7; background-image: radial-gradient(circle at 90% 10%, rgba(20,92,130,0.04) 0%, transparent 55%); padding: 7px 8px 6px; position: relative; display:flex; flex-direction: column; overflow: hidden;}
+.theme-barra .cell.muted{background: #EDE3CB; color:#a89b78;}
+.theme-barra .cell.muted .num{color:#c4b490;}
+.theme-barra .num{font-family:'Anton', sans-serif; font-size: 15px; text-align:right; color: var(--navy); line-height: 1;}
+.theme-barra .cell.today{background: var(--gold); background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 8px, transparent 8px 16px);}
+.theme-barra .cell.today .num{color: var(--navy-deep);}
+.theme-barra .cell.today .hoy-tag{position:absolute; bottom:7px; left:8px; font-family:'Anton', sans-serif; font-size: 9px; letter-spacing: 1.5px; color: var(--sand); background: var(--navy); padding: 3px 8px; border-radius: 999px; transform: rotate(-4deg);}
+.theme-barra .bday{margin-top: auto; background: var(--coral); color: white; padding: 5px 7px; border-radius: 3px 10px 3px 3px; line-height: 1; box-shadow: 2px 2px 0 var(--navy); border: 1px dashed rgba(255,255,255,0.6);}
+.theme-barra .bday .cake{font-size: 10px; letter-spacing: 0.4px;}
+.theme-barra .bday .names{font-size: 10.5px; line-height: 1.28; margin-top: 3px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
+.theme-barra footer{margin-top: 24px; display:flex; align-items:center; justify-content:flex-end; gap: 10px; font-size: 11.5px; color: var(--ocean); font-style: italic;}
+.theme-barra footer svg{height: 22px; width:auto; opacity:0.85;}
+
+@media (max-width: 700px){
+  .theme-barra .grid{grid-auto-rows: 80px;}
+  .theme-barra .cell{padding: 5px 6px 5px;}
+  .theme-barra .dow{font-size: 9px; padding: 8px 2px;}
+  .theme-barra .num{font-size: 12px;}
+  .theme-barra .bday{padding: 4px 5px;}
+  .theme-barra .bday .names{font-size: 8.7px;}
+  .theme-barra .bday .cake{font-size: 8px;}
+  .theme-barra .navbar{padding: 14px 18px;}
+  .theme-barra .doodle-row svg{height: 42px;}
+}
+
+/* ======================================================= */
+/* ===================== THEME 2: TANTA ===================== */
+/* ======================================================= */
+.theme-tanta{
+  --magenta: #E0177C;
+  --magenta-deep: #A5115C;
+  --orange: #F5821F;
+  --pink: #EE3E8E;
+  --purple: #7A2D8C;
+  --ink: #2B1330;
+  --paper: #FFFFFF;
+  --cloud: #FBF3F8;
+
+  background-color: var(--cloud);
+  background-image:
+    radial-gradient(circle at 6% 4%, rgba(224,23,124,0.10) 0%, transparent 42%),
+    radial-gradient(circle at 96% 96%, rgba(245,130,31,0.10) 0%, transparent 42%);
+  color: var(--ink);
+  padding: 36px 16px 60px;
+}
+.theme-tanta .wrap{max-width: 1040px; margin: 0 auto;}
+.theme-tanta .navbar{
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 18px 30px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap: wrap; gap: 14px;
+  box-shadow: 0 10px 28px rgba(122,45,140,0.16);
+  border-top: 4px solid var(--magenta);
+}
+.theme-tanta .brand{display:flex; align-items:center; gap: 14px;}
+.theme-tanta .brand .icon{ width:46px; height:46px; flex-shrink:0; }
+.theme-tanta .brand .text{display:flex; flex-direction:column; line-height:1;}
+.theme-tanta .brand .logo{
+  font-family:'Anton', sans-serif;
+  font-size: clamp(28px, 3.8vw, 40px);
+  letter-spacing: 0.5px;
+}
+.theme-tanta .brand .logo .c1{color: var(--magenta);}
+.theme-tanta .brand .logo .c2{color: var(--orange);}
+.theme-tanta .brand .logo .c3{color: var(--pink);}
+.theme-tanta .brand .sub{margin-top: 8px; font-size: 10.5px; letter-spacing: 2.5px; color: var(--purple); font-weight: 700; text-transform: uppercase;}
+.theme-tanta .stamp{
+  font-family:'Anton', sans-serif; font-weight:400; font-size: 14px; letter-spacing: 1px;
+  color: var(--paper);
+  background: linear-gradient(120deg, var(--purple), var(--magenta) 55%, var(--orange));
+  padding: 10px 24px;
+  border-radius: 999px; white-space: nowrap;
+}
+.theme-tanta .stripe{
+  height: 9px; margin: 22px 0 20px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--magenta) 0%, var(--pink) 34%, var(--orange) 68%, var(--purple) 100%);
+}
+.theme-tanta .doodle-row{display:flex; align-items:center; justify-content:center; gap: 26px; margin-bottom: 6px; opacity: 0.96;}
+.theme-tanta .doodle-row svg{ height: 54px; width:auto; }
+.theme-tanta .doodle-title{font-family:'Anton',sans-serif; font-weight:400; font-size:24px; color:var(--purple); letter-spacing:0.5px; text-transform:uppercase;}
+.theme-tanta .legend{display:flex; gap: 20px; justify-content:center; margin: 18px 0 18px; font-size: 12.5px; color: var(--ink); flex-wrap: wrap;}
+.theme-tanta .legend span{display:flex; align-items:center; gap:7px; background: var(--paper); padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--magenta); font-weight: 600;}
+.theme-tanta .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+.theme-tanta .dot.gold{background: var(--orange);}
+.theme-tanta .dot.coral{background: var(--magenta);}
+.theme-tanta .grid{
+  display:grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 98px;
+  background: var(--purple); gap: 2px; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 16px 30px rgba(122,45,140,0.24);
+}
+.theme-tanta .dow{background: var(--purple); color: #FCE8F4; font-family:'Anton', sans-serif; font-weight:400; font-size: 12px; letter-spacing: 1.5px; text-align: center; padding: 12px 4px;}
+.theme-tanta .cell{background: var(--paper); padding: 7px 8px 6px; position: relative; display:flex; flex-direction: column; overflow: hidden;}
+.theme-tanta .cell.muted{background: #F3E4EF; color:#c99cbb;}
+.theme-tanta .cell.muted .num{color:#d8b5cc;}
+.theme-tanta .num{font-family:'Anton', sans-serif; font-weight:400; font-size: 15px; text-align:right; color: var(--magenta-deep); line-height: 1;}
+.theme-tanta .cell.today{background: var(--orange); background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.20) 0 8px, transparent 8px 16px);}
+.theme-tanta .cell.today .num{color: var(--paper);}
+.theme-tanta .cell.today .hoy-tag{position:absolute; bottom:7px; left:8px; font-family:'Anton', sans-serif; font-weight:400; font-size: 9px; letter-spacing: 1.5px; color: var(--paper); background: var(--purple); padding: 3px 9px; border-radius: 999px;}
+.theme-tanta .bday{margin-top: auto; background: linear-gradient(120deg, var(--magenta), var(--pink)); color: var(--paper); padding: 5px 7px; border-radius: 3px 10px 3px 3px; line-height: 1; border-left: 3px solid var(--orange);}
+.theme-tanta .bday .cake{font-size: 10px; letter-spacing: 0.4px; font-weight:700;}
+.theme-tanta .bday .names{font-size: 10.5px; line-height: 1.28; margin-top: 3px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
+.theme-tanta footer{margin-top: 24px; display:flex; align-items:center; justify-content:flex-end; gap: 10px; font-size: 11.5px; color: var(--purple); font-style: italic;}
+.theme-tanta footer svg{height: 20px; width:auto; opacity:0.9;}
+
+@media (max-width: 700px){
+  .theme-tanta .grid{grid-auto-rows: 80px;}
+  .theme-tanta .cell{padding: 5px 6px 5px;}
+  .theme-tanta .dow{font-size: 9px; padding: 8px 2px;}
+  .theme-tanta .num{font-size: 12px;}
+  .theme-tanta .bday{padding: 4px 5px;}
+  .theme-tanta .bday .names{font-size: 8.7px;}
+  .theme-tanta .bday .cake{font-size: 8px;}
+  .theme-tanta .navbar{padding: 14px 18px;}
+  .theme-tanta .brand .icon{width:36px; height:36px;}
+  .theme-tanta .doodle-row svg{height: 40px;}
+}
+
+/* ======================================================= */
+/* ===================== THEME 3: LA MAR ===================== */
+/* ======================================================= */
+.theme-lamar{
+  --azul: #10495E;
+  --azul-deep: #0A3140;
+  --verde: #4C8C6E;
+  --arena: #EFE6D3;
+  --paper: #FBF7EC;
+  --coral: #D96C4A;
+  --ink: #10314A;
+
+  background-color: var(--arena);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='46'><path d='M0 26 Q17.5 8 35 26 T70 26 T105 26 T140 26' fill='none' stroke='%2310495E' stroke-width='1.4' opacity='0.10'/></svg>"),
+    radial-gradient(circle at 10% 8%, rgba(76,140,110,0.14) 0%, transparent 45%),
+    radial-gradient(circle at 90% 92%, rgba(16,73,94,0.12) 0%, transparent 45%);
+  background-repeat: repeat, no-repeat, no-repeat;
+  color: var(--ink);
+  padding: 36px 16px 60px;
+}
+.theme-lamar .wrap{max-width: 1040px; margin: 0 auto;}
+.theme-lamar .navbar{
+  position: relative;
+  background: var(--paper);
+  border-radius: 8px 8px 0 0;
+  padding: 18px 28px 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap: wrap; gap: 14px;
+  box-shadow: 0 10px 24px rgba(16,49,64,0.16);
+  border: 1px solid rgba(16,73,94,0.22);
+  border-bottom: none;
+  margin-bottom: 14px;
+}
+.theme-lamar .navbar::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:-13px; height:16px;
+  background-image: radial-gradient(circle at 12px 0, transparent 12px, var(--paper) 12.5px);
+  background-size: 24px 16px;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 6px 6px rgba(16,49,64,0.14));
+}
+.theme-lamar .brand{display:flex; align-items:center; gap: 14px;}
+.theme-lamar .brand .icon{ width:44px; height:44px; flex-shrink:0; }
+.theme-lamar .brand .text{display:flex; flex-direction:column; line-height:1;}
+.theme-lamar .brand .logo{
+  font-family:'Alfa Slab One', serif;
+  font-size: clamp(24px, 3.4vw, 34px);
+  color: var(--azul);
+  letter-spacing: 1px;
+}
+.theme-lamar .brand .sub{margin-top: 8px; font-size: 10.5px; letter-spacing: 2.5px; color: var(--verde); font-weight: 700; text-transform: uppercase;}
+.theme-lamar .stamp{
+  font-family:'Anton', sans-serif; font-size: 14px; letter-spacing: 1.5px;
+  color: var(--paper); background: var(--coral);
+  padding: 11px 22px 11px 30px;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+  white-space: nowrap;
+}
+.theme-lamar .ola-divider{ margin: 6px 0 20px; }
+.theme-lamar .ola-divider svg{ width:100%; height:20px; display:block; }
+.theme-lamar .doodle-row{display:flex; align-items:center; justify-content:center; gap: 18px; margin-bottom: 6px; opacity: 0.96;}
+.theme-lamar .doodle-row svg{ height: 46px; width:auto; }
+.theme-lamar .doodle-title{
+  font-family:'Anton',sans-serif; font-size:18px; color:var(--arena); letter-spacing:1.5px; text-transform:uppercase;
+  background: var(--azul-deep);
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1.5px dashed var(--coral);
+  transform: rotate(-1deg);
+}
+.theme-lamar .legend{display:flex; gap: 20px; justify-content:center; margin: 18px 0 18px; font-size: 12.5px; color: var(--ink); flex-wrap: wrap;}
+.theme-lamar .legend span{display:flex; align-items:center; gap:7px; background: var(--paper); padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--azul); font-weight: 600;}
+.theme-lamar .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+.theme-lamar .dot.gold{background: var(--verde);}
+.theme-lamar .dot.coral{background: var(--coral);}
+.theme-lamar .grid{
+  display:grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 98px;
+  background: var(--azul); gap: 2px; border-radius: 4px 4px 16px 16px; overflow: hidden;
+  box-shadow: 0 16px 30px rgba(16,49,64,0.20);
+}
+.theme-lamar .dow{background: var(--azul); color: var(--arena); font-family:'Anton', sans-serif; font-size: 12px; letter-spacing: 1.5px; text-align: center; padding: 12px 4px;}
+.theme-lamar .cell{background: var(--paper); padding: 7px 8px 6px; position: relative; display:flex; flex-direction: column; overflow: hidden;}
+.theme-lamar .cell.muted{background: #E2D8C0; color:#a79a7c;}
+.theme-lamar .cell.muted .num{color:#bfb193;}
+.theme-lamar .num{font-family:'Anton', sans-serif; font-size: 15px; text-align:right; color: var(--azul); line-height: 1;}
+.theme-lamar .cell.today{background: var(--verde); background-image: repeating-radial-gradient(circle at 100% 0%, rgba(255,255,255,0.28) 0, rgba(255,255,255,0.28) 3px, transparent 3px, transparent 11px);}
+.theme-lamar .cell.today .num{color: var(--paper);}
+.theme-lamar .cell.today .hoy-tag{position:absolute; bottom:7px; left:8px; font-family:'Anton', sans-serif; font-size: 9px; letter-spacing: 1.5px; color: var(--paper); background: var(--azul-deep); padding: 3px 8px; border-radius: 999px 999px 999px 2px;}
+.theme-lamar .bday{position:relative; margin-top: auto; background: var(--coral); color: var(--paper); padding: 8px 7px 5px; border-radius: 2px 2px 10px 2px; line-height: 1;}
+.theme-lamar .bday::before{
+  content:"";
+  position:absolute; top:-5px; left:0; right:0; height:8px;
+  background-image: radial-gradient(circle at 6px 8px, var(--coral) 5px, transparent 5.5px);
+  background-size: 12px 8px;
+  background-repeat: repeat-x;
+}
+.theme-lamar .bday .cake{font-size: 10px; letter-spacing: 0.4px; font-weight:700;}
+.theme-lamar .bday .names{font-size: 10.5px; line-height: 1.28; margin-top: 3px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
+.theme-lamar footer{margin-top: 24px; display:flex; align-items:center; justify-content:flex-end; gap: 10px; font-size: 11.5px; color: var(--verde); font-style: italic;}
+.theme-lamar footer svg{height: 22px; width:auto; opacity:0.85;}
+
+@media (max-width: 700px){
+  .theme-lamar .grid{grid-auto-rows: 80px;}
+  .theme-lamar .cell{padding: 5px 6px 5px;}
+  .theme-lamar .dow{font-size: 9px; padding: 8px 2px;}
+  .theme-lamar .num{font-size: 12px;}
+  .theme-lamar .bday{padding: 6px 5px 4px;}
+  .theme-lamar .bday .names{font-size: 8.7px;}
+  .theme-lamar .bday .cake{font-size: 8px;}
+  .theme-lamar .navbar{padding: 14px 18px 20px;}
+  .theme-lamar .brand .icon{width:34px; height:34px;}
+  .theme-lamar .doodle-row svg{height: 34px;}
+  .theme-lamar .doodle-title{font-size: 14px; padding: 6px 14px;}
+}
+
+/* ============ EDICIÓN: celdas + modal ============ */
+.cell[data-day]{ cursor: pointer; transition: filter .12s ease, transform .12s ease; }
+.cell[data-day]:hover{ filter: brightness(0.97); }
+.cell[data-day]:active{ transform: scale(0.98); }
+
+.cumple-modal-overlay{
+  display:none; position:fixed; inset:0; z-index: 200;
+  background: rgba(10,20,30,0.55);
+  align-items:center; justify-content:center; padding: 16px;
+}
+.cumple-modal-overlay.open{ display:flex; }
+.cumple-modal{
+  background:#fff; border-radius: 14px; width: 100%; max-width: 380px;
+  padding: 22px 22px 18px; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  font-family:'DM Sans', sans-serif;
+}
+.cumple-modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; }
+.cumple-modal-header span{ font-family:'Anton', sans-serif; font-size: 17px; color:#0B2E4F; letter-spacing:0.5px; }
+.cumple-modal-close{
+  background: #eee; border:none; border-radius: 50%; width: 28px; height:28px;
+  cursor:pointer; font-size: 14px; color:#555; line-height:1;
+}
+.cumple-modal-close:hover{ background:#ddd; }
+.cumple-modal-names{ max-height: 220px; overflow-y:auto; margin-bottom: 14px; }
+.cumple-modal-empty{ color:#999; font-size: 13.5px; padding: 6px 0; }
+.cumple-modal-name-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 8px 10px; background:#F7F5EF; border-radius: 8px; margin-bottom: 6px;
+  font-size: 14px; color:#222;
+}
+.cumple-modal-name-row button{
+  background:none; border:none; color:#c0392b; cursor:pointer; font-size: 13px; padding: 2px 6px;
+}
+.cumple-modal-name-row button:hover{ color:#e74c3c; }
+.cumple-modal-add{ display:flex; gap: 8px; }
+.cumple-modal-add input{
+  flex:1; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #ddd; font-size: 14px;
+  font-family:'DM Sans', sans-serif;
+}
+.cumple-modal-add input:focus{ outline:none; border-color:#F2B705; }
+.cumple-modal-add button{
+  background:#0B2E4F; color:#fff; border:none; border-radius: 8px; padding: 10px 16px;
+  font-weight: 700; font-size: 13.5px; cursor:pointer;
+}
+.cumple-modal-add button:hover{ background:#145C82; }
+.cumple-modal-status{ margin-top: 10px; font-size: 12px; color:#888; min-height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="switcher-bar">
+  <button id="btn-barra" class="active" onclick="showPage('barra')">BARRA CHALACA</button>
+  <button id="btn-tanta" onclick="showPage('tanta')">TANTA</button>
+  <button id="btn-lamar" onclick="showPage('lamar')">LA MAR</button>
+</div>
+
+<!-- ================= PAGE: BARRA CHALACA ================= -->
+<div id="page-barra" class="page active theme-barra">
+  <div class="wrap">
+
+    <div class="navbar">
+      <div class="brand">
+        <div class="logo">BARRA CHALACA</div>
+        <div class="sub">STREET FOOD PERUANO · RRHH</div>
+      </div>
+      <div class="stamp">SEPTIEMBRE 2026</div>
+    </div>
+
+    <div class="stripe"></div>
+
+    <div class="doodle-row">
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
+        <path d="M95 30 L118 15 L112 30 L118 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
+        <circle cx="34" cy="26" r="3.2" fill="#0B2E4F"/>
+        <path d="M15 30 Q35 40 55 30" fill="none" stroke="#E8492B" stroke-width="2"/>
+      </svg>
+      <div class="doodle-title">CUMPLEAÑOS DEL EQUIPO</div>
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M110 30 C 90 5, 50 5, 25 30 C 50 55, 90 55, 110 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
+        <path d="M25 30 L2 15 L8 30 L2 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
+        <circle cx="86" cy="26" r="3.2" fill="#0B2E4F"/>
+        <path d="M105 30 Q85 40 65 30" fill="none" stroke="#E8492B" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot gold"></span> Hoy</span>
+      <span><span class="dot coral"></span> Cumpleaños</span>
+    </div>
+
+    <div class="grid">
+      <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
+
+      <div class="cell muted"><div class="num">31</div></div>
+      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">HOY</div></div>
+      <div class="cell" data-day="2"><div class="num">2</div></div>
+      <div class="cell" data-day="3"><div class="num">3</div></div>
+      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
+      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
+      <div class="cell" data-day="6"><div class="num">6</div></div>
+
+      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
+      <div class="cell" data-day="8"><div class="num">8</div></div>
+      <div class="cell" data-day="9"><div class="num">9</div></div>
+      <div class="cell" data-day="10"><div class="num">10</div></div>
+      <div class="cell" data-day="11"><div class="num">11</div></div>
+      <div class="cell" data-day="12"><div class="num">12</div></div>
+      <div class="cell" data-day="13"><div class="num">13</div></div>
+
+      <div class="cell" data-day="14"><div class="num">14</div></div>
+      <div class="cell" data-day="15"><div class="num">15</div></div>
+      <div class="cell" data-day="16"><div class="num">16</div></div>
+      <div class="cell" data-day="17"><div class="num">17</div></div>
+      <div class="cell" data-day="18"><div class="num">18</div></div>
+      <div class="cell" data-day="19"><div class="num">19</div></div>
+      <div class="cell" data-day="20"><div class="num">20</div></div>
+
+      <div class="cell" data-day="21"><div class="num">21</div></div>
+      <div class="cell" data-day="22"><div class="num">22</div></div>
+      <div class="cell" data-day="23"><div class="num">23</div></div>
+      <div class="cell" data-day="24"><div class="num">24</div></div>
+      <div class="cell" data-day="25"><div class="num">25</div></div>
+      <div class="cell" data-day="26"><div class="num">26</div></div>
+      <div class="cell" data-day="27"><div class="num">27</div></div>
+
+      <div class="cell" data-day="28"><div class="num">28</div></div>
+      <div class="cell" data-day="29"><div class="num">29</div></div>
+      <div class="cell" data-day="30"><div class="num">30</div></div>
+      <div class="cell muted"><div class="num">1</div></div>
+      <div class="cell muted"><div class="num">2</div></div>
+      <div class="cell muted"><div class="num">3</div></div>
+      <div class="cell muted"><div class="num">4</div></div>
+    </div>
+
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 C 8 4, 16 4, 20 14 C 24 4, 32 4, 38 14" fill="none" stroke="#145C82" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= PAGE: TANTA ================= -->
+<div id="page-tanta" class="page theme-tanta">
+  <div class="wrap">
+
+    <div class="navbar">
+      <div class="brand">
+        <svg class="icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#E0177C" stroke-width="4"/>
+          <path d="M30 8 A22 22 0 0 1 30 52" fill="none" stroke="#F5821F" stroke-width="4"/>
+          <circle cx="30" cy="30" r="8" fill="#EE3E8E"/>
+        </svg>
+        <div class="text">
+          <div class="logo"><span class="c1">T</span><span class="c2">A</span><span class="c2">n</span><span class="c1">t</span><span class="c3">a</span></div>
+          <div class="sub">Cocina casera peruana · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp">SEPTIEMBRE 2026</div>
+    </div>
+
+    <div class="stripe"></div>
+
+    <div class="doodle-row">
+      <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,44 24,14 44,44" fill="none" stroke="#E0177C" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="44,44 64,14 84,44" fill="none" stroke="#F5821F" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="84,44 104,14 118,34" fill="none" stroke="#7A2D8C" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+      <div class="doodle-title">cumpleaños del equipo</div>
+      <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="2,34 16,14 36,44" fill="none" stroke="#7A2D8C" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="36,44 56,14 76,44" fill="none" stroke="#F5821F" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="76,44 96,14 116,44" fill="none" stroke="#E0177C" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot gold"></span> Hoy</span>
+      <span><span class="dot coral"></span> Cumpleaños</span>
+    </div>
+
+    <div class="grid">
+      <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
+
+      <div class="cell muted"><div class="num">31</div></div>
+      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">Hoy</div></div>
+      <div class="cell" data-day="2"><div class="num">2</div></div>
+      <div class="cell" data-day="3"><div class="num">3</div></div>
+      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
+      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
+      <div class="cell" data-day="6"><div class="num">6</div></div>
+
+      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
+      <div class="cell" data-day="8"><div class="num">8</div></div>
+      <div class="cell" data-day="9"><div class="num">9</div></div>
+      <div class="cell" data-day="10"><div class="num">10</div></div>
+      <div class="cell" data-day="11"><div class="num">11</div></div>
+      <div class="cell" data-day="12"><div class="num">12</div></div>
+      <div class="cell" data-day="13"><div class="num">13</div></div>
+
+      <div class="cell" data-day="14"><div class="num">14</div></div>
+      <div class="cell" data-day="15"><div class="num">15</div></div>
+      <div class="cell" data-day="16"><div class="num">16</div></div>
+      <div class="cell" data-day="17"><div class="num">17</div></div>
+      <div class="cell" data-day="18"><div class="num">18</div></div>
+      <div class="cell" data-day="19"><div class="num">19</div></div>
+      <div class="cell" data-day="20"><div class="num">20</div></div>
+
+      <div class="cell" data-day="21"><div class="num">21</div></div>
+      <div class="cell" data-day="22"><div class="num">22</div></div>
+      <div class="cell" data-day="23"><div class="num">23</div></div>
+      <div class="cell" data-day="24"><div class="num">24</div></div>
+      <div class="cell" data-day="25"><div class="num">25</div></div>
+      <div class="cell" data-day="26"><div class="num">26</div></div>
+      <div class="cell" data-day="27"><div class="num">27</div></div>
+
+      <div class="cell" data-day="28"><div class="num">28</div></div>
+      <div class="cell" data-day="29"><div class="num">29</div></div>
+      <div class="cell" data-day="30"><div class="num">30</div></div>
+      <div class="cell muted"><div class="num">1</div></div>
+      <div class="cell muted"><div class="num">2</div></div>
+      <div class="cell muted"><div class="num">3</div></div>
+      <div class="cell muted"><div class="num">4</div></div>
+    </div>
+
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><polyline points="2,16 12,4 22,16 32,4 38,10" fill="none" stroke="#E0177C" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= PAGE: LA MAR ================= -->
+<div id="page-lamar" class="page theme-lamar">
+  <div class="wrap">
+
+    <div class="navbar">
+      <div class="brand">
+        <svg class="icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 38 Q16 26 30 38 T54 38" fill="none" stroke="#10495E" stroke-width="3"/>
+          <path d="M6 46 Q16 34 30 46 T54 46" fill="none" stroke="#4C8C6E" stroke-width="3"/>
+          <circle cx="30" cy="18" r="8" fill="#D96C4A"/>
+        </svg>
+        <div class="text">
+          <div class="logo">LA MAR</div>
+          <div class="sub">Cebichería peruana · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp">SEPTIEMBRE 2026</div>
+    </div>
+
+    <div class="ola-divider">
+      <svg viewBox="0 0 400 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 10 Q 12.5 0 25 10 T 50 10 T 75 10 T 100 10" fill="none" stroke="#10495E" stroke-width="2.5" transform="scale(4,1)"/>
+        <path d="M0 15 Q 12.5 6 25 15 T 50 15 T 75 15 T 100 15" fill="none" stroke="#4C8C6E" stroke-width="2" opacity="0.7" transform="scale(4,1)"/>
+      </svg>
+    </div>
+
+    <div class="doodle-row">
+      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#D96C4A" stroke-width="3"/>
+        <path d="M52 25 L58 18 L58 32 Z" fill="#D96C4A"/>
+        <circle cx="20" cy="22" r="2.4" fill="#10495E"/>
+      </svg>
+      <div class="doodle-title">cumpleaños del equipo</div>
+      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#4C8C6E" stroke-width="3" transform="scale(-1,1) translate(-60,0)"/>
+        <path d="M8 25 L2 18 L2 32 Z" fill="#4C8C6E" transform="translate(0,0)"/>
+        <circle cx="40" cy="22" r="2.4" fill="#10495E"/>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot gold"></span> Hoy</span>
+      <span><span class="dot coral"></span> Cumpleaños</span>
+    </div>
+
+    <div class="grid">
+      <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
+
+      <div class="cell muted"><div class="num">31</div></div>
+      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">HOY</div></div>
+      <div class="cell" data-day="2"><div class="num">2</div></div>
+      <div class="cell" data-day="3"><div class="num">3</div></div>
+      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
+      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
+      <div class="cell" data-day="6"><div class="num">6</div></div>
+
+      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
+      <div class="cell" data-day="8"><div class="num">8</div></div>
+      <div class="cell" data-day="9"><div class="num">9</div></div>
+      <div class="cell" data-day="10"><div class="num">10</div></div>
+      <div class="cell" data-day="11"><div class="num">11</div></div>
+      <div class="cell" data-day="12"><div class="num">12</div></div>
+      <div class="cell" data-day="13"><div class="num">13</div></div>
+
+      <div class="cell" data-day="14"><div class="num">14</div></div>
+      <div class="cell" data-day="15"><div class="num">15</div></div>
+      <div class="cell" data-day="16"><div class="num">16</div></div>
+      <div class="cell" data-day="17"><div class="num">17</div></div>
+      <div class="cell" data-day="18"><div class="num">18</div></div>
+      <div class="cell" data-day="19"><div class="num">19</div></div>
+      <div class="cell" data-day="20"><div class="num">20</div></div>
+
+      <div class="cell" data-day="21"><div class="num">21</div></div>
+      <div class="cell" data-day="22"><div class="num">22</div></div>
+      <div class="cell" data-day="23"><div class="num">23</div></div>
+      <div class="cell" data-day="24"><div class="num">24</div></div>
+      <div class="cell" data-day="25"><div class="num">25</div></div>
+      <div class="cell" data-day="26"><div class="num">26</div></div>
+      <div class="cell" data-day="27"><div class="num">27</div></div>
+
+      <div class="cell" data-day="28"><div class="num">28</div></div>
+      <div class="cell" data-day="29"><div class="num">29</div></div>
+      <div class="cell" data-day="30"><div class="num">30</div></div>
+      <div class="cell muted"><div class="num">1</div></div>
+      <div class="cell muted"><div class="num">2</div></div>
+      <div class="cell muted"><div class="num">3</div></div>
+      <div class="cell muted"><div class="num">4</div></div>
+    </div>
+
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 Q10 6 20 14 T38 14" fill="none" stroke="#4C8C6E" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= MODAL: cargar cumpleaños ================= -->
+<div id="cumple-modal-overlay" class="cumple-modal-overlay" onclick="closeModalOutside(event)">
+  <div class="cumple-modal">
+    <div class="cumple-modal-header">
+      <span id="cumple-modal-title">Día</span>
+      <button class="cumple-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="cumple-modal-names" class="cumple-modal-names"></div>
+    <div class="cumple-modal-add">
+      <input type="text" id="cumple-modal-input" placeholder="Nombre y apellido" maxlength="60">
+      <button onclick="addName()">Agregar</button>
+    </div>
+    <div id="cumple-modal-status" class="cumple-modal-status"></div>
+  </div>
+</div>
+
+<script>
+function showPage(name){
+  document.getElementById('page-barra').classList.toggle('active', name === 'barra');
+  document.getElementById('page-tanta').classList.toggle('active', name === 'tanta');
+  document.getElementById('page-lamar').classList.toggle('active', name === 'lamar');
+  document.getElementById('btn-barra').classList.toggle('active', name === 'barra');
+  document.getElementById('btn-tanta').classList.toggle('active', name === 'tanta');
+  document.getElementById('btn-lamar').classList.toggle('active', name === 'lamar');
+}
+
+/* ============ CUMPLEAÑOS: guardado compartido con JSONBin.io ============ */
+// 1) Creá una cuenta gratis en https://jsonbin.io
+// 2) Sacá tu "X-Master-Key" (Api Keys) y creá un Bin nuevo con contenido {}
+// 3) Pegá acá el Bin ID y la Api Key:
+const JSONBIN_BIN_ID = '6a970830f5f4af5e295d8458';
+const JSONBIN_API_KEY = '$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n.';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+
+// Nombres que ya estaban cargados en el diseño original — se usan como
+// punto de partida hasta que alguien edite ese día desde el JSONBin.
+const DEFAULT_CUMPLE = {
+  "4": ["Quiroz, Roca, Melany, Andrea"],
+  "5": ["Alpaca Vergara, Valeria"],
+  "7": ["Carabes, Lucas"]
+};
+
+let cumpleData = Object.assign({}, DEFAULT_CUMPLE);
+let currentDay = null;
+
+function isConfigured(){
+  return JSONBIN_BIN_ID && JSONBIN_BIN_ID.indexOf('PEGA_AQUI') === -1 &&
+         JSONBIN_API_KEY && JSONBIN_API_KEY.indexOf('PEGA_AQUI') === -1;
+}
+
+async function loadCumpleData(){
+  if(!isConfigured()){
+    console.warn('Falta configurar JSONBIN_BIN_ID y JSONBIN_API_KEY en el <script>.');
+    renderAllDays();
+    return;
+  }
+  try{
+    const res = await fetch(JSONBIN_BASE + '/latest', {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    // Los días guardados en el bin pisan a los por defecto; los que
+    // todavía no se tocaron mantienen el valor original del diseño.
+    cumpleData = Object.assign({}, DEFAULT_CUMPLE, (json.record || {}));
+  }catch(e){
+    console.error('No se pudieron cargar los cumpleaños:', e);
+  }
+  renderAllDays();
+}
+
+async function saveCumpleData(){
+  if(!isConfigured()){
+    setStatus('Falta configurar JSONBin en el código.');
+    return false;
+  }
+  try{
+    const res = await fetch(JSONBIN_BASE, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+      body: JSON.stringify(cumpleData)
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return true;
+  }catch(e){
+    console.error('No se pudo guardar:', e);
+    setStatus('No se pudo guardar. Revisá tu conexión.');
+    return false;
+  }
+}
+
+function setStatus(msg){
+  const el = document.getElementById('cumple-modal-status');
+  if(el) el.textContent = msg;
+}
+
+function renderAllDays(){
+  document.querySelectorAll('.cell[data-day]').forEach(cell => {
+    const day = cell.getAttribute('data-day');
+    const names = cumpleData[day] || [];
+    let bday = cell.querySelector('.bday');
+    if(names.length > 0){
+      if(!bday){
+        bday = document.createElement('div');
+        bday.className = 'bday';
+        bday.innerHTML = '<div class="cake">🎂 CUMPLE</div><div class="names"></div>';
+        cell.appendChild(bday);
+      }
+      bday.querySelector('.names').textContent = names.join(', ');
+    }else if(bday){
+      bday.remove();
+    }
+  });
+}
+
+function escapeForDisplay(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderModalNames(){
+  const container = document.getElementById('cumple-modal-names');
+  const names = cumpleData[currentDay] || [];
+  if(names.length === 0){
+    container.innerHTML = '<p class="cumple-modal-empty">Todavía no hay nadie cargado para este día.</p>';
+    return;
+  }
+  container.innerHTML = names.map((n, i) =>
+    '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(n) + '</span><button onclick="removeName(' + i + ')">Quitar ✕</button></div>'
+  ).join('');
+}
+
+function openModal(day){
+  currentDay = day;
+  document.getElementById('cumple-modal-title').textContent = 'Día ' + day + ' de septiembre';
+  renderModalNames();
+  document.getElementById('cumple-modal-input').value = '';
+  setStatus(isConfigured() ? '' : 'Falta configurar JSONBin en el código.');
+  document.getElementById('cumple-modal-overlay').classList.add('open');
+  document.getElementById('cumple-modal-input').focus();
+}
+
+function closeModal(){
+  document.getElementById('cumple-modal-overlay').classList.remove('open');
+  currentDay = null;
+}
+
+function closeModalOutside(e){
+  if(e.target.id === 'cumple-modal-overlay') closeModal();
+}
+
+async function addName(){
+  const input = document.getElementById('cumple-modal-input');
+  const value = input.value.trim();
+  if(!value || currentDay === null) return;
+  if(!cumpleData[currentDay]) cumpleData[currentDay] = [];
+  cumpleData[currentDay].push(value);
+  input.value = '';
+  renderModalNames();
+  renderAllDays();
+  setStatus('Guardando...');
+  const ok = await saveCumpleData();
+  setStatus(ok ? 'Guardado ✓' : 'No se pudo guardar. Revisá tu conexión.');
+}
+
+async function removeName(index){
+  if(currentDay === null) return;
+  cumpleData[currentDay].splice(index, 1);
+  renderModalNames();
+  renderAllDays();
+  setStatus('Guardando...');
+  const ok = await saveCumpleData();
+  setStatus(ok ? 'Guardado ✓' : 'No se pudo guardar. Revisá tu conexión.');
+}
+
+document.getElementById('cumple-modal-input').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') addName();
+});
+
+document.querySelectorAll('.cell[data-day]').forEach(cell => {
+  cell.addEventListener('click', () => openModal(cell.getAttribute('data-day')));
+});
+
+loadCumpleData();
+</script>
+</body>
+</html>

@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cumpleaños de Septiembre — Acurio Restaurantes</title>
+<!-- Librería usada solo por la pestaña ITC para generar la imagen a compartir -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
@@ -342,6 +345,185 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
   .theme-lamar .doodle-title{font-size: 14px; padding: 6px 14px;}
 }
 
+/* ======================================================= */
+/* ============ THEME 4: ITC (fusión, paleta reducida) ==== */
+/* ======================================================= */
+.theme-itc{
+  /* Paleta simplificada: 1 color estructural (navy) + 1 acento cálido (coral)
+     + 1 acento de "hoy" (gold) + neutros. Nada de magenta/naranja/verde/azul
+     separados como en la v1 — todo el fusion look ahora sale de la FORMA
+     (bordes de Barra Chalaca, borde ondulado de La Mar, cinta de Tanta),
+     no de sumar más tonos. */
+  --navy: #0B2E4F;
+  --navy-deep: #072038;
+  --coral: #D9524A;
+  --gold: #F2B705;
+  --sand: #F1E9D6;
+  --paper: #FFFDF7;
+  --ink: #16283F;
+
+  background-color: var(--sand);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='46'><path d='M0 26 Q17.5 8 35 26 T70 26 T105 26 T140 26' fill='none' stroke='%230B2E4F' stroke-width='1.4' opacity='0.08'/></svg>"),
+    radial-gradient(circle at 8% 6%, rgba(11,46,79,0.07) 0%, transparent 45%),
+    radial-gradient(circle at 94% 94%, rgba(217,82,74,0.08) 0%, transparent 45%);
+  background-repeat: repeat, no-repeat, no-repeat;
+  color: var(--ink);
+  padding: 36px 16px 60px;
+}
+.theme-itc .wrap{max-width: 1040px; margin: 0 auto;}
+.theme-itc .navbar{
+  position: relative;
+  background: var(--paper);
+  border-radius: 14px 14px 0 0;
+  padding: 16px 26px 22px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap: wrap; gap: 14px;
+  box-shadow: 0 8px 0 rgba(7,32,56,0.10), 0 14px 26px rgba(11,46,79,0.16);
+  border: 2px solid var(--navy);
+  border-bottom: none;
+}
+.theme-itc .navbar::after{
+  content:"";
+  position:absolute; left:-2px; right:-2px; bottom:-13px; height:16px;
+  background-image: radial-gradient(circle at 12px 0, transparent 12px, var(--paper) 12.5px);
+  background-size: 24px 16px;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 6px 6px rgba(16,49,64,0.12));
+}
+.theme-itc .brand{display:flex; align-items:center; gap: 14px;}
+.theme-itc .brand .icon{ width:46px; height:46px; flex-shrink:0; }
+.theme-itc .brand .text{display:flex; flex-direction:column; line-height:1;}
+.theme-itc .brand .logo{
+  font-family:'Alfa Slab One', serif;
+  font-size: clamp(24px, 3.4vw, 34px);
+  color: var(--navy);
+  text-shadow: 2px 2px 0 var(--coral);
+  letter-spacing: 0.5px;
+}
+.theme-itc .brand .sub{margin-top: 8px; font-size: 10.5px; letter-spacing: 2.5px; color: var(--navy); opacity: 0.7; font-weight: 700; text-transform: uppercase;}
+.theme-itc .stamp{
+  font-family:'Anton', sans-serif; font-size: 14px; letter-spacing: 1.5px;
+  color: var(--sand);
+  background: var(--navy);
+  padding: 10px 22px;
+  border-radius: 999px; border: 2px dashed var(--coral);
+  box-shadow: 3px 3px 0 rgba(7,32,56,0.2); white-space: nowrap;
+}
+.theme-itc .stripe{
+  height: 8px; margin: 22px 0 20px; border-radius: 4px;
+  background: repeating-linear-gradient(90deg, var(--navy) 0 22px, var(--coral) 22px 26px);
+  box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+}
+.theme-itc .doodle-row{display:flex; align-items:center; justify-content:center; gap: 24px; margin-bottom: 6px; opacity: 0.96;}
+.theme-itc .doodle-row svg{ height: 52px; width:auto; }
+.theme-itc .doodle-title{
+  font-family:'Anton',sans-serif; font-size:20px; color:var(--sand); letter-spacing:1px; text-transform:uppercase;
+  background: var(--navy-deep);
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: 1.5px dashed var(--coral);
+  transform: rotate(-1deg);
+}
+.theme-itc .legend{display:flex; gap: 20px; justify-content:center; margin: 18px 0 18px; font-size: 12.5px; color: var(--ink); flex-wrap: wrap;}
+.theme-itc .legend span{display:flex; align-items:center; gap:7px; background: rgba(255,255,255,0.65); padding: 5px 14px; border-radius: 999px; border: 1.5px solid var(--navy); font-weight: 600;}
+.theme-itc .dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+.theme-itc .dot.gold{background: var(--gold);}
+.theme-itc .dot.coral{background: var(--coral);}
+.theme-itc .grid{
+  display:grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 98px;
+  background: var(--navy); gap: 2px; border-radius: 4px 4px 16px 16px; overflow: hidden;
+  box-shadow: 0 16px 30px rgba(11,46,79,0.22);
+  border: 2px solid var(--navy);
+}
+.theme-itc .dow{background: var(--navy); color: var(--sand); font-family:'Anton', sans-serif; font-size: 12px; letter-spacing: 1.5px; text-align: center; padding: 12px 4px;}
+.theme-itc .cell{background: var(--paper); padding: 7px 8px 6px; position: relative; display:flex; flex-direction: column; overflow: hidden;}
+.theme-itc .cell.muted{background: #E7DFC7; color:#a89b78;}
+.theme-itc .cell.muted .num{color:#c4b490;}
+.theme-itc .num{font-family:'Anton', sans-serif; font-size: 15px; text-align:right; color: var(--navy); line-height: 1;}
+.theme-itc .cell.today{background: var(--gold); background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.20) 0 8px, transparent 8px 16px);}
+.theme-itc .cell.today .num{color: var(--navy-deep);}
+.theme-itc .cell.today .hoy-tag{position:absolute; bottom:7px; left:8px; font-family:'Anton', sans-serif; font-size: 9px; letter-spacing: 1.5px; color: var(--sand); background: var(--navy); padding: 3px 8px; border-radius: 999px; transform: rotate(-4deg);}
+.theme-itc .bday{position:relative; margin-top: auto; background: var(--coral); color: var(--paper); padding: 6px 7px 5px; border-radius: 3px 10px 3px 3px; line-height: 1; border-left: 3px solid var(--navy); box-shadow: 2px 2px 0 rgba(7,32,56,0.2);}
+.theme-itc .bday .cake{font-size: 10px; letter-spacing: 0.4px; font-weight:700;}
+.theme-itc .bday .names{font-size: 10.5px; line-height: 1.28; margin-top: 3px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
+.theme-itc footer{margin-top: 24px; display:flex; align-items:center; justify-content:flex-end; gap: 10px; font-size: 11.5px; color: var(--navy); opacity: 0.75; font-style: italic;}
+.theme-itc footer svg{height: 22px; width:auto; opacity:0.85;}
+
+/* ---- Botón "Compartir imagen" (genérico, disponible en las 4 pestañas) ---- */
+.share-actions{ display:flex; justify-content:center; margin: 4px 0 20px; }
+.share-btn{
+  display:inline-flex; align-items:center; gap: 8px;
+  font-family:'Anton', sans-serif; font-size: 13px; letter-spacing: 1px;
+  color: #fff; background: var(--ink);
+  border: 2px solid var(--ink); border-radius: 999px;
+  padding: 10px 22px; cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.18);
+  transition: transform .12s ease, opacity .15s ease;
+}
+.share-btn:hover{ opacity: 0.88; }
+.share-btn:active{ transform: scale(0.97); }
+.share-btn[disabled]{ opacity: 0.55; cursor: default; }
+.share-status{
+  text-align:center; font-size: 12px; color: var(--ink); opacity: 0.85;
+  margin-top: -12px; margin-bottom: 16px; min-height: 14px;
+}
+@media (max-width: 700px){
+  .share-btn{ font-size: 12px; padding: 9px 18px; width: 100%; justify-content: center; }
+}
+
+@media (max-width: 700px){
+  .theme-itc{ padding: 22px 10px 44px; }
+  .theme-itc .wrap{ max-width: 100%; }
+  .theme-itc .navbar{
+    flex-direction: column; align-items: flex-start;
+    padding: 14px 16px 20px; border-radius: 12px 12px 0 0;
+  }
+  .theme-itc .stamp{ align-self: flex-start; font-size: 12px; padding: 8px 16px; }
+  .theme-itc .brand .icon{width:34px; height:34px;}
+  .theme-itc .brand .logo{ font-size: 22px; }
+  .theme-itc .stripe{ margin: 16px 0 14px; }
+  .theme-itc .doodle-row{ gap: 10px; }
+  .theme-itc .doodle-row svg{height: 32px;}
+  .theme-itc .doodle-title{font-size: 12px; padding: 6px 10px; letter-spacing: 0.5px;}
+  .theme-itc .legend{ gap: 10px; margin: 12px 0 14px; font-size: 11px; }
+  .theme-itc .legend span{ padding: 4px 10px; }
+  .theme-itc .grid{grid-auto-rows: 68px; border-radius: 4px 4px 10px 10px;}
+  .theme-itc .cell{padding: 4px 4px 4px;}
+  .theme-itc .dow{font-size: 8px; padding: 6px 1px; letter-spacing: 0.5px;}
+  .theme-itc .num{font-size: 11px;}
+  .theme-itc .bday{padding: 3px 4px; border-radius: 2px 6px 2px 2px;}
+  .theme-itc .bday .names{font-size: 7.6px; line-height: 1.15; -webkit-line-clamp: 2;}
+  .theme-itc .bday .cake{font-size: 7px;}
+  .theme-itc .cell.today .hoy-tag{font-size: 7px; padding: 2px 6px; bottom:4px; left:4px;}
+  .theme-itc footer{ font-size: 10px; justify-content: center; text-align:center; }
+}
+
+@media (max-width: 380px){
+  .theme-itc .grid{grid-auto-rows: 58px;}
+  .theme-itc .bday .names{ display:none; }
+  .theme-itc .bday .cake{ font-size: 8px; }
+}
+
+/* ============ SECCIÓN DE MESES (navegador de mes, todas las pestañas) ============ */
+.month-nav{
+  display:flex; align-items:center; justify-content:center; gap: 16px;
+  margin: 4px 0 18px;
+}
+.month-nav button{
+  width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(0,0,0,0.08); color: inherit; font-size: 16px; font-weight: 700;
+  display:flex; align-items:center; justify-content:center;
+  transition: background .15s ease, transform .1s ease;
+  font-family: 'DM Sans', sans-serif;
+}
+.month-nav button:hover{ background: rgba(0,0,0,0.16); }
+.month-nav button:active{ transform: scale(0.92); }
+.month-nav .month-label{
+  font-family:'Anton', sans-serif; font-size: 15px; letter-spacing: 1.5px; text-transform: uppercase;
+  min-width: 190px; text-align:center;
+}
+
 /* ============ EDICIÓN: celdas + modal ============ */
 .cell[data-day]{ cursor: pointer; transition: filter .12s ease, transform .12s ease; }
 .cell[data-day]:hover{ filter: brightness(0.97); }
@@ -396,6 +578,7 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
   <button id="btn-barra" class="active" onclick="showPage('barra')">BARRA CHALACA</button>
   <button id="btn-tanta" onclick="showPage('tanta')">TANTA</button>
   <button id="btn-lamar" onclick="showPage('lamar')">LA MAR</button>
+  <button id="btn-itc" onclick="showPage('itc')">ITC</button>
 </div>
 
 <!-- ================= PAGE: BARRA CHALACA ================= -->
@@ -433,48 +616,14 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <span><span class="dot coral"></span> Cumpleaños</span>
     </div>
 
-    <div class="grid">
+    <div class="month-nav">
+      <button onclick="changeMonth('barra',-1)" aria-label="Mes anterior">‹</button>
+      <div class="month-label" id="month-label-barra">SEPTIEMBRE 2026</div>
+      <button onclick="changeMonth('barra',1)" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid" id="grid-barra">
       <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
-
-      <div class="cell muted"><div class="num">31</div></div>
-      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">HOY</div></div>
-      <div class="cell" data-day="2"><div class="num">2</div></div>
-      <div class="cell" data-day="3"><div class="num">3</div></div>
-      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
-      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
-      <div class="cell" data-day="6"><div class="num">6</div></div>
-
-      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
-      <div class="cell" data-day="8"><div class="num">8</div></div>
-      <div class="cell" data-day="9"><div class="num">9</div></div>
-      <div class="cell" data-day="10"><div class="num">10</div></div>
-      <div class="cell" data-day="11"><div class="num">11</div></div>
-      <div class="cell" data-day="12"><div class="num">12</div></div>
-      <div class="cell" data-day="13"><div class="num">13</div></div>
-
-      <div class="cell" data-day="14"><div class="num">14</div></div>
-      <div class="cell" data-day="15"><div class="num">15</div></div>
-      <div class="cell" data-day="16"><div class="num">16</div></div>
-      <div class="cell" data-day="17"><div class="num">17</div></div>
-      <div class="cell" data-day="18"><div class="num">18</div></div>
-      <div class="cell" data-day="19"><div class="num">19</div></div>
-      <div class="cell" data-day="20"><div class="num">20</div></div>
-
-      <div class="cell" data-day="21"><div class="num">21</div></div>
-      <div class="cell" data-day="22"><div class="num">22</div></div>
-      <div class="cell" data-day="23"><div class="num">23</div></div>
-      <div class="cell" data-day="24"><div class="num">24</div></div>
-      <div class="cell" data-day="25"><div class="num">25</div></div>
-      <div class="cell" data-day="26"><div class="num">26</div></div>
-      <div class="cell" data-day="27"><div class="num">27</div></div>
-
-      <div class="cell" data-day="28"><div class="num">28</div></div>
-      <div class="cell" data-day="29"><div class="num">29</div></div>
-      <div class="cell" data-day="30"><div class="num">30</div></div>
-      <div class="cell muted"><div class="num">1</div></div>
-      <div class="cell muted"><div class="num">2</div></div>
-      <div class="cell muted"><div class="num">3</div></div>
-      <div class="cell muted"><div class="num">4</div></div>
     </div>
 
     <footer>
@@ -482,6 +631,11 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 C 8 4, 16 4, 20 14 C 24 4, 32 4, 38 14" fill="none" stroke="#145C82" stroke-width="2.5"/></svg>
     </footer>
   </div>
+
+  <div class="share-actions no-capture">
+    <button class="share-btn" id="share-btn-barra" onclick="shareCalendarImage('barra')">📸 Compartir imagen</button>
+  </div>
+  <div class="share-status no-capture" id="share-status-barra"></div>
 </div>
 
 <!-- ================= PAGE: TANTA ================= -->
@@ -524,48 +678,14 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <span><span class="dot coral"></span> Cumpleaños</span>
     </div>
 
-    <div class="grid">
+    <div class="month-nav">
+      <button onclick="changeMonth('tanta',-1)" aria-label="Mes anterior">‹</button>
+      <div class="month-label" id="month-label-tanta">SEPTIEMBRE 2026</div>
+      <button onclick="changeMonth('tanta',1)" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid" id="grid-tanta">
       <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
-
-      <div class="cell muted"><div class="num">31</div></div>
-      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">Hoy</div></div>
-      <div class="cell" data-day="2"><div class="num">2</div></div>
-      <div class="cell" data-day="3"><div class="num">3</div></div>
-      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
-      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
-      <div class="cell" data-day="6"><div class="num">6</div></div>
-
-      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
-      <div class="cell" data-day="8"><div class="num">8</div></div>
-      <div class="cell" data-day="9"><div class="num">9</div></div>
-      <div class="cell" data-day="10"><div class="num">10</div></div>
-      <div class="cell" data-day="11"><div class="num">11</div></div>
-      <div class="cell" data-day="12"><div class="num">12</div></div>
-      <div class="cell" data-day="13"><div class="num">13</div></div>
-
-      <div class="cell" data-day="14"><div class="num">14</div></div>
-      <div class="cell" data-day="15"><div class="num">15</div></div>
-      <div class="cell" data-day="16"><div class="num">16</div></div>
-      <div class="cell" data-day="17"><div class="num">17</div></div>
-      <div class="cell" data-day="18"><div class="num">18</div></div>
-      <div class="cell" data-day="19"><div class="num">19</div></div>
-      <div class="cell" data-day="20"><div class="num">20</div></div>
-
-      <div class="cell" data-day="21"><div class="num">21</div></div>
-      <div class="cell" data-day="22"><div class="num">22</div></div>
-      <div class="cell" data-day="23"><div class="num">23</div></div>
-      <div class="cell" data-day="24"><div class="num">24</div></div>
-      <div class="cell" data-day="25"><div class="num">25</div></div>
-      <div class="cell" data-day="26"><div class="num">26</div></div>
-      <div class="cell" data-day="27"><div class="num">27</div></div>
-
-      <div class="cell" data-day="28"><div class="num">28</div></div>
-      <div class="cell" data-day="29"><div class="num">29</div></div>
-      <div class="cell" data-day="30"><div class="num">30</div></div>
-      <div class="cell muted"><div class="num">1</div></div>
-      <div class="cell muted"><div class="num">2</div></div>
-      <div class="cell muted"><div class="num">3</div></div>
-      <div class="cell muted"><div class="num">4</div></div>
     </div>
 
     <footer>
@@ -573,6 +693,11 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><polyline points="2,16 12,4 22,16 32,4 38,10" fill="none" stroke="#E0177C" stroke-width="2.5"/></svg>
     </footer>
   </div>
+
+  <div class="share-actions no-capture">
+    <button class="share-btn" id="share-btn-tanta" onclick="shareCalendarImage('tanta')">📸 Compartir imagen</button>
+  </div>
+  <div class="share-status no-capture" id="share-status-tanta"></div>
 </div>
 
 <!-- ================= PAGE: LA MAR ================= -->
@@ -620,48 +745,14 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <span><span class="dot coral"></span> Cumpleaños</span>
     </div>
 
-    <div class="grid">
+    <div class="month-nav">
+      <button onclick="changeMonth('lamar',-1)" aria-label="Mes anterior">‹</button>
+      <div class="month-label" id="month-label-lamar">SEPTIEMBRE 2026</div>
+      <button onclick="changeMonth('lamar',1)" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid" id="grid-lamar">
       <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
-
-      <div class="cell muted"><div class="num">31</div></div>
-      <div class="cell today" data-day="1"><div class="num">1</div><div class="hoy-tag">HOY</div></div>
-      <div class="cell" data-day="2"><div class="num">2</div></div>
-      <div class="cell" data-day="3"><div class="num">3</div></div>
-      <div class="cell" data-day="4"><div class="num">4</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Quiroz, Roca, Melany, Andrea</div></div></div>
-      <div class="cell" data-day="5"><div class="num">5</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Alpaca Vergara, Valeria</div></div></div>
-      <div class="cell" data-day="6"><div class="num">6</div></div>
-
-      <div class="cell" data-day="7"><div class="num">7</div><div class="bday"><div class="cake">🎂 CUMPLE</div><div class="names">Carabes, Lucas</div></div></div>
-      <div class="cell" data-day="8"><div class="num">8</div></div>
-      <div class="cell" data-day="9"><div class="num">9</div></div>
-      <div class="cell" data-day="10"><div class="num">10</div></div>
-      <div class="cell" data-day="11"><div class="num">11</div></div>
-      <div class="cell" data-day="12"><div class="num">12</div></div>
-      <div class="cell" data-day="13"><div class="num">13</div></div>
-
-      <div class="cell" data-day="14"><div class="num">14</div></div>
-      <div class="cell" data-day="15"><div class="num">15</div></div>
-      <div class="cell" data-day="16"><div class="num">16</div></div>
-      <div class="cell" data-day="17"><div class="num">17</div></div>
-      <div class="cell" data-day="18"><div class="num">18</div></div>
-      <div class="cell" data-day="19"><div class="num">19</div></div>
-      <div class="cell" data-day="20"><div class="num">20</div></div>
-
-      <div class="cell" data-day="21"><div class="num">21</div></div>
-      <div class="cell" data-day="22"><div class="num">22</div></div>
-      <div class="cell" data-day="23"><div class="num">23</div></div>
-      <div class="cell" data-day="24"><div class="num">24</div></div>
-      <div class="cell" data-day="25"><div class="num">25</div></div>
-      <div class="cell" data-day="26"><div class="num">26</div></div>
-      <div class="cell" data-day="27"><div class="num">27</div></div>
-
-      <div class="cell" data-day="28"><div class="num">28</div></div>
-      <div class="cell" data-day="29"><div class="num">29</div></div>
-      <div class="cell" data-day="30"><div class="num">30</div></div>
-      <div class="cell muted"><div class="num">1</div></div>
-      <div class="cell muted"><div class="num">2</div></div>
-      <div class="cell muted"><div class="num">3</div></div>
-      <div class="cell muted"><div class="num">4</div></div>
     </div>
 
     <footer>
@@ -669,6 +760,75 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 Q10 6 20 14 T38 14" fill="none" stroke="#4C8C6E" stroke-width="2.5"/></svg>
     </footer>
   </div>
+
+  <div class="share-actions no-capture">
+    <button class="share-btn" id="share-btn-lamar" onclick="shareCalendarImage('lamar')">📸 Compartir imagen</button>
+  </div>
+  <div class="share-status no-capture" id="share-status-lamar"></div>
+</div>
+
+<!-- ================= PAGE: ITC ================= -->
+<div id="page-itc" class="page theme-itc">
+  <div class="wrap">
+
+    <div class="navbar">
+      <div class="brand">
+        <svg class="icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="24" fill="none" stroke="#0B2E4F" stroke-width="4"/>
+          <path d="M8 36 Q18 24 30 36 T52 36" fill="none" stroke="#D9524A" stroke-width="3"/>
+          <circle cx="30" cy="30" r="7" fill="#F2B705"/>
+        </svg>
+        <div class="text">
+          <div class="logo">ITC</div>
+          <div class="sub">Todos los locales · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp" id="stamp-itc">SEPTIEMBRE 2026</div>
+    </div>
+
+    <div class="stripe"></div>
+
+    <div class="doodle-row">
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z" fill="none" stroke="#0B2E4F" stroke-width="3"/>
+        <path d="M95 30 L118 15 L112 30 L118 45 Z" fill="#F2B705" stroke="#0B2E4F" stroke-width="2"/>
+        <circle cx="34" cy="26" r="3.2" fill="#D9524A"/>
+        <path d="M15 30 Q35 40 55 30" fill="none" stroke="#D9524A" stroke-width="2"/>
+      </svg>
+      <div class="doodle-title">Cumpleaños del equipo</div>
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M110 30 C 90 5, 50 5, 25 30 C 50 55, 90 55, 110 30 Z" fill="none" stroke="#0B2E4F" stroke-width="3"/>
+        <path d="M25 30 L2 15 L8 30 L2 45 Z" fill="#F2B705" stroke="#0B2E4F" stroke-width="2"/>
+        <circle cx="86" cy="26" r="3.2" fill="#D9524A"/>
+        <path d="M105 30 Q85 40 65 30" fill="none" stroke="#D9524A" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot gold"></span> Hoy</span>
+      <span><span class="dot coral"></span> Cumpleaños</span>
+    </div>
+
+    <div class="month-nav">
+      <button onclick="changeMonth('itc',-1)" aria-label="Mes anterior">‹</button>
+      <div class="month-label" id="month-label-itc">SEPTIEMBRE 2026</div>
+      <button onclick="changeMonth('itc',1)" aria-label="Mes siguiente">›</button>
+    </div>
+
+    <div class="grid" id="grid-itc">
+      <div class="dow">Lunes</div><div class="dow">Martes</div><div class="dow">Miércoles</div><div class="dow">Jueves</div><div class="dow">Viernes</div><div class="dow">Sábado</div><div class="dow">Domingo</div>
+    </div>
+
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 C 8 4, 16 4, 20 14 C 24 4, 32 4, 38 14" fill="none" stroke="#D9524A" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+
+  <div class="share-actions no-capture">
+    <button class="share-btn" id="share-btn-itc" onclick="shareCalendarImage('itc')">📸 Compartir imagen</button>
+  </div>
+  <div class="share-status no-capture" id="share-status-itc"></div>
 </div>
 
 <!-- ================= MODAL: cargar cumpleaños ================= -->
@@ -688,16 +848,18 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
 </div>
 
 <script>
+const LOCALES = ['barra', 'tanta', 'lamar', 'itc'];
+const LOCAL_NAMES = { barra: 'Barra Chalaca', tanta: 'Tanta', lamar: 'La Mar', itc: 'ITC' };
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
 function showPage(name){
-  document.getElementById('page-barra').classList.toggle('active', name === 'barra');
-  document.getElementById('page-tanta').classList.toggle('active', name === 'tanta');
-  document.getElementById('page-lamar').classList.toggle('active', name === 'lamar');
-  document.getElementById('btn-barra').classList.toggle('active', name === 'barra');
-  document.getElementById('btn-tanta').classList.toggle('active', name === 'tanta');
-  document.getElementById('btn-lamar').classList.toggle('active', name === 'lamar');
+  LOCALES.forEach(n => {
+    document.getElementById('page-' + n).classList.toggle('active', n === name);
+    document.getElementById('btn-' + n).classList.toggle('active', n === name);
+  });
 }
 
-/* ============ CUMPLEAÑOS: guardado compartido con JSONBin.io ============ */
+/* ============ CUMPLEAÑOS: guardado con JSONBin.io — datos independientes por local ============ */
 // 1) Creá una cuenta gratis en https://jsonbin.io
 // 2) Sacá tu "X-Master-Key" (Api Keys) y creá un Bin nuevo con contenido {}
 // 3) Pegá acá el Bin ID y la Api Key:
@@ -705,15 +867,29 @@ const JSONBIN_BIN_ID = '6a970830f5f4af5e295d8458';
 const JSONBIN_API_KEY = '$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n.';
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
-// Nombres que ya estaban cargados en el diseño original — se usan como
-// punto de partida hasta que alguien edite ese día desde el JSONBin.
+// Los datos ahora están agrupados por local ("barra", "tanta", "lamar", "itc") y,
+// dentro de cada local, por mes ("YYYY-MM"). Cada local tiene su propia lista de
+// nombres — ya NO se comparte información entre locales. Los siguientes son los
+// nombres que ya estaban cargados en el diseño original, usados como punto de
+// partida de Septiembre 2026 para cada local hasta que alguien los edite.
 const DEFAULT_CUMPLE = {
-  "4": ["Quiroz, Roca, Melany, Andrea"],
-  "5": ["Alpaca Vergara, Valeria"],
-  "7": ["Carabes, Lucas"]
+  barra: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
+  tanta: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
+  lamar: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
+  itc:   { '2026-09': {} }
 };
 
-let cumpleData = Object.assign({}, DEFAULT_CUMPLE);
+let cumpleData = JSON.parse(JSON.stringify(DEFAULT_CUMPLE));
+
+// Mes que está mirando cada local ahora mismo (independiente entre pestañas)
+let currentMonth = {
+  barra: { y: 2026, m: 9 },
+  tanta: { y: 2026, m: 9 },
+  lamar: { y: 2026, m: 9 },
+  itc:   { y: 2026, m: 9 }
+};
+
+let currentLocal = null;
 let currentDay = null;
 
 function isConfigured(){
@@ -721,10 +897,23 @@ function isConfigured(){
          JSONBIN_API_KEY && JSONBIN_API_KEY.indexOf('PEGA_AQUI') === -1;
 }
 
+function monthKey(y, m){ return y + '-' + String(m).padStart(2, '0'); }
+
+function deepMergeCumple(defaults, saved){
+  const result = {};
+  LOCALES.forEach(loc => {
+    result[loc] = Object.assign({}, defaults[loc]);
+    if(saved && saved[loc]){
+      Object.keys(saved[loc]).forEach(mk => { result[loc][mk] = saved[loc][mk]; });
+    }
+  });
+  return result;
+}
+
 async function loadCumpleData(){
   if(!isConfigured()){
     console.warn('Falta configurar JSONBIN_BIN_ID y JSONBIN_API_KEY en el <script>.');
-    renderAllDays();
+    initAllPages();
     return;
   }
   try{
@@ -733,13 +922,13 @@ async function loadCumpleData(){
     });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
-    // Los días guardados en el bin pisan a los por defecto; los que
-    // todavía no se tocaron mantienen el valor original del diseño.
-    cumpleData = Object.assign({}, DEFAULT_CUMPLE, (json.record || {}));
+    // Cada local pisa únicamente sus propios datos guardados; los locales que
+    // todavía no se tocaron mantienen su valor original del diseño.
+    cumpleData = deepMergeCumple(DEFAULT_CUMPLE, json.record || {});
   }catch(e){
     console.error('No se pudieron cargar los cumpleaños:', e);
   }
-  renderAllDays();
+  initAllPages();
 }
 
 async function saveCumpleData(){
@@ -767,10 +956,86 @@ function setStatus(msg){
   if(el) el.textContent = msg;
 }
 
-function renderAllDays(){
-  document.querySelectorAll('.cell[data-day]').forEach(cell => {
+/* ============ SECCIÓN DE MESES: cálculo y render de la grilla ============ */
+function daysInMonth(y, m){ return new Date(y, m, 0).getDate(); } // m = 1..12
+function firstWeekdayMonFirst(y, m){
+  const d = new Date(y, m - 1, 1).getDay(); // 0=Dom..6=Sáb
+  return (d + 6) % 7; // 0=Lun..6=Dom
+}
+
+function initAllPages(){
+  LOCALES.forEach(loc => buildGrid(loc));
+}
+
+function changeMonth(local, delta){
+  let { y, m } = currentMonth[local];
+  m += delta;
+  if(m < 1){ m = 12; y--; }
+  if(m > 12){ m = 1; y++; }
+  currentMonth[local] = { y, m };
+  buildGrid(local);
+}
+
+function updateMonthLabel(local){
+  const { y, m } = currentMonth[local];
+  const text = MESES[m - 1].toUpperCase() + ' ' + y;
+  const label = document.getElementById('month-label-' + local);
+  if(label) label.textContent = text;
+  const stamp = document.querySelector('#page-' + local + ' .stamp');
+  if(stamp) stamp.textContent = text;
+}
+
+function buildGrid(local){
+  const { y, m } = currentMonth[local];
+  const grid = document.getElementById('grid-' + local);
+  if(!grid) return;
+
+  grid.querySelectorAll('.cell').forEach(c => c.remove());
+
+  const firstOffset = firstWeekdayMonFirst(y, m);
+  const totalDays = daysInMonth(y, m);
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  const prevTotalDays = daysInMonth(prevY, prevM);
+
+  const now = new Date();
+  const isRealMonth = now.getFullYear() === y && (now.getMonth() + 1) === m;
+  const todayNum = now.getDate();
+
+  let html = '';
+  for(let i = firstOffset; i > 0; i--){
+    html += '<div class="cell muted"><div class="num">' + (prevTotalDays - i + 1) + '</div></div>';
+  }
+  for(let d = 1; d <= totalDays; d++){
+    const isToday = isRealMonth && d === todayNum;
+    html += '<div class="cell' + (isToday ? ' today' : '') + '" data-day="' + d + '">' +
+              '<div class="num">' + d + '</div>' +
+              (isToday ? '<div class="hoy-tag">HOY</div>' : '') +
+            '</div>';
+  }
+  const filledSoFar = firstOffset + totalDays;
+  const trailing = (7 - (filledSoFar % 7)) % 7;
+  for(let d = 1; d <= trailing; d++){
+    html += '<div class="cell muted"><div class="num">' + d + '</div></div>';
+  }
+
+  grid.insertAdjacentHTML('beforeend', html);
+
+  grid.querySelectorAll('.cell[data-day]').forEach(cell => {
+    cell.addEventListener('click', () => openModal(local, cell.getAttribute('data-day')));
+  });
+
+  updateMonthLabel(local);
+  renderDaysForLocal(local);
+}
+
+function renderDaysForLocal(local){
+  const { y, m } = currentMonth[local];
+  const mk = monthKey(y, m);
+  const data = (cumpleData[local] && cumpleData[local][mk]) || {};
+  document.querySelectorAll('#page-' + local + ' .cell[data-day]').forEach(cell => {
     const day = cell.getAttribute('data-day');
-    const names = cumpleData[day] || [];
+    const names = data[day] || [];
     let bday = cell.querySelector('.bday');
     if(names.length > 0){
       if(!bday){
@@ -794,7 +1059,8 @@ function escapeForDisplay(str){
 
 function renderModalNames(){
   const container = document.getElementById('cumple-modal-names');
-  const names = cumpleData[currentDay] || [];
+  const mk = monthKey(currentMonth[currentLocal].y, currentMonth[currentLocal].m);
+  const names = (cumpleData[currentLocal][mk] && cumpleData[currentLocal][mk][currentDay]) || [];
   if(names.length === 0){
     container.innerHTML = '<p class="cumple-modal-empty">Todavía no hay nadie cargado para este día.</p>';
     return;
@@ -804,9 +1070,12 @@ function renderModalNames(){
   ).join('');
 }
 
-function openModal(day){
+function openModal(local, day){
+  currentLocal = local;
   currentDay = day;
-  document.getElementById('cumple-modal-title').textContent = 'Día ' + day + ' de septiembre';
+  const { y, m } = currentMonth[local];
+  document.getElementById('cumple-modal-title').textContent =
+    LOCAL_NAMES[local] + ' · Día ' + day + ' de ' + MESES[m - 1].toLowerCase() + ' ' + y;
   renderModalNames();
   document.getElementById('cumple-modal-input').value = '';
   setStatus(isConfigured() ? '' : 'Falta configurar JSONBin en el código.');
@@ -816,6 +1085,7 @@ function openModal(day){
 
 function closeModal(){
   document.getElementById('cumple-modal-overlay').classList.remove('open');
+  currentLocal = null;
   currentDay = null;
 }
 
@@ -826,22 +1096,25 @@ function closeModalOutside(e){
 async function addName(){
   const input = document.getElementById('cumple-modal-input');
   const value = input.value.trim();
-  if(!value || currentDay === null) return;
-  if(!cumpleData[currentDay]) cumpleData[currentDay] = [];
-  cumpleData[currentDay].push(value);
+  if(!value || currentLocal === null || currentDay === null) return;
+  const mk = monthKey(currentMonth[currentLocal].y, currentMonth[currentLocal].m);
+  if(!cumpleData[currentLocal][mk]) cumpleData[currentLocal][mk] = {};
+  if(!cumpleData[currentLocal][mk][currentDay]) cumpleData[currentLocal][mk][currentDay] = [];
+  cumpleData[currentLocal][mk][currentDay].push(value);
   input.value = '';
   renderModalNames();
-  renderAllDays();
+  renderDaysForLocal(currentLocal);
   setStatus('Guardando...');
   const ok = await saveCumpleData();
   setStatus(ok ? 'Guardado ✓' : 'No se pudo guardar. Revisá tu conexión.');
 }
 
 async function removeName(index){
-  if(currentDay === null) return;
-  cumpleData[currentDay].splice(index, 1);
+  if(currentLocal === null || currentDay === null) return;
+  const mk = monthKey(currentMonth[currentLocal].y, currentMonth[currentLocal].m);
+  cumpleData[currentLocal][mk][currentDay].splice(index, 1);
   renderModalNames();
-  renderAllDays();
+  renderDaysForLocal(currentLocal);
   setStatus('Guardando...');
   const ok = await saveCumpleData();
   setStatus(ok ? 'Guardado ✓' : 'No se pudo guardar. Revisá tu conexión.');
@@ -851,9 +1124,106 @@ document.getElementById('cumple-modal-input').addEventListener('keydown', functi
   if(e.key === 'Enter') addName();
 });
 
-document.querySelectorAll('.cell[data-day]').forEach(cell => {
-  cell.addEventListener('click', () => openModal(cell.getAttribute('data-day')));
-});
+/* ============ Compartir el calendario como imagen (las 4 pestañas) ============ */
+const LOCAL_BG = {
+  barra: '#E4D2A6',
+  tanta: '#FBF3F8',
+  lamar: '#EFE6D3',
+  itc:   '#F1E9D6'
+};
+
+async function shareCalendarImage(local){
+  const btn = document.getElementById('share-btn-' + local);
+  const statusEl = document.getElementById('share-status-' + local);
+  const target = document.getElementById('page-' + local);
+
+  if(typeof html2canvas === 'undefined'){
+    statusEl.textContent = 'No se pudo cargar la herramienta de captura. Revisá tu conexión.';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Generando imagen…';
+  statusEl.textContent = '';
+
+  try{
+    // Esperamos a que las tipografías (Anton, Alfa Slab One, etc.) estén
+    // realmente cargadas antes de capturar — si no, la captura sale con la
+    // tipografía de reemplazo del sistema y se ve desprolija.
+    if(document.fonts && document.fonts.ready){
+      await document.fonts.ready;
+    }
+
+    const canvas = await html2canvas(target, {
+      backgroundColor: LOCAL_BG[local] || '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      // La grilla puede tener un poco de scroll acumulado por el modal;
+      // arrancamos siempre desde el borde superior izquierdo real.
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      // El botón de compartir y su mensaje de estado no deben salir en la foto.
+      ignoreElements: (el) => el.classList && el.classList.contains('no-capture')
+    });
+
+    canvas.toBlob(async (blob) => {
+      if(!blob){
+        statusEl.textContent = 'No se pudo generar la imagen.';
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        return;
+      }
+
+      const { y, m } = currentMonth[local];
+      const fileName = 'cumpleanos-' + local + '-' + monthKey(y, m) + '.png';
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // En celular, si el navegador soporta compartir archivos (Web Share API),
+      // abrimos directamente el panel para compartir por WhatsApp, etc.
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({
+            files: [file],
+            title: 'Cumpleaños ' + LOCAL_NAMES[local] + ' — ' + MESES[m - 1] + ' ' + y,
+            text: 'Calendario de cumpleaños ' + LOCAL_NAMES[local]
+          });
+          statusEl.textContent = '';
+        }catch(shareErr){
+          // El usuario canceló el share sheet u otro error — no es un fallo real.
+          if(shareErr && shareErr.name !== 'AbortError'){
+            downloadBlob(blob, fileName);
+            statusEl.textContent = 'Imagen descargada ✓';
+          }
+        }
+      }else{
+        // En escritorio (o si no hay soporte de share) se descarga directamente.
+        downloadBlob(blob, fileName);
+        statusEl.textContent = 'Imagen descargada ✓';
+      }
+
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }, 'image/png');
+  }catch(err){
+    console.error('No se pudo capturar la imagen:', err);
+    statusEl.textContent = 'No se pudo generar la imagen. Intentá de nuevo.';
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function downloadBlob(blob, fileName){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 loadCumpleData();
 </script>

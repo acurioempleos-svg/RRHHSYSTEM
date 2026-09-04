@@ -570,6 +570,53 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
 }
 .cumple-modal-add button:hover{ background:#145C82; }
 .cumple-modal-status{ margin-top: 10px; font-size: 12px; color:#888; min-height: 14px; }
+
+/* ============ AVISO: cumpleaños de la semana (todos los locales) ============ */
+.weekly-modal-overlay{
+  display:none; position:fixed; inset:0; z-index: 300;
+  background: rgba(10,20,30,0.6);
+  align-items:center; justify-content:center; padding: 16px;
+}
+.weekly-modal-overlay.open{ display:flex; }
+.weekly-modal{
+  background:#fff; border-radius: 16px; width: 100%; max-width: 440px;
+  max-height: 82vh; overflow-y:auto;
+  padding: 26px 26px 20px; box-shadow: 0 22px 60px rgba(0,0,0,0.4);
+  font-family:'DM Sans', sans-serif;
+  border-top: 6px solid #F2B705;
+}
+.weekly-modal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 4px; }
+.weekly-modal-header .weekly-title{
+  font-family:'Anton', sans-serif; font-size: 19px; color:#0B2E4F; letter-spacing:0.5px;
+  display:flex; align-items:center; gap:8px;
+}
+.weekly-modal-close{
+  background: #eee; border:none; border-radius: 50%; width: 30px; height:30px;
+  cursor:pointer; font-size: 15px; color:#555; line-height:1; flex-shrink:0;
+}
+.weekly-modal-close:hover{ background:#ddd; }
+.weekly-modal-sub{ font-size: 12.5px; color:#888; margin-bottom: 16px; }
+.weekly-day-block{ margin-bottom: 14px; }
+.weekly-day-block:last-child{ margin-bottom: 0; }
+.weekly-day-label{
+  font-family:'Anton', sans-serif; font-size: 12.5px; letter-spacing: 0.8px; text-transform: uppercase;
+  color:#145C82; margin-bottom: 6px; display:flex; align-items:center; gap:8px;
+}
+.weekly-today-tag{
+  font-family:'DM Sans', sans-serif; font-weight:700; font-size: 10px; letter-spacing: 0.5px;
+  background:#F2B705; color:#0B2E4F; padding: 2px 8px; border-radius: 999px;
+}
+.weekly-local-row{
+  display:flex; align-items:baseline; gap: 8px;
+  padding: 8px 10px; background:#F7F5EF; border-radius: 8px; margin-bottom: 6px;
+  font-size: 13.5px; color:#222;
+}
+.weekly-local-row:last-child{ margin-bottom: 0; }
+.weekly-local-tag{
+  font-weight: 800; color:#E8492B; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.weekly-names{ color:#333; }
 </style>
 </head>
 <body>
@@ -847,6 +894,18 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
   </div>
 </div>
 
+<!-- ================= MODAL: aviso de cumpleaños de la semana (todos los locales) ================= -->
+<div id="weekly-modal-overlay" class="weekly-modal-overlay" onclick="closeWeeklyModalOutside(event)">
+  <div class="weekly-modal">
+    <div class="weekly-modal-header">
+      <span class="weekly-title">🎉 Cumpleaños esta semana</span>
+      <button class="weekly-modal-close" onclick="closeWeeklyModal()">✕</button>
+    </div>
+    <div class="weekly-modal-sub">Resumen de todos los locales</div>
+    <div id="weekly-modal-body"></div>
+  </div>
+</div>
+
 <script>
 const LOCALES = ['barra', 'tanta', 'lamar', 'itc'];
 const LOCAL_NAMES = { barra: 'Barra Chalaca', tanta: 'Tanta', lamar: 'La Mar', itc: 'ITC' };
@@ -914,6 +973,7 @@ async function loadCumpleData(){
   if(!isConfigured()){
     console.warn('Falta configurar JSONBIN_BIN_ID y JSONBIN_API_KEY en el <script>.');
     initAllPages();
+    showWeeklySummaryIfAny();
     return;
   }
   try{
@@ -929,6 +989,7 @@ async function loadCumpleData(){
     console.error('No se pudieron cargar los cumpleaños:', e);
   }
   initAllPages();
+  showWeeklySummaryIfAny();
 }
 
 async function saveCumpleData(){
@@ -1223,6 +1284,79 @@ function downloadBlob(blob, fileName){
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ============ AVISO: cumpleaños de la semana (todos los locales) ============ */
+const DOW_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+// Devuelve los 7 objetos Date de la semana actual (Lunes a Domingo).
+function getCurrentWeekDates(){
+  const now = new Date();
+  const offset = (now.getDay() + 6) % 7; // 0=Lunes..6=Domingo
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+  const dates = [];
+  for(let i = 0; i < 7; i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+// Recorre los 7 días de la semana actual y junta, para cada día que tenga
+// cumpleaños, qué locales los tienen y con qué nombres. Soporta semanas que
+// cruzan de un mes a otro porque calcula el monthKey día por día.
+function buildWeeklyBirthdaySummary(){
+  const now = new Date();
+  const rows = [];
+  getCurrentWeekDates().forEach(d => {
+    const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+    const mk = monthKey(y, m);
+    const localesConCumple = [];
+    LOCALES.forEach(loc => {
+      const names = (cumpleData[loc] && cumpleData[loc][mk] && cumpleData[loc][mk][String(day)]) || [];
+      if(names.length > 0) localesConCumple.push({ local: loc, names });
+    });
+    if(localesConCumple.length > 0){
+      const isToday = now.getFullYear() === y && (now.getMonth() + 1) === m && now.getDate() === day;
+      rows.push({
+        dow: DOW_NAMES[(d.getDay() + 6) % 7],
+        day, monthName: MESES[m - 1].toLowerCase(),
+        isToday, locales: localesConCumple
+      });
+    }
+  });
+  return rows;
+}
+
+// Muestra el aviso solo si hay al menos un cumpleaños en algún local esta
+// semana; si no hay ninguno, no hace nada (el mensaje no aparece).
+function showWeeklySummaryIfAny(){
+  const rows = buildWeeklyBirthdaySummary();
+  if(rows.length === 0) return;
+
+  const body = document.getElementById('weekly-modal-body');
+  body.innerHTML = rows.map(r => {
+    const localesHtml = r.locales.map(entry =>
+      '<div class="weekly-local-row"><span class="weekly-local-tag">' + escapeForDisplay(LOCAL_NAMES[entry.local]) + '</span>' +
+      '<span class="weekly-names">' + escapeForDisplay(entry.names.join(', ')) + '</span></div>'
+    ).join('');
+    return '<div class="weekly-day-block">' +
+      '<div class="weekly-day-label">' + r.dow + ' ' + r.day + ' de ' + r.monthName +
+        (r.isToday ? ' <span class="weekly-today-tag">HOY</span>' : '') +
+      '</div>' + localesHtml +
+    '</div>';
+  }).join('');
+
+  document.getElementById('weekly-modal-overlay').classList.add('open');
+}
+
+function closeWeeklyModal(){
+  document.getElementById('weekly-modal-overlay').classList.remove('open');
+}
+
+function closeWeeklyModalOutside(e){
+  if(e.target.id === 'weekly-modal-overlay') closeWeeklyModal();
 }
 
 loadCumpleData();

@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Sugeridor de Tickets</title>
+<style>
+  :root{
+    --ink:#191714;
+    --ink-2:#241f1a;
+    --panel:#2b241d;
+    --paper:#f4ede0;
+    --paper-dim:#c9bda6;
+    --aji:#e0a028;
+    --aji-dim:#8a6a2c;
+    --chicha:#7a3b6d;
+    --ok:#5c8a52;
+    --warn:#c0562f;
+    --line:#413628;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Georgia','Iowan Old Style',serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:28px 18px 80px;}
+
+  header{margin-bottom:22px;}
+  header h1{
+    font-family:'Iowan Old Style','Georgia',serif;
+    font-size:30px;
+    font-weight:700;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+    color:var(--paper);
+  }
+  header p{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14px;
+    color:var(--paper-dim);
+    line-height:1.5;
+    max-width:46ch;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabs{
+    display:flex;gap:0;margin:22px 0 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab-btn{
+    background:none;border:none;color:var(--paper-dim);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14.5px;font-weight:600;
+    padding:10px 4px;margin-right:22px;cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:color .15s;
+  }
+  .tab-btn:hover{color:var(--paper);}
+  .tab-btn.activo{color:var(--aji);border-bottom-color:var(--aji);}
+  .tab-content{display:none;}
+  .tab-content.activo{display:block;}
+
+  .buscador{position:relative;margin:22px 0 8px;}
+  .buscador input{
+    width:100%;
+    padding:16px 46px 16px 16px;
+    font-size:17px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    color:var(--paper);
+    outline:none;
+  }
+  .buscador input::placeholder{color:var(--paper-dim);}
+  .buscador input:focus{border-color:var(--aji);}
+  .buscador .icono{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    color:var(--paper-dim);font-size:16px;pointer-events:none;
+  }
+
+  .sugerencias{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 3px 3px;
+    max-height:260px;
+    overflow-y:auto;
+    position:relative;
+    z-index:5;
+  }
+  .sugerencias.oculto{display:none;}
+  .sug-item{
+    padding:12px 16px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:15px;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+  }
+  .sug-item:last-child{border-bottom:none;}
+  .sug-item:hover, .sug-item.activo{background:var(--ink-2);}
+  .sug-item .rol{
+    font-size:11px;color:var(--paper-dim);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+
+  .plato-actual{
+    display:none;
+    margin:14px 0 26px;
+    padding:14px 16px;
+    background:var(--ink-2);
+    border-left:3px solid var(--aji);
+    border-radius:2px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  .plato-actual.visible{display:flex;justify-content:space-between;align-items:center;}
+  .plato-actual .nombre{font-size:16px;color:var(--paper);}
+  .plato-actual .nombre b{color:var(--aji);}
+  .plato-actual .quitar{
+    color:var(--paper-dim);font-size:13px;cursor:pointer;
+    background:none;border:none;font-family:inherit;
+  }
+  .plato-actual .quitar:hover{color:var(--paper);}
+
+  .resultados{margin-top:6px;}
+  .vacio{
+    text-align:center;padding:50px 20px;color:var(--paper-dim);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14px;line-height:1.6;
+  }
+
+  .etiqueta-seccion{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13px;color:var(--paper-dim);margin:0 0 12px;
+  }
+
+  .ticket{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .ticket.generado{border-style:dashed;}
+  .ticket.personalizado{border-style:dotted;border-color:var(--chicha);}
+  .ticket-cab{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:12px;margin-bottom:6px;
+  }
+  .ticket-cab h3{
+    margin:0;font-size:19px;font-weight:700;color:var(--paper);
+    line-height:1.3;
+  }
+  .fc-pill{
+    flex-shrink:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:12px;font-weight:600;
+    padding:4px 9px;border-radius:20px;white-space:nowrap;
+  }
+  .fc-pill.buena{background:rgba(92,138,82,0.2);color:#8fc17f;}
+  .fc-pill.media{background:rgba(224,160,40,0.18);color:var(--aji);}
+  .fc-pill.alta{background:rgba(192,86,47,0.2);color:#e0855f;}
+
+  .ticket-desc{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13.5px;color:var(--paper-dim);line-height:1.5;
+    margin:0 0 14px;
+  }
+  .items{list-style:none;margin:0;padding:0;}
+  .items li{
+    display:flex;justify-content:space-between;gap:10px;
+    padding:7px 0;border-top:1px solid var(--line);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14.5px;
+  }
+  .items li:first-child{border-top:none;}
+  .items .rol-item{color:var(--paper-dim);flex-shrink:0;font-size:12.5px;padding-top:2px;min-width:70px;}
+  .items .prod-item{color:var(--paper);text-align:left;flex:1;}
+  .items .prod-item .marca-input{color:var(--aji);font-weight:600;}
+
+  .badge-ideal{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:11px;color:var(--aji);letter-spacing:0.02em;margin-bottom:8px;
+  }
+  .badge-generado{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:11px;color:var(--paper-dim);letter-spacing:0.02em;margin-bottom:8px;
+  }
+  .badge-personalizado{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:11px;color:var(--chicha);letter-spacing:0.02em;margin-bottom:8px;
+  }
+
+  /* ---------- Armar combo ---------- */
+  .intro-combo{margin:16px 0 18px;}
+
+  .form-row{display:flex;gap:10px;}
+  .form-group{margin:14px 0;flex:1;}
+  .form-group label{
+    display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:12px;color:var(--paper-dim);margin-bottom:6px;
+  }
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group textarea,
+  .form-group select{
+    width:100%;
+    padding:12px 14px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:14.5px;
+    outline:none;
+  }
+  .form-group textarea{resize:vertical;}
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus{border-color:var(--aji);}
+  .form-group.personas{max-width:150px;flex:0 0 150px;}
+
+  .fila-agregar{display:flex;gap:8px;margin-top:8px;}
+  .fila-agregar select{
+    flex:1;min-width:0;
+    padding:12px 10px;background:var(--panel);border:1px solid var(--line);
+    border-radius:3px;color:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;outline:none;
+  }
+  .fila-agregar select:focus{border-color:var(--aji);}
+  .fila-agregar input[type="number"]{
+    width:58px;flex-shrink:0;text-align:center;
+    padding:12px 6px;background:var(--panel);border:1px solid var(--line);
+    border-radius:3px;color:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;outline:none;
+  }
+  .fila-agregar input[type="number"]:focus{border-color:var(--aji);}
+  .btn-agregar{
+    flex-shrink:0;background:var(--aji);color:var(--ink);border:none;border-radius:3px;
+    padding:0 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-weight:700;font-size:14px;cursor:pointer;
+  }
+  .btn-agregar:disabled{opacity:.35;cursor:not-allowed;}
+
+  .lista-combo{list-style:none;margin:16px 0 0;padding:0;}
+  .lista-combo li{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-top:1px solid var(--line);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;
+  }
+  .lista-combo li:first-child{border-top:none;}
+  .lista-combo .rol-tag{color:var(--paper-dim);font-size:12px;min-width:64px;flex-shrink:0;}
+  .lista-combo .prod-nombre{flex:1;color:var(--paper);}
+  .lista-combo .fc-mini{color:var(--paper-dim);font-size:12.5px;flex-shrink:0;}
+  .lista-combo .btn-quitar-item{
+    background:none;border:none;color:var(--paper-dim);cursor:pointer;
+    font-size:16px;line-height:1;padding:0 2px;flex-shrink:0;
+  }
+  .lista-combo .btn-quitar-item:hover{color:var(--warn);}
+
+  .resumen-combo{
+    display:none;justify-content:space-between;align-items:center;
+    margin:18px 0 0;padding:14px 16px;background:var(--ink-2);border-radius:2px;
+  }
+  .resumen-combo .texto{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13.5px;color:var(--paper-dim);
+  }
+
+  .acciones-combo{display:flex;gap:10px;margin-top:20px;}
+  .btn-primario, .btn-secundario{
+    flex:1;border-radius:3px;padding:14px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-weight:700;font-size:14px;cursor:pointer;
+  }
+  .btn-primario{background:var(--aji);color:var(--ink);border:none;}
+  .btn-secundario{background:none;color:var(--paper);border:1px solid var(--line);}
+  .btn-primario:disabled, .btn-secundario:disabled{opacity:.35;cursor:not-allowed;}
+
+  .mensaje-ok{
+    display:none;margin-top:12px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13px;color:#8fc17f;line-height:1.5;
+  }
+  .mensaje-ok.visible{display:block;}
+
+  .guardados-section{margin-top:30px;}
+  .lista-guardados{list-style:none;margin:8px 0 0;padding:0;}
+  .lista-guardados li{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-top:1px solid var(--line);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;
+  }
+  .lista-guardados li:first-child{border-top:none;}
+  .lista-guardados .nombre-guardado{flex:1;color:var(--paper);}
+  .lista-guardados .fc-mini{color:var(--paper-dim);font-size:12.5px;flex-shrink:0;}
+  .lista-guardados .btn-eliminar{
+    background:none;border:none;color:var(--paper-dim);cursor:pointer;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12.5px;
+    flex-shrink:0;
+  }
+  .lista-guardados .btn-eliminar:hover{color:var(--warn);}
+  .vacio-guardados{
+    display:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:13px;color:var(--paper-dim);margin-top:8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>¿Qué tiene la mesa?</h1>
+    <p>Poné el plato o la bebida que ya pidió el cliente y te tiro el ticket ideal para completar — el que más cuida el food cost.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn activo" data-tab="buscador">Buscador</button>
+    <button class="tab-btn" data-tab="armar">Armar combo</button>
+  </div>
+
+  <!-- ============ TAB 1: BUSCADOR ============ -->
+  <div class="tab-content activo" id="tab-buscador">
+
+    <div class="buscador-grupo" id="grupo-buscador-principal" style="position:relative;">
+      <div class="buscador">
+        <input type="text" id="input-busqueda" placeholder="Ej: Lomo Saltado, Pisco Sour, Cebiche..." autocomplete="off">
+        <span class="icono">⌕</span>
+      </div>
+      <div class="sugerencias oculto" id="lista-sugerencias"></div>
+    </div>
+
+    <div class="plato-actual" id="plato-actual">
+      <div class="nombre">Buscando combos para <b id="plato-actual-nombre"></b></div>
+      <button class="quitar" id="btn-quitar">cambiar</button>
+    </div>
+
+    <div class="resultados" id="resultados">
+      <div class="vacio">Empezá escribiendo el nombre del plato o trago que ya está en la mesa.</div>
+    </div>
+
+  </div>
+
+  <!-- ============ TAB 2: ARMAR COMBO ============ -->
+  <div class="tab-content" id="tab-armar">
+
+    <p class="etiqueta-seccion intro-combo">Armá tu propia combinación a mano y mirá el food cost mientras la vas construyendo.</p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="combo-nombre">Nombre del ticket</label>
+        <input type="text" id="combo-nombre" placeholder="Ej: Mesa de amigas verano">
+      </div>
+      <div class="form-group personas">
+        <label for="combo-personas">Personas</label>
+        <input type="text" id="combo-personas" placeholder="2 personas">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="input-combo-busqueda">Agregar plato o bebida</label>
+      <div class="buscador-grupo" id="grupo-buscador-combo" style="position:relative;">
+        <div class="buscador" style="margin:0 0 8px;">
+          <input type="text" id="input-combo-busqueda" placeholder="Buscar producto..." autocomplete="off">
+          <span class="icono">⌕</span>
+        </div>
+        <div class="sugerencias oculto" id="lista-combo-sugerencias"></div>
+      </div>
+      <div class="fila-agregar">
+        <select id="combo-rol"></select>
+        <input type="number" id="combo-qty" value="1" min="1">
+        <button class="btn-agregar" id="btn-agregar-item" disabled>Agregar</button>
+      </div>
+    </div>
+
+    <ul class="lista-combo" id="lista-combo-items"></ul>
+
+    <div class="resumen-combo" id="resumen-combo">
+      <span class="texto" id="resumen-combo-texto"></span>
+      <span class="fc-pill" id="resumen-combo-pill"></span>
+    </div>
+
+    <div class="acciones-combo">
+      <button class="btn-primario" id="btn-guardar-combo" disabled>Guardar</button>
+    </div>
+    <p class="mensaje-ok" id="combo-mensaje-ok"></p>
+
+    <div class="guardados-section">
+      <p class="etiqueta-seccion">Tus combos guardados</p>
+      <ul class="lista-guardados" id="lista-guardados"></ul>
+      <p class="vacio-guardados" id="vacio-guardados">Todavía no guardaste ninguno.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+  // ---------- Datos: productos y food cost ----------
+  var PRODUCTOS = [
+    {n:"PISCO SOUR", fc:24.67, cat:"Bebida"},
+    {n:"PISCO DE MARACUYA", fc:27.4, cat:"Bebida"},
+    {n:"QUE TAL CHELA", fc:14.68, cat:"Bebida"},
+    {n:"PISCO DE FRUTOS ROJOS", fc:22.42, cat:"Bebida"},
+    {n:"LIMONADA DE MENTA Y JENGIBRE", fc:18.57, cat:"Bebida"},
+    {n:"CHICHA", fc:30.88, cat:"Bebida"},
+    {n:"LIMONADA DE MARACUYA", fc:16.82, cat:"Bebida"},
+    {n:"COCA ZERO", fc:26.59, cat:"Bebida"},
+    {n:"COCA COLA", fc:26.59, cat:"Bebida"},
+    {n:"APEROL SPRITZ", fc:21.04, cat:"Bebida"},
+    {n:"LIMONADA CLASICA", fc:9.02, cat:"Bebida"},
+    {n:"PINTA HEINEKEN", fc:24.35, cat:"Bebida"},
+    {n:"PORRON", fc:25.96, cat:"Bebida"},
+    {n:"VINO TANTA", fc:25.86, cat:"Bebida"},
+    {n:"COPA DE VINO TINTO", fc:18.94, cat:"Bebida"},
+    {n:"COPA DE VINO BLANCO", fc:14.65, cat:"Bebida"},
+    {n:"AGUA CON GAS", fc:0, cat:"Bebida"},
+    {n:"AGUA SIN GAS", fc:0, cat:"Bebida"},
+    {n:"CAFE", fc:18.85, cat:"Cafe"},
+    {n:"CAFE CORTADO", fc:19.08, cat:"Cafe"},
+    {n:"COBB", fc:20.96, cat:"Entrada"},
+    {n:"TEQUEÑOS", fc:20.0, cat:"Entrada"},
+    {n:"WANTANES", fc:26.84, cat:"Entrada"},
+    {n:"CROQUETAS DE CHOCLO", fc:28.14, cat:"Entrada"},
+    {n:"TALLARINES CASEROS POLLO", fc:32.93, cat:"Fondo"},
+    {n:"TIRADITO CHIFERO", fc:25.73, cat:"Fondo"},
+    {n:"AEROPUERTO", fc:22.95, cat:"Fondo"},
+    {n:"RISOTTO DE CHUPE", fc:26.67, cat:"Fondo"},
+    {n:"ESTOFADO DE RES", fc:24.0, cat:"Fondo"},
+    {n:"CEBICHE CLASICO", fc:22.18, cat:"Fondo"},
+    {n:"LOMO SALTADO", fc:19.63, cat:"Fondo"},
+    {n:"AJI DE GALLINA", fc:27.61, cat:"Fondo"},
+    {n:"SUSPIRO LIMEÑO", fc:8.36, cat:"Postre"},
+    {n:"MALDITA TENTACION", fc:29.1, cat:"Postre"},
+    {n:"TORTA TRES LECHES C/DDL", fc:18.83, cat:"Postre"},
+    {n:"ESFERA", fc:22.03, cat:"Postre"},
+    {n:"LUCUMITA", fc:25.99, cat:"Postre"},
+    {n:"TRES LECHES CLASICO", fc:16.29, cat:"Postre"}
+  ];
+
+  // ---------- Datos: tickets ideales curados ----------
+  var TICKETS = [
+    {nombre:"El Clásico Ejecutivo", personas:"1 persona",
+     desc:"Ideal para el cliente de oficina que busca lo más vendido y rápido.",
+     fc:19.01,
+     items:[["Fondo","LOMO SALTADO"],["Bebida","LIMONADA DE MENTA Y JENGIBRE"],["Cierre","CAFE"]]},
+    {nombre:"Menú Criollo de Alta Rentabilidad", personas:"1 persona",
+     desc:"Compensa el costo del Ají de Gallina con dos productos sumamente económicos.",
+     fc:14.99,
+     items:[["Fondo","AJI DE GALLINA"],["Bebida","LIMONADA CLASICA"],["Postre","SUSPIRO LIMEÑO"]]},
+    {nombre:"Almuerzo Marino Premium", personas:"2 personas",
+     desc:"Combina el plato más vendido del restaurante con una entrada de excelente margen.",
+     fc:20.31,
+     items:[["Entrada","TEQUEÑOS"],["Fondo","CEBICHE CLASICO"],["Fondo","TIRADITO CHIFERO"],["Bebidas","2 LIMONADA DE MARACUYA"]]},
+    {nombre:"Menú Nikkei / Fusión", personas:"2 personas",
+     desc:"Sabores intensos y urbanos con un costo total extremadamente controlado.",
+     fc:24.52,
+     items:[["Entrada","WANTANES"],["Fondo","AEROPUERTO"],["Fondo","LOMO SALTADO"],["Bebidas","2 COCA ZERO"]]},
+    {nombre:"El Pisco & Piqueo Tradicional", personas:"2-3 personas",
+     desc:"El Pisco Sour tiene una rotación brutal; lo equilibramos con tequeños y un postre para elevar el ticket.",
+     fc:22.56,
+     items:[["Piqueo","TEQUEÑOS"],["Bebidas","3 PISCO SOUR"],["Postre","TORTA TRES LECHES C/DDL"]]},
+    {nombre:"Tarde de Amigas / Brunch Dulce", personas:"2 personas",
+     desc:"Una opción ligera y sofisticada enfocada en repostería y coctelería fresca.",
+     fc:18.26,
+     items:[["Piqueo","COBB"],["Bebidas","2 APEROL SPRITZ"],["Postre","SUSPIRO LIMEÑO"],["Café","2 CAFE CORTADO"]]},
+    {nombre:"Noche de Cerveza y Antojos", personas:"3-4 personas",
+     desc:"Para grupos que van a relajarse. Bajamos el costo de las frituras usando la chela de la casa.",
+     fc:19.51,
+     items:[["Piqueo","CROQUETAS DE CHOCLO"],["Piqueo","WANTANES"],["Bebidas","4 QUE TAL CHELA"]]},
+    {nombre:"Cena Romántica con Vino Blanco", personas:"2 personas",
+     desc:"El vino blanco por copa es una de las mejores minas de oro. Mitiga el costo del Risotto.",
+     fc:19.75,
+     items:[["Entrada","TIRADITO CHIFERO"],["Fondo","RISOTTO DE CHUPE"],["Fondo","CEBICHE CLASICO"],["Bebidas","3 COPA DE VINO BLANCO"]]},
+    {nombre:"Cena Criolla de Invierno con Vino Tinto", personas:"2 personas",
+     desc:"Estrategia para vender el Estofado de Res emparejado con vino y cerrar con alta rentabilidad.",
+     fc:20.08,
+     items:[["Entrada","TEQUEÑOS"],["Fondo","ESTOFADO DE RES"],["Fondo","LOMO SALTADO"],["Bebidas","3 COPA DE VINO TINTO"]]},
+    {nombre:"El Ticket Salva-Márgenes", personas:"2 personas",
+     desc:"Para cuando la cocina vende platos costosos (como los Tallarines). Obliga a ofrecer chicha y suspiro para rescatar el margen de la mesa.",
+     fc:22.56,
+     items:[["Fondo","TALLARINES CASEROS POLLO"],["Fondo","ESTOFADO DE RES"],["Bebidas","2 CHICHA"],["Postre","2 SUSPIRO LIMEÑO"]]},
+    {nombre:"Almuerzo Criollo Familiar", personas:"4 personas",
+     desc:"Ideal para familias los fines de semana. Combina platos fuertes tradicionales con bebidas refrescantes de gran margen.",
+     fc:20.43,
+     items:[["Piqueos","TEQUEÑOS + WANTANES"],["Fondos","2 LOMO SALTADO + 2 AJI DE GALLINA"],["Bebidas","jarra de 4 LIMONADA DE MARACUYA"],["Postres","2 SUSPIRO LIMEÑO"]]},
+    {nombre:"Mesa Especial Mar y Tierra", personas:"4 personas",
+     desc:"Una experiencia premium para sibaritas que combina lo mejor de la sección marina con carnes.",
+     fc:20.17,
+     items:[["Piqueos","TIRADITO CHIFERO + TEQUEÑOS"],["Fondos","2 CEBICHE CLASICO + 2 ESTOFADO DE RES"],["Bebidas","4 COPA DE VINO BLANCO"],["Cierre","4 CAFE CORTADO"]]},
+    {nombre:"Noche de Coctelería y Piqueos", personas:"4 personas",
+     desc:"Pensado para un grupo de amigos o salida doble en la noche (After Office prolongado).",
+     fc:23.18,
+     items:[["Piqueos","2 CROQUETAS DE CHOCLO + WANTANES"],["Ronda 1","4 PISCO SOUR"],["Ronda 2","4 APEROL SPRITZ"],["Postre","TORTA TRES LECHES C/DDL"]]},
+    {nombre:"El Banquete Fusión Premium", personas:"6 personas",
+     desc:"Piqueos, fondos y bebidas mixtas (con y sin alcohol) para una mesa grande, cerrando con postres para compartir.",
+     fc:20.45,
+     items:[["Piqueos","2 WANTANES + TEQUEÑOS"],["Fondos","3 AEROPUERTO + 3 LOMO SALTADO"],["Bebidas","3 PISCO SOUR + 3 LIMONADA DE MARACUYA"],["Postres","2 SUSPIRO LIMEÑO + TORTA TRES LECHES C/DDL"]]}
+  ];
+
+  // ---------- Utilidades ----------
+  function normalizar(s){
+    return s.toUpperCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .trim();
+  }
+
+  function claseFc(fc){
+    if (fc <= 19) return "buena";
+    if (fc <= 24) return "media";
+    return "alta";
+  }
+
+  function contieneProducto(items, nombreProd){
+    var norm = normalizar(nombreProd);
+    for (var i=0;i<items.length;i++){
+      if (normalizar(items[i][1]).indexOf(norm) !== -1) return true;
+    }
+    return false;
+  }
+
+  function ticketsQueContienen(nombreProd){
+    return TICKETS.filter(function(t){ return contieneProducto(t.items, nombreProd); })
+                   .sort(function(a,b){ return a.fc - b.fc; });
+  }
+
+  function mejorDe(categoria, excluir, permitirCero){
+    var pool = PRODUCTOS.filter(function(p){
+      return p.cat === categoria && p.n !== excluir && (permitirCero || p.fc > 0);
+    });
+    pool.sort(function(a,b){ return a.fc - b.fc; });
+    return pool[0] || null;
+  }
+
+  function generarCombo(producto){
+    var partes = [];
+    var usados = [producto.n];
+
+    function agregar(rol, cat, permitirCero){
+      if (producto.cat === cat) return;
+      var p = mejorDe(cat, null, permitirCero || false);
+      if (p && usados.indexOf(p.n) === -1){
+        partes.push([rol, p.n, p.fc]);
+        usados.push(p.n);
+      }
+    }
+
+    var rolBase = producto.cat === "Fondo" ? "Fondo" :
+                  producto.cat === "Entrada" ? "Entrada" :
+                  producto.cat === "Bebida" ? "Bebida" :
+                  producto.cat === "Postre" ? "Postre" : "Cierre";
+    partes.push([rolBase, producto.n, producto.fc]);
+
+    if (producto.cat !== "Entrada") agregar("Entrada","Entrada");
+    if (producto.cat !== "Fondo") agregar("Fondo","Fondo");
+    if (producto.cat !== "Bebida") agregar("Bebida","Bebida");
+    if (producto.cat !== "Postre") agregar("Postre","Postre");
+
+    var suma = partes.reduce(function(acc,p){ return acc + p[2]; }, 0);
+    var fcProm = suma / partes.length;
+
+    return {
+      nombre: "Combo sugerido para " + producto.n,
+      personas: "1-2 personas",
+      desc: "No hay un ticket curado con este producto todavía, así que armamos la combinación de menor food cost disponible alrededor de él.",
+      fc: fcProm,
+      items: partes.map(function(p){ return [p[0], p[1]]; }),
+      generado: true
+    };
+  }
+
+  // ---------- Render de un ticket ----------
+  function renderTicket(t){
+    var div = document.createElement("div");
+    div.className = "ticket" + (t.generado ? " generado" : (t.personalizado ? " personalizado" : ""));
+
+    var badge = document.createElement("div");
+    badge.className = t.generado ? "badge-generado" : (t.personalizado ? "badge-personalizado" : "badge-ideal");
+    badge.textContent = t.generado ? "Combo generado" : (t.personalizado ? "Tu combinación" : "Ticket ideal");
+    div.appendChild(badge);
+
+    var cab = document.createElement("div");
+    cab.className = "ticket-cab";
+    var h3 = document.createElement("h3");
+    h3.textContent = t.nombre + (t.personas ? " · " + t.personas : "");
+    var pill = document.createElement("span");
+    pill.className = "fc-pill " + claseFc(t.fc);
+    pill.textContent = "FC " + t.fc.toFixed(1) + "%";
+    cab.appendChild(h3);
+    cab.appendChild(pill);
+    div.appendChild(cab);
+
+    if (t.desc){
+      var desc = document.createElement("p");
+      desc.className = "ticket-desc";
+      desc.textContent = t.desc;
+      div.appendChild(desc);
+    }
+
+    var ul = document.createElement("ul");
+    ul.className = "items";
+    t.items.forEach(function(it){
+      var li = document.createElement("li");
+      var rol = document.createElement("span");
+      rol.className = "rol-item";
+      rol.textContent = it[0];
+      var prod = document.createElement("span");
+      prod.className = "prod-item";
+      prod.textContent = it[1];
+      li.appendChild(rol);
+      li.appendChild(prod);
+      ul.appendChild(li);
+    });
+    div.appendChild(ul);
+
+    return div;
+  }
+
+  function mostrarResultados(producto){
+    var cont = document.getElementById("resultados");
+    cont.innerHTML = "";
+
+    var encontrados = ticketsQueContienen(producto.n);
+
+    if (encontrados.length > 0){
+      var label = document.createElement("p");
+      label.className = "etiqueta-seccion";
+      label.textContent = encontrados.length === 1
+        ? "1 ticket ideal encontrado, ordenado por food cost:"
+        : encontrados.length + " tickets ideales encontrados, ordenados por food cost:";
+      cont.appendChild(label);
+      encontrados.forEach(function(t){ cont.appendChild(renderTicket(t)); });
+    } else {
+      var combo = generarCombo(producto);
+      var label2 = document.createElement("p");
+      label2.className = "etiqueta-seccion";
+      label2.textContent = "Sin ticket curado para este producto — generamos el mejor combo posible:";
+      cont.appendChild(label2);
+      cont.appendChild(renderTicket(combo));
+    }
+  }
+
+  // ---------- Autocompletado reutilizable ----------
+  function crearAutocompletado(input, lista, contenedor, onSeleccionar, excluirFn){
+    var indiceActivo = -1;
+    var opcionesFiltradas = [];
+
+    function ocultar(){
+      lista.classList.add("oculto");
+      lista.innerHTML = "";
+      indiceActivo = -1;
+    }
+
+    function filtrar(texto){
+      var norm = normalizar(texto);
+      if (!norm){ ocultar(); return; }
+      opcionesFiltradas = PRODUCTOS.filter(function(p){
+        return normalizar(p.n).indexOf(norm) !== -1 && !(excluirFn && excluirFn(p));
+      }).slice(0, 8);
+
+      if (opcionesFiltradas.length === 0){ ocultar(); return; }
+
+      lista.innerHTML = "";
+      opcionesFiltradas.forEach(function(p){
+        var item = document.createElement("div");
+        item.className = "sug-item";
+        var nombreSpan = document.createElement("span");
+        nombreSpan.textContent = p.n;
+        var rolSpan = document.createElement("span");
+        rolSpan.className = "rol";
+        rolSpan.textContent = p.cat;
+        item.appendChild(nombreSpan);
+        item.appendChild(rolSpan);
+        item.addEventListener("click", function(){ ocultar(); onSeleccionar(p); });
+        lista.appendChild(item);
+      });
+      lista.classList.remove("oculto");
+    }
+
+    input.addEventListener("input", function(){ filtrar(input.value); });
+
+    input.addEventListener("keydown", function(e){
+      if (lista.classList.contains("oculto")) return;
+      var nodos = lista.querySelectorAll(".sug-item");
+      if (e.key === "ArrowDown"){
+        e.preventDefault();
+        indiceActivo = Math.min(indiceActivo + 1, nodos.length - 1);
+      } else if (e.key === "ArrowUp"){
+        e.preventDefault();
+        indiceActivo = Math.max(indiceActivo - 1, 0);
+      } else if (e.key === "Enter"){
+        e.preventDefault();
+        if (indiceActivo >= 0 && opcionesFiltradas[indiceActivo]){
+          ocultar(); onSeleccionar(opcionesFiltradas[indiceActivo]);
+        } else if (opcionesFiltradas.length > 0){
+          ocultar(); onSeleccionar(opcionesFiltradas[0]);
+        }
+        return;
+      } else {
+        return;
+      }
+      nodos.forEach(function(n,i){ n.classList.toggle("activo", i === indiceActivo); });
+    });
+
+    document.addEventListener("click", function(e){
+      if (!contenedor.contains(e.target)) ocultar();
+    });
+
+    return { ocultar: ocultar };
+  }
+
+  // ---------- Tabs ----------
+  var tabBtns = document.querySelectorAll(".tab-btn");
+  tabBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabBtns.forEach(function(b){ b.classList.remove("activo"); });
+      btn.classList.add("activo");
+      document.querySelectorAll(".tab-content").forEach(function(c){ c.classList.remove("activo"); });
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("activo");
+    });
+  });
+
+  // ---------- TAB 1: Buscador principal ----------
+  var input = document.getElementById("input-busqueda");
+  var lista = document.getElementById("lista-sugerencias");
+  var grupoPrincipal = document.getElementById("grupo-buscador-principal");
+  var platoActual = document.getElementById("plato-actual");
+  var platoActualNombre = document.getElementById("plato-actual-nombre");
+  var btnQuitar = document.getElementById("btn-quitar");
+  var resultadosEl = document.getElementById("resultados");
+
+  function seleccionar(producto){
+    input.value = "";
+    platoActualNombre.textContent = producto.n;
+    platoActual.classList.add("visible");
+    mostrarResultados(producto);
+  }
+
+  crearAutocompletado(input, lista, grupoPrincipal, seleccionar);
+
+  btnQuitar.addEventListener("click", function(){
+    platoActual.classList.remove("visible");
+    resultadosEl.innerHTML = '<div class="vacio">Empezá escribiendo el nombre del plato o trago que ya está en la mesa.</div>';
+    input.focus();
+  });
+
+  // ---------- TAB 2: Armar combo ----------
+  var ROLES = ["Entrada","Fondo","Piqueo","Bebida","Bebidas","Postre","Café","Cierre","Otro"];
+  var rolSelect = document.getElementById("combo-rol");
+  ROLES.forEach(function(r){
+    var opt = document.createElement("option");
+    opt.value = r; opt.textContent = r;
+    rolSelect.appendChild(opt);
+  });
+
+  function mapCategoriaARol(cat){
+    if (cat === "Bebida") return "Bebida";
+    if (cat === "Entrada") return "Entrada";
+    if (cat === "Fondo") return "Fondo";
+    if (cat === "Postre") return "Postre";
+    if (cat === "Cafe") return "Café";
+    return "Otro";
+  }
+
+  // ---------- Base de datos: JSONBin.io ----------
+  // Completá estos dos datos con los tuyos de jsonbin.io:
+  // 1. Creá una cuenta gratis en https://jsonbin.io
+  // 2. Creá un bin nuevo con contenido inicial: []
+  // 3. Pegá el Bin ID y tu X-Master-Key acá abajo:
+  var JSONBIN_BIN_ID = "6a970830f5f4af5e295d8458";
+  var JSONBIN_API_KEY = "$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n.";
+  var JSONBIN_URL = "https://api.jsonbin.io/v3/b/" + JSONBIN_BIN_ID;
+  var jsonbinConfigurado = JSONBIN_BIN_ID.indexOf("TU_") !== 0 && JSONBIN_API_KEY.indexOf("TU_") !== 0;
+
+  function cargarCombosGuardados(){
+    if (!jsonbinConfigurado) return Promise.resolve([]);
+    return fetch(JSONBIN_URL + "/latest", {
+      headers: { "X-Master-Key": JSONBIN_API_KEY }
+    })
+      .then(function(res){
+        if (!res.ok) throw new Error("No se pudo conectar con JSONBin");
+        return res.json();
+      })
+      .then(function(data){
+        return (data && Array.isArray(data.record)) ? data.record : [];
+      })
+      .catch(function(e){
+        console.error(e);
+        return null; // null = hubo error de conexión (distinto de "vacío")
+      });
+  }
+
+  function guardarCombosEnStorage(){
+    if (!jsonbinConfigurado) return Promise.resolve(false);
+    return fetch(JSONBIN_URL, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": JSONBIN_API_KEY
+      },
+      body: JSON.stringify(combosGuardados)
+    })
+      .then(function(res){ return res.ok; })
+      .catch(function(e){ console.error(e); return false; });
+  }
+
+  var inputCombo = document.getElementById("input-combo-busqueda");
+  var listaCombo = document.getElementById("lista-combo-sugerencias");
+  var grupoCombo = document.getElementById("grupo-buscador-combo");
+  var qtyInput = document.getElementById("combo-qty");
+  var btnAgregarItem = document.getElementById("btn-agregar-item");
+  var btnGuardarCombo = document.getElementById("btn-guardar-combo");
+  var mensajeOk = document.getElementById("combo-mensaje-ok");
+  var comboProductoSeleccionado = null;
+  var comboItems = [];
+  var combosGuardados = [];
+
+  crearAutocompletado(inputCombo, listaCombo, grupoCombo, function(p){
+    comboProductoSeleccionado = p;
+    inputCombo.value = p.n;
+    rolSelect.value = mapCategoriaARol(p.cat);
+    btnAgregarItem.disabled = false;
+  }, function(p){
+    // no dejar cargar un producto que ya está agregado en el combo actual
+    return comboItems.some(function(it){ return it.nombre === p.n; });
+  });
+
+  inputCombo.addEventListener("input", function(){
+    if (comboProductoSeleccionado && normalizar(inputCombo.value) !== normalizar(comboProductoSeleccionado.n)){
+      comboProductoSeleccionado = null;
+      btnAgregarItem.disabled = true;
+    }
+  });
+
+  function renderComboLista(){
+    var ul = document.getElementById("lista-combo-items");
+    ul.innerHTML = "";
+    comboItems.forEach(function(it, idx){
+      var li = document.createElement("li");
+
+      var rolSpan = document.createElement("span");
+      rolSpan.className = "rol-tag";
+      rolSpan.textContent = it.rol;
+
+      var nombreSpan = document.createElement("span");
+      nombreSpan.className = "prod-nombre";
+      nombreSpan.textContent = (it.qty > 1 ? it.qty + " x " : "") + it.nombre;
+
+      var fcSpan = document.createElement("span");
+      fcSpan.className = "fc-mini";
+      fcSpan.textContent = "FC " + it.fc.toFixed(1) + "%";
+
+      var btnQuitarItem = document.createElement("button");
+      btnQuitarItem.className = "btn-quitar-item";
+      btnQuitarItem.textContent = "✕";
+      btnQuitarItem.addEventListener("click", function(){
+        comboItems.splice(idx, 1);
+        renderComboLista();
+        actualizarResumenCombo();
+      });
+
+      li.appendChild(rolSpan);
+      li.appendChild(nombreSpan);
+      li.appendChild(fcSpan);
+      li.appendChild(btnQuitarItem);
+      ul.appendChild(li);
+    });
+  }
+
+  function actualizarResumenCombo(){
+    var resumen = document.getElementById("resumen-combo");
+    var texto = document.getElementById("resumen-combo-texto");
+    var pill = document.getElementById("resumen-combo-pill");
+
+    mensajeOk.classList.remove("visible");
+
+    if (comboItems.length === 0){
+      resumen.style.display = "none";
+      btnGuardarCombo.disabled = true;
+      return;
+    }
+
+    var datos = datosComboActual();
+    texto.textContent = comboItems.length + (comboItems.length === 1 ? " producto agregado" : " productos agregados");
+    pill.className = "fc-pill " + claseFc(datos.fc);
+    pill.textContent = "FC " + datos.fc.toFixed(1) + "% prom.";
+    resumen.style.display = "flex";
+    btnGuardarCombo.disabled = false;
+  }
+
+  function datosComboActual(){
+    var nombre = document.getElementById("combo-nombre").value.trim() || "Combo personalizado";
+    var personas = document.getElementById("combo-personas").value.trim();
+    var sumaQty = comboItems.reduce(function(a,i){ return a + i.qty; }, 0);
+    var sumaFcPond = comboItems.reduce(function(a,i){ return a + i.fc * i.qty; }, 0);
+    var fcProm = sumaQty ? sumaFcPond / sumaQty : 0;
+    var itemsFinal = comboItems.map(function(it){
+      return [it.rol, (it.qty > 1 ? it.qty + " " : "") + it.nombre];
+    });
+    return { nombre: nombre, personas: personas, fc: fcProm, items: itemsFinal };
+  }
+
+  function renderListaGuardados(){
+    var ul = document.getElementById("lista-guardados");
+    var vacio = document.getElementById("vacio-guardados");
+    ul.innerHTML = "";
+
+    if (!jsonbinConfigurado){
+      vacio.textContent = "Falta completar JSONBIN_BIN_ID y JSONBIN_API_KEY en el código para activar la base de datos.";
+      vacio.style.display = "block";
+      return;
+    }
+
+    if (combosGuardados.length === 0){
+      vacio.textContent = "Todavía no guardaste ninguno.";
+      vacio.style.display = "block";
+      return;
+    }
+    vacio.style.display = "none";
+
+    combosGuardados.forEach(function(c){
+      var li = document.createElement("li");
+
+      var nombreSpan = document.createElement("span");
+      nombreSpan.className = "nombre-guardado";
+      nombreSpan.textContent = c.nombre + (c.personas ? " · " + c.personas : "");
+
+      var fcSpan = document.createElement("span");
+      fcSpan.className = "fc-mini";
+      fcSpan.textContent = "FC " + c.fc.toFixed(1) + "%";
+
+      var btnEliminar = document.createElement("button");
+      btnEliminar.className = "btn-eliminar";
+      btnEliminar.textContent = "eliminar";
+      btnEliminar.addEventListener("click", function(){
+        btnEliminar.disabled = true;
+        btnEliminar.textContent = "eliminando...";
+        var idxTickets = TICKETS.indexOf(c);
+        if (idxTickets !== -1) TICKETS.splice(idxTickets, 1);
+        var idxGuardados = combosGuardados.indexOf(c);
+        if (idxGuardados !== -1) combosGuardados.splice(idxGuardados, 1);
+        guardarCombosEnStorage().then(function(ok){
+          if (!ok && idxTickets !== -1) TICKETS.splice(idxTickets, 0, c); // revertir si falló
+          renderListaGuardados();
+        });
+      });
+
+      li.appendChild(nombreSpan);
+      li.appendChild(fcSpan);
+      li.appendChild(btnEliminar);
+      ul.appendChild(li);
+    });
+  }
+
+  btnAgregarItem.addEventListener("click", function(){
+    if (!comboProductoSeleccionado) return;
+    var qty = parseInt(qtyInput.value, 10);
+    if (!qty || qty < 1) qty = 1;
+
+    comboItems.push({
+      rol: rolSelect.value,
+      nombre: comboProductoSeleccionado.n,
+      fc: comboProductoSeleccionado.fc,
+      qty: qty
+    });
+
+    renderComboLista();
+    actualizarResumenCombo();
+
+    inputCombo.value = "";
+    comboProductoSeleccionado = null;
+    qtyInput.value = "1";
+    btnAgregarItem.disabled = true;
+    inputCombo.focus();
+  });
+
+  btnGuardarCombo.addEventListener("click", function(){
+    if (comboItems.length === 0) return;
+    if (!jsonbinConfigurado){
+      mensajeOk.textContent = "Todavía no configuraste JSONBIN_BIN_ID / JSONBIN_API_KEY en el código, así que no hay dónde guardar.";
+      mensajeOk.classList.add("visible");
+      return;
+    }
+
+    var datos = datosComboActual();
+    var ticketObj = {
+      nombre: datos.nombre,
+      personas: datos.personas,
+      fc: datos.fc,
+      items: datos.items,
+      personalizado: true
+    };
+
+    var textoOriginal = btnGuardarCombo.textContent;
+    btnGuardarCombo.disabled = true;
+    btnGuardarCombo.textContent = "Guardando...";
+    mensajeOk.classList.remove("visible");
+
+    TICKETS.push(ticketObj);
+    combosGuardados.push(ticketObj);
+
+    guardarCombosEnStorage().then(function(ok){
+      btnGuardarCombo.textContent = textoOriginal;
+
+      if (!ok){
+        // revertir si falló el guardado remoto
+        TICKETS.pop();
+        combosGuardados.pop();
+        mensajeOk.textContent = "No se pudo guardar en JSONBin. Revisá el Bin ID / API Key o tu conexión.";
+        mensajeOk.classList.add("visible");
+        btnGuardarCombo.disabled = false;
+        return;
+      }
+
+      renderListaGuardados();
+      mensajeOk.textContent = "Guardado ✓ Ya está en JSONBin y aparece si buscás cualquiera de sus productos en la pestaña Buscador.";
+      mensajeOk.classList.add("visible");
+
+      comboItems = [];
+      renderComboLista();
+      actualizarResumenCombo();
+      document.getElementById("combo-nombre").value = "";
+      document.getElementById("combo-personas").value = "";
+    });
+  });
+
+  // ---------- Carga inicial de combos guardados desde JSONBin ----------
+  if (!jsonbinConfigurado){
+    renderListaGuardados();
+  } else {
+    var vacioInicial = document.getElementById("vacio-guardados");
+    vacioInicial.textContent = "Cargando combos guardados...";
+    vacioInicial.style.display = "block";
+
+    cargarCombosGuardados().then(function(combos){
+      if (combos === null){
+        vacioInicial.textContent = "No se pudo conectar con JSONBin. Revisá el Bin ID / API Key o tu conexión.";
+        vacioInicial.style.display = "block";
+        return;
+      }
+      combosGuardados = combos;
+      combosGuardados.forEach(function(c){ TICKETS.push(c); });
+      renderListaGuardados();
+    });
+  }
+
+})();
+</script>
+</body>
+</html>

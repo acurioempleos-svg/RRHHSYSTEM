@@ -571,6 +571,25 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
 .cumple-modal-add button:hover{ background:#145C82; }
 .cumple-modal-status{ margin-top: 10px; font-size: 12px; color:#888; min-height: 14px; }
 
+/* ============ Generar imagen de saludo (selector de persona) ============ */
+.cumple-modal-greeting{
+  margin-top: 16px; padding-top: 16px; border-top: 1.5px dashed #e2ddd0;
+}
+.cumple-modal-greeting-label{
+  font-size: 12.5px; color:#666; font-weight:700; margin-bottom: 8px;
+}
+.cumple-modal-greeting select{
+  width: 100%; padding: 9px 10px; border-radius: 8px; border: 1.5px solid #ddd;
+  font-size: 14px; font-family:'DM Sans', sans-serif; margin-bottom: 10px; background:#fff;
+}
+.cumple-modal-greeting select:focus{ outline:none; border-color:#F2B705; }
+.cumple-modal-greeting-btn{
+  width:100%; background:#E8492B; color:#fff; border:none; border-radius: 8px; padding: 11px 16px;
+  font-weight: 700; font-size: 13.5px; cursor:pointer; font-family:'DM Sans', sans-serif;
+}
+.cumple-modal-greeting-btn:hover{ background:#c73c22; }
+.cumple-modal-greeting-status{ margin-top: 8px; font-size: 12px; color:#888; min-height: 14px; }
+
 /* ============ AVISO: cumpleaños de la semana (todos los locales) ============ */
 .weekly-modal-overlay{
   display:none; position:fixed; inset:0; z-index: 300;
@@ -891,6 +910,13 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
       <button onclick="addName()">Agregar</button>
     </div>
     <div id="cumple-modal-status" class="cumple-modal-status"></div>
+
+    <div id="cumple-modal-greeting" class="cumple-modal-greeting" style="display:none;">
+      <div class="cumple-modal-greeting-label">Generar imagen de saludo para:</div>
+      <select id="greeting-person-select"></select>
+      <button class="cumple-modal-greeting-btn" onclick="prepareGreetingImage()">🎉 Generar imagen de saludo</button>
+      <div id="cumple-modal-greeting-status" class="cumple-modal-greeting-status"></div>
+    </div>
   </div>
 </div>
 
@@ -1124,11 +1150,412 @@ function renderModalNames(){
   const names = (cumpleData[currentLocal][mk] && cumpleData[currentLocal][mk][currentDay]) || [];
   if(names.length === 0){
     container.innerHTML = '<p class="cumple-modal-empty">Todavía no hay nadie cargado para este día.</p>';
+  }else{
+    container.innerHTML = names.map((n, i) =>
+      '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(n) + '</span><button onclick="removeName(' + i + ')">Quitar ✕</button></div>'
+    ).join('');
+  }
+  renderGreetingSelector(names);
+}
+
+/* ============ Generar imagen de saludo: selector de persona ============ */
+// Muestra u oculta el bloque de "generar imagen de saludo" según si el día
+// tiene nombres cargados, y llena el <select> con cada nombre para que se
+// pueda elegir a quién saludar cuando hay varios cumpleañeros el mismo día.
+function renderGreetingSelector(names){
+  const wrap = document.getElementById('cumple-modal-greeting');
+  const select = document.getElementById('greeting-person-select');
+  const status = document.getElementById('cumple-modal-greeting-status');
+  status.textContent = '';
+
+  if(!names || names.length === 0){
+    wrap.style.display = 'none';
+    select.innerHTML = '';
     return;
   }
-  container.innerHTML = names.map((n, i) =>
-    '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(n) + '</span><button onclick="removeName(' + i + ')">Quitar ✕</button></div>'
+
+  wrap.style.display = 'block';
+  select.innerHTML = names.map((n, i) =>
+    '<option value="' + i + '">' + escapeForDisplay(n) + '</option>'
   ).join('');
+}
+
+// Paleta de cada local, para que la tarjeta de saludo se vea acorde a la
+// pestaña desde la que se generó.
+const THEME_COLORS = {
+  barra: { bg1: '#0B2E4F', bg2: '#145C82', accent: '#E8492B', gold: '#F2B705', card: '#FFFDF7', ink: '#0B2E4F' },
+  tanta: { bg1: '#7A2D8C', bg2: '#E0177C', accent: '#F5821F', gold: '#EE3E8E', card: '#FFFFFF', ink: '#2B1330' },
+  lamar: { bg1: '#10495E', bg2: '#4C8C6E', accent: '#D96C4A', gold: '#EFE6D3', card: '#FBF7EC', ink: '#10314A' },
+  itc:   { bg1: '#0B2E4F', bg2: '#16283F', accent: '#D9524A', gold: '#F2B705', card: '#FFFDF7', ink: '#16283F' }
+};
+
+// Frases lindas para variar el saludo — se elige una al azar en cada imagen.
+const GREETING_PHRASES = [
+  'Que este nuevo año esté lleno de buenos momentos, mucha salud y mucha felicidad.',
+  'Gracias por ser parte del equipo todos los días. ¡Que lo festejes a lo grande!',
+  'Un día especial para alguien especial. ¡Feliz vuelta al sol, que lo disfrutes mucho!',
+  'Que se cumplan todos tus deseos este año y que venga cargado de buenas noticias.',
+  'Hoy brindamos por vos y por todo lo que sumás al equipo. ¡Feliz cumpleaños!',
+  'Que este nuevo capítulo venga con muchas alegrías, éxitos y buenos momentos.'
+];
+
+function pickRandomPhrase(){
+  return GREETING_PHRASES[Math.floor(Math.random() * GREETING_PHRASES.length)];
+}
+
+// Dibuja un rectángulo con esquinas redondeadas (compatible con navegadores
+// que no tienen ctx.roundRect nativo).
+function drawRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Confetti simple: puntitos y rombos de colores repartidos por el fondo,
+// evitando el área central donde va la tarjeta blanca con el texto.
+function drawConfetti(ctx, W, H, colors, cardTop, cardBottom){
+  const shapes = 46;
+  for(let i = 0; i < shapes; i++){
+    let x = Math.random() * W;
+    let y = Math.random() * H;
+    // Si cae dentro del área de la tarjeta, la mandamos a un borde en vez de saltearla.
+    if(y > cardTop && y < cardBottom){
+      y = (i % 2 === 0) ? Math.random() * cardTop : cardBottom + Math.random() * (H - cardBottom);
+    }
+    const color = colors[i % colors.length];
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.55 + Math.random() * 0.35;
+    if(i % 3 === 0){
+      const size = 8 + Math.random() * 10;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.random() * Math.PI);
+      ctx.fillRect(-size / 2, -size / 2, size, size);
+      ctx.restore();
+    }else{
+      const radius = 4 + Math.random() * 7;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+// Chispita de 4 puntas simple, usada como acento junto al medallón.
+function drawSparkle(ctx, cx, cy, size, color){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(0, -size);
+  ctx.quadraticCurveTo(size * 0.18, -size * 0.18, size, 0);
+  ctx.quadraticCurveTo(size * 0.18, size * 0.18, 0, size);
+  ctx.quadraticCurveTo(-size * 0.18, size * 0.18, -size, 0);
+  ctx.quadraticCurveTo(-size * 0.18, -size * 0.18, 0, -size);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Globos decorativos con hilo, repartidos en el espacio disponible entre
+// dos alturas. Se usan para que el interior de la tarjeta nunca quede con
+// una franja en blanco, sea cual sea el largo de la frase elegida.
+function drawBalloons(ctx, W, topY, bottomY, colors){
+  if(bottomY - topY < 46) return; // muy poco lugar: mejor no dibujar nada
+  const count = (bottomY - topY > 120) ? 5 : 3;
+  const midY = topY + (bottomY - topY) / 2;
+  const spread = Math.min((bottomY - topY) / 2 - 10, 22);
+  for(let i = 0; i < count; i++){
+    const cx = (W / (count + 1)) * (i + 1);
+    const rx = 24 + Math.random() * 9;
+    const ry = rx * 1.22;
+    const cy = midY + (i % 2 === 0 ? -1 : 1) * (spread * (0.4 + Math.random() * 0.6));
+    const color = colors[i % colors.length];
+
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.32, cy - ry * 0.35, rx * 0.22, ry * 0.15, -0.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, cy + ry - 1);
+    ctx.lineTo(cx + 4, cy + ry - 1);
+    ctx.lineTo(cx, cy + ry + 8);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + ry + 8);
+    ctx.quadraticCurveTo(cx + (i % 2 === 0 ? 11 : -11), cy + ry + 26, cx, cy + ry + 42);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+function prepareGreetingImage(){
+  const select = document.getElementById('greeting-person-select');
+  const status = document.getElementById('cumple-modal-greeting-status');
+  if(!select || !select.value){
+    status.textContent = 'No hay ninguna persona seleccionada.';
+    return;
+  }
+  const selectedName = select.options[select.selectedIndex].text;
+  generateGreetingImage(selectedName);
+}
+
+// Escribe "text" centrado dentro de un ancho máximo, partiendo en varias
+// líneas si hace falta. Devuelve la posición Y donde terminó de escribir,
+// por si algo más se quiere dibujar debajo.
+function wrapCenteredText(ctx, text, centerX, startY, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  let y = startY;
+  const lines = [];
+  words.forEach(word => {
+    const testLine = line ? line + ' ' + word : word;
+    if(ctx.measureText(testLine).width > maxWidth && line){
+      lines.push(line);
+      line = word;
+    }else{
+      line = testLine;
+    }
+  });
+  if(line) lines.push(line);
+  lines.forEach(l => {
+    ctx.fillText(l, centerX, y);
+    y += lineHeight;
+  });
+  return y;
+}
+
+// Dibuja una tarjeta de felicitación simple (fondo de color, "¡Feliz
+// Cumpleaños!" y el nombre de la persona elegida), la convierte en PNG y la
+// descarga o abre el panel para compartir (WhatsApp, etc.) en celular.
+async function generateGreetingImage(name){
+  const btn = document.querySelector('#cumple-modal-greeting .cumple-modal-greeting-btn');
+  const status = document.getElementById('cumple-modal-greeting-status');
+  const originalLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Generando imagen…'; }
+  status.textContent = '';
+
+  try{
+    // Esperamos a que las tipografías estén cargadas para que el canvas
+    // no dibuje con la tipografía de reemplazo del sistema.
+    if(document.fonts && document.fonts.ready){
+      await document.fonts.ready;
+    }
+
+    const W = 1000, H = 1250;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const theme = THEME_COLORS[currentLocal] || THEME_COLORS.itc;
+    const localName = LOCAL_NAMES[currentLocal] || 'Acurio Restaurantes';
+    const phrase = pickRandomPhrase();
+
+    // Fondo: degradé con los colores del local.
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, theme.bg1);
+    grad.addColorStop(1, theme.bg2);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Tarjeta blanca central donde va todo el texto.
+    const cardX = 70, cardY = 260, cardW = W - 140, cardH = 760;
+    const cardCenterX = W / 2;
+
+    // Resplandor suave detrás del medallón superior, para que no quede
+    // "pegado" sobre el fondo plano.
+    const glow = ctx.createRadialGradient(cardCenterX, cardY, 10, cardCenterX, cardY, 170);
+    glow.addColorStop(0, 'rgba(255,255,255,0.35)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(cardCenterX - 170, cardY - 170, 340, 340);
+
+    drawConfetti(ctx, W, H, [theme.accent, theme.gold, '#ffffff'], cardY, cardY + cardH);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.28)';
+    ctx.shadowBlur = 40;
+    ctx.shadowOffsetY = 14;
+    ctx.fillStyle = theme.card;
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.fill();
+    ctx.restore();
+
+    // Marco interior fino, para que la tarjeta se sienta "diseñada" y no
+    // una simple placa blanca.
+    ctx.save();
+    ctx.strokeStyle = theme.accent;
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 2;
+    drawRoundRect(ctx, cardX + 16, cardY + 16, cardW - 32, cardH - 32, 18);
+    ctx.stroke();
+    ctx.restore();
+
+    // Textura de puntitos muy sutil dentro de la tarjeta, para que el
+    // blanco no se sienta plano ni "hecho apurado".
+    ctx.save();
+    drawRoundRect(ctx, cardX, cardY, cardW, cardH, 28);
+    ctx.clip();
+    ctx.fillStyle = theme.ink;
+    ctx.globalAlpha = 0.035;
+    for(let dy = cardY + 20; dy < cardY + cardH; dy += 26){
+      for(let dx = cardX + 20; dx < cardX + cardW; dx += 26){
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    ctx.textAlign = 'center';
+
+    // Medallón circular con el emoji, superpuesto sobre el borde superior
+    // de la tarjeta (mitad afuera, mitad adentro) como un sello.
+    const badgeR = 92;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.22)';
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetY = 6;
+    ctx.beginPath();
+    ctx.arc(cardCenterX, cardY, badgeR, 0, Math.PI * 2);
+    ctx.fillStyle = theme.card;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(cardCenterX, cardY, badgeR, 0, Math.PI * 2);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = theme.gold;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cardCenterX, cardY, badgeR - 12, 0, Math.PI * 2);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = theme.accent;
+    ctx.globalAlpha = 0.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.font = '92px sans-serif';
+    ctx.fillText('🎂', cardCenterX, cardY + 32);
+
+    // Chispas doradas a los costados del medallón.
+    drawSparkle(ctx, cardCenterX - badgeR - 46, cardY - 30, 16, theme.gold);
+    drawSparkle(ctx, cardCenterX + badgeR + 46, cardY - 10, 12, theme.accent);
+
+    // Título dentro de la tarjeta.
+    ctx.fillStyle = theme.ink;
+    ctx.font = "58px 'Anton', sans-serif";
+    let y = wrapCenteredText(ctx, '¡FELIZ CUMPLEAÑOS!', W / 2, cardY + badgeR + 90, cardW - 100, 66);
+
+    // Nombre de la persona elegida, destacado con el color de acento del local.
+    ctx.fillStyle = theme.accent;
+    ctx.font = "italic 700 56px 'Fraunces', serif";
+    y = wrapCenteredText(ctx, name, W / 2, y + 55, cardW - 100, 62) + 30;
+
+    // Línea decorativa separadora.
+    ctx.strokeStyle = theme.gold;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 60, y);
+    ctx.lineTo(W / 2 + 60, y);
+    ctx.stroke();
+
+    // Frase linda, elegida al azar entre varias opciones.
+    ctx.fillStyle = theme.ink;
+    ctx.font = "600 34px 'DM Sans', sans-serif";
+    y = wrapCenteredText(ctx, phrase, W / 2, y + 58, cardW - 130, 46);
+
+    // Cierre de la tarjeta, anclado siempre cerca del borde inferior (no
+    // depende de cuántas líneas ocupó la frase de arriba).
+    const closingY = cardY + cardH - 66;
+
+    // Globos decorativos: rellenan el espacio entre la frase y el cierre
+    // para que la tarjeta nunca se vea con un bloque en blanco abajo.
+    drawBalloons(ctx, W, y + 24, closingY - 78, [theme.accent, theme.gold, theme.bg2]);
+
+    ctx.strokeStyle = theme.gold;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 44, closingY - 52);
+    ctx.lineTo(W / 2 + 44, closingY - 52);
+    ctx.stroke();
+
+    ctx.fillStyle = theme.accent;
+    ctx.font = "700 21px 'DM Sans', sans-serif";
+    ctx.fillText('CON CARIÑO, TU EQUIPO', W / 2, closingY - 18);
+
+    ctx.fillStyle = theme.ink;
+    ctx.font = "italic 600 30px 'Fraunces', serif";
+    ctx.fillText(localName, W / 2, closingY + 20);
+
+    // Pie de imagen, con una placa detrás para que no quede texto suelto
+    // flotando sobre el degradé.
+    ctx.font = "600 22px 'DM Sans', sans-serif";
+    const footerText = 'Recursos Humanos · Acurio Restaurantes';
+    const footerW = ctx.measureText(footerText).width + 56;
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    drawRoundRect(ctx, W / 2 - footerW / 2, H - 78, footerW, 44, 22);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillText(footerText, W / 2, H - 49);
+
+    canvas.toBlob(async (blob) => {
+      if(!blob){
+        status.textContent = 'No se pudo generar la imagen.';
+        if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
+        return;
+      }
+
+      const safeName = name.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+      const fileName = 'saludo-cumple-' + safeName + '.png';
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({
+            files: [file],
+            title: '¡Feliz cumpleaños, ' + name + '!',
+            text: 'Saludo de cumpleaños para ' + name
+          });
+          status.textContent = '';
+        }catch(shareErr){
+          if(shareErr && shareErr.name !== 'AbortError'){
+            downloadBlob(blob, fileName);
+            status.textContent = 'Imagen descargada ✓';
+          }
+        }
+      }else{
+        downloadBlob(blob, fileName);
+        status.textContent = 'Imagen descargada ✓';
+      }
+
+      if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
+    }, 'image/png');
+  }catch(err){
+    console.error('No se pudo generar la imagen de saludo:', err);
+    status.textContent = 'No se pudo generar la imagen. Intentá de nuevo.';
+    if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
+  }
 }
 
 function openModal(local, day){

@@ -244,9 +244,6 @@
         <button class="btn btn-secondary" style="display:none;" id="admin-cancel-edit" onclick="Admin.cancelEdit()">Cancelar</button>
       </div>
       <div class="error-text" id="admin-error"></div>
-
-      <hr class="sep">
-      <button class="btn btn-secondary" onclick="Admin.seedTanta()">Cargar banco por defecto de Tanta (31 preguntas)</button>
     </section>
 
     <!-- ═══════════ EVALUACIÓN ═══════════ -->
@@ -348,18 +345,34 @@ function showView(id){
 
 // ══════════════════════════════════════════════════════════════
 //  PERSISTENCIA DE PREGUNTAS (Firestore con fallback localStorage)
+//  Con caché en memoria: evita ir a buscar a Firestore de nuevo
+//  para el mismo local durante los próximos minutos, así la
+//  carga es instantánea para el 2do, 3er... camarero que rinde.
 // ══════════════════════════════════════════════════════════════
 const Bank = {
-  async get(local){
+  _cache: {},              // { local: { data, ts } }
+  _cacheTTL: 5 * 60 * 1000, // 5 minutos
+
+  async get(local, { force = false } = {}){
+    const cached = this._cache[local];
+    if (!force && cached && (Date.now() - cached.ts) < this._cacheTTL) {
+      return cached.data;
+    }
+    let data = [];
     if (db) {
       try {
         const doc = await db.collection('evaluaciones_preguntas').doc(local).get();
-        return doc.exists ? (doc.data().preguntas || []) : [];
+        data = doc.exists ? (doc.data().preguntas || []) : [];
+        this._cache[local] = { data, ts: Date.now() };
+        return data;
       } catch(e){ console.warn('Error leyendo banco de Firestore, uso localStorage', e); }
     }
-    try { return JSON.parse(localStorage.getItem('eval_bank_' + local)) || []; } catch { return []; }
+    try { data = JSON.parse(localStorage.getItem('eval_bank_' + local)) || []; } catch { data = []; }
+    this._cache[local] = { data, ts: Date.now() };
+    return data;
   },
   async set(local, preguntas){
+    this._cache[local] = { data: preguntas, ts: Date.now() }; // refresca la caché al instante
     if (db) {
       try {
         await db.collection('evaluaciones_preguntas').doc(local).set({ preguntas, actualizado: Date.now() });
@@ -385,162 +398,8 @@ const Results = {
   }
 };
 
-// ══════════════════════════════════════════════════════════════
-//  BANCO POR DEFECTO — TANTA
-// ══════════════════════════════════════════════════════════════
-function mkMc(texto, opciones, correcta, explicacion=''){
-  return { id:'tanta_'+Math.random().toString(36).slice(2,9), tipo:'mc', texto, opciones, correcta, explicacion };
-}
-function mkDev(texto, explicacion=''){
-  return { id:'tanta_'+Math.random().toString(36).slice(2,9), tipo:'desarrollo', texto, opciones:[], correcta:null, explicacion };
-}
-
-const SEED_TANTA = [
-  mkMc('¿Por qué hablamos de "comida criolla" en la gastronomía peruana?', [
-    'Porque utiliza únicamente productos cultivados en Perú.',
-    'Porque es una cocina que surge de la mezcla y evolución de diferentes influencias culturales y productos locales.',
-    'Porque todos sus platos son picantes.',
-    'Porque solamente se consume en la costa.'
-  ], 1),
-  mkMc('¿Cómo debemos recibir a un cliente cuando ingresa a Tanta?', [
-    'Esperar a que se acerque a la mesa.',
-    'Recibirlo con una actitud cordial, saludo, contacto visual y predisposición para ayudarlo.',
-    'Preguntarle inmediatamente qué quiere comer.',
-    'Señalarle dónde sentarse sin hablarle.'
-  ], 1),
-  mkMc('¿Cuánto tiempo debería pasar aproximadamente antes de acercarse a una mesa nueva?', [
-    '10 minutos.', '5 minutos.', 'Lo antes posible, idealmente dentro del primer minuto.', 'Cuando el cliente llame al camarero.'
-  ], 2),
-  mkMc('¿Cómo debemos presentarnos ante el cliente?', [
-    'Únicamente diciendo nuestro nombre.',
-    'De manera cordial, profesional y clara, indicando que estaremos a disposición durante su experiencia.',
-    'Preguntando directamente qué desea comer.',
-    'No es necesario presentarse.'
-  ], 1),
-  mkMc('¿Cómo debemos hablar y dirigirnos al cliente?', [
-    'Con confianza, utilizando apodos.', 'De manera informal para generar confianza.',
-    'Con respeto, cordialidad, claridad y lenguaje profesional.', 'Hablando rápidamente para ahorrar tiempo.'
-  ], 2),
-  mkMc('¿Qué actitud debemos tener frente a un cliente indeciso?', [
-    'Presionarlo para que decida rápidamente.', 'Ignorarlo hasta que tome una decisión.',
-    'Escucharlo, hacer preguntas y ofrecer recomendaciones según sus gustos.', 'Recomendarle siempre el plato más caro.'
-  ], 2),
-  mkMc('¿Qué significa brindar un servicio personalizado?', [
-    'Tratar a todos los clientes exactamente de la misma manera.',
-    'Adaptar la atención a las necesidades, preferencias y características de cada cliente.',
-    'Ofrecer descuentos a todos los clientes.', 'Atender primero a los clientes habituales.'
-  ], 1),
-  mkMc('¿Qué información debemos conocer antes de comenzar nuestro turno en Tanta?', [
-    'Únicamente los horarios.',
-    'La carta, platos disponibles, faltantes, sugerencias, ingredientes, alergias, promociones y novedades del servicio.',
-    'Solamente los postres.', 'Solamente los precios.'
-  ], 1),
-  mkMc('¿Cómo debemos despedir al cliente?', [
-    'Sin decir nada, para no molestarlo.',
-    'Agradeciendo su visita, despidiéndonos cordialmente e invitándolo a regresar.',
-    'Preguntándole por qué no consumió más.', 'Entregándole la cuenta y retirándonos.'
-  ], 1),
-  mkMc('¿Por qué es importante conocer cuáles son los platos picantes de la carta de Tanta?', [
-    'Para vender siempre los platos picantes.',
-    'Para poder informar correctamente al cliente y evitar una experiencia desagradable.',
-    'Porque todos los platos peruanos son picantes.', 'Porque los platos picantes son los más rentables.'
-  ], 1),
-  mkMc('¿Por qué debemos conocer qué platos de la carta contienen lácteos?', [
-    'Para poder recomendar siempre esos platos.',
-    'Para informar correctamente a clientes con alergias, intolerancias o restricciones alimentarias.',
-    'Porque los lácteos mejoran todos los platos.', 'Porque son obligatorios en la cocina peruana.'
-  ], 1),
-  mkMc('Un cliente pregunta qué platos de Tanta son aptos para celíacos. ¿Qué debemos hacer?', [
-    'Decirle que cualquier plato sin pan es apto.',
-    'Responder según nuestro conocimiento y confirmar con cocina si existe alguna duda o riesgo de contaminación cruzada.',
-    'Elegir cualquier ensalada.', 'Decirle que todos los platos son aptos.'
-  ], 1),
-  mkMc('¿Qué debemos recomendar a una persona que visita Tanta por primera vez?', [
-    'El plato más caro.', 'El plato que nosotros preferimos.',
-    'Una selección representativa de la propuesta del restaurante, teniendo en cuenta sus gustos.',
-    'El plato que salga más rápido.'
-  ], 2),
-  mkMc('¿Cuál es el criterio para identificar el plato insignia de un restaurante como Tanta?', [
-    'El camarero puede elegir cualquiera.',
-    'Es el plato que representa especialmente la identidad y propuesta gastronómica del restaurante.',
-    'Es siempre el plato más caro.', 'Es siempre el plato más vendido.'
-  ], 1),
-  mkMc('¿Qué debemos conocer sobre los postres de la carta?', [
-    'Solo sus nombres.',
-    'Ingredientes principales, sabores, texturas, características y forma de presentación.',
-    'Solo sus precios.', 'Solo cuál es el más rápido de servir.'
-  ], 1),
-  mkMc('¿Cómo recomendarías una bebida para acompañar una comida?', [
-    'Ofreciendo la bebida más cara.',
-    'Preguntando qué está comiendo y cuáles son sus preferencias para hacer una recomendación adecuada.',
-    'Recomendando siempre vino.', 'No haciendo ninguna recomendación.'
-  ], 1),
-  mkMc('¿Cómo ofrecerías un postre sin resultar insistente?', [
-    '"Tiene que pedir un postre".', '"¿No quiere nada más?".',
-    'Presentando la opción de manera atractiva y cordial, dejando la decisión al cliente.',
-    'Insistiendo varias veces.'
-  ], 2),
-  mkMc('¿Qué significa hacer una venta sugestiva?', [
-    'Obligar al cliente a comprar productos adicionales.',
-    'Sugerir productos que puedan mejorar su experiencia, según sus necesidades y preferencias.',
-    'Vender siempre el producto más caro.', 'Aumentar la cuenta sin informar al cliente.'
-  ], 1),
-  mkMc('¿Cuál es la diferencia entre vender y recomendar?', [
-    'No existe diferencia.',
-    'Vender busca únicamente aumentar la cuenta; recomendar busca ofrecer una opción adecuada para el cliente.',
-    'Recomendar significa ofrecer siempre el producto más barato.', 'Vender significa dar productos gratis.'
-  ], 1),
-  mkMc('¿Cómo se presenta correctamente un plato en la mesa?', [
-    'Dejándolo rápidamente sin explicar nada.',
-    'Colocándolo con cuidado, identificando el plato y mencionando sus componentes principales cuando corresponda.',
-    'Preguntando al cliente dónde quiere que lo coloquemos.', 'Sirviéndolo desde cualquier lado.'
-  ], 1),
-  mkMc('Un cliente dice que su plato está frío. ¿Qué debemos hacer?', [
-    'Decirle que la cocina lo preparó correctamente.', 'Discutir con el cliente.',
-    'Escuchar, disculparse y buscar una solución rápidamente, informando al encargado o cocina.'
-  ], 2),
-  mkMc('Un cliente dice que la comida no le gustó. ¿Cómo debemos actuar?', [
-    'Decirle que todos los demás clientes la disfrutan.',
-    'Escucharlo con respeto, comprender el motivo y buscar una solución junto con el responsable.',
-    'Ignorarlo.', 'Decirle que debería haber pedido otro plato.'
-  ], 1),
-  mkMc('Un cliente recibe un plato equivocado. ¿Qué debemos hacer?', [
-    'Decirle que debe quedarse con el plato.', 'Culpar a cocina.',
-    'Disculparnos, retirar o gestionar correctamente el plato y solucionar el error lo antes posible.',
-    'Decirle que espere hasta terminar el servicio.'
-  ], 2),
-  mkMc('¿Cómo debemos actuar frente a un cliente enojado?', [
-    'Elevar el tono de voz para defendernos.', 'Interrumpirlo.',
-    'Mantener la calma, escuchar, mostrar empatía y buscar una solución.', 'Ignorarlo.'
-  ], 2),
-  mkMc('¿Qué cosas nunca debemos decirle a un cliente durante un reclamo?', [
-    '"Entiendo su molestia".', '"Permítame buscar una solución".',
-    '"No es mi problema", "la culpa es de cocina" o "usted está equivocado".',
-    '"Voy a consultar con mi encargado".'
-  ], 2),
-  mkMc('¿Cuándo debemos llamar al encargado o jefe de salón?', [
-    'Ante cualquier situación que no podamos resolver correctamente o cuando el reclamo requiere una decisión superior.',
-    'Nunca.', 'Solo cuando el cliente pide la cuenta.', 'Solo cuando el restaurante está lleno.'
-  ], 0),
-  mkMc('¿Qué harías si un cliente reclama algo que no depende directamente del camarero?', [
-    'Decirle que no es responsabilidad nuestra.',
-    'Escucharlo, mostrar predisposición y comunicar inmediatamente la situación al responsable correspondiente.',
-    'Ignorarlo.', 'Decirle que se queje en otro lugar.'
-  ], 1),
-  mkMc('Antes de bajar la cuenta, ¿cómo debe estar la mesa?', [
-    'Con todos los platos y residuos acumulados.',
-    'Limpia, ordenada y despejada, retirando previamente lo que corresponda y dejando únicamente lo necesario.',
-    'Exactamente igual que durante el servicio.', 'Solo hay que retirar los vasos.'
-  ], 1),
-
-  mkDev('¿Cuáles son las entradas frías y calientes de la carta de Tanta? Describí cada una.'),
-  mkDev('¿Cuáles son los platos principales fríos y calientes de la carta de Tanta? Describí cada uno.'),
-  mkDev('Describí cuáles son los platos picantes de la carta de Tanta.'),
-  mkDev('Recomendá una selección representativa de la carta de Tanta para un cliente que visita el restaurante por primera vez, y describí los platos elegidos.'),
-  mkDev('¿Cuál es el plato insignia de Tanta? Describilo.'),
-  mkDev('Describí los postres de la carta de Tanta: ingredientes principales, sabores, texturas y forma de presentación.'),
-  mkDev('¿Qué es Tanta? Describí el local, de dónde proviene la marca, quién es el dueño, la experiencia que ofrece (platos para compartir, etc.) y cómo se realiza la presentación en mesa.')
-];
+// (banco de preguntas precargadas eliminado — el banco arranca vacío
+// y se carga 100% desde el panel de administración)
 
 // ══════════════════════════════════════════════════════════════
 //  ADMIN — gestión del banco de preguntas
@@ -593,13 +452,6 @@ const Admin = {
     this.toggleTipo();
   },
   cancelEdit(){ this.resetForm(); },
-
-  async seedTanta(){
-    if (!confirm('Esto reemplaza el banco de preguntas de Tanta por las 31 preguntas por defecto. ¿Continuar?')) return;
-    await Bank.set('tanta', SEED_TANTA);
-    document.getElementById('admin-local').value = 'tanta';
-    this.loadList();
-  },
 
   async loadList(){
     const local = document.getElementById('admin-local').value;
@@ -720,7 +572,15 @@ const Eval = {
     if (!local) { errEl.textContent = 'Seleccioná tu local.'; return; }
     if (!dni) { errEl.textContent = 'Ingresá tu DNI.'; return; }
 
+    const startBtn = document.querySelector('#view-login .btn-primary');
+    startBtn.disabled = true;
+    startBtn.textContent = 'Cargando…';
+
     const questions = await Bank.get(local);
+
+    startBtn.disabled = false;
+    startBtn.textContent = 'Iniciar evaluación';
+
     if (!questions.length) {
       errEl.textContent = 'No hay preguntas cargadas para este local. Consultá con el administrador.';
       return;
@@ -818,7 +678,7 @@ const Eval = {
       this.idx++;
       if (this.idx >= this.questions.length) this.finish();
       else this.renderQuestion();
-    }, 1300);
+    }, 700);
   },
 
   submitDev(){

@@ -216,13 +216,23 @@
       <h2 style="font-family:var(--font-serif); font-size:16px; font-weight:600; margin-bottom:16px;" id="admin-form-title">Agregar pregunta</h2>
 
       <div class="field">
+        <label>Tipo de pregunta</label>
+        <select id="admin-q-tipo" onchange="Admin.toggleTipo()">
+          <option value="mc">Opción múltiple (2 min)</option>
+          <option value="desarrollo">Desarrollo (20 min)</option>
+        </select>
+      </div>
+
+      <div class="field">
         <label>Enunciado</label>
         <textarea id="admin-q-text" rows="2" placeholder="Escribí la pregunta"></textarea>
       </div>
 
-      <label>Opciones (marcá la correcta)</label>
-      <div id="admin-options"></div>
-      <button class="add-option-btn" onclick="Admin.addOptionRow()">+ Agregar opción</button>
+      <div id="admin-options-wrap">
+        <label>Opciones (marcá la correcta)</label>
+        <div id="admin-options"></div>
+        <button class="add-option-btn" onclick="Admin.addOptionRow()">+ Agregar opción</button>
+      </div>
 
       <div class="field">
         <label>Explicación (opcional, se muestra si responde mal)</label>
@@ -234,6 +244,9 @@
         <button class="btn btn-secondary" style="display:none;" id="admin-cancel-edit" onclick="Admin.cancelEdit()">Cancelar</button>
       </div>
       <div class="error-text" id="admin-error"></div>
+
+      <hr class="sep">
+      <button class="btn btn-secondary" onclick="Admin.seedTanta()">Cargar banco por defecto de Tanta (31 preguntas)</button>
     </section>
 
     <!-- ═══════════ EVALUACIÓN ═══════════ -->
@@ -246,6 +259,10 @@
       <div class="timer-track"><div class="timer-fill" id="eval-timer-fill"></div></div>
       <div class="q-title" id="eval-q-title"></div>
       <div id="eval-options"></div>
+      <div id="eval-dev-wrap" style="display:none;">
+        <textarea id="eval-dev-answer" rows="8" placeholder="Escribí tu respuesta acá…"></textarea>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="Eval.submitDev()">Continuar</button>
+      </div>
     </section>
 
     <!-- ═══════════ RESULTADO ═══════════ -->
@@ -369,6 +386,163 @@ const Results = {
 };
 
 // ══════════════════════════════════════════════════════════════
+//  BANCO POR DEFECTO — TANTA
+// ══════════════════════════════════════════════════════════════
+function mkMc(texto, opciones, correcta, explicacion=''){
+  return { id:'tanta_'+Math.random().toString(36).slice(2,9), tipo:'mc', texto, opciones, correcta, explicacion };
+}
+function mkDev(texto, explicacion=''){
+  return { id:'tanta_'+Math.random().toString(36).slice(2,9), tipo:'desarrollo', texto, opciones:[], correcta:null, explicacion };
+}
+
+const SEED_TANTA = [
+  mkMc('¿Por qué hablamos de "comida criolla" en la gastronomía peruana?', [
+    'Porque utiliza únicamente productos cultivados en Perú.',
+    'Porque es una cocina que surge de la mezcla y evolución de diferentes influencias culturales y productos locales.',
+    'Porque todos sus platos son picantes.',
+    'Porque solamente se consume en la costa.'
+  ], 1),
+  mkMc('¿Cómo debemos recibir a un cliente cuando ingresa a Tanta?', [
+    'Esperar a que se acerque a la mesa.',
+    'Recibirlo con una actitud cordial, saludo, contacto visual y predisposición para ayudarlo.',
+    'Preguntarle inmediatamente qué quiere comer.',
+    'Señalarle dónde sentarse sin hablarle.'
+  ], 1),
+  mkMc('¿Cuánto tiempo debería pasar aproximadamente antes de acercarse a una mesa nueva?', [
+    '10 minutos.', '5 minutos.', 'Lo antes posible, idealmente dentro del primer minuto.', 'Cuando el cliente llame al camarero.'
+  ], 2),
+  mkMc('¿Cómo debemos presentarnos ante el cliente?', [
+    'Únicamente diciendo nuestro nombre.',
+    'De manera cordial, profesional y clara, indicando que estaremos a disposición durante su experiencia.',
+    'Preguntando directamente qué desea comer.',
+    'No es necesario presentarse.'
+  ], 1),
+  mkMc('¿Cómo debemos hablar y dirigirnos al cliente?', [
+    'Con confianza, utilizando apodos.', 'De manera informal para generar confianza.',
+    'Con respeto, cordialidad, claridad y lenguaje profesional.', 'Hablando rápidamente para ahorrar tiempo.'
+  ], 2),
+  mkMc('¿Qué actitud debemos tener frente a un cliente indeciso?', [
+    'Presionarlo para que decida rápidamente.', 'Ignorarlo hasta que tome una decisión.',
+    'Escucharlo, hacer preguntas y ofrecer recomendaciones según sus gustos.', 'Recomendarle siempre el plato más caro.'
+  ], 2),
+  mkMc('¿Qué significa brindar un servicio personalizado?', [
+    'Tratar a todos los clientes exactamente de la misma manera.',
+    'Adaptar la atención a las necesidades, preferencias y características de cada cliente.',
+    'Ofrecer descuentos a todos los clientes.', 'Atender primero a los clientes habituales.'
+  ], 1),
+  mkMc('¿Qué información debemos conocer antes de comenzar nuestro turno en Tanta?', [
+    'Únicamente los horarios.',
+    'La carta, platos disponibles, faltantes, sugerencias, ingredientes, alergias, promociones y novedades del servicio.',
+    'Solamente los postres.', 'Solamente los precios.'
+  ], 1),
+  mkMc('¿Cómo debemos despedir al cliente?', [
+    'Sin decir nada, para no molestarlo.',
+    'Agradeciendo su visita, despidiéndonos cordialmente e invitándolo a regresar.',
+    'Preguntándole por qué no consumió más.', 'Entregándole la cuenta y retirándonos.'
+  ], 1),
+  mkMc('¿Por qué es importante conocer cuáles son los platos picantes de la carta de Tanta?', [
+    'Para vender siempre los platos picantes.',
+    'Para poder informar correctamente al cliente y evitar una experiencia desagradable.',
+    'Porque todos los platos peruanos son picantes.', 'Porque los platos picantes son los más rentables.'
+  ], 1),
+  mkMc('¿Por qué debemos conocer qué platos de la carta contienen lácteos?', [
+    'Para poder recomendar siempre esos platos.',
+    'Para informar correctamente a clientes con alergias, intolerancias o restricciones alimentarias.',
+    'Porque los lácteos mejoran todos los platos.', 'Porque son obligatorios en la cocina peruana.'
+  ], 1),
+  mkMc('Un cliente pregunta qué platos de Tanta son aptos para celíacos. ¿Qué debemos hacer?', [
+    'Decirle que cualquier plato sin pan es apto.',
+    'Responder según nuestro conocimiento y confirmar con cocina si existe alguna duda o riesgo de contaminación cruzada.',
+    'Elegir cualquier ensalada.', 'Decirle que todos los platos son aptos.'
+  ], 1),
+  mkMc('¿Qué debemos recomendar a una persona que visita Tanta por primera vez?', [
+    'El plato más caro.', 'El plato que nosotros preferimos.',
+    'Una selección representativa de la propuesta del restaurante, teniendo en cuenta sus gustos.',
+    'El plato que salga más rápido.'
+  ], 2),
+  mkMc('¿Cuál es el criterio para identificar el plato insignia de un restaurante como Tanta?', [
+    'El camarero puede elegir cualquiera.',
+    'Es el plato que representa especialmente la identidad y propuesta gastronómica del restaurante.',
+    'Es siempre el plato más caro.', 'Es siempre el plato más vendido.'
+  ], 1),
+  mkMc('¿Qué debemos conocer sobre los postres de la carta?', [
+    'Solo sus nombres.',
+    'Ingredientes principales, sabores, texturas, características y forma de presentación.',
+    'Solo sus precios.', 'Solo cuál es el más rápido de servir.'
+  ], 1),
+  mkMc('¿Cómo recomendarías una bebida para acompañar una comida?', [
+    'Ofreciendo la bebida más cara.',
+    'Preguntando qué está comiendo y cuáles son sus preferencias para hacer una recomendación adecuada.',
+    'Recomendando siempre vino.', 'No haciendo ninguna recomendación.'
+  ], 1),
+  mkMc('¿Cómo ofrecerías un postre sin resultar insistente?', [
+    '"Tiene que pedir un postre".', '"¿No quiere nada más?".',
+    'Presentando la opción de manera atractiva y cordial, dejando la decisión al cliente.',
+    'Insistiendo varias veces.'
+  ], 2),
+  mkMc('¿Qué significa hacer una venta sugestiva?', [
+    'Obligar al cliente a comprar productos adicionales.',
+    'Sugerir productos que puedan mejorar su experiencia, según sus necesidades y preferencias.',
+    'Vender siempre el producto más caro.', 'Aumentar la cuenta sin informar al cliente.'
+  ], 1),
+  mkMc('¿Cuál es la diferencia entre vender y recomendar?', [
+    'No existe diferencia.',
+    'Vender busca únicamente aumentar la cuenta; recomendar busca ofrecer una opción adecuada para el cliente.',
+    'Recomendar significa ofrecer siempre el producto más barato.', 'Vender significa dar productos gratis.'
+  ], 1),
+  mkMc('¿Cómo se presenta correctamente un plato en la mesa?', [
+    'Dejándolo rápidamente sin explicar nada.',
+    'Colocándolo con cuidado, identificando el plato y mencionando sus componentes principales cuando corresponda.',
+    'Preguntando al cliente dónde quiere que lo coloquemos.', 'Sirviéndolo desde cualquier lado.'
+  ], 1),
+  mkMc('Un cliente dice que su plato está frío. ¿Qué debemos hacer?', [
+    'Decirle que la cocina lo preparó correctamente.', 'Discutir con el cliente.',
+    'Escuchar, disculparse y buscar una solución rápidamente, informando al encargado o cocina.'
+  ], 2),
+  mkMc('Un cliente dice que la comida no le gustó. ¿Cómo debemos actuar?', [
+    'Decirle que todos los demás clientes la disfrutan.',
+    'Escucharlo con respeto, comprender el motivo y buscar una solución junto con el responsable.',
+    'Ignorarlo.', 'Decirle que debería haber pedido otro plato.'
+  ], 1),
+  mkMc('Un cliente recibe un plato equivocado. ¿Qué debemos hacer?', [
+    'Decirle que debe quedarse con el plato.', 'Culpar a cocina.',
+    'Disculparnos, retirar o gestionar correctamente el plato y solucionar el error lo antes posible.',
+    'Decirle que espere hasta terminar el servicio.'
+  ], 2),
+  mkMc('¿Cómo debemos actuar frente a un cliente enojado?', [
+    'Elevar el tono de voz para defendernos.', 'Interrumpirlo.',
+    'Mantener la calma, escuchar, mostrar empatía y buscar una solución.', 'Ignorarlo.'
+  ], 2),
+  mkMc('¿Qué cosas nunca debemos decirle a un cliente durante un reclamo?', [
+    '"Entiendo su molestia".', '"Permítame buscar una solución".',
+    '"No es mi problema", "la culpa es de cocina" o "usted está equivocado".',
+    '"Voy a consultar con mi encargado".'
+  ], 2),
+  mkMc('¿Cuándo debemos llamar al encargado o jefe de salón?', [
+    'Ante cualquier situación que no podamos resolver correctamente o cuando el reclamo requiere una decisión superior.',
+    'Nunca.', 'Solo cuando el cliente pide la cuenta.', 'Solo cuando el restaurante está lleno.'
+  ], 0),
+  mkMc('¿Qué harías si un cliente reclama algo que no depende directamente del camarero?', [
+    'Decirle que no es responsabilidad nuestra.',
+    'Escucharlo, mostrar predisposición y comunicar inmediatamente la situación al responsable correspondiente.',
+    'Ignorarlo.', 'Decirle que se queje en otro lugar.'
+  ], 1),
+  mkMc('Antes de bajar la cuenta, ¿cómo debe estar la mesa?', [
+    'Con todos los platos y residuos acumulados.',
+    'Limpia, ordenada y despejada, retirando previamente lo que corresponda y dejando únicamente lo necesario.',
+    'Exactamente igual que durante el servicio.', 'Solo hay que retirar los vasos.'
+  ], 1),
+
+  mkDev('¿Cuáles son las entradas frías y calientes de la carta de Tanta? Describí cada una.'),
+  mkDev('¿Cuáles son los platos principales fríos y calientes de la carta de Tanta? Describí cada uno.'),
+  mkDev('Describí cuáles son los platos picantes de la carta de Tanta.'),
+  mkDev('Recomendá una selección representativa de la carta de Tanta para un cliente que visita el restaurante por primera vez, y describí los platos elegidos.'),
+  mkDev('¿Cuál es el plato insignia de Tanta? Describilo.'),
+  mkDev('Describí los postres de la carta de Tanta: ingredientes principales, sabores, texturas y forma de presentación.'),
+  mkDev('¿Qué es Tanta? Describí el local, de dónde proviene la marca, quién es el dueño, la experiencia que ofrece (platos para compartir, etc.) y cómo se realiza la presentación en mesa.')
+];
+
+// ══════════════════════════════════════════════════════════════
 //  ADMIN — gestión del banco de preguntas
 // ══════════════════════════════════════════════════════════════
 const Admin = {
@@ -400,9 +574,14 @@ const Admin = {
     if (wrap.querySelectorAll('.option-row').length <= 2) return;
     btn.closest('.option-row').remove();
   },
+  toggleTipo(){
+    const tipo = document.getElementById('admin-q-tipo').value;
+    document.getElementById('admin-options-wrap').style.display = (tipo === 'desarrollo') ? 'none' : 'block';
+  },
   resetForm(){
     this.editingId = null;
     document.getElementById('admin-form-title').textContent = 'Agregar pregunta';
+    document.getElementById('admin-q-tipo').value = 'mc';
     document.getElementById('admin-q-text').value = '';
     document.getElementById('admin-q-expl').value = '';
     document.getElementById('admin-options').innerHTML = '';
@@ -411,8 +590,16 @@ const Admin = {
     document.getElementById('admin-save-btn').textContent = 'Guardar pregunta';
     this.addOptionRow('', true);
     this.addOptionRow('', false);
+    this.toggleTipo();
   },
   cancelEdit(){ this.resetForm(); },
+
+  async seedTanta(){
+    if (!confirm('Esto reemplaza el banco de preguntas de Tanta por las 31 preguntas por defecto. ¿Continuar?')) return;
+    await Bank.set('tanta', SEED_TANTA);
+    document.getElementById('admin-local').value = 'tanta';
+    this.loadList();
+  },
 
   async loadList(){
     const local = document.getElementById('admin-local').value;
@@ -427,10 +614,13 @@ const Admin = {
     this.currentQuestions.forEach(q => {
       const item = document.createElement('div');
       item.className = 'q-item';
+      const meta = (q.tipo === 'desarrollo')
+        ? 'Desarrollo · 20 min'
+        : `Opción múltiple · ${q.opciones.length} opciones · 2 min`;
       item.innerHTML = `
         <div>
           <div class="q-text">${escapeHtml(q.texto)}</div>
-          <div class="q-meta">${q.opciones.length} opciones</div>
+          <div class="q-meta">${meta}</div>
         </div>
         <div class="q-actions">
           <button onclick="Admin.editQuestion('${q.id}')">Editar</button>
@@ -445,10 +635,13 @@ const Admin = {
     if (!q) return;
     this.editingId = id;
     document.getElementById('admin-form-title').textContent = 'Editar pregunta';
+    document.getElementById('admin-q-tipo').value = q.tipo || 'mc';
     document.getElementById('admin-q-text').value = q.texto;
     document.getElementById('admin-q-expl').value = q.explicacion || '';
     document.getElementById('admin-options').innerHTML = '';
-    q.opciones.forEach((op, i) => this.addOptionRow(op, i === q.correcta));
+    (q.opciones || []).forEach((op, i) => this.addOptionRow(op, i === q.correcta));
+    if (!(q.opciones || []).length) { this.addOptionRow('', true); this.addOptionRow('', false); }
+    this.toggleTipo();
     document.getElementById('admin-cancel-edit').style.display = 'inline-flex';
     document.getElementById('admin-save-btn').textContent = 'Actualizar pregunta';
     document.getElementById('admin-error').textContent = '';
@@ -472,23 +665,28 @@ const Admin = {
     const texto = document.getElementById('admin-q-text').value.trim();
     if (!texto) { errEl.textContent = 'Escribí el enunciado de la pregunta.'; return; }
 
-    const rows = [...document.getElementById('admin-options').querySelectorAll('.option-row')];
-    const opciones = rows.map(r => r.querySelector('input[type="text"]').value.trim());
-    if (opciones.some(o => !o)) { errEl.textContent = 'Completá el texto de todas las opciones.'; return; }
-    const correctIdx = rows.findIndex(r => r.querySelector('input[type="radio"]').checked);
-    if (correctIdx === -1) { errEl.textContent = 'Marcá cuál es la opción correcta.'; return; }
+    const tipo = document.getElementById('admin-q-tipo').value;
+    let opciones = [], correctIdx = null;
+
+    if (tipo === 'mc') {
+      const rows = [...document.getElementById('admin-options').querySelectorAll('.option-row')];
+      opciones = rows.map(r => r.querySelector('input[type="text"]').value.trim());
+      if (opciones.some(o => !o)) { errEl.textContent = 'Completá el texto de todas las opciones.'; return; }
+      correctIdx = rows.findIndex(r => r.querySelector('input[type="radio"]').checked);
+      if (correctIdx === -1) { errEl.textContent = 'Marcá cuál es la opción correcta.'; return; }
+    }
 
     const explicacion = document.getElementById('admin-q-expl').value.trim();
 
     let questions = await Bank.get(local);
     if (this.editingId) {
       questions = questions.map(q => q.id === this.editingId
-        ? { ...q, texto, opciones, correcta: correctIdx, explicacion }
+        ? { ...q, tipo, texto, opciones, correcta: correctIdx, explicacion }
         : q);
     } else {
       questions.push({
         id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
-        texto, opciones, correcta: correctIdx, explicacion
+        tipo, texto, opciones, correcta: correctIdx, explicacion
       });
     }
     await Bank.set(local, questions);
@@ -506,8 +704,9 @@ function escapeHtml(str){
 // ══════════════════════════════════════════════════════════════
 //  EVALUACIÓN
 // ══════════════════════════════════════════════════════════════
-const TIME_PER_QUESTION = 60; // segundos
-const PASS_THRESHOLD = 70; // %
+const TIME_MC = 120;   // 2 min — preguntas de opción múltiple
+const TIME_DEV = 1200; // 20 min — preguntas de desarrollo
+const PASS_THRESHOLD = 70; // % (sobre las preguntas de opción múltiple)
 
 const Eval = {
   local: '', dni: '', questions: [], idx: 0, correctCount: 0, timerInt: null, timeLeft: 0, answered: false,
@@ -544,34 +743,55 @@ const Eval = {
     document.getElementById('eval-q-title').textContent = q.texto;
 
     const optsWrap = document.getElementById('eval-options');
+    const devWrap = document.getElementById('eval-dev-wrap');
     optsWrap.innerHTML = '';
-    q.opciones.forEach((op, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'opt-btn';
-      btn.textContent = op;
-      btn.onclick = () => this.selectAnswer(i);
-      optsWrap.appendChild(btn);
-    });
+
+    if (q.tipo === 'desarrollo') {
+      optsWrap.style.display = 'none';
+      devWrap.style.display = 'block';
+      document.getElementById('eval-dev-answer').value = '';
+    } else {
+      devWrap.style.display = 'none';
+      optsWrap.style.display = 'block';
+      q.opciones.forEach((op, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.textContent = op;
+        btn.onclick = () => this.selectAnswer(i);
+        optsWrap.appendChild(btn);
+      });
+    }
 
     this.startTimer();
   },
 
   startTimer(){
     clearInterval(this.timerInt);
-    this.timeLeft = TIME_PER_QUESTION;
+    const q = this.questions[this.idx];
+    const limit = (q.tipo === 'desarrollo') ? TIME_DEV : TIME_MC;
+    this.timeLeft = limit;
     const timerEl = document.getElementById('eval-timer');
     const fillEl = document.getElementById('eval-timer-fill');
     timerEl.classList.remove('urgent'); fillEl.classList.remove('urgent');
-    timerEl.textContent = this.timeLeft + 's';
+    timerEl.textContent = this.formatTime(this.timeLeft);
     fillEl.style.width = '100%';
 
     this.timerInt = setInterval(() => {
       this.timeLeft--;
-      timerEl.textContent = Math.max(this.timeLeft,0) + 's';
-      fillEl.style.width = (Math.max(this.timeLeft,0) / TIME_PER_QUESTION * 100) + '%';
-      if (this.timeLeft <= 10) { timerEl.classList.add('urgent'); fillEl.classList.add('urgent'); }
-      if (this.timeLeft <= 0) { clearInterval(this.timerInt); this.selectAnswer(-1); }
+      timerEl.textContent = this.formatTime(Math.max(this.timeLeft,0));
+      fillEl.style.width = (Math.max(this.timeLeft,0) / limit * 100) + '%';
+      if (this.timeLeft <= (limit <= 120 ? 10 : 60)) { timerEl.classList.add('urgent'); fillEl.classList.add('urgent'); }
+      if (this.timeLeft <= 0) {
+        clearInterval(this.timerInt);
+        if (q.tipo === 'desarrollo') this.submitDev(); else this.selectAnswer(-1);
+      }
     }, 1000);
+  },
+
+  formatTime(sec){
+    if (sec < 60) return sec + 's';
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + String(s).padStart(2,'0');
   },
 
   selectAnswer(selectedIdx){
@@ -584,7 +804,7 @@ const Eval = {
     if (isCorrect) this.correctCount++;
 
     this.responses.push({
-      pregunta: q.texto, seleccionada: selectedIdx, correcta: q.correcta, esCorrecta: isCorrect
+      tipo: 'mc', pregunta: q.texto, seleccionada: selectedIdx, correcta: q.correcta, esCorrecta: isCorrect
     });
 
     const btns = document.querySelectorAll('#eval-options .opt-btn');
@@ -601,12 +821,31 @@ const Eval = {
     }, 1300);
   },
 
+  submitDev(){
+    if (this.answered) return;
+    this.answered = true;
+    clearInterval(this.timerInt);
+
+    const q = this.questions[this.idx];
+    const respuesta = document.getElementById('eval-dev-answer').value.trim();
+
+    this.responses.push({
+      tipo: 'desarrollo', pregunta: q.texto, respuesta, revisarManualmente: true
+    });
+
+    this.idx++;
+    if (this.idx >= this.questions.length) this.finish();
+    else this.renderQuestion();
+  },
+
   async finish(){
-    const total = this.questions.length;
-    const pct = Math.round((this.correctCount / total) * 100);
+    const mcResponses = this.responses.filter(r => r.tipo === 'mc');
+    const devResponses = this.responses.filter(r => r.tipo === 'desarrollo');
+    const totalMc = mcResponses.length;
+    const pct = totalMc ? Math.round((this.correctCount / totalMc) * 100) : 0;
     const passed = pct >= PASS_THRESHOLD;
 
-    document.getElementById('result-score').textContent = `${this.correctCount}/${total}`;
+    document.getElementById('result-score').textContent = `${this.correctCount}/${totalMc}`;
     document.getElementById('result-score').className = 'result-score ' + (passed ? 'pass' : 'fail');
     document.getElementById('result-status').textContent = passed ? 'Aprobado' : 'No aprobado';
     document.getElementById('result-status').className = 'result-status ' + (passed ? 'pass' : 'fail');
@@ -614,17 +853,20 @@ const Eval = {
     document.getElementById('result-dni').textContent = this.dni;
     document.getElementById('result-pct').textContent = pct + '%';
     document.getElementById('result-date').textContent = new Date().toLocaleString('es-AR');
-    document.getElementById('result-save-note').textContent = 'Guardando resultado…';
+    document.getElementById('result-save-note').textContent = devResponses.length
+      ? 'Guardando resultado… (las preguntas de desarrollo requieren revisión manual)'
+      : 'Guardando resultado…';
 
     showView('view-result');
 
     const saved = await Results.save({
-      local: this.local, dni: this.dni, correctas: this.correctCount, total,
+      local: this.local, dni: this.dni, correctas: this.correctCount, total: totalMc,
       porcentaje: pct, aprobado: passed, respuestas: this.responses,
+      preguntasDesarrolloPendientes: devResponses.length,
       fecha: Date.now()
     });
     document.getElementById('result-save-note').textContent = saved
-      ? 'Resultado guardado correctamente.'
+      ? (devResponses.length ? 'Resultado guardado · desarrollo pendiente de revisión manual.' : 'Resultado guardado correctamente.')
       : 'No se pudo guardar el resultado.';
   },
 

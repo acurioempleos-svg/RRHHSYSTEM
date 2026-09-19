@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ciclo del empleado y liquidación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1F4F3;--panel:#fff;--ink:#1B2B30;--muted:#5E7076;--line:#D7DFDD;--accent:#0D6B58;--accent-d:#0A5343;--signal:#B4700F;--danger:#B23A2B;--ok:#2F7D4F;--r:8px}
+*{box-sizing:border-box}
+html{scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
+header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:20px;padding:10px 22px;flex-wrap:wrap}
+header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
+.tabs{display:flex;gap:4px}
+.tabs button{background:none;border:0;color:#B9C7CB;font:inherit;font-weight:500;padding:7px 14px;border-radius:6px;cursor:pointer}
+.tabs button:hover{color:#fff}
+.tabs button[aria-current=page]{background:#ffffff1c;color:#fff}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:13px;color:#B9C7CB}
+.hdr-right .warn{color:#F2C46B}
+main{max-width:1180px;margin:0 auto;padding:22px}
+.view[hidden]{display:none}
+h2{font-size:17px;margin:0 0 12px;font-weight:600}
+h3{font-size:14px;margin:0 0 10px;font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.stack>*+*{margin-top:16px}
+.bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.bar input[type=search]{flex:1;min-width:220px}
+input,select,textarea{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible,tr:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:disabled,select:disabled{background:#F1F4F3;color:var(--muted)}
+.btn{font:inherit;font-weight:500;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-d);color:#fff}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn.sm{padding:4px 9px;font-size:13px}
+.tablewrap{padding:0;overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{font-weight:600;font-size:13px;color:var(--muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.grid tbody tr[data-act]{cursor:pointer}
+.grid tbody tr[data-act]:hover{background:#F1F4F3}
+td.num,th.num{text-align:right}
+.empty{color:var(--muted);text-align:center;padding:28px 14px}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12.5px;font-weight:500;background:#E6ECEA;color:#41565C}
+.alta{display:inline-block;min-width:26px;text-align:center;font-weight:700;border-radius:6px;padding:1px 8px;color:#fff}.alta-N{background:#2F7D4F}.alta-S{background:#B23A2B}
+.stat{display:flex;align-items:baseline;gap:14px;margin:18px 0 12px}.stat strong{font-size:52px;line-height:1;font-weight:700;color:var(--accent);letter-spacing:-.02em}.stat span{font-size:16px}
+.st-activo{background:#DDF0E4;color:#1F6B3F}.st-licencia{background:#F8E9CB;color:#8A5608}.st-egreso{background:#F6DDD7;color:#9A3222}
+.st-liquidado{background:#D3E8E3;color:#0A5343}.st-preingreso{background:#DCE7F3;color:#28527F}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+.cols.liq{grid-template-columns:minmax(0,340px) minmax(0,1fr)}
+@media(max-width:860px){.cols,.cols.liq{grid-template-columns:1fr}}
+.frm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.frm .full{grid-column:1/-1}
+.fld{display:block}
+.fld>span{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+.sub{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.sub:first-child{margin-top:0;padding-top:0;border:0}
+.docs{display:grid;gap:6px}
+.docs label{display:flex;gap:8px;align-items:center}
+.docs input{width:auto}
+.row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.row>*{flex:1;min-width:110px}
+.row>.btn{flex:0 0 auto}
+.muted{color:var(--muted);font-size:13px}
+.sw{display:flex;align-items:center;gap:10px;cursor:pointer;margin:6px 0}
+.sw[hidden]{display:none}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw .knob{width:38px;height:22px;background:#C4CFCD;border-radius:99px;position:relative;flex:0 0 auto;transition:background .15s}
+.sw .knob::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.sw input:checked+.knob{background:var(--accent)}
+.sw input:checked+.knob::after{transform:translateX(16px)}
+.sw input:focus-visible+.knob{outline:2px solid var(--accent);outline-offset:2px}
+.sw input:disabled+.knob{opacity:.5}
+.recibo{padding:0;overflow:hidden}
+.rc-head{padding:18px 22px;border-bottom:1px solid var(--line)}
+.rc-head h2{margin:0 0 2px}
+.rc-head .who{display:flex;gap:6px 22px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:6px}
+.rc-head .who b{color:var(--ink);font-weight:600}
+.ledger td{padding:8px 22px}
+.ledger tr.tot td{font-weight:600;background:#F6F8F7}
+.ledger tr.sec td{font-size:12.5px;font-weight:600;color:var(--muted);background:#F6F8F7;padding:6px 22px}
+.tag{font-size:12px;color:var(--muted);margin-left:8px}
+.neto{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:18px 22px;background:var(--ink);color:#fff}
+.neto span{font-size:14px;color:#B9C7CB}
+.neto strong{font-size:32px;font-weight:700;letter-spacing:-.01em}
+.avisos{padding:12px 22px;background:#FBF1DD;color:#7A4B06;font-size:13.5px;border-bottom:1px solid var(--line)}
+.avisos p{margin:2px 0}
+.rc-foot{padding:14px 22px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.actions{padding:14px 22px;display:flex;gap:8px;flex-wrap:wrap;align-items:end;border-top:1px solid var(--line);background:#FAFBFA}
+.actions .fld{min-width:140px}
+.checks{padding:14px 22px;border-top:1px solid var(--line)}
+.checks label{display:flex;gap:8px;align-items:center;margin:4px 0}
+.checks input{width:auto}
+.msg{padding:26px 22px;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+#toast.on{opacity:1}
+.hist{max-height:220px;overflow:auto;font-size:13.5px}
+.hist p{margin:0;padding:5px 0;border-bottom:1px solid var(--line)}
+.hist time{color:var(--muted);font-size:12.5px;display:block}
+.alerts{display:grid;gap:10px;margin-bottom:16px}
+.alert{border:1px solid var(--line);border-left:4px solid var(--signal);border-radius:var(--r);background:#fff;padding:12px 16px}
+.alert.crit{border-left-color:var(--danger)}
+.alert.ok{border-left-color:var(--ok)}
+.alert h4{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px}
+.alert h4 .n{background:var(--signal);color:#fff;font-size:12px;font-weight:700;border-radius:99px;padding:0 8px;min-width:20px;text-align:center;display:inline-block}
+.alert.crit h4 .n{background:var(--danger)}
+.alert ul{margin:4px 0 0;padding-left:18px;font-size:13.5px}
+.alert ul li{margin:2px 0}
+.alert ul a,.alert ul span.lnk{color:var(--accent-d);cursor:pointer;text-decoration:underline;font-weight:500}
+.sync{display:inline-flex;align-items:center;gap:5px}
+.sync .dot{width:7px;height:7px;border-radius:50%;background:#7C8B8F;flex:0 0 auto}
+.sync.on .dot{background:#3FD584}
+.sync.off .dot{background:#F2C46B}
+.sync.err .dot{background:#E4685B}
+.bars{display:grid;gap:7px;margin:10px 0}
+.bars .brow{display:grid;grid-template-columns:minmax(90px,auto) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.bars .btrack{background:#E6ECEA;border-radius:4px;height:14px;overflow:hidden}
+.bars .bfill{height:100%;background:var(--accent);border-radius:4px}
+.bars .bfill.neg{background:var(--danger)}
+.bars .bval{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:6px 0 16px}
+.statgrid .sbox{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.statgrid .sbox strong{display:block;font-size:26px;color:var(--accent);letter-spacing:-.01em}
+.statgrid .sbox span{font-size:12.5px;color:var(--muted)}
+.simbox{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.simbox table{width:100%}
+.simbox td,.simbox th{padding:6px 8px;font-size:13px}
+.simbox .win{color:var(--ok);font-weight:600}
+@media print{header,.bar,#liq-form,#liq-list,.actions,.checks,.no-print,#toast{display:none!important}body{background:#fff}main{padding:0;max-width:none}.card{border:0}.cols.liq{display:block}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ciclo del empleado</h1>
+  <nav class="tabs" aria-label="Secciones">
+    <button data-act="tab" data-tab="emp">Empleados</button>
+    <button data-act="tab" data-tab="liq">Liquidación</button>
+    <button data-act="tab" data-tab="est">Historial y estadística</button>
+    <button data-act="tab" data-tab="par">Parámetros</button>
+  </nav>
+  <div class="hdr-right">
+    <span id="sync" class="sync off"><span class="dot"></span><span id="sync-txt">Sin sincronización</span></span>
+    <span id="respaldo"></span>
+    <button class="btn sm" data-act="export">Exportar respaldo</button>
+    <label class="btn sm" style="cursor:pointer">Importar<input type="file" id="imp" accept="application/json,.json" hidden></label>
+  </div>
+</header>
+<main>
+  <section class="view" id="v-emp"></section>
+  <section class="view" id="v-liq" hidden></section>
+  <section class="view" id="v-est" hidden></section>
+  <section class="view" id="v-par" hidden></section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- SDK de Firebase (gratis, plan Spark). Si no hay conexión a internet o no está configurado,
+     la app sigue funcionando 100% con localStorage, solo sin sincronizar entre usuarios. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+//==LOGIC-START==
+const DAY = 864e5;
+const pd = s => new Date(s + 'T00:00:00');
+const r2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+const dias = (a, b) => Math.round((b - a) / DAY) + 1;                 // inclusive
+const fmtISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const ym = d => fmtISO(d).slice(0, 7);
+const mejor = (rem, desde, hasta) =>
+  Math.max(0, ...rem.filter(r => r.periodo >= desde && r.periodo <= hasta).map(r => +r.habitual || 0));
+const mesesEntre = (a, b) => {
+  let m = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth();
+  if (b.getDate() < a.getDate()) m--;
+  return m;
+};
+// Feriados nacionales de Argentina (inamovibles + trasladables + no laborables con fines turísticos).
+// Fuente 2026: Decreto 614/2025 y Resolución 164/2025 (Jefatura de Gabinete). 2027: fechas fijas confirmadas;
+// las trasladables de ago/oct/nov 2027 son estimadas según la regla de la Ley 27.399 y deben confirmarse cuando
+// el Gobierno publique la resolución anual (normalmente en diciembre del año anterior). Para sumar años nuevos,
+// agregá un array de fechas ISO 'YYYY-MM-DD' a este objeto.
+const FERIADOS_AR = {
+  2026: ['2026-01-01','2026-02-16','2026-02-17','2026-03-23','2026-03-24','2026-04-02','2026-04-03','2026-05-01',
+         '2026-05-25','2026-06-17','2026-06-20','2026-07-09','2026-07-10','2026-08-17','2026-10-12','2026-11-20',
+         '2026-12-07','2026-12-08','2026-12-25'],
+  2027: ['2027-01-01','2027-02-08','2027-02-09','2027-03-24','2027-03-26','2027-04-02','2027-05-01','2027-05-25',
+         '2027-06-17','2027-06-20','2027-07-09','2027-08-16','2027-10-11','2027-11-22','2027-12-08','2027-12-25'],
+};
+const feriadosSet = new Set(Object.values(FERIADOS_AR).flat());
+const esFeriado = iso => feriadosSet.has(iso);
+function addHabiles(s, n) {                                           // salta fines de semana y feriados nacionales
+  const d = pd(s); let c = 0;
+  while (c < n) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w !== 0 && w !== 6 && !esFeriado(fmtISO(d))) c++; }
+  return fmtISO(d);
+}
+
+const DEFAULT_P = {
+  vacaciones: [{ hasta: 5, dias: 14 }, { hasta: 10, dias: 21 }, { hasta: 20, dias: 28 }, { hasta: 999, dias: 35 }],
+  mesesPrueba: 6,
+  topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
+};
+
+// Último día del período de prueba (ingreso + N meses − 1 día)
+function finDePrueba(ingISO, meses) {
+  const i = pd(ingISO);
+  const d = new Date(i.getFullYear(), i.getMonth() + (+meses || 0), i.getDate());
+  d.setDate(d.getDate() - 1);
+  return fmtISO(d);
+}
+
+function calcularLiquidacion({ emp, rem, egreso, P }) {
+  const ing = pd(emp.fechaIngreso), f = pd(egreso.fecha), t = egreso.tipo;
+  const sueldo = +emp.sueldoActual || 0, v30 = sueldo / 30, v25 = sueldo / 25;
+  const C = [], avisos = [];
+  const add = (codigo, desc, monto, remunerativo = true) => { if (monto > 0.004) C.push({ codigo, desc, monto: r2(monto), remunerativo }); };
+
+  const antigReal = (f - ing) / (365.25 * DAY);
+  const meses = mesesEntre(ing, new Date(f.getTime() + DAY));
+  const anios = Math.floor(meses / 12) + (meses % 12 > 3 ? 1 : 0);      // fracción > 3 meses = 1 año
+  const mrnh = Math.max(mejor(rem, ym(new Date(f.getFullYear(), f.getMonth() - 11, 1)), ym(f)), sueldo);
+
+  // 1. Días trabajados del mes
+  const iniMes = new Date(f.getFullYear(), f.getMonth(), 1);
+  const dTrab = Math.min(30, dias(ing > iniMes ? ing : iniMes, f));
+  add('DIAS', `Días trabajados del mes (${dTrab})`, v30 * dTrab);
+
+  // 2. SAC proporcional
+  const s1 = f.getMonth() < 6;
+  const iniSem = new Date(f.getFullYear(), s1 ? 0 : 6, 1);
+  const finSem = new Date(f.getFullYear(), s1 ? 6 : 12, 0);
+  const mejorSem = Math.max(mejor(rem, ym(iniSem), ym(f)), sueldo);
+  add('SAC', 'SAC proporcional', mejorSem / 2 * dias(ing > iniSem ? ing : iniSem, f) / dias(iniSem, finSem));
+
+  // 3. Vacaciones no gozadas
+  const antig31 = (new Date(f.getFullYear(), 11, 31) - ing) / (365.25 * DAY);
+  const tramo = P.vacaciones.find(x => antig31 <= x.hasta) || P.vacaciones[P.vacaciones.length - 1];
+  const iniAnio = new Date(f.getFullYear(), 0, 1);
+  const diasAnio = dias(ing > iniAnio ? ing : iniAnio, f);
+  const diasVac = Math.max(0, tramo.dias * diasAnio / 365 - (+egreso.vacGozadasAnio || 0)) + (+egreso.vacPendientesAnt || 0);
+  add('VAC', `Vacaciones no gozadas (${diasVac.toFixed(2)} días)`, diasVac * v25);
+  add('SAC_VAC', 'SAC s/ vacaciones', diasVac * v25 / 12);
+
+  // 4. Preaviso (apagado por defecto: se activa a mano)
+  const enPrueba = f <= pd(finDePrueba(emp.fechaIngreso, P.mesesPrueba));
+  if (t === 'fin_prueba' && !enPrueba) avisos.push('La fecha de egreso es posterior al fin del período de prueba: corresponde tratarlo como despido sin causa.');
+  if (t === 'despido_sin_causa' && enPrueba) avisos.push('El egreso cae dentro del período de prueba: verificá si corresponde "Fin de período de prueba".');
+  let mesesPre = 0;
+  if (egreso.pagarPreaviso && (t === 'despido_sin_causa' || t === 'fin_prueba' || t === 'despido_indirecto')) {
+    mesesPre = t === 'fin_prueba' ? 0.5 : (antigReal <= 5 ? 1 : 2);
+    add('PREAVISO', `Preaviso sustitutivo (${mesesPre === 0.5 ? '15 días' : mesesPre + (mesesPre === 1 ? ' mes' : ' meses')})`, sueldo * mesesPre);
+    add('SAC_PRE', 'SAC s/ preaviso', sueldo * mesesPre / 12);
+  }
+
+  // 5. Integración del mes de despido (apagada por defecto)
+  if (egreso.pagarIntegracion && (t === 'despido_sin_causa' || t === 'despido_indirecto')) {
+    const diasMes = new Date(f.getFullYear(), f.getMonth() + 1, 0).getDate();
+    const integ = v30 * (diasMes - f.getDate());
+    add('INTEG', 'Integración mes de despido (art. 233)', integ);
+    add('SAC_INT', 'SAC s/ integración', integ / 12);
+  }
+
+  // 6. Indemnización por antigüedad (art. 245) — no remunerativa
+  let base245 = 0;
+  if (t === 'despido_sin_causa' || t === 'fallecimiento' || t === 'despido_indirecto') {
+    const tope = +P.topeCCT || 0;
+    base245 = tope > 0 ? Math.max(Math.min(mrnh, tope), mrnh * 0.67) : mrnh;
+    if (!(tope > 0)) avisos.push('Falta cargar el tope del CCT en Parámetros: la base del art. 245 no está topeada.');
+    const ind = Math.max(anios, 1) * base245 * (t === 'fallecimiento' ? 0.5 : 1);
+    add('IND245', `Indemnización por antigüedad (${anios} ${anios === 1 ? 'año' : 'años'}${t === 'fallecimiento' ? ', 50 %' : ''})`, ind, false);
+    if (t === 'despido_indirecto') avisos.push('Despido indirecto: se calculó como un despido sin causa (art. 246 LCT). Verificá que la injuria invocada por el empleado esté documentada.');
+  }
+  if (t === 'mutuo_acuerdo') add('ACUERDO', 'Suma acordada (art. 241)', +egreso.montoPactado || 0, false);
+  if (t === 'abandono_trabajo') avisos.push('Abandono de trabajo: se liquida como egreso sin indemnización. Verificá que se haya cursado la intimación previa a reintegrarse (art. 244 LCT) antes de dar por configurado el abandono.');
+  if (t === 'jubilacion') avisos.push('Retiro por jubilación: se liquida sin indemnización por antigüedad, asumiendo que el empleado reúne los requisitos para jubilarse. Si la empresa intimó a jubilarse antes de que estén cumplidos, corresponde indemnización reducida (arts. 252/253 LCT) y hay que calcularla aparte.');
+
+  const total = r2(C.reduce((s, c) => s + c.monto, 0));
+  return { conceptos: C, total, avisos,
+           meta: { mrnh: r2(mrnh), anios, meses, sueldo, base245: r2(base245), mesesPre, antigReal: +antigReal.toFixed(2) } };
+}
+//==LOGIC-END==
+
+/* ================= Almacenamiento local (gratis) =================
+   Todo vive en localStorage del navegador (y, si se configura, se copia cifrado a Cloudinary o Firebase). Respaldá con "Exportar respaldo".
+   Para migrar a Firestore/Supabase más adelante alcanza con reemplazar load() y save(). */
+const KEY = 'rrhh_ciclo_v1';
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* ================= Sincronización multiusuario (gratis, vía Firebase Firestore) =================
+   Es opcional: sin configurar, la app funciona igual que antes (solo en este navegador).
+   Cómo activarla (una sola vez, dura ~10 min y el plan gratuito de Firestore alcanza sobrado
+   para un equipo de HR de este tamaño — 1 GiB y 20.000 escrituras por día, gratis):
+   1. Andá a https://console.firebase.google.com → "Agregar proyecto" (gratis, plan Spark).
+   2. En el proyecto: "Compilación" → "Firestore Database" → "Crear base de datos" → modo producción.
+   3. "Compilación" → "Authentication" → "Comenzar" → habilitá el proveedor "Anónimo".
+   4. En Firestore → pestaña "Reglas", pegá esto y publicá:
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /{document=**} { allow read, write: if request.auth != null; }
+          }
+        }
+   5. En "Configuración del proyecto" → "Tus apps" → "</>" (Web) → registrá una app y copiá el
+      apiKey / authDomain / projectId / appId. Pegalos en Parámetros → "Sincronización multiusuario".
+   Todas las personas que carguen el mismo archivo HTML con esos mismos datos van a compartir la
+   misma base, en tiempo real. */
+const FB_KEY = 'rrhh_ciclo_fb_cfg';
+const localId = uidSync();
+function uidSync() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+let fbDb = null, fbReady = false, fbApplyingRemote = false;
+function fbConfig() { try { return JSON.parse(localStorage.getItem(FB_KEY) || 'null'); } catch (e) { return null; } }
+function setSync(state, txt) { const el = $('#sync'); if (!el) return; el.className = 'sync ' + state; const t = $('#sync-txt'); if (t) t.textContent = txt; }
+function fbDocRef() { const cfg = fbConfig(); return fbDb.collection(cfg.coleccion || 'rrhh_ciclo').doc(cfg.documento || 'datos'); }
+function fbInit() {
+  const cfg = fbConfig();
+  if (!cfg || !cfg.apiKey || !cfg.projectId || typeof firebase === 'undefined') { setSync('off', 'Sin sincronización'); return; }
+  try {
+    setSync('off', 'Conectando…');
+    const app = (firebase.apps && firebase.apps.length) ? firebase.apps[0] : firebase.initializeApp(cfg);
+    fbDb = firebase.firestore();
+    firebase.auth().signInAnonymously().then(() => {
+      fbReady = true;
+      fbDocRef().onSnapshot(snap => {
+        if (!snap.exists) { setSync('on', 'Sincronizado'); return; }
+        const data = snap.data();
+        if (!data || !data.json || data._local === localId) { setSync('on', 'Sincronizado'); return; }
+        fbApplyingRemote = true;
+        try {
+          S = normalize(JSON.parse(data.json));
+          try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+          if (UI.detail && !S.empleados.some(x => x.id === UI.detail)) UI.detail = null;
+          go(UI.tab); paintRespaldo(); toast('Se actualizaron los datos (cambios de otro usuario)');
+        } finally { fbApplyingRemote = false; }
+        setSync('on', 'Sincronizado');
+      }, () => setSync('err', 'Error de sincronización'));
+    }).catch(() => setSync('err', 'No se pudo autenticar en Firebase'));
+  } catch (e) { setSync('err', 'Configuración de Firebase inválida'); }
+}
+function fbDisconnect() { try { localStorage.removeItem(FB_KEY); } catch (e) {} fbDb = null; fbReady = false; setSync('off', 'Sin sincronización'); }
+function fbPush() {
+  if (!fbReady || !fbDb || fbApplyingRemote) return;
+  fbDocRef().set({ json: JSON.stringify(S), _local: localId, actualizado: new Date().toISOString() })
+    .then(() => setSync('on', 'Sincronizado')).catch(() => setSync('err', 'No se pudo sincronizar (quedó guardado en este navegador)'));
+}
+/* ================= Nube con Cloudinary (cifrada de punta a punta) =================
+   Guarda una copia de TODOS los datos como un archivo JSON "raw" en tu cuenta de Cloudinary.
+   Antes de subirlo se cifra en este navegador (AES-256-GCM, clave derivada con PBKDF2) usando la
+   clave que definas en Parámetros: en Cloudinary solo queda texto ilegible, aunque alguien tenga el link.
+   Configuración de Cloudinary (una sola vez):
+   1. Creá una cuenta gratis en https://cloudinary.com y copiá el "Cloud name" (Dashboard).
+   2. Settings (engranaje) → Upload → "Upload presets" → "Add upload preset":
+        - Signing mode: Unsigned
+        - Use filename or externally defined Public ID: activado
+        - Unique filename: desactivado
+        - Overwrite: activado
+        - Invalidate (Advanced): activado, si aparece
+        - Folder: vacío
+      Guardá y copiá el nombre del preset.
+   3. Pegá cloud name, preset y una clave de cifrado en Parámetros → "Guardado en la nube (Cloudinary)".
+   Limitaciones: Cloudinary es almacenamiento de archivos, no una base de datos. Gana el último que guarda
+   (no hay fusión de cambios) y el CDN puede tardar unos minutos en mostrar la versión nueva a otros usuarios. */
+const CL_KEY = 'rrhh_ciclo_cl_cfg', CL_META = 'rrhh_ciclo_cl_meta';
+let clReady = false, clBusy = false, clTimer = null, clPoll = null, clRev = 0, clApplyingRemote = false;
+function clConfig() { try { return JSON.parse(localStorage.getItem(CL_KEY) || 'null'); } catch (e) { return null; } }
+function clMeta() { try { return JSON.parse(localStorage.getItem(CL_META) || '{}') || {}; } catch (e) { return {}; } }
+function setClMeta(m) { try { localStorage.setItem(CL_META, JSON.stringify(Object.assign(clMeta(), m))); } catch (e) {} }
+function clPublicId(cfg) { return ((cfg.archivo || 'rrhh_ciclo/datos').replace(/\.json$/i, '').replace(/^\/+/, '').replace(/[^\w\-\/]/g, '_') || 'rrhh_ciclo/datos') + '.json'; }
+function clUrl(cfg) { return `https://res.cloudinary.com/${encodeURIComponent(cfg.cloudName)}/raw/upload/${clPublicId(cfg)}`; }
+const clHora = () => new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+const b64 = buf => { const a = new Uint8Array(buf); let t = ''; for (let i = 0; i < a.length; i += 0x8000) t += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(t); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function clKey(pass, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function clEncrypt(text, pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await clKey(pass, salt), new TextEncoder().encode(text));
+  return { salt: b64(salt), iv: b64(iv), data: b64(ct) };
+}
+async function clDecrypt(env, pass) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, await clKey(pass, unb64(env.salt)), unb64(env.data));
+  return new TextDecoder().decode(pt);
+}
+function clPush() {                                                   // subida con demora de 1,5 s para juntar cambios seguidos
+  if (!clConfig() || clApplyingRemote) return;
+  clRev++; setClMeta({ dirty: true }); setSync('off', 'Cambios sin subir a Cloudinary…');
+  clearTimeout(clTimer); clTimer = setTimeout(clUpload, 1500);
+}
+async function clUpload() {
+  const cfg = clConfig(); if (!cfg) return;
+  if (clBusy) { clearTimeout(clTimer); clTimer = setTimeout(clUpload, 1500); return; }
+  clBusy = true; const rev = clRev; setSync('off', 'Subiendo a Cloudinary…');
+  try {
+    if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
+    const stamp = new Date().toISOString();
+    const env = Object.assign({ v: 1, actualizado: stamp, _local: localId }, await clEncrypt(JSON.stringify(S), cfg.clave));
+    const fd = new FormData();
+    fd.append('file', new Blob([JSON.stringify(env)], { type: 'application/json' }), 'datos.json');
+    fd.append('upload_preset', cfg.uploadPreset);
+    fd.append('public_id', clPublicId(cfg));
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloudName)}/raw/upload`, { method: 'POST', body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+    clReady = true;
+    if (rev === clRev) { setClMeta({ dirty: false, lastRemote: stamp }); setSync('on', 'Guardado en Cloudinary ' + clHora()); }
+    else { setClMeta({ lastRemote: stamp }); clearTimeout(clTimer); clTimer = setTimeout(clUpload, 300); }
+  } catch (e) { setSync('err', ('Cloudinary: ' + (e.message || 'no se pudo subir') + ' (quedó guardado en este navegador)').slice(0, 140)); }
+  finally { clBusy = false; }
+}
+// mode: 'first' (al abrir/conectar), 'auto' (sondeo periódico), 'force' (botón "Traer ahora")
+async function clPull(mode = 'auto') {
+  const cfg = clConfig(); if (!cfg || clBusy) return;
+  const meta = clMeta();
+  if (mode === 'auto' && meta.dirty) return;
+  try {
+    const r = await fetch(clUrl(cfg) + '?t=' + Date.now(), { cache: 'no-store' });
+    if (r.status === 404) {
+      clReady = true;
+      if (S.empleados.length) clPush(); else setSync('on', 'Conectado a Cloudinary (todavía no hay datos en la nube)');
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const env = await r.json();
+    clReady = true;
+    const propio = env._local === localId;
+    const viejo = mode !== 'force' && env.actualizado && meta.lastRemote && env.actualizado <= meta.lastRemote;
+    if (propio || viejo) { setSync('on', 'Sincronizado con Cloudinary'); return; }
+    let data;
+    try { data = JSON.parse(await clDecrypt(env, cfg.clave)); } catch (e) { setSync('err', 'Cloudinary: clave incorrecta o archivo dañado'); return; }
+    if (!data || !Array.isArray(data.empleados)) { setSync('err', 'Cloudinary: el archivo de la nube no tiene el formato esperado'); return; }
+    if (mode === 'auto' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;   // no pisar lo que se está tipeando
+    const sinSync = !meta.lastRemote && S.empleados.length > 0;
+    if (mode === 'force') {
+      if (!confirm(`Se van a reemplazar los datos de este navegador por los de la nube (${data.empleados.length} empleados). ¿Continuar?`)) return;
+    } else if (meta.dirty || sinSync) {
+      const ok = confirm(`En la nube hay datos (${data.empleados.length} empleados) distintos a los de este navegador.\n\nAceptar: usar los de la nube y descartar los de este navegador.\nCancelar: conservar los de este navegador y reemplazar los de la nube.\n\nSi dudás, cancelá, exportá un respaldo y volvé a intentar.`);
+      if (!ok) { clPush(); return; }
+    }
+    clApplyingRemote = true;
+    try {
+      S = normalize(data);
+      try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+      if (UI.detail && UI.detail !== 'new' && !S.empleados.some(x => x.id === UI.detail)) UI.detail = null;
+      go(UI.tab); paintRespaldo();
+    } finally { clApplyingRemote = false; }
+    setClMeta({ lastRemote: env.actualizado, dirty: false });
+    setSync('on', 'Sincronizado con Cloudinary'); toast('Datos actualizados desde la nube');
+  } catch (e) { setSync('err', ('Cloudinary: no se pudo leer (' + (e.message || 'sin conexión') + ')').slice(0, 140)); }
+}
+function clInit() {
+  clearInterval(clPoll);
+  const cfg = clConfig();
+  if (!cfg || !cfg.cloudName || !cfg.uploadPreset || !cfg.clave) return;
+  setSync('off', 'Conectando con Cloudinary…');
+  clPull('first').then(() => { if (clMeta().dirty) clPush(); });
+  clPoll = setInterval(() => { if (!document.hidden) clPull('auto'); }, 30000);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && clConfig()) clPull('auto'); });
+function clDisconnect() {
+  try { localStorage.removeItem(CL_KEY); localStorage.removeItem(CL_META); } catch (e) {}
+  clearInterval(clPoll); clearTimeout(clTimer); clReady = false; setSync('off', 'Sin sincronización');
+}
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), lastExport: null });
+function normalize(d) {
+  const b = Object.assign(blank(), d);
+  b.parametros = Object.assign(clone(DEFAULT_P), b.parametros);
+  delete b.parametros.aportes;
+  return b;
+}
+function load() { try { const r = localStorage.getItem(KEY); if (r) return normalize(JSON.parse(r)); } catch (e) {} return blank(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('No se pudo guardar en el navegador. Exportá un respaldo ya.'); } fbPush(); clPush(); }
+let S = load();
+
+/* ================= Utilidades UI ================= */
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n || 0);
+const fdate = s => s ? s.split('-').reverse().join('/') : '—';
+const fper = s => s ? s.split('-').reverse().join('/') : '—';
+const today = () => fmtISO(new Date());
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+let toastT; function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2800); }
+
+/* ================= Gráficos livianos (SVG / barras CSS, sin librerías) ================= */
+function barras(items, { money: enPlata = false } = {}) {                 // items: [{label, value, neg}]
+  if (!items.length) return '<p class="muted" style="margin:0">Sin datos para mostrar.</p>';
+  const max = Math.max(1, ...items.map(i => Math.abs(i.value)));
+  return `<div class="bars">${items.map(i => `<div class="brow"><span>${esc(i.label)}</span><span class="btrack"><span class="bfill${i.neg ? ' neg' : ''}" style="width:${Math.max(2, Math.round(Math.abs(i.value) / max * 100))}%"></span></span><span class="bval">${enPlata ? money(i.value) : i.value}</span></div>`).join('')}</div>`;
+}
+function lineChart(points, { w = 560, h = 150, fmtY = n => n } = {}) {    // points: [{x:label, y:number}]
+  if (points.length < 2) return points.length === 1 ? `<p class="muted" style="margin:0">Solo hay un valor cargado (${esc(points[0].x)}: ${fmtY(points[0].y)}).</p>` : '<p class="muted" style="margin:0">Sin datos suficientes para el gráfico.</p>';
+  const pad = { l: 54, r: 12, t: 12, b: 26 };
+  const ys = points.map(p => p.y), yMin = Math.min(0, ...ys), yMax = Math.max(...ys) || 1;
+  const X = i => pad.l + (i / (points.length - 1)) * (w - pad.l - pad.r);
+  const Y = v => h - pad.b - ((v - yMin) / ((yMax - yMin) || 1)) * (h - pad.t - pad.b);
+  const pathPts = points.map((p, i) => `${X(i)},${Y(p.y)}`).join(' ');
+  const gridY = [yMin, (yMin + yMax) / 2, yMax];
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;max-height:220px" role="img" aria-label="Gráfico de evolución">
+    ${gridY.map(v => `<line x1="${pad.l}" y1="${Y(v)}" x2="${w - pad.r}" y2="${Y(v)}" stroke="#E6ECEA" stroke-width="1"/><text x="${pad.l - 8}" y="${Y(v) + 4}" font-size="10" text-anchor="end" fill="#5E7076">${esc(fmtY(v))}</text>`).join('')}
+    <polyline points="${pathPts}" fill="none" stroke="#0D6B58" stroke-width="2"/>
+    ${points.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="3" fill="#0D6B58"><title>${esc(p.x)}: ${esc(fmtY(p.y))}</title></circle>`).join('')}
+    ${points.map((p, i) => (i === 0 || i === points.length - 1 || points.length <= 8) ? `<text x="${X(i)}" y="${h - 6}" font-size="10" text-anchor="middle" fill="#5E7076">${esc(p.x)}</text>` : '').join('')}
+  </svg>`;
+}
+const log = (empleadoId, texto) => S.historial.push({ id: uid(), empleadoId, ts: new Date().toISOString(), texto });
+
+const ESTADOS = { candidato: 'Candidato', preingreso: 'Preingreso', activo: 'Activo', licencia: 'En licencia', egreso: 'Egreso en curso', liquidado: 'Liquidado', archivado: 'Archivado' };
+const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento' };
+const LIQ_ESTADOS = { borrador: 'Borrador', aprobada: 'Aprobada', pagada: 'Pagada', cerrada: 'Cerrada' };
+const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', preapto: 'Examen preocupacional', contrato: 'Registro / contrato firmado' };
+const SANC_TIPOS = ['Apercibimiento', 'Suspensión', 'Otra'];
+const LOCALES = ['BCP', 'BCBL', 'BCB', 'BCC', 'Tanta', 'La Mar'];
+const PUESTOS = ['Bacha A. Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almacen', 'Vigilancia', 'Supervision', 'Caja', 'Recepcion',
+  'Camarero', 'Camarero Jr', 'Corredor', 'Jefe de barra', 'Barra', 'Chef', 'Sous Chef', 'Cocina', 'Produccion', 'Volante',
+  'Valet Parking', 'Director', 'Auditora jefe', 'Auditora', 'RRHH', 'Mantenimiento', 'Gerente general', 'Gerente de compras',
+  'Compras', 'Jefa de administracion', 'Administracion'];
+const canonLocal = v => { v = (v || '').trim(); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
+const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e.estado));
+const totalDe = r => r.total ?? r.bruto;
+const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
+const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
+const UI = { tab: 'emp', detail: null, q: '', fe: '', liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '' };
+const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
+
+/* ================= Alertas del panel general ================= */
+function calcAlertas() {
+  const hoy = today(), lim = fmtISO(new Date(Date.now() + 15 * DAY));
+  const activos = enNomina();
+  const prueba = activos.filter(e => { const fp = finPruebaDe(e); return fp && fp >= hoy && fp <= lim; }).sort((a, b) => finPruebaDe(a).localeCompare(finPruebaDe(b)));
+  const sinAlta = activos.filter(e => !e.alta);
+  const vLibreta = activos.filter(e => e.libretaSanitariaVenc && e.libretaSanitariaVenc >= hoy && e.libretaSanitariaVenc <= lim);
+  const vPreocup = activos.filter(e => e.preocupacionalVenc && e.preocupacionalVenc >= hoy && e.preocupacionalVenc <= lim);
+  const vencidos = activos.filter(e => (e.libretaSanitariaVenc && e.libretaSanitariaVenc < hoy) || (e.preocupacionalVenc && e.preocupacionalVenc < hoy));
+  const pend = S.liquidaciones.filter(l => l.estado === 'borrador' || l.estado === 'aprobada');
+  const bands = { d60: [], d30: [], d15: [] };
+  pend.forEach(l => {
+    const venc = addHabiles(l.inputs.fecha, 4);
+    if (venc >= hoy) return;
+    const atraso = Math.round((pd(hoy) - pd(venc)) / DAY);
+    const item = { l, emp: S.empleados.find(x => x.id === l.empleadoId), atraso };
+    if (atraso >= 60) bands.d60.push(item); else if (atraso >= 30) bands.d30.push(item); else if (atraso >= 15) bands.d15.push(item);
+  });
+  return { prueba, sinAlta, vLibreta, vPreocup, vencidos, bands };
+}
+function renderAlertas() {
+  const A = calcAlertas();
+  const liqCount = A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
+  const total = A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vPreocup.length + A.vencidos.length + liqCount;
+  if (!total) return '';
+  const empLink = e => `<span class="lnk" data-act="openEmp" data-id="${e.id}">${esc(e.apellido)}, ${esc(e.nombre)}</span>`;
+  const liqLink = (l, txt) => `<span class="lnk" data-act="openLiq" data-id="${l.id}">${esc(txt)}</span>`;
+  const blocks = [];
+  if (A.prueba.length) blocks.push(`<div class="alert"><h4><span class="n">${A.prueba.length}</span>Fin de período de prueba en los próximos 15 días</h4><ul>${A.prueba.map(e => `<li>${empLink(e)} — vence ${fdate(finPruebaDe(e))}</li>`).join('')}</ul></div>`);
+  if (A.sinAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.sinAlta.length}</span>Empleados en nómina sin alta cargada</h4><ul>${A.sinAlta.map(e => `<li>${empLink(e)}</li>`).join('')}</ul></div>`);
+  const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vPreocup.map(e => ({ e, tipo: 'Examen preocupacional', f: e.preocupacionalVenc }))];
+  if (venc.length) blocks.push(`<div class="alert"><h4><span class="n">${venc.length}</span>Vencimientos de legajo en los próximos 15 días</h4><ul>${venc.map(v => `<li>${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}</li>`).join('')}</ul></div>`);
+  if (A.vencidos.length) blocks.push(`<div class="alert crit"><h4><span class="n">${A.vencidos.length}</span>Vencimientos de legajo ya vencidos</h4><ul>${A.vencidos.map(e => `<li>${empLink(e)}${e.libretaSanitariaVenc && e.libretaSanitariaVenc < today() ? ` — Libreta sanitaria venció ${fdate(e.libretaSanitariaVenc)}` : ''}${e.preocupacionalVenc && e.preocupacionalVenc < today() ? ` — Preocupacional venció ${fdate(e.preocupacionalVenc)}` : ''}</li>`).join('')}</ul></div>`);
+  if (liqCount) {
+    const grp = arr => arr.map(it => liqLink(it.l, `${it.emp ? it.emp.apellido + ', ' + it.emp.nombre : '—'} (${it.atraso} días)`)).join(', ');
+    blocks.push(`<div class="alert crit"><h4><span class="n">${liqCount}</span>Liquidaciones con el plazo de pago vencido (art. 128 LCT)</h4><ul>
+      ${A.bands.d60.length ? `<li><b>Más de 2 meses de atraso:</b> ${grp(A.bands.d60)}</li>` : ''}
+      ${A.bands.d30.length ? `<li><b>Más de 1 mes de atraso:</b> ${grp(A.bands.d30)}</li>` : ''}
+      ${A.bands.d15.length ? `<li><b>Más de 15 días de atraso:</b> ${grp(A.bands.d15)}</li>` : ''}
+    </ul></div>`);
+  }
+  return `<div class="alerts">${blocks.join('')}</div>`;
+}
+
+function go(tab) {
+  UI.tab = tab;
+  $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
+  $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
+  ({ emp: renderEmp, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  window.scrollTo(0, 0);
+}
+function paintRespaldo() {
+  const el = $('#respaldo');
+  if (!S.lastExport) { el.innerHTML = '<span class="warn">Sin respaldo todavía</span>'; return; }
+  const dd = Math.floor((Date.now() - new Date(S.lastExport)) / DAY);
+  el.innerHTML = dd > 7 ? `<span class="warn">Último respaldo hace ${dd} días</span>` : `Respaldo: ${fdate(S.lastExport.slice(0, 10))}`;
+}
+
+/* ================= Empleados ================= */
+function renderEmp() {
+  if (UI.detail) return renderDetail();
+  $('#v-emp').innerHTML = `
+    ${renderAlertas()}
+    <div class="bar">
+      <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
+      <select id="fe" style="width:auto" aria-label="Filtrar por estado"><option value="">Todos los estados</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
+    </div>
+    <div class="card tablewrap"><table class="grid"><thead><tr><th>Legajo</th><th>Nombre</th><th>Local</th><th>Puesto</th><th>Ingreso</th><th>Fin de prueba</th><th title="N = alta normal, S = alta especial">Alta</th><th>Estado</th></tr></thead><tbody id="emp-rows"></tbody></table></div>
+    <p class="muted">Alta: N = normal, S = especial. Vacío = sin alta.</p>`;
+  paintRows();
+}
+function paintRows() {
+  const q = UI.q.toLowerCase();
+  const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || `${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`.toLowerCase().includes(q)))
+    .sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td></tr>`).join('')
+    : `<tr><td colspan="8" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
+}
+
+function renderDetail() {
+  const isNew = UI.detail === 'new';
+  const e = isNew ? { estado: 'preingreso', modalidad: 'indeterminado', docs: {} } : S.empleados.find(x => x.id === UI.detail);
+  if (!e) { UI.detail = null; return renderEmp(); }
+  const inp = (label, name, type = 'text', ex = '', cls = '') => `<label class="fld ${cls}"><span>${label}</span><input name="${name}" type="${type}" value="${esc(e[name] ?? '')}" ${ex}></label>`;
+  const sel = (label, name, opts) => `<label class="fld"><span>${label}</span><select name="${name}">${Object.entries(opts).map(([k, v]) => `<option value="${k}" ${e[name] === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+  const rem = S.remuneraciones.filter(r => r.empleadoId === e.id).sort((a, b) => b.periodo.localeCompare(a.periodo));
+  const vac = S.vacaciones.filter(v => v.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
+  const lic = S.licencias.filter(l => l.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
+  const sanc = S.sanciones.filter(s => s.empleadoId === e.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const his = S.historial.filter(h => h.empleadoId === e.id).sort((a, b) => b.ts.localeCompare(a.ts));
+  const liqs = S.liquidaciones.filter(l => l.empleadoId === e.id);
+  const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
+
+  $('#v-emp').innerHTML = `
+  <div class="bar"><button class="btn" data-act="back">Volver a empleados</button>
+    ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
+    ${!isNew && canEgreso ? `<button class="btn primary" style="margin-left:auto" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
+  <div class="cols">
+   <form class="card" id="emp-form" onsubmit="return false">
+    <div class="sub">Datos personales</div>
+    <div class="frm">
+      ${inp('Nombre', 'nombre')}${inp('Apellido', 'apellido')}
+      ${inp('DNI', 'dni', 'text', 'inputmode="numeric"')}${inp('CUIL', 'cuil', 'text', 'inputmode="numeric" placeholder="20-12345678-3"')}
+      ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${inp('Teléfono', 'tel', 'tel')}
+      ${inp('Email', 'email', 'email')}${inp('Domicilio', 'domicilio')}
+      ${inp('Contacto de emergencia', 'emergenciaNombre')}${inp('Teléfono de emergencia', 'emergenciaTel', 'tel')}
+      ${inp('CBU / alias', 'cbu')}${inp('Banco', 'banco')}
+    </div>
+    <div class="sub">Datos laborales</div>
+    <div class="frm">
+      ${inp('Legajo', 'legajo', 'text', 'placeholder="Automático si lo dejás vacío"')}${sel('Estado', 'estado', ESTADOS)}
+      <label class="fld"><span>Local</span><input name="local" list="locales" value="${esc(e.local ?? '')}"></label>
+      <label class="fld"><span>Puesto</span><select name="puesto"><option value="">Elegí un puesto</option>${(e.puesto && !PUESTOS.includes(e.puesto) ? [e.puesto] : []).concat(PUESTOS).map(p => `<option value="${esc(p)}" ${e.puesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
+      ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
+    </div>
+    <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
+    <div class="sub">Documentación de ingreso</div>
+    <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
+    <div class="frm" style="margin-top:12px">
+      ${inp('Vencimiento libreta sanitaria', 'libretaSanitariaVenc', 'date')}${inp('Vencimiento examen preocupacional', 'preocupacionalVenc', 'date')}
+    </div>
+    <div style="margin-top:18px;display:flex;gap:8px">
+      <button class="btn primary" type="button" data-act="saveEmp">${isNew ? 'Crear empleado' : 'Guardar cambios'}</button>
+      ${!isNew && !['liquidado', 'archivado'].includes(e.estado) && !liqs.length ? `<button class="btn danger" type="button" data-act="delEmp">Eliminar legajo</button>` : ''}
+    </div>
+   </form>
+   ${isNew ? '<div class="card muted">Cargá los datos y creá el legajo. Después vas a poder registrar remuneraciones, vacaciones, licencias y el egreso.</div>' : `
+   <div class="stack">
+    <div class="card"><h3>Remuneración normal y habitual por mes</h3>
+      <p class="muted" style="margin-top:0">Se usa para la mejor remuneración (art. 245) y el SAC.</p>
+      ${lineChart(rem.slice().sort((a, b) => a.periodo.localeCompare(b.periodo)).map(r => ({ x: fper(r.periodo), y: r.habitual })), { fmtY: n => money(n) })}
+      <div class="row" style="margin-top:12px"><label class="fld"><span>Período</span><input type="month" id="r-per"></label><label class="fld"><span>Monto</span><input type="number" id="r-val" step="0.01" min="0"></label><button class="btn" data-act="addRem">Agregar</button></div>
+      ${rem.length ? `<table style="margin-top:10px"><tbody>${rem.slice(0, 12).map(r => `<tr><td>${fper(r.periodo)}</td><td class="num">${money(r.habitual)}</td><td class="num"><button class="btn sm danger" data-act="delRem" data-id="${r.id}" aria-label="Quitar ${fper(r.periodo)}">Quitar</button></td></tr>`).join('')}</tbody></table>${rem.length > 12 ? `<p class="muted">Se muestran los últimos 12 de ${rem.length}.</p>` : ''}` : ''}
+    </div>
+    <div class="card"><h3>Vacaciones gozadas</h3>
+      <div class="row"><label class="fld"><span>Desde</span><input type="date" id="v-desde"></label><label class="fld"><span>Hasta</span><input type="date" id="v-hasta"></label><button class="btn" data-act="addVac">Agregar</button></div>
+      ${vac.length ? `<table style="margin-top:10px"><tbody>${vac.map(v => `<tr><td>${fdate(v.desde)} al ${fdate(v.hasta)}</td><td class="num">${v.dias} días</td><td class="num"><button class="btn sm danger" data-act="delVac" data-id="${v.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
+    </div>
+    <div class="card"><h3>Licencias y ausencias</h3>
+      <div class="row"><label class="fld"><span>Tipo</span><select id="li-tipo">${['Enfermedad', 'Accidente', 'Maternidad / paternidad', 'Estudio', 'Sin goce de sueldo', 'Otra'].map(t => `<option>${t}</option>`).join('')}</select></label><label class="fld"><span>Desde</span><input type="date" id="li-desde"></label><label class="fld"><span>Hasta</span><input type="date" id="li-hasta"></label><button class="btn" data-act="addLic">Agregar</button></div>
+      ${lic.length ? `<table style="margin-top:10px"><tbody>${lic.map(l => `<tr><td>${esc(l.tipo)}</td><td>${fdate(l.desde)} al ${fdate(l.hasta)}</td><td class="num"><button class="btn sm danger" data-act="delLic" data-id="${l.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
+    </div>
+    <div class="card"><h3>Sanciones y apercibimientos</h3>
+      <div class="row"><label class="fld"><span>Tipo</span><select id="sa-tipo">${SANC_TIPOS.map(t => `<option>${t}</option>`).join('')}</select></label><label class="fld"><span>Fecha</span><input type="date" id="sa-fecha" value="${today()}"></label><label class="fld"><span>Días (si es suspensión)</span><input type="number" id="sa-dias" min="0" step="1" value="0"></label><button class="btn" data-act="addSancion">Agregar</button></div>
+      <label class="fld full" style="margin-top:8px"><span>Motivo</span><input type="text" id="sa-motivo" placeholder="Descripción breve"></label>
+      ${sanc.length ? `<table style="margin-top:10px"><tbody>${sanc.map(s => `<tr><td>${fdate(s.fecha)}</td><td>${esc(s.tipo)}${s.tipo === 'Suspensión' && s.dias ? ` (${s.dias} días)` : ''}<div class="muted">${esc(s.motivo || '')}</div></td><td class="num"><button class="btn sm danger" data-act="delSancion" data-id="${s.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin-bottom:0">Sin sanciones registradas.</p>'}
+    </div>
+    ${liqs.length ? `<div class="card"><h3>Liquidaciones</h3><table><tbody>${liqs.map(l => `<tr><td>${fdate(l.inputs.fecha)}</td><td>${esc(TIPOS[l.inputs.tipo])}</td><td class="num">${money(totalDe(l.result))}</td><td>${LIQ_ESTADOS[l.estado]}</td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div class="card"><h3>Historial</h3><div class="hist">${his.length ? his.map(h => `<p><time>${new Date(h.ts).toLocaleString('es-AR')}</time>${esc(h.texto)}</p>`).join('') : '<p class="muted">Sin movimientos.</p>'}</div></div>
+   </div>`}
+  </div>`;
+}
+function keepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
+const empActual = () => S.empleados.find(x => x.id === UI.detail);
+
+/* ================= Liquidación ================= */
+const vacAuto = (empId, fecha) => S.vacaciones.filter(v => v.empleadoId === empId && String(v.anio) === String(fecha).slice(0, 4)).reduce((s, v) => s + v.dias, 0);
+const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
+
+function renderLiq() {
+  const L = UI.liq;
+  const liq = L && L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
+  if (L && L.id && !liq) UI.liq = null;
+  const Lc = UI.liq;
+  const emp = Lc ? S.empleados.find(x => x.id === Lc.empId) : null;
+  if (Lc && emp) { if (liq) Lc.inputs = clone(liq.inputs); else if (!Lc.inputs) Lc.inputs = defaultsLiq(emp); }
+  const inp = (Lc && Lc.inputs) || {};
+  const locked = !!liq && liq.estado !== 'borrador';
+  const dis = locked || !emp ? 'disabled' : '';
+  const elegibles = S.empleados.filter(e => ['activo', 'licencia', 'egreso'].includes(e.estado) || (emp && e.id === emp.id));
+  const mine = S.liquidaciones.slice().reverse();
+
+  $('#v-liq').innerHTML = `
+  <div class="cols liq">
+   <div class="stack">
+    <div class="card" id="liq-form">
+      <h2>Egreso</h2>
+      <label class="fld"><span>Empleado</span><select id="l-emp" ${liq ? 'disabled' : ''}><option value="">Elegí un empleado</option>${elegibles.map(e => `<option value="${e.id}" ${emp && e.id === emp.id ? 'selected' : ''}>${esc(e.apellido)}, ${esc(e.nombre)} (${esc(e.legajo)})</option>`).join('')}</select></label>
+      <div class="frm" style="grid-template-columns:1fr;margin-top:12px">
+        <label class="fld"><span>Tipo de egreso</span><select id="l-tipo" ${dis}>${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${inp.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label class="fld"><span>Fecha de egreso</span><input type="date" id="l-fecha" value="${esc(inp.fecha || '')}" ${dis}></label>
+        <label class="fld" id="row-monto" hidden><span>Monto acordado</span><input type="number" id="l-monto" step="0.01" min="0" value="${inp.montoPactado || 0}" ${dis}></label>
+      </div>
+      <label class="sw" id="row-prea"><input type="checkbox" id="l-prea" ${inp.pagarPreaviso ? 'checked' : ''} ${dis}><span class="knob"></span>Pagar preaviso</label>
+      <label class="sw" id="row-integ"><input type="checkbox" id="l-integ" ${inp.pagarIntegracion ? 'checked' : ''} ${dis}><span class="knob"></span>Pagar integración del mes (art. 233)</label>
+      <div class="frm" style="margin-top:12px">
+        <label class="fld"><span>Vacaciones gozadas este año (días)</span><input type="number" id="l-vg" step="0.01" min="0" value="${inp.vacGozadas ?? 0}" ${dis}></label>
+        <label class="fld"><span>Vacaciones pendientes de años anteriores (días)</span><input type="number" id="l-vp" step="0.01" min="0" value="${inp.vacPend ?? 0}" ${dis}></label>
+      </div>
+    </div>
+    <div class="card" id="liq-list"><h3>Liquidaciones guardadas</h3>
+      ${mine.length ? `<table><tbody>${mine.map(l => { const em = S.empleados.find(x => x.id === l.empleadoId); return `<tr><td>${esc(em ? em.apellido + ', ' + em.nombre : '—')}<div class="muted">${fdate(l.inputs.fecha)} · ${esc(TIPOS[l.inputs.tipo])}</div></td><td class="num">${money(totalDe(l.result))}<div class="muted">${LIQ_ESTADOS[l.estado]}</div></td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`; }).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Todavía no guardaste ninguna.</p>'}
+    </div>
+   </div>
+   <div class="card recibo" id="liq-res"></div>
+  </div>`;
+  updateLiq();
+}
+
+function readLiqForm() {
+  return { tipo: $('#l-tipo').value, fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
+    montoPactado: +$('#l-monto').value || 0, vacGozadas: +$('#l-vg').value || 0, vacPend: +$('#l-vp').value || 0 };
+}
+
+function updateLiq() {
+  const L = UI.liq, box = $('#liq-res');
+  if (!L || !L.empId) { $('#row-monto').hidden = true; $('#row-prea').hidden = true; $('#row-integ').hidden = true; box.innerHTML = '<div class="msg">Elegí un empleado para calcular su liquidación final.</div>'; return; }
+  const emp = S.empleados.find(x => x.id === L.empId);
+  const liq = L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
+  const locked = !!liq && liq.estado !== 'borrador';
+  if (!locked) L.inputs = readLiqForm();
+  const inp = L.inputs;
+  $('#row-monto').hidden = inp.tipo !== 'mutuo_acuerdo';
+  $('#row-prea').hidden = !['despido_sin_causa', 'fin_prueba', 'despido_indirecto'].includes(inp.tipo);
+  $('#row-integ').hidden = !['despido_sin_causa', 'despido_indirecto'].includes(inp.tipo);
+
+  let res;
+  if (locked) res = liq.result;
+  else {
+    L.res = null;
+    if (!emp.fechaIngreso) { box.innerHTML = '<div class="msg">Falta la fecha de ingreso del empleado. Cargala en su legajo.</div>'; return; }
+    if (!(+emp.sueldoActual > 0)) { box.innerHTML = '<div class="msg">Falta el sueldo mensual normal y habitual del empleado. Cargalo en su legajo.</div>'; return; }
+    if (!inp.fecha) { box.innerHTML = '<div class="msg">Elegí la fecha de egreso.</div>'; return; }
+    if (pd(inp.fecha) < pd(emp.fechaIngreso)) { box.innerHTML = '<div class="msg">La fecha de egreso es anterior a la fecha de ingreso.</div>'; return; }
+    res = calcularLiquidacion({ emp, rem: S.remuneraciones.filter(r => r.empleadoId === emp.id),
+      egreso: { tipo: inp.tipo, fecha: inp.fecha, pagarPreaviso: inp.pagarPreaviso, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend },
+      P: S.parametros });
+    L.res = res;
+  }
+  const hab = res.conceptos.filter(c => c.remunerativo), nor = res.conceptos.filter(c => !c.remunerativo);
+  const est = liq ? liq.estado : 'borrador';
+  const vence = addHabiles(inp.fecha, 4);
+  let simHtml = '';
+  if (!locked && ['despido_sin_causa', 'fin_prueba', 'despido_indirecto'].includes(inp.tipo)) {
+    const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend };
+    const remEmp = S.remuneraciones.filter(r => r.empleadoId === emp.id);
+    const sinP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: false }, P: S.parametros });
+    const conP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: true }, P: S.parametros });
+    const dif = r2(conP.total - sinP.total);
+    simHtml = `<div class="simbox"><h3 style="margin-bottom:6px">Simulador: con vs. sin preaviso</h3>
+      <p class="muted" style="margin-top:0">Compara el total a pagar activando o no el preaviso sustitutivo, sin cambiar lo que tenés cargado arriba.</p>
+      <table><thead><tr><th></th><th class="num">Sin preaviso</th><th class="num">Con preaviso</th></tr></thead><tbody>
+        <tr><td>Total liquidación</td><td class="num">${money(sinP.total)}</td><td class="num">${money(conP.total)}</td></tr>
+        <tr><td>Diferencia</td><td class="num" colspan="2" style="text-align:right">${money(dif)} adicional pagando preaviso</td></tr>
+      </tbody></table></div>`;
+  }
+  let acciones = '';
+  if (est === 'borrador') acciones = `<div class="actions"><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
+  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>Medio</span><select id="pay-medio"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select></label><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
+  else {
+    const c = liq.cierre || {}, ok = c.recibo && c.art80 && c.baja;
+    acciones = `<div class="checks"><h3>Cierre del legajo</h3>
+      <label><input type="checkbox" data-cierre="recibo" ${c.recibo ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Recibo firmado por el empleado</label>
+      <label><input type="checkbox" data-cierre="art80" ${c.art80 ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Certificado de trabajo (art. 80) entregado</label>
+      <label><input type="checkbox" data-cierre="baja" ${c.baja ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Baja informada en ARCA</label>
+      ${est === 'pagada' ? `<div style="margin-top:10px"><button class="btn primary" data-act="archiveLiq" ${ok ? '' : 'disabled'}>Archivar legajo</button></div>` : '<p class="muted">Legajo archivado.</p>'}</div>
+      <div class="actions"><button class="btn" data-act="print">Imprimir recibo</button></div>`;
+  }
+  const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
+  box.innerHTML = `
+    <div class="rc-head"><h2>Liquidación final <span class="chip" style="vertical-align:middle;margin-left:6px">${LIQ_ESTADOS[est]}</span></h2>
+      <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span><span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span></div></div>
+    ${res.avisos.length ? `<div class="avisos">${res.avisos.map(a => `<p>${esc(a)}</p>`).join('')}</div>` : ''}
+    <table class="ledger"><tbody>
+      <tr class="sec"><td colspan="2">Haberes</td></tr>
+      ${hab.map(row).join('')}${nor.map(row).join('')}
+    </tbody></table>
+    <div class="neto"><span>Total a cobrar</span><strong>${money(totalDe(res))}</strong></div>
+    <div class="rc-foot">Mejor remuneración ${money(res.meta.mrnh)}, antigüedad ${res.meta.anios} ${res.meta.anios === 1 ? 'año' : 'años'} (${Math.floor(res.meta.meses / 12)} años y ${res.meta.meses % 12} meses). Plazo de pago (art. 128): ${fdate(vence)}, sin contar fines de semana ni feriados.${liq && liq.pago ? ` Pagada el ${fdate(liq.pago.fecha)} por ${esc(liq.pago.medio.toLowerCase())}.` : ''}</div>
+    ${acciones}${simHtml}`;
+}
+
+function persistLiq(estado) {
+  const L = UI.liq;
+  if (!L || !L.res) { toast('Completá los datos para poder calcular.'); return; }
+  const emp = S.empleados.find(x => x.id === L.empId);
+  let liq = L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
+  const nueva = !liq;
+  if (nueva) { liq = { id: uid(), empleadoId: emp.id, creada: today(), cierre: {}, pago: null }; S.liquidaciones.push(liq); L.id = liq.id; }
+  liq.inputs = clone(L.inputs); liq.result = clone(L.res); liq.parametros = clone(S.parametros); liq.estado = estado; liq.actualizada = today();
+  emp.estado = 'egreso'; emp.fechaEgreso = liq.inputs.fecha; emp.tipoEgreso = liq.inputs.tipo;
+  log(emp.id, `Liquidación ${nueva ? 'creada' : 'actualizada'} (${TIPOS[liq.inputs.tipo]}, egreso ${fdate(liq.inputs.fecha)}): ${LIQ_ESTADOS[estado].toLowerCase()}, total ${money(totalDe(liq.result))}`);
+  save(); renderLiq(); toast(estado === 'aprobada' ? 'Liquidación aprobada' : 'Borrador guardado');
+}
+function pickEmp(id) {
+  if (!id) { UI.liq = null; return renderLiq(); }
+  const ultima = S.liquidaciones.filter(l => l.empleadoId === id).slice(-1)[0];
+  UI.liq = ultima ? { id: ultima.id, empId: id } : { empId: id };
+  renderLiq();
+}
+function onLiqInput(t) {
+  if (t.id === 'l-emp') return pickEmp(t.value);
+  if (t.id === 'l-tipo') { $('#l-prea').checked = false; $('#l-integ').checked = false; }
+  if (t.id === 'l-fecha' && UI.liq && UI.liq.empId) $('#l-vg').value = vacAuto(UI.liq.empId, t.value);
+  updateLiq();
+}
+
+/* ================= Historial y estadística ================= */
+function renderEst() {
+  const locales = [...new Set([...LOCALES, ...S.empleados.map(e => (e.local || '').trim()).filter(Boolean)])];
+  const puestos = [...PUESTOS, ...new Set(S.empleados.map(e => e.puesto).filter(p => p && !PUESTOS.includes(p)))];
+  const emps = S.empleados.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
+  $('#v-est').innerHTML = `
+  <div class="stack">
+    <div class="card">
+      <h2>Cantidad de empleados</h2>
+      <div class="frm" style="max-width:640px">
+        <label class="fld"><span>Local</span><select id="st-local"><option value="">Todos los locales</option>${locales.map(l => `<option value="${esc(l)}" ${UI.stLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+        <label class="fld"><span>Puesto</span><select id="st-puesto"><option value="">Todos los puestos</option>${puestos.map(p => `<option value="${esc(p)}" ${UI.stPuesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      </div>
+      <div id="st-res"></div>
+      <p class="muted" style="margin-bottom:0">Se cuentan los empleados activos y en licencia.</p>
+    </div>
+    <div class="card">
+      <h2>Rotación por local (últimos 12 meses)</h2>
+      <label class="fld" style="max-width:280px"><span>Local</span><select id="st-rot-local">${locales.map(l => `<option value="${esc(l)}" ${UI.stRotLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      <div id="st-rot"></div>
+    </div>
+    <div class="card"><h2>Antigüedad promedio</h2><div id="st-antig"></div></div>
+    <div class="card"><h2>Motivos de egreso</h2><div id="st-motivos"></div></div>
+    <div class="card"><h2>Costo de liquidaciones por local</h2><p class="muted" style="margin-top:0">Suma de liquidaciones aprobadas, pagadas o cerradas.</p><div id="st-costo"></div></div>
+    <div class="card"><h2>Altas N y S por local</h2><div id="st-altas"></div></div>
+    <div class="card tablewrap">
+      <div style="padding:18px 18px 0"><h2>Historial de movimientos</h2>
+        <label class="fld" style="max-width:320px"><span>Empleado</span><select id="h-emp"><option value="">Todos los empleados</option>${emps.map(e => `<option value="${e.id}" ${UI.hEmp === e.id ? 'selected' : ''}>${esc(e.apellido)}, ${esc(e.nombre)}</option>`).join('')}</select></label></div>
+      <div id="h-res"></div>
+    </div>
+  </div>`;
+  paintEst(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintHist();
+}
+function paintEst() {
+  const l = UI.stLocal, p = UI.stPuesto, loc = e => (e.local || '').trim(), base = enNomina();
+  const n = base.filter(e => (!l || loc(e) === l) && (!p || e.puesto === p)).length;
+  const titulo = p && l ? `${p} en ${l}` : p ? `${p} en todos los locales` : l ? `Empleados en ${l}` : 'Total de empleados';
+  let cab = '', cuenta = {};
+  if (!p) { cab = 'Puesto'; base.filter(e => !l || loc(e) === l).forEach(e => { const k = e.puesto || 'Sin puesto'; cuenta[k] = (cuenta[k] || 0) + 1; }); }
+  else if (!l) { cab = 'Local'; base.filter(e => e.puesto === p).forEach(e => { const k = loc(e) || 'Sin local'; cuenta[k] = (cuenta[k] || 0) + 1; }); }
+  const filas = Object.entries(cuenta).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  $('#st-res').innerHTML = `<div class="stat"><strong>${n}</strong><span>${esc(titulo)}</span></div>` +
+    (filas.length ? `<table style="max-width:520px"><thead><tr><th>${cab}</th><th class="num">Cantidad</th></tr></thead><tbody>${filas.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v}</td></tr>`).join('')}</tbody></table>` : '');
+}
+function paintRotacion() {
+  const loc = UI.stRotLocal;
+  const meses = []; const d = new Date(); d.setDate(1);
+  for (let i = 11; i >= 0; i--) { const m = new Date(d.getFullYear(), d.getMonth() - i, 1); meses.push(ym(m)); }
+  const enLocal = e => (e.local || '').trim() === loc;
+  const altasPorMes = {}, bajasPorMes = {};
+  meses.forEach(m => { altasPorMes[m] = 0; bajasPorMes[m] = 0; });
+  S.empleados.filter(enLocal).forEach(e => { if (e.fechaIngreso) { const m = e.fechaIngreso.slice(0, 7); if (m in altasPorMes) altasPorMes[m]++; } });
+  S.liquidaciones.forEach(l => { const emp = S.empleados.find(x => x.id === l.empleadoId); if (emp && enLocal(emp) && l.inputs?.fecha) { const m = l.inputs.fecha.slice(0, 7); if (m in bajasPorMes) bajasPorMes[m]++; } });
+  const totAltas = Object.values(altasPorMes).reduce((s, v) => s + v, 0), totBajas = Object.values(bajasPorMes).reduce((s, v) => s + v, 0);
+  const max = Math.max(1, ...meses.map(m => Math.max(altasPorMes[m], bajasPorMes[m])));
+  $('#st-rot').innerHTML = `
+    <div class="legend"><span><i style="background:#0D6B58"></i>Ingresos (${totAltas})</span><span><i style="background:#B23A2B"></i>Egresos (${totBajas})</span></div>
+    <div style="display:grid;grid-template-columns:repeat(${meses.length},1fr);gap:5px;align-items:end;height:140px;padding-top:6px">
+      ${meses.map(m => `<div style="display:flex;gap:2px;align-items:end;height:100%;justify-content:center"><div title="Ingresos ${fper(m)}: ${altasPorMes[m]}" style="width:9px;background:#0D6B58;border-radius:2px 2px 0 0;height:${Math.max(2, altasPorMes[m] / max * 100)}%"></div><div title="Egresos ${fper(m)}: ${bajasPorMes[m]}" style="width:9px;background:#B23A2B;border-radius:2px 2px 0 0;height:${Math.max(2, bajasPorMes[m] / max * 100)}%"></div></div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${meses.length},1fr);gap:5px;margin-top:4px">${meses.map(m => `<div style="font-size:10px;color:var(--muted);text-align:center;writing-mode:vertical-rl">${m.slice(2)}</div>`).join('')}</div>`;
+}
+function paintAntig() {
+  const base = enNomina().filter(e => e.fechaIngreso);
+  if (!base.length) { $('#st-antig').innerHTML = '<p class="muted" style="margin:0">Sin datos.</p>'; return; }
+  const hoy = new Date();
+  const prom = base.reduce((s, e) => s + (hoy - pd(e.fechaIngreso)) / (365.25 * DAY), 0) / base.length;
+  $('#st-antig').innerHTML = `<div class="statgrid"><div class="sbox"><strong>${prom.toFixed(1)}</strong><span>años en promedio, sobre ${base.length} empleados activos</span></div></div>`;
+}
+function paintMotivos() {
+  const cuenta = {};
+  S.empleados.forEach(e => { if (e.tipoEgreso) cuenta[TIPOS[e.tipoEgreso] || e.tipoEgreso] = (cuenta[TIPOS[e.tipoEgreso] || e.tipoEgreso] || 0) + 1; });
+  const items = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  $('#st-motivos').innerHTML = barras(items);
+}
+function paintCosto() {
+  const cuenta = {};
+  S.liquidaciones.filter(l => ['aprobada', 'pagada', 'cerrada'].includes(l.estado)).forEach(l => {
+    const emp = S.empleados.find(x => x.id === l.empleadoId), k = (emp && emp.local) || 'Sin local';
+    cuenta[k] = (cuenta[k] || 0) + totalDe(l.result);
+  });
+  const items = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value: r2(value) }));
+  $('#st-costo').innerHTML = barras(items, { money: true });
+}
+function paintAltasNS() {
+  const locales = [...new Set([...LOCALES, ...S.empleados.map(e => (e.local || '').trim()).filter(Boolean)])];
+  const filas = locales.map(l => {
+    const emps = S.empleados.filter(e => (e.local || '').trim() === l);
+    return { local: l, N: emps.filter(e => e.alta === 'N').length, S: emps.filter(e => e.alta === 'S').length };
+  }).filter(f => f.N || f.S);
+  $('#st-altas').innerHTML = filas.length
+    ? `<div class="legend"><span><i style="background:#0D6B58"></i>Alta normal (N)</span><span><i style="background:#B23A2B"></i>Alta especial (S)</span></div>
+       <table><thead><tr><th>Local</th><th class="num">N</th><th class="num">S</th><th class="num">Total</th></tr></thead><tbody>${filas.map(f => `<tr><td>${esc(f.local)}</td><td class="num">${f.N}</td><td class="num">${f.S}</td><td class="num">${f.N + f.S}</td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted" style="margin:0">Sin altas cargadas todavía.</p>';
+}
+function paintHist() {
+  const todos = S.historial.filter(h => !UI.hEmp || h.empleadoId === UI.hEmp).sort((a, b) => b.ts.localeCompare(a.ts));
+  const nom = id => { const e = S.empleados.find(x => x.id === id); return e ? `${e.apellido}, ${e.nombre}` : '—'; };
+  $('#h-res').innerHTML = todos.length
+    ? `<table style="margin-top:12px"><thead><tr><th>Fecha</th><th>Empleado</th><th>Movimiento</th></tr></thead><tbody>${todos.slice(0, 300).map(h => `<tr><td style="white-space:nowrap">${new Date(h.ts).toLocaleString('es-AR')}</td><td>${esc(nom(h.empleadoId))}</td><td>${esc(h.texto)}</td></tr>`).join('')}</tbody></table>${todos.length > 300 ? `<p class="muted" style="padding:0 18px 14px">Se muestran los últimos 300 de ${todos.length}.</p>` : ''}`
+    : '<p class="empty">Todavía no hay movimientos registrados.</p>';
+}
+
+/* ================= Parámetros ================= */
+function renderPar() {
+  const P = S.parametros, num = (id, label, v, ex = 'step="0.01" min="0"') => `<label class="fld"><span>${label}</span><input type="number" id="${id}" value="${v}" ${ex}></label>`;
+  const cfg = fbConfig() || {}, clc = clConfig() || {};
+  const txt = (id, label, v, ph = '') => `<label class="fld"><span>${label}</span><input type="text" id="${id}" value="${esc(v || '')}" placeholder="${ph}"></label>`;
+  $('#v-par').innerHTML = `<div class="stack" style="max-width:720px">
+  <form class="card" onsubmit="return false">
+    <h2>Parámetros de liquidación</h2>
+    <p class="muted" style="margin-top:0">Cada liquidación guardada conserva una copia de los valores que se usaron.</p>
+    <div class="frm">
+      ${num('par-prueba', 'Período de prueba (meses)', P.mesesPrueba, 'step="1" min="0"')}
+      ${num('par-tope', 'Tope del art. 245 (3 × promedio CCT)', P.topeCCT)}
+    </div>
+    <div class="sub">Días de vacaciones por antigüedad</div>
+    <div class="frm">${num('par-v1', 'Hasta 5 años', P.vacaciones[0].dias, 'step="1" min="0"')}${num('par-v2', 'Más de 5 y hasta 10', P.vacaciones[1].dias, 'step="1" min="0"')}${num('par-v3', 'Más de 10 y hasta 20', P.vacaciones[2].dias, 'step="1" min="0"')}${num('par-v4', 'Más de 20 años', P.vacaciones[3].dias, 'step="1" min="0"')}</div>
+    <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
+  </form>
+  <form class="card" onsubmit="return false">
+    <h2>Guardado en la nube (Cloudinary) <span class="sync ${clReady ? 'on' : 'off'}" style="margin-left:6px;font-size:13px;font-weight:400"><span class="dot"></span>${clReady ? 'Conectado' : (clc.cloudName ? 'Sin conectar' : 'Sin configurar')}</span></h2>
+    <p class="muted" style="margin-top:0">Guarda una copia <b>cifrada</b> de todos los datos en tu cuenta de Cloudinary y la trae en cualquier navegador donde cargues esta misma configuración. El cifrado se hace en este navegador con la clave que elijas: en Cloudinary solo queda texto ilegible. <b>Si perdés la clave, los datos de la nube no se pueden recuperar</b>, así que seguí exportando respaldos. Si varias personas guardan a la vez, gana el último que guarda, y ver los cambios de otro usuario puede tardar unos minutos.</p>
+    <div class="frm">
+      ${txt('cl-cloud', 'Cloud name', clc.cloudName)}
+      ${txt('cl-preset', 'Upload preset (unsigned)', clc.uploadPreset)}
+      <label class="fld"><span>Clave de cifrado (mín. 8 caracteres)</span><input type="password" id="cl-clave" value="${esc(clc.clave || '')}" autocomplete="off"></label>
+      ${txt('cl-archivo', 'Nombre del archivo en la nube (opcional)', clc.archivo, 'rrhh_ciclo/datos')}
+    </div>
+    <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Cómo configurar Cloudinary (una sola vez)</summary>
+      <ol style="margin:8px 0 0;padding-left:20px">
+        <li>Creá una cuenta gratis en cloudinary.com y copiá el <b>Cloud name</b> del Dashboard.</li>
+        <li>Settings → Upload → <b>Upload presets</b> → Add upload preset.</li>
+        <li>Signing mode: <b>Unsigned</b>. Activá <b>Use filename or externally defined Public ID</b> y <b>Overwrite</b>; desactivá <b>Unique filename</b>; dejá <b>Folder</b> vacío. Si en Advanced aparece <b>Invalidate</b>, activalo.</li>
+        <li>Guardá el preset, copiá su nombre y pegalo acá junto con el Cloud name y una clave de cifrado. Los nombres de los menús pueden variar levemente.</li>
+        <li>En cada otro navegador o computadora, cargá los mismos cuatro datos (con la misma clave).</li>
+      </ol>
+    </details>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" type="button" data-act="clConectar">Guardar y conectar</button>
+      ${clc.cloudName ? '<button class="btn" type="button" data-act="clSubir">Subir ahora</button><button class="btn" type="button" data-act="clTraer">Traer ahora</button><button class="btn danger" type="button" data-act="clDesconectar">Desconectar</button>' : ''}
+    </div>
+  </form>
+  <form class="card" onsubmit="return false">
+    <h2>Sincronización multiusuario <span class="sync ${fbReady ? 'on' : 'off'}" style="margin-left:6px;font-size:13px;font-weight:400"><span class="dot"></span>${fbReady ? 'Sincronizado' : (cfg.apiKey ? 'Sin conectar' : 'Sin configurar')}</span></h2>
+    <p class="muted" style="margin-top:0">Para que varias personas usen el mismo legajo en tiempo real, gratis, con un proyecto propio de Firebase (plan Spark, sin costo para este volumen de datos). Los pasos están comentados arriba del bloque de sincronización en el código fuente del archivo.</p>
+    <div class="frm">
+      ${txt('fb-apiKey', 'apiKey', cfg.apiKey)}
+      ${txt('fb-authDomain', 'authDomain', cfg.authDomain, 'tu-proyecto.firebaseapp.com')}
+      ${txt('fb-projectId', 'projectId', cfg.projectId)}
+      ${txt('fb-appId', 'appId', cfg.appId)}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn primary" type="button" data-act="fbConectar">Guardar y conectar</button>
+      ${cfg.apiKey ? '<button class="btn danger" type="button" data-act="fbDesconectar">Desconectar</button>' : ''}
+    </div>
+  </form>
+  </div>`;
+}
+
+/* ================= Acciones ================= */
+const ACT = {
+  tab: b => { UI.detail = null; go(b.dataset.tab); },
+  newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
+  openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
+  back: () => { UI.detail = null; renderEmp(); },
+  saveEmp: () => {
+    const f = $('#emp-form'), d = Object.fromEntries(new FormData(f));
+    if (!d.nombre.trim() || !d.apellido.trim() || !d.dni.trim()) { toast('Nombre, apellido y DNI son obligatorios.'); return; }
+    const isNew = UI.detail === 'new';
+    const prev = isNew ? null : empActual();
+    const legajo = d.legajo.trim() || String(S.empleados.reduce((m, x) => Math.max(m, parseInt(x.legajo) || 0), 0) + 1).padStart(4, '0');
+    if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id))) { toast('Ya existe un legajo con ese número.'); return; }
+    const docs = {}; Object.keys(DOCS).forEach(k => docs[k] = f.elements['doc_' + k].checked);
+    const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
+      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
+      emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), puesto: d.puesto, alta: d.alta || '',
+      categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
+      libretaSanitariaVenc: d.libretaSanitariaVenc || '', preocupacionalVenc: d.preocupacionalVenc || '' });
+    if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
+    else {
+      const lab = { estado: 'Estado', local: 'Local', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', preocupacionalVenc: 'Vto. preocupacional' };
+      Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
+      Object.assign(prev, nuevo);
+    }
+    save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
+  },
+  delEmp: () => {
+    const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
+    ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial'].forEach(k => S[k] = S[k].filter(x => x.empleadoId !== e.id));
+    S.empleados = S.empleados.filter(x => x.id !== e.id); save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
+  },
+  addRem: () => {
+    const e = empActual(), per = $('#r-per').value, val = +$('#r-val').value;
+    if (!per || !(val > 0)) { toast('Completá período y monto.'); return; }
+    const ex = S.remuneraciones.find(r => r.empleadoId === e.id && r.periodo === per);
+    if (ex) ex.habitual = val; else S.remuneraciones.push({ id: uid(), empleadoId: e.id, periodo: per, habitual: val });
+    save(); keepScroll(renderDetail);
+  },
+  delRem: b => { S.remuneraciones = S.remuneraciones.filter(r => r.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  addVac: () => {
+    const e = empActual(), d = $('#v-desde').value, h = $('#v-hasta').value;
+    if (!d || !h || h < d) { toast('Revisá las fechas: "hasta" no puede ser anterior a "desde".'); return; }
+    S.vacaciones.push({ id: uid(), empleadoId: e.id, anio: +d.slice(0, 4), desde: d, hasta: h, dias: dias(pd(d), pd(h)) });
+    log(e.id, `Vacaciones gozadas: ${fdate(d)} al ${fdate(h)}`); save(); keepScroll(renderDetail);
+  },
+  delVac: b => { S.vacaciones = S.vacaciones.filter(v => v.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  addLic: () => {
+    const e = empActual(), d = $('#li-desde').value, h = $('#li-hasta').value;
+    if (!d || !h || h < d) { toast('Revisá las fechas de la licencia.'); return; }
+    S.licencias.push({ id: uid(), empleadoId: e.id, tipo: $('#li-tipo').value, desde: d, hasta: h });
+    log(e.id, `Licencia: ${$('#li-tipo').value}, ${fdate(d)} al ${fdate(h)}`); save(); keepScroll(renderDetail);
+  },
+  delLic: b => { S.licencias = S.licencias.filter(l => l.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  addSancion: () => {
+    const e = empActual(), f = $('#sa-fecha').value, tipo = $('#sa-tipo').value, motivo = $('#sa-motivo').value.trim(), dias = +$('#sa-dias').value || 0;
+    if (!f) { toast('Elegí la fecha de la sanción.'); return; }
+    S.sanciones.push({ id: uid(), empleadoId: e.id, fecha: f, tipo, motivo, dias: tipo === 'Suspensión' ? dias : 0 });
+    log(e.id, `Sanción: ${tipo}${tipo === 'Suspensión' && dias ? ` (${dias} días)` : ''}${motivo ? ' — ' + motivo : ''}`); save(); keepScroll(renderDetail);
+  },
+  delSancion: b => { S.sanciones = S.sanciones.filter(s => s.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  startEgreso: () => { const e = empActual(); pickEmp(e.id); UI.detail = null; go('liq'); },
+  openLiq: b => { const l = S.liquidaciones.find(x => x.id === b.dataset.id); UI.liq = { id: l.id, empId: l.empleadoId }; UI.detail = null; go('liq'); },
+  saveLiq: () => persistLiq('borrador'),
+  approveLiq: () => persistLiq('aprobada'),
+  reopenLiq: () => { const l = S.liquidaciones.find(x => x.id === UI.liq.id); l.estado = 'borrador'; log(l.empleadoId, 'Liquidación vuelta a borrador'); save(); renderLiq(); },
+  discardLiq: () => {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id); if (!confirm('¿Descartar este borrador?')) return;
+    const e = S.empleados.find(x => x.id === l.empleadoId);
+    S.liquidaciones = S.liquidaciones.filter(x => x.id !== l.id);
+    if (e && e.estado === 'egreso' && !S.liquidaciones.some(x => x.empleadoId === e.id)) { e.estado = 'activo'; e.fechaEgreso = ''; e.tipoEgreso = ''; }
+    if (e) log(e.id, 'Borrador de liquidación descartado'); save(); UI.liq = null; renderLiq(); toast('Borrador descartado');
+  },
+  payLiq: () => {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId), fp = $('#pay-fecha').value;
+    if (!fp) { toast('Elegí la fecha de pago.'); return; }
+    l.pago = { fecha: fp, medio: $('#pay-medio').value }; l.estado = 'pagada'; e.estado = 'liquidado';
+    log(e.id, `Liquidación pagada el ${fdate(fp)} (${l.pago.medio}), total ${money(totalDe(l.result))}`); save(); renderLiq(); toast('Pago registrado');
+  },
+  archiveLiq: () => {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
+    l.estado = 'cerrada'; e.estado = 'archivado'; log(e.id, 'Legajo archivado'); save(); renderLiq(); toast('Legajo archivado');
+  },
+  print: () => window.print(),
+  savePar: () => {
+    const g = id => +$('#' + id).value || 0, P = S.parametros;
+    P.mesesPrueba = g('par-prueba'); P.topeCCT = g('par-tope');
+    P.vacaciones = [{ hasta: 5, dias: g('par-v1') }, { hasta: 10, dias: g('par-v2') }, { hasta: 20, dias: g('par-v3') }, { hasta: 999, dias: g('par-v4') }];
+    save(); toast('Parámetros guardados');
+  },
+  clConectar: () => {
+    const v = id => $('#' + id).value.trim();
+    const cfg = { cloudName: v('cl-cloud'), uploadPreset: v('cl-preset'), clave: $('#cl-clave').value, archivo: v('cl-archivo') };
+    if (!cfg.cloudName || !cfg.uploadPreset || !cfg.clave) { toast('Completá cloud name, upload preset y clave de cifrado.'); return; }
+    if (cfg.clave.length < 8) { toast('La clave de cifrado debe tener al menos 8 caracteres.'); return; }
+    if (!window.crypto || !crypto.subtle) { toast('Este navegador no permite cifrar. Abrí el archivo desde https o localhost.'); return; }
+    if (fbConfig() && !confirm('Esto desactiva la sincronización con Firebase y pasa a usar Cloudinary. ¿Continuar?')) return;
+    try { localStorage.setItem(CL_KEY, JSON.stringify(cfg)); } catch (e) { toast('No se pudo guardar la configuración en este navegador.'); return; }
+    if (fbConfig()) fbDisconnect();
+    clReady = false; clInit(); renderPar(); toast('Conectando con Cloudinary…');
+  },
+  clSubir: () => { if (!confirm('Se van a reemplazar los datos de la nube por los de este navegador. ¿Continuar?')) return; clPush(); clearTimeout(clTimer); clUpload(); },
+  clTraer: () => { clPull('force'); },
+  clDesconectar: () => { clDisconnect(); renderPar(); toast('Cloudinary desconectado (los datos de la nube no se borran)'); },
+  fbConectar: () => {
+    const v = id => $('#' + id).value.trim();
+    const cfg = { apiKey: v('fb-apiKey'), authDomain: v('fb-authDomain'), projectId: v('fb-projectId'), appId: v('fb-appId') };
+    if (!cfg.apiKey || !cfg.projectId) { toast('Completá al menos apiKey y projectId.'); return; }
+    if (clConfig()) { if (!confirm('Esto desactiva el guardado en Cloudinary y pasa a usar Firebase. ¿Continuar?')) return; clDisconnect(); }
+    try { localStorage.setItem(FB_KEY, JSON.stringify(cfg)); } catch (e) { toast('No se pudo guardar la configuración en este navegador.'); return; }
+    fbInit(); renderPar(); toast('Conectando con Firebase…');
+  },
+  fbDesconectar: () => { fbDisconnect(); renderPar(); toast('Sincronización desconectada'); },
+  export: () => {
+    S.lastExport = new Date().toISOString(); save(); paintRespaldo();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));
+    a.download = `rrhh-ciclo-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+};
+
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'q') { UI.q = t.value; paintRows(); }
+  else if (t.id === 'fe') { UI.fe = t.value; paintRows(); }
+  else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
+  else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }
+  else if (t.id === 'st-rot-local') { UI.stRotLocal = t.value; paintRotacion(); }
+  else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
+  else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
+  else if (t.closest && t.closest('#liq-form')) onLiqInput(t);
+  else if (t.dataset && t.dataset.cierre) {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id); l.cierre = l.cierre || {}; l.cierre[t.dataset.cierre] = t.checked; save(); updateLiq();
+  }
+});
+$('#imp').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!Array.isArray(d.empleados)) throw new Error('formato');
+      if (!confirm(`Se van a reemplazar los datos actuales por los del archivo (${d.empleados.length} empleados). ¿Continuar?`)) return;
+      S = normalize(d); migrarDatos(); save(); UI.detail = null; UI.liq = null; paintRespaldo(); go(UI.tab); toast('Respaldo importado');
+    } catch (err) { toast('El archivo no es un respaldo válido.'); }
+    e.target.value = '';
+  };
+  rd.readAsText(file);
+});
+
+function migrarDatos() {                                      // "E. Camarero" → "Camarero"; "bcp" → "BCP"
+  let cambio = false;
+  S.empleados.forEach(e => {
+    if (e.puesto && !PUESTOS.includes(e.puesto)) {
+      const n = e.puesto.replace(/^[A-Z]{1,2}\.\s*(?:\d+\s+)?/, '').trim();
+      if (PUESTOS.includes(n)) { e.puesto = n; cambio = true; }
+    }
+    if (e.local && canonLocal(e.local) !== e.local) { e.local = canonLocal(e.local); cambio = true; }
+  });
+  if (cambio) save();
+}
+migrarDatos();
+paintRespaldo();
+go('emp');
+fbInit();
+clInit();
+</script>
+</body>
+</html>

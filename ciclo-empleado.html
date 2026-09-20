@@ -168,6 +168,7 @@ td.num,th.num{text-align:right}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 //==LOGIC-START==
 const DAY = 864e5;
@@ -524,6 +525,52 @@ const PUESTOS = ['Bacha', 'Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almace
   'Valet Parking', 'Director', 'Auditora jefe', 'Auditora', 'RRHH', 'Mantenimiento', 'Gerente general', 'Gerente de compras',
   'Compras', 'Jefa de administracion', 'Administracion'];
 const canonLocal = v => { v = (v || '').trim(); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
+
+/* ================= Importación masiva de empleados (Excel/CSV) ================= */
+const stripAcc = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const normHeader = s => stripAcc(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const IMP_ALIAS = {
+  legajo: ['legajo'], nombre: ['nombre'], apellido: ['apellido'], dni: ['dni'], cuil: ['cuil'],
+  fechaNac: ['fecha nacimiento', 'fecha de nacimiento', 'nacimiento'],
+  tel: ['telefono', 'celular', 'tel'], email: ['email', 'mail', 'correo'], domicilio: ['domicilio', 'direccion'],
+  emergenciaNombre: ['contacto emergencia', 'emergencia nombre', 'contacto de emergencia'],
+  emergenciaTel: ['telefono emergencia', 'emergencia telefono', 'tel emergencia'],
+  cbu: ['cbu'], banco: ['banco'], estado: ['estado'], local: ['local', 'sucursal'], puesto: ['puesto', 'cargo'], alta: ['alta'],
+  categoriaCCT: ['categoria cct', 'categoriacct', 'categoria'], modalidad: ['modalidad'],
+  fechaIngreso: ['fecha ingreso', 'fecha de ingreso', 'ingreso'],
+  sueldoActual: ['sueldo', 'sueldo actual', 'sueldo mensual', 'sueldo mensual normal y habitual'],
+  libretaSanitariaVenc: ['vto libreta sanitaria', 'libreta sanitaria', 'vencimiento libreta sanitaria'],
+  preocupacionalVenc: ['vto preocupacional', 'preocupacional', 'vencimiento preocupacional']
+};
+function impEmpColMap(headers) {
+  const map = {};
+  headers.forEach(h => { const n = normHeader(h); for (const f in IMP_ALIAS) if (IMP_ALIAS[f].includes(n)) { map[h] = f; break; } });
+  return map;
+}
+function impFecha(v) {
+  if (v instanceof Date && !isNaN(v)) return fmtISO(v);
+  const s = String(v ?? '').trim(); if (!s) return '';
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) { let [, d, mo, y] = m; if (y.length === 2) y = '20' + y; return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`; }
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) { let [, y, mo, d] = m; return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`; }
+  return '';
+}
+function impNum(v) {
+  if (typeof v === 'number') return v;
+  let s = String(v ?? '').trim(); if (!s) return 0;
+  s = /,\d{1,2}$/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  const n = parseFloat(s.replace(/[^0-9.\-]/g, '')); return isNaN(n) ? 0 : n;
+}
+function impEstado(v) {
+  const n = normHeader(v); if (!n) return '';
+  if (ESTADOS[n]) return n;
+  for (const k in ESTADOS) if (normHeader(ESTADOS[k]) === n) return k;
+  return '';
+}
+function impAlta(v) { const n = normHeader(v); return n === 'n' || n === 'normal' ? 'N' : n === 's' || n === 'especial' ? 'S' : ''; }
+function impPuesto(v) { const s = String(v ?? '').trim(); if (!s) return ''; return PUESTOS.find(p => p.toLowerCase() === s.toLowerCase()) || s; }
+function impTxt(v, prevVal) { const s = String(v ?? '').trim(); return s !== '' ? s : (prevVal ?? ''); }
 const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e.estado));
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
@@ -951,6 +998,19 @@ function renderPar() {
     <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
   </form>
   <form class="card" onsubmit="return false">
+    <h2>Carga masiva de empleados (Excel / CSV)</h2>
+    <p class="muted" style="margin-top:0">Subí una planilla con un empleado por fila. Si el <b>legajo</b> o el <b>DNI</b> de una fila ya existe, se actualiza ese legajo; si no, se crea uno nuevo. No borra ni toca a nadie que no esté en el archivo.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" type="button" data-act="impEmpPlantilla">Descargar plantilla</button>
+      <label class="btn primary" style="cursor:pointer">Elegir archivo<input type="file" id="imp-emp" accept=".xlsx,.xls,.csv" hidden></label>
+      <span id="imp-emp-nombre" class="muted"></span>
+    </div>
+    <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Columnas que reconoce</summary>
+      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. libreta sanitaria, Vto. preocupacional. El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
+    </details>
+    <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
+  </form>
+  <form class="card" onsubmit="return false">
     <h2>Guardado en la nube (Cloudinary) <span class="sync ${clReady ? 'on' : 'off'}" style="margin-left:6px;font-size:13px;font-weight:400"><span class="dot"></span>${clReady ? 'Conectado' : (clc.cloudName ? 'Sin conectar' : 'Sin configurar')}</span></h2>
     <p class="muted" style="margin-top:0">Guarda una copia <b>cifrada</b> de todos los datos en tu cuenta de Cloudinary y la trae en cualquier navegador donde cargues esta misma configuración. El cifrado se hace en este navegador con la clave que elijas: en Cloudinary solo queda texto ilegible. <b>Si perdés la clave, los datos de la nube no se pueden recuperar</b>, así que seguí exportando respaldos. Si varias personas guardan a la vez, gana el último que guarda, y ver los cambios de otro usuario puede tardar unos minutos.</p>
     <div class="frm">
@@ -1108,6 +1168,15 @@ const ACT = {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' }));
     a.download = `rrhh-ciclo-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  },
+  impEmpPlantilla: () => {
+    const headers = ['Legajo', 'Nombre', 'Apellido', 'DNI', 'CUIL', 'Fecha nacimiento', 'Teléfono', 'Email', 'Domicilio',
+      'Contacto emergencia', 'Teléfono emergencia', 'CBU', 'Banco', 'Estado', 'Local', 'Puesto', 'Alta', 'Categoría CCT',
+      'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. libreta sanitaria', 'Vto. preocupacional'];
+    const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Camarero', '', '', '', '2024-03-01', 500000, '', ''];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ejemplo]), 'Empleados');
+    XLSX.writeFile(wb, 'plantilla-empleados.xlsx');
   }
 };
 
@@ -1126,6 +1195,69 @@ document.addEventListener('input', e => {
   else if (t.dataset && t.dataset.cierre) {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id); l.cierre = l.cierre || {}; l.cierre[t.dataset.cierre] = t.checked; save(); updateLiq();
   }
+});
+document.addEventListener('change', e => {
+  if (e.target.id !== 'imp-emp') return;
+  const file = e.target.files[0]; if (!file) return;
+  const nombreSpan = $('#imp-emp-nombre'); if (nombreSpan) nombreSpan.textContent = file.name;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const resBox = () => $('#imp-emp-resultado');
+    try {
+      const wb = XLSX.read(rd.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true });
+      if (!rows.length) { if (resBox()) resBox().innerHTML = '<span style="color:var(--danger)">El archivo no tiene filas de datos.</span>'; return; }
+      const colMap = impEmpColMap(Object.keys(rows[0]));
+      const errores = [], cambios = [];
+      rows.forEach((row, i) => {
+        const d = {}; Object.entries(colMap).forEach(([h, f]) => d[f] = row[h]);
+        const nombre = String(d.nombre ?? '').trim(), apellido = String(d.apellido ?? '').trim(), dni = String(d.dni ?? '').trim();
+        if (!nombre || !apellido || !dni) { errores.push(`Fila ${i + 2}: falta nombre, apellido o DNI.`); return; }
+        const legajoRaw = String(d.legajo ?? '').trim();
+        let prev = null;
+        if (legajoRaw) prev = S.empleados.find(x => x.legajo === legajoRaw);
+        if (!prev && dni) prev = S.empleados.find(x => x.dni === dni);
+        const legajo = legajoRaw || (prev ? prev.legajo : String(S.empleados.reduce((m, x) => Math.max(m, parseInt(x.legajo) || 0), 0) + cambios.filter(c => c.isNew).length + 1).padStart(4, '0'));
+        if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id))) { errores.push(`Fila ${i + 2}: el legajo ${legajo} ya está usado por otro empleado.`); return; }
+        const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
+          legajo, nombre, apellido, dni,
+          cuil: impTxt(d.cuil, prev && prev.cuil), fechaNac: impFecha(d.fechaNac) || (prev ? prev.fechaNac : ''),
+          tel: impTxt(d.tel, prev && prev.tel), email: impTxt(d.email, prev && prev.email), domicilio: impTxt(d.domicilio, prev && prev.domicilio),
+          emergenciaNombre: impTxt(d.emergenciaNombre, prev && prev.emergenciaNombre), emergenciaTel: impTxt(d.emergenciaTel, prev && prev.emergenciaTel),
+          cbu: impTxt(d.cbu, prev && prev.cbu), banco: impTxt(d.banco, prev && prev.banco),
+          estado: (d.estado !== undefined && String(d.estado).trim() !== '' && impEstado(d.estado)) || (prev ? prev.estado : 'activo'),
+          local: d.local !== undefined && String(d.local).trim() !== '' ? canonLocal(d.local) : (prev ? prev.local : ''),
+          puesto: d.puesto !== undefined && String(d.puesto).trim() !== '' ? impPuesto(d.puesto) : (prev ? prev.puesto : ''),
+          alta: d.alta !== undefined && String(d.alta).trim() !== '' ? impAlta(d.alta) : (prev ? prev.alta : ''),
+          categoriaCCT: impTxt(d.categoriaCCT, prev && prev.categoriaCCT), modalidad: impTxt(d.modalidad, prev && prev.modalidad),
+          fechaIngreso: impFecha(d.fechaIngreso) || (prev ? prev.fechaIngreso : ''),
+          sueldoActual: d.sueldoActual !== undefined && String(d.sueldoActual).trim() !== '' ? impNum(d.sueldoActual) : (prev ? prev.sueldoActual : 0),
+          docs: prev ? prev.docs : { dni: false, cuil: false, preapto: false, contrato: false },
+          libretaSanitariaVenc: impFecha(d.libretaSanitariaVenc) || (prev ? prev.libretaSanitariaVenc : ''),
+          preocupacionalVenc: impFecha(d.preocupacionalVenc) || (prev ? prev.preocupacionalVenc : '')
+        });
+        cambios.push({ prev, nuevo, isNew: !prev });
+      });
+      if (!cambios.length) {
+        if (resBox()) resBox().innerHTML = `<span style="color:var(--danger)">No se pudo importar ninguna fila.</span>${errores.length ? '<br>' + errores.slice(0, 12).map(esc).join('<br>') : ''}`;
+        e.target.value = ''; return;
+      }
+      const nuevos = cambios.filter(c => c.isNew).length, actualizados = cambios.length - nuevos;
+      if (!confirm(`Se van a crear ${nuevos} legajo(s) nuevo(s) y actualizar ${actualizados}.${errores.length ? ' ' + errores.length + ' fila(s) se van a saltear por datos incompletos.' : ''} ¿Continuar?`)) { e.target.value = ''; return; }
+      cambios.forEach(({ prev, nuevo, isNew }) => {
+        if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado por importación (${ESTADOS[nuevo.estado] || nuevo.estado})`); }
+        else { Object.assign(prev, nuevo); log(nuevo.id, 'Legajo actualizado por importación'); }
+      });
+      save(); migrarDatos(); paintRespaldo(); go(UI.tab);
+      const box = resBox();
+      if (box) box.innerHTML = `<span style="color:var(--ok)">Importación lista: ${nuevos} nuevo(s), ${actualizados} actualizado(s).</span>` +
+        (errores.length ? `<br><span style="color:var(--signal)">${errores.slice(0, 12).map(esc).join('<br>')}${errores.length > 12 ? `<br>y ${errores.length - 12} más…` : ''}</span>` : '');
+      toast('Empleados importados');
+    } catch (err) { if (resBox()) resBox().innerHTML = `<span style="color:var(--danger)">No se pudo leer el archivo (${esc(err.message || 'formato no reconocido')}).</span>`; }
+    e.target.value = '';
+  };
+  rd.readAsArrayBuffer(file);
 });
 $('#imp').addEventListener('change', e => {
   const file = e.target.files[0]; if (!file) return;

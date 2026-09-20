@@ -113,6 +113,23 @@ td.num,th.num{text-align:right}
 .alert ul{margin:4px 0 0;padding-left:18px;font-size:13.5px}
 .alert ul li{margin:2px 0}
 .alert ul a,.alert ul span.lnk{color:var(--accent-d);cursor:pointer;text-decoration:underline;font-weight:500}
+.tabs .bdg{display:inline-block;min-width:18px;padding:0 6px;margin-left:5px;border-radius:99px;background:#E4685B;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:18px}
+.bdg[hidden]{display:none}
+.btn:disabled{opacity:.4;cursor:default}.btn:disabled:hover{border-color:var(--line);color:var(--ink)}
+.frow th{padding:6px 8px;background:#F6F8F7;vertical-align:top;font-weight:400}
+.frow input,.frow select{padding:4px 6px;font-size:12.5px;min-width:96px}
+.frow .rng{display:grid;gap:3px}
+.frow .rng label{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted)}
+.frow .rng input{min-width:0}
+.v-bad{color:var(--danger);font-weight:600}.v-soon{color:var(--signal);font-weight:600}
+.ord{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
+.ord-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:grab}
+.ord-item.dragging{opacity:.45}
+.ord-item.over{border-color:var(--accent);box-shadow:0 0 0 2px #0D6B5833}
+.ord-item .grip{color:var(--muted);font-size:16px;line-height:1}
+.ord-item .ord-n{width:22px;color:var(--muted);font-size:13px;text-align:right}
+.ord-item .ord-name{flex:1;font-weight:500}
+.ord-btns{display:flex;gap:4px}
 .sync{display:inline-flex;align-items:center;gap:5px}
 .sync .dot{width:7px;height:7px;border-radius:50%;background:#7C8B8F;flex:0 0 auto}
 .sync.on .dot{background:#3FD584}
@@ -144,6 +161,7 @@ td.num,th.num{text-align:right}
   <h1>Ciclo del empleado</h1>
   <nav class="tabs" aria-label="Secciones">
     <button data-act="tab" data-tab="emp">Empleados</button>
+    <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
     <button data-act="tab" data-tab="est">Historial y estadística</button>
     <button data-act="tab" data-tab="par">Parámetros</button>
@@ -157,6 +175,7 @@ td.num,th.num{text-align:right}
 </header>
 <main>
   <section class="view" id="v-emp"></section>
+  <section class="view" id="v-ale" hidden></section>
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
   <section class="view" id="v-par" hidden></section>
@@ -470,7 +489,7 @@ function clDisconnect() {
   try { localStorage.removeItem(CL_KEY); localStorage.removeItem(CL_META); } catch (e) {}
   clearInterval(clPoll); clearTimeout(clTimer); clReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   b.parametros = Object.assign(clone(DEFAULT_P), b.parametros);
@@ -478,7 +497,7 @@ function normalize(d) {
   return b;
 }
 function load() { try { const r = localStorage.getItem(KEY); if (r) return normalize(JSON.parse(r)); } catch (e) {} return blank(); }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('No se pudo guardar en el navegador. Exportá un respaldo ya.'); } fbPush(); clPush(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('No se pudo guardar en el navegador. Exportá un respaldo ya.'); } fbPush(); clPush(); try { paintBadge(); } catch (e) {} }
 let S = load();
 
 /* ================= Utilidades UI ================= */
@@ -517,7 +536,7 @@ const log = (empleadoId, texto) => S.historial.push({ id: uid(), empleadoId, ts:
 const ESTADOS = { candidato: 'Candidato', preingreso: 'Preingreso', activo: 'Activo', licencia: 'En licencia', egreso: 'Egreso en curso', liquidado: 'Liquidado', archivado: 'Archivado' };
 const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento' };
 const LIQ_ESTADOS = { borrador: 'Borrador', aprobada: 'Aprobada', pagada: 'Pagada', cerrada: 'Cerrada' };
-const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', preapto: 'Examen preocupacional', contrato: 'Registro / contrato firmado' };
+const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', contrato: 'Registro / contrato firmado' };
 const SANC_TIPOS = ['Apercibimiento', 'Suspensión', 'Otra'];
 const LOCALES = ['BCP', 'BCBL', 'BCB', 'BCC', 'Tanta', 'La Mar'];
 const RAZONES = ['Sabores Incas', 'Inca Central', 'Ccome', 'Barra chalaca caseros'];
@@ -528,15 +547,27 @@ const PUESTOS = ['Bacha', 'Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almace
 const canonLocal = v => { v = (v || '').trim(); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
 const canonRazon = v => { v = (v || '').trim(); return RAZONES.find(r => r.toLowerCase() === v.toLowerCase()) || v; };
 
-/* Orden de la nómina: Salón antes que Cocina, y dentro de cada área, jefes antes que empleados.
-   Si algún puesto no está en estas listas, se ubica al final (área "otros"). Editá estos arrays
-   si un puesto está en el área o nivel equivocado. */
+/* Orden de los puestos en la nómina: lo define el usuario en Parámetros → "Orden de los puestos".
+   Mientras no lo toque, se usa este orden de partida: Salón antes que Cocina y, dentro de cada área,
+   los jefes primero. Los puestos que no estén en la lista van al final. */
 const AREA_SALON = ['Recepcion', 'Caja', 'Supervision', 'Jefe de barra', 'Barra', 'Camarero', 'Camarero Jr', 'Corredor', 'Volante', 'Valet Parking'];
 const AREA_COCINA = ['Chef', 'Sous Chef', 'Cocina', 'Pasteleria', 'Produccion', 'Bacha', 'Almacen'];
 const JEFES_PUESTOS = ['Supervision', 'Jefe de barra', 'Chef', 'Sous Chef'];
+const PUESTOS_UNICOS = [...new Set(PUESTOS)];
 const areaDe = p => AREA_SALON.includes(p) ? 0 : AREA_COCINA.includes(p) ? 1 : 2;
 const nivelDe = p => JEFES_PUESTOS.includes(p) ? 0 : 1;
-const ordenNomina = (a, b) => areaDe(a.puesto) - areaDe(b.puesto) || nivelDe(a.puesto) - nivelDe(b.puesto) || (a.apellido || '').localeCompare(b.apellido || '');
+const posEnArea = p => { const a = [AREA_SALON, AREA_COCINA][areaDe(p)]; return a ? a.indexOf(p) : PUESTOS_UNICOS.indexOf(p); };
+function puestosExtra() { return [...new Set(S.empleados.map(e => (e.puesto || '').trim()).filter(p => p && !PUESTOS_UNICOS.includes(p)))]; }
+function ordenPuestos() {
+  const todos = [...PUESTOS_UNICOS, ...puestosExtra()];
+  const guardado = (S.ordenPuestos || []).filter((p, i, a) => todos.includes(p) && a.indexOf(p) === i);
+  const base = todos.slice().sort((a, b) => areaDe(a) - areaDe(b) || nivelDe(a) - nivelDe(b) || posEnArea(a) - posEnArea(b));
+  return guardado.concat(base.filter(p => !guardado.includes(p)));
+}
+const ordenNomina = () => {
+  const om = new Map(ordenPuestos().map((p, i) => [p, i]));
+  return (a, b) => (om.has(a.puesto) ? om.get(a.puesto) : 9999) - (om.has(b.puesto) ? om.get(b.puesto) : 9999) || (a.apellido || '').localeCompare(b.apellido || '');
+};
 
 /* ================= Importación masiva de empleados (Excel/CSV) ================= */
 const stripAcc = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -552,7 +583,7 @@ const IMP_ALIAS = {
   fechaIngreso: ['fecha ingreso', 'fecha de ingreso', 'ingreso'],
   sueldoActual: ['sueldo', 'sueldo actual', 'sueldo mensual', 'sueldo mensual normal y habitual'],
   libretaSanitariaVenc: ['vto libreta sanitaria', 'libreta sanitaria', 'vencimiento libreta sanitaria'],
-  preocupacionalVenc: ['vto preocupacional', 'preocupacional', 'vencimiento preocupacional']
+  dniVenc: ['vto dni precaria', 'vto dni', 'vto precaria', 'vencimiento dni precaria', 'vencimiento dni', 'vencimiento precaria', 'dni vencimiento']
 };
 function impEmpColMap(headers) {
   const map = {};
@@ -587,7 +618,7 @@ const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
 const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
-const UI = { tab: 'emp', detail: null, q: '', fe: '', liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '' };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '' };
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
 /* ================= Alertas del panel general ================= */
@@ -597,8 +628,8 @@ function calcAlertas() {
   const prueba = activos.filter(e => { const fp = finPruebaDe(e); return fp && fp >= hoy && fp <= lim; }).sort((a, b) => finPruebaDe(a).localeCompare(finPruebaDe(b)));
   const sinAlta = activos.filter(e => !e.alta);
   const vLibreta = activos.filter(e => e.libretaSanitariaVenc && e.libretaSanitariaVenc >= hoy && e.libretaSanitariaVenc <= lim);
-  const vPreocup = activos.filter(e => e.preocupacionalVenc && e.preocupacionalVenc >= hoy && e.preocupacionalVenc <= lim);
-  const vencidos = activos.filter(e => (e.libretaSanitariaVenc && e.libretaSanitariaVenc < hoy) || (e.preocupacionalVenc && e.preocupacionalVenc < hoy));
+  const vDni = activos.filter(e => e.dniVenc && e.dniVenc >= hoy && e.dniVenc <= lim);
+  const vencidos = activos.filter(e => (e.libretaSanitariaVenc && e.libretaSanitariaVenc < hoy) || (e.dniVenc && e.dniVenc < hoy));
   const pend = S.liquidaciones.filter(l => l.estado === 'borrador' || l.estado === 'aprobada');
   const bands = { d60: [], d30: [], d15: [] };
   pend.forEach(l => {
@@ -608,21 +639,28 @@ function calcAlertas() {
     const item = { l, emp: S.empleados.find(x => x.id === l.empleadoId), atraso };
     if (atraso >= 60) bands.d60.push(item); else if (atraso >= 30) bands.d30.push(item); else if (atraso >= 15) bands.d15.push(item);
   });
-  return { prueba, sinAlta, vLibreta, vPreocup, vencidos, bands };
+  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands };
+}
+const alertasTotal = A => A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
+function paintBadge() { const b = $('#ale-n'); if (!b) return; const n = alertasTotal(calcAlertas()); b.textContent = n; b.hidden = !n; }
+function renderAle() {
+  const h = renderAlertas();
+  $('#v-ale').innerHTML = `<h2>Alertas</h2>` +
+    (h || `<div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>`) +
+    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar y liquidaciones con el plazo de pago vencido.</p>`;
 }
 function renderAlertas() {
   const A = calcAlertas();
   const liqCount = A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
-  const total = A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vPreocup.length + A.vencidos.length + liqCount;
-  if (!total) return '';
+  if (!alertasTotal(A)) return '';
   const empLink = e => `<span class="lnk" data-act="openEmp" data-id="${e.id}">${esc(e.apellido)}, ${esc(e.nombre)}</span>`;
   const liqLink = (l, txt) => `<span class="lnk" data-act="openLiq" data-id="${l.id}">${esc(txt)}</span>`;
   const blocks = [];
   if (A.prueba.length) blocks.push(`<div class="alert"><h4><span class="n">${A.prueba.length}</span>Fin de período de prueba en los próximos 15 días</h4><ul>${A.prueba.map(e => `<li>${empLink(e)} — vence ${fdate(finPruebaDe(e))}</li>`).join('')}</ul></div>`);
   if (A.sinAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.sinAlta.length}</span>Empleados en nómina sin alta cargada</h4><ul>${A.sinAlta.map(e => `<li>${empLink(e)}</li>`).join('')}</ul></div>`);
-  const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vPreocup.map(e => ({ e, tipo: 'Examen preocupacional', f: e.preocupacionalVenc }))];
+  const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vDni.map(e => ({ e, tipo: 'DNI / precaria', f: e.dniVenc }))];
   if (venc.length) blocks.push(`<div class="alert"><h4><span class="n">${venc.length}</span>Vencimientos de legajo en los próximos 15 días</h4><ul>${venc.map(v => `<li>${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}</li>`).join('')}</ul></div>`);
-  if (A.vencidos.length) blocks.push(`<div class="alert crit"><h4><span class="n">${A.vencidos.length}</span>Vencimientos de legajo ya vencidos</h4><ul>${A.vencidos.map(e => `<li>${empLink(e)}${e.libretaSanitariaVenc && e.libretaSanitariaVenc < today() ? ` — Libreta sanitaria venció ${fdate(e.libretaSanitariaVenc)}` : ''}${e.preocupacionalVenc && e.preocupacionalVenc < today() ? ` — Preocupacional venció ${fdate(e.preocupacionalVenc)}` : ''}</li>`).join('')}</ul></div>`);
+  if (A.vencidos.length) blocks.push(`<div class="alert crit"><h4><span class="n">${A.vencidos.length}</span>Vencimientos de legajo ya vencidos</h4><ul>${A.vencidos.map(e => `<li>${empLink(e)}${e.libretaSanitariaVenc && e.libretaSanitariaVenc < today() ? ` — Libreta sanitaria venció ${fdate(e.libretaSanitariaVenc)}` : ''}${e.dniVenc && e.dniVenc < today() ? ` — DNI / precaria venció ${fdate(e.dniVenc)}` : ''}</li>`).join('')}</ul></div>`);
   if (liqCount) {
     const grp = arr => arr.map(it => liqLink(it.l, `${it.emp ? it.emp.apellido + ', ' + it.emp.nombre : '—'} (${it.atraso} días)`)).join(', ');
     blocks.push(`<div class="alert crit"><h4><span class="n">${liqCount}</span>Liquidaciones con el plazo de pago vencido (art. 128 LCT)</h4><ul>
@@ -638,7 +676,8 @@ function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  ({ emp: renderEmp, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  ({ emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  paintBadge();
   window.scrollTo(0, 0);
 }
 function paintRespaldo() {
@@ -651,23 +690,55 @@ function paintRespaldo() {
 /* ================= Empleados ================= */
 function renderEmp() {
   if (UI.detail) return renderDetail();
+  const F = UI.f, vals = k => [...new Set(S.empleados.map(e => (e[k] || '').trim()).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const opt = (v, cur, lab) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(lab ?? v)}</option>`;
+  const pick = (key, lista, label) => `<select data-f="${key}" aria-label="Filtrar por ${label}"><option value="">Todos</option>${lista.map(v => opt(v, F[key])).join('')}${opt('__none__', F[key], '(vacío)')}</select>`;
+  const txt = (key, label) => `<input type="search" data-f="${key}" value="${esc(F[key] || '')}" placeholder="Filtrar…" aria-label="Filtrar por ${label}">`;
+  const rng = (key, label) => `<div class="rng"><label>Desde<input type="date" data-f="${key}D" value="${esc(F[key + 'D'] || '')}" aria-label="${label} desde"></label><label>Hasta<input type="date" data-f="${key}H" value="${esc(F[key + 'H'] || '')}" aria-label="${label} hasta"></label></div>`;
+  const venc = (key, label) => `<select data-f="${key}" aria-label="Filtrar por ${label}"><option value="">Todos</option>${[['vencido', 'Vencido'], ['prox', 'Vence en 15 días'], ['vigente', 'Vigente'], ['sin', 'Sin fecha']].map(([v, l]) => opt(v, F[key], l)).join('')}</select>`;
+  const puestosEnUso = ordenPuestos().filter(p => S.empleados.some(e => (e.puesto || '').trim() === p));
   $('#v-emp').innerHTML = `
-    ${renderAlertas()}
     <div class="bar">
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
-      <select id="fe" style="width:auto" aria-label="Filtrar por estado"><option value="">Todos los estados</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <button class="btn" data-act="clearFilters">Limpiar filtros</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
-    <div class="card tablewrap"><table class="grid"><thead><tr><th>Legajo</th><th>Nombre</th><th>Razón social</th><th>Local</th><th>Puesto</th><th>Ingreso</th><th>Fin de prueba</th><th title="N = alta normal, S = alta especial">Alta</th><th>Estado</th></tr></thead><tbody id="emp-rows"></tbody></table></div>
-    <p class="muted">Alta: N = normal, S = especial. Vacío = sin alta.</p>`;
+    <div class="card tablewrap"><table class="grid"><thead>
+      <tr><th>Legajo</th><th>Nombre</th><th>Razón social</th><th>Local</th><th>Puesto</th><th>Ingreso</th><th>Fin de prueba</th><th title="N = alta normal, S = alta especial">Alta</th><th>Estado</th><th>Venc. DNI / precaria</th><th>Venc. libreta</th></tr>
+      <tr class="frow">
+        <th>${txt('legajo', 'legajo')}</th>
+        <th>${txt('nombre', 'nombre')}</th>
+        <th>${pick('razon', vals('razonSocial'), 'razón social')}</th>
+        <th>${pick('local', vals('local'), 'local')}</th>
+        <th>${pick('puesto', puestosEnUso, 'puesto')}</th>
+        <th>${rng('ing', 'Ingreso')}</th>
+        <th>${rng('fp', 'Fin de prueba')}</th>
+        <th><select data-f="alta" aria-label="Filtrar por alta"><option value="">Todas</option>${opt('N', F.alta, 'N (normal)')}${opt('S', F.alta, 'S (especial)')}${opt('__none__', F.alta, 'Sin alta')}</select></th>
+        <th><select id="fe" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select></th>
+        <th>${venc('dni', 'vencimiento de DNI / precaria')}</th>
+        <th>${venc('lib', 'vencimiento de libreta')}</th>
+      </tr></thead><tbody id="emp-rows"></tbody></table></div>
+    <p class="muted"><span id="emp-count"></span> Alta: N = normal, S = especial. Vacío = sin alta.</p>`;
   paintRows();
 }
 function paintRows() {
-  const q = UI.q.toLowerCase();
-  const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || `${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`.toLowerCase().includes(q)))
-    .sort(ordenNomina);
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}</td><td>${esc(e.razonSocial)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td></tr>`).join('')
-    : `<tr><td colspan="9" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
+  const q = UI.q.toLowerCase(), F = UI.f, hoy = today(), lim = fmtISO(new Date(Date.now() + 15 * DAY));
+  const norm = v => stripAcc(v || '').toLowerCase();
+  const txt = (v, f) => !f || norm(v).includes(norm(f).trim());
+  const pick = (v, f) => !f || (f === '__none__' ? !(v || '').trim() : (v || '').trim() === f);
+  const rng = (v, d, h) => (!d && !h) || (!!v && (!d || v >= d) && (!h || v <= h));
+  const ven = (v, f) => !f || f === (!v ? 'sin' : v < hoy ? 'vencido' : v <= lim ? 'prox' : 'vigente');
+  const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || `${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`.toLowerCase().includes(q))
+      && txt(e.legajo, F.legajo) && txt(`${e.apellido} ${e.nombre}`, F.nombre)
+      && pick(e.razonSocial, F.razon) && pick(e.local, F.local) && pick(e.puesto, F.puesto)
+      && rng(e.fechaIngreso, F.ingD, F.ingH) && rng(finPruebaDe(e), F.fpD, F.fpH)
+      && (!F.alta || (F.alta === '__none__' ? !e.alta : e.alta === F.alta))
+      && ven(e.dniVenc, F.dni) && ven(e.libretaSanitariaVenc, F.lib))
+    .sort(ordenNomina());
+  const vcell = e => f => !f ? '—' : `<span class="${!['activo', 'licencia'].includes(e.estado) ? '' : f < hoy ? 'v-bad' : f <= lim ? 'v-soon' : ''}">${fdate(f)}</span>`;
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}</td><td>${esc(e.razonSocial)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td><td>${vcell(e)(e.dniVenc)}</td><td>${vcell(e)(e.libretaSanitariaVenc)}</td></tr>`).join('')
+    : `<tr><td colspan="11" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
+  const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
 }
 
 function renderDetail() {
@@ -704,7 +775,7 @@ function renderDetail() {
       ${inp('Legajo', 'legajo', 'text', 'placeholder="Automático si lo dejás vacío"')}${sel('Estado', 'estado', ESTADOS)}
       <label class="fld"><span>Local</span><input name="local" list="locales" value="${esc(e.local ?? '')}"></label>
       <label class="fld"><span>Razón social</span><select name="razonSocial"><option value="">Sin asignar</option>${RAZONES.map(r => `<option value="${esc(r)}" ${e.razonSocial === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
-      <label class="fld"><span>Puesto</span><select name="puesto"><option value="">Elegí un puesto</option>${(e.puesto && !PUESTOS.includes(e.puesto) ? [e.puesto] : []).concat(PUESTOS).map(p => `<option value="${esc(p)}" ${e.puesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      <label class="fld"><span>Puesto</span><select name="puesto"><option value="">Elegí un puesto</option>${ordenPuestos().map(p => `<option value="${esc(p)}" ${e.puesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
       ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
     </div>
@@ -712,7 +783,7 @@ function renderDetail() {
     <div class="sub">Documentación de ingreso</div>
     <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
     <div class="frm" style="margin-top:12px">
-      ${inp('Vencimiento libreta sanitaria', 'libretaSanitariaVenc', 'date')}${inp('Vencimiento examen preocupacional', 'preocupacionalVenc', 'date')}
+      ${inp('Vencimiento DNI / precaria', 'dniVenc', 'date')}${inp('Vencimiento libreta sanitaria', 'libretaSanitariaVenc', 'date')}
     </div>
     <div style="margin-top:18px;display:flex;gap:8px">
       <button class="btn primary" type="button" data-act="saveEmp">${isNew ? 'Crear empleado' : 'Guardar cambios'}</button>
@@ -893,7 +964,7 @@ function onLiqInput(t) {
 /* ================= Historial y estadística ================= */
 function renderEst() {
   const locales = [...new Set([...LOCALES, ...S.empleados.map(e => (e.local || '').trim()).filter(Boolean)])];
-  const puestos = [...PUESTOS, ...new Set(S.empleados.map(e => e.puesto).filter(p => p && !PUESTOS.includes(p)))];
+  const puestos = ordenPuestos();
   const emps = S.empleados.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
   $('#v-est').innerHTML = `
   <div class="stack">
@@ -1010,6 +1081,12 @@ function renderPar() {
     <div class="frm">${num('par-v1', 'Hasta 5 años', P.vacaciones[0].dias, 'step="1" min="0"')}${num('par-v2', 'Más de 5 y hasta 10', P.vacaciones[1].dias, 'step="1" min="0"')}${num('par-v3', 'Más de 10 y hasta 20', P.vacaciones[2].dias, 'step="1" min="0"')}${num('par-v4', 'Más de 20 años', P.vacaciones[3].dias, 'step="1" min="0"')}</div>
     <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
   </form>
+  <div class="card">
+    <h2>Orden de los puestos</h2>
+    <p class="muted" style="margin-top:0">Es el orden en que aparece la nómina en Empleados (y en las listas de puestos). Arrastrá cada puesto o usá las flechas. Dentro de un mismo puesto se ordena por apellido. Se guarda al instante.</p>
+    <button class="btn sm" type="button" data-act="puestosReset">Restablecer orden original</button>
+    <ul class="ord" id="ord-puestos"></ul>
+  </div>
   <form class="card" onsubmit="return false">
     <h2>Carga masiva de empleados (Excel / CSV)</h2>
     <p class="muted" style="margin-top:0">Subí una planilla con un empleado por fila. Si el <b>legajo</b> o el <b>DNI</b> de una fila ya existe, se actualiza ese legajo; si no, se crea uno nuevo. No borra ni toca a nadie que no esté en el archivo.</p>
@@ -1019,7 +1096,7 @@ function renderPar() {
       <span id="imp-emp-nombre" class="muted"></span>
     </div>
     <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Columnas que reconoce</summary>
-      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. libreta sanitaria, Vto. preocupacional. El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
+      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria. El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
     </details>
     <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
   </form>
@@ -1061,11 +1138,21 @@ function renderPar() {
     </div>
   </form>
   </div>`;
+  paintOrdenPuestos();
+}
+function paintOrdenPuestos() {
+  const box = $('#ord-puestos'); if (!box) return;
+  const ord = ordenPuestos(), cnt = {};
+  S.empleados.forEach(e => { const p = (e.puesto || '').trim(); if (p) cnt[p] = (cnt[p] || 0) + 1; });
+  box.innerHTML = ord.map((p, i) => `<li class="ord-item" draggable="true" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(p)}</span><span class="muted">${cnt[p] ? cnt[p] + (cnt[p] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(p)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(p)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
 }
 
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; go(b.dataset.tab); },
+  clearFilters: () => { UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
+  puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
+  puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
   openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
   back: () => { UI.detail = null; renderEmp(); },
@@ -1081,10 +1168,10 @@ const ACT = {
       legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
-      libretaSanitariaVenc: d.libretaSanitariaVenc || '', preocupacionalVenc: d.preocupacionalVenc || '' });
+      libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '' });
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
-      const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', preocupacionalVenc: 'Vto. preocupacional' };
+      const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
       Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
       Object.assign(prev, nuevo);
     }
@@ -1185,7 +1272,7 @@ const ACT = {
   impEmpPlantilla: () => {
     const headers = ['Legajo', 'Nombre', 'Apellido', 'DNI', 'CUIL', 'Fecha nacimiento', 'Teléfono', 'Email', 'Domicilio',
       'Contacto emergencia', 'Teléfono emergencia', 'CBU', 'Banco', 'Estado', 'Local', 'Razón social', 'Puesto', 'Alta', 'Categoría CCT',
-      'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. libreta sanitaria', 'Vto. preocupacional'];
+      'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. DNI / precaria', 'Vto. libreta sanitaria'];
     const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Sabores Incas', 'Camarero', '', '', '', '2024-03-01', 500000, '', ''];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ejemplo]), 'Empleados');
@@ -1199,6 +1286,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') { UI.q = t.value; paintRows(); }
   else if (t.id === 'fe') { UI.fe = t.value; paintRows(); }
+  else if (t.dataset && t.dataset.f !== undefined) { UI.f[t.dataset.f] = t.value; paintRows(); }
   else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
   else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }
   else if (t.id === 'st-rot-local') { UI.stRotLocal = t.value; paintRotacion(); }
@@ -1247,9 +1335,9 @@ document.addEventListener('change', e => {
           categoriaCCT: impTxt(d.categoriaCCT, prev && prev.categoriaCCT), modalidad: impTxt(d.modalidad, prev && prev.modalidad),
           fechaIngreso: impFecha(d.fechaIngreso) || (prev ? prev.fechaIngreso : ''),
           sueldoActual: d.sueldoActual !== undefined && String(d.sueldoActual).trim() !== '' ? impNum(d.sueldoActual) : (prev ? prev.sueldoActual : 0),
-          docs: prev ? prev.docs : { dni: false, cuil: false, preapto: false, contrato: false },
+          docs: prev ? prev.docs : { dni: false, cuil: false, contrato: false },
           libretaSanitariaVenc: impFecha(d.libretaSanitariaVenc) || (prev ? prev.libretaSanitariaVenc : ''),
-          preocupacionalVenc: impFecha(d.preocupacionalVenc) || (prev ? prev.preocupacionalVenc : '')
+          dniVenc: impFecha(d.dniVenc) || (prev ? prev.dniVenc : '')
         });
         cambios.push({ prev, nuevo, isNew: !prev });
       });
@@ -1287,6 +1375,19 @@ $('#imp').addEventListener('change', e => {
   };
   rd.readAsText(file);
 });
+
+/* Arrastrar y soltar para ordenar los puestos (en pantallas táctiles se usan las flechas) */
+let dragI = null;
+const ordItem = e => { const el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement); return el && el.closest ? el.closest('.ord-item') : null; };
+document.addEventListener('dragstart', e => { const li = ordItem(e); if (!li) return; dragI = +li.dataset.pi; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragI)); } catch (_) {} li.classList.add('dragging'); });
+document.addEventListener('dragover', e => { const li = ordItem(e); if (!li || dragI === null) return; e.preventDefault(); $$('.ord-item.over').forEach(x => { if (x !== li) x.classList.remove('over'); }); li.classList.add('over'); });
+document.addEventListener('drop', e => {
+  const li = ordItem(e); if (!li || dragI === null) return; e.preventDefault();
+  const to = +li.dataset.pi, ord = ordenPuestos();
+  if (to !== dragI) { const [m] = ord.splice(dragI, 1); ord.splice(to, 0, m); S.ordenPuestos = ord; save(); }
+  dragI = null; paintOrdenPuestos();
+});
+document.addEventListener('dragend', () => { dragI = null; $$('.ord-item').forEach(x => x.classList.remove('dragging', 'over')); });
 
 function migrarDatos() {                                      // "E. Camarero" → "Camarero"; "bcp" → "BCP"
   let cambio = false;

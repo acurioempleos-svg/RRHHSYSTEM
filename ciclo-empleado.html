@@ -237,6 +237,12 @@ function finDePrueba(ingISO, meses) {
   return fmtISO(d);
 }
 
+// Ley 27.802 (vigente desde el 06/03/2026) modificó el art. 231 LCT: durante el período de prueba el empleador ya no debe preaviso.
+// Antes de esa fecha, el fin de prueba lleva preaviso de 15 días (o su indemnización sustitutiva).
+const SIN_PREAVISO_PRUEBA_DESDE = '2026-03-06';
+const preavisoAplica = (tipo, fechaISO) => tipo === 'despido_sin_causa' || tipo === 'despido_indirecto'
+  || (tipo === 'fin_prueba' && (!fechaISO || fechaISO < SIN_PREAVISO_PRUEBA_DESDE));
+
 function calcularLiquidacion({ emp, rem, egreso, P }) {
   const ing = pd(emp.fechaIngreso), f = pd(egreso.fecha), t = egreso.tipo;
   const sueldo = +emp.sueldoActual || 0, v30 = sueldo / 30, v25 = sueldo / 25;
@@ -273,8 +279,15 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   const enPrueba = f <= pd(finDePrueba(emp.fechaIngreso, P.mesesPrueba));
   if (t === 'fin_prueba' && !enPrueba) avisos.push('La fecha de egreso es posterior al fin del período de prueba: corresponde tratarlo como despido sin causa.');
   if (t === 'despido_sin_causa' && enPrueba) avisos.push('El egreso cae dentro del período de prueba: verificá si corresponde "Fin de período de prueba".');
+  if (t === 'fin_prueba') {
+    avisos.push('Fin del período de prueba (art. 92 bis LCT): no genera antigüedad, por lo que no corresponde indemnización del art. 245 ni integración del mes. Se liquidan los días trabajados, el SAC proporcional y las vacaciones proporcionales.'
+      + (preavisoAplica(t, egreso.fecha)
+        ? ' Como el egreso es anterior al 06/03/2026, corresponde preaviso de 15 días (o su indemnización sustitutiva).'
+        : ' Desde el 06/03/2026 (Ley 27.802, art. 231 LCT) tampoco se debe preaviso durante el período de prueba.'));
+    if (emp.modalidad && emp.modalidad !== 'indeterminado') avisos.push('El período de prueba del art. 92 bis rige para contratos por tiempo indeterminado. Este empleado figura con otra modalidad: verificá que corresponda usar este tipo de egreso.');
+  }
   let mesesPre = 0;
-  if (egreso.pagarPreaviso && (t === 'despido_sin_causa' || t === 'fin_prueba' || t === 'despido_indirecto')) {
+  if (egreso.pagarPreaviso && preavisoAplica(t, egreso.fecha)) {
     mesesPre = t === 'fin_prueba' ? 0.5 : (antigReal <= 5 ? 1 : 2);
     add('PREAVISO', `Preaviso sustitutivo (${mesesPre === 0.5 ? '15 días' : mesesPre + (mesesPre === 1 ? ' mes' : ' meses')})`, sueldo * mesesPre);
     add('SAC_PRE', 'SAC s/ preaviso', sueldo * mesesPre / 12);
@@ -534,7 +547,7 @@ function lineChart(points, { w = 560, h = 150, fmtY = n => n } = {}) {    // poi
 const log = (empleadoId, texto) => S.historial.push({ id: uid(), empleadoId, ts: new Date().toISOString(), texto });
 
 const ESTADOS = { candidato: 'Candidato', preingreso: 'Preingreso', activo: 'Activo', licencia: 'En licencia', egreso: 'Egreso en curso', liquidado: 'Liquidado', archivado: 'Archivado' };
-const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento' };
+const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba (art. 92 bis)', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento' };
 const LIQ_ESTADOS = { borrador: 'Borrador', aprobada: 'Aprobada', pagada: 'Pagada', cerrada: 'Cerrada' };
 const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', contrato: 'Registro / contrato firmado' };
 const SANC_TIPOS = ['Apercibimiento', 'Suspensión', 'Otra'];
@@ -579,7 +592,7 @@ const IMP_ALIAS = {
   emergenciaNombre: ['contacto emergencia', 'emergencia nombre', 'contacto de emergencia'],
   emergenciaTel: ['telefono emergencia', 'emergencia telefono', 'tel emergencia'],
   cbu: ['cbu'], banco: ['banco'], estado: ['estado'], local: ['local', 'sucursal'], razonSocial: ['razon social', 'razonsocial', 'empresa'], puesto: ['puesto', 'cargo'], alta: ['alta'],
-  categoriaCCT: ['categoria cct', 'categoriacct', 'categoria'], modalidad: ['modalidad'],
+  categoriaCCT: ['categoria cct', 'categoriacct', 'categoria'], modalidad: ['modalidad'], rifl: ['regimen 710', 'regimen 710 rifl', 'rifl', '710'],
   fechaIngreso: ['fecha ingreso', 'fecha de ingreso', 'ingreso'],
   sueldoActual: ['sueldo', 'sueldo actual', 'sueldo mensual', 'sueldo mensual normal y habitual'],
   libretaSanitariaVenc: ['vto libreta sanitaria', 'libreta sanitaria', 'vencimiento libreta sanitaria'],
@@ -611,6 +624,7 @@ function impEstado(v) {
   for (const k in ESTADOS) if (normHeader(ESTADOS[k]) === n) return k;
   return '';
 }
+function impBool(v) { const n = normHeader(v); return ['si', 's', 'x', '1', 'true', 'verdadero', 'yes'].includes(n); }
 function impAlta(v) { const n = normHeader(v); return n === 'n' || n === 'normal' ? 'N' : n === 's' || n === 'especial' ? 'S' : ''; }
 function impPuesto(v) { const s = String(v ?? '').trim(); if (!s) return ''; return PUESTOS.find(p => p.toLowerCase() === s.toLowerCase()) || s; }
 function impTxt(v, prevVal) { const s = String(v ?? '').trim(); return s !== '' ? s : (prevVal ?? ''); }
@@ -736,7 +750,7 @@ function paintRows() {
       && ven(e.dniVenc, F.dni) && ven(e.libretaSanitariaVenc, F.lib))
     .sort(ordenNomina());
   const vcell = e => f => !f ? '—' : `<span class="${!['activo', 'licencia'].includes(e.estado) ? '' : f < hoy ? 'v-bad' : f <= lim ? 'v-soon' : ''}">${fdate(f)}</span>`;
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}</td><td>${esc(e.razonSocial)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td><td>${vcell(e)(e.dniVenc)}</td><td>${vcell(e)(e.libretaSanitariaVenc)}</td></tr>`).join('')
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td><td>${esc(e.razonSocial)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td><td>${vcell(e)(e.dniVenc)}</td><td>${vcell(e)(e.libretaSanitariaVenc)}</td></tr>`).join('')
     : `<tr><td colspan="11" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
 }
@@ -779,6 +793,7 @@ function renderDetail() {
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
       ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
     </div>
+    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
     <div class="sub">Documentación de ingreso</div>
     <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
@@ -877,7 +892,7 @@ function updateLiq() {
   if (!locked) L.inputs = readLiqForm();
   const inp = L.inputs;
   $('#row-monto').hidden = inp.tipo !== 'mutuo_acuerdo';
-  $('#row-prea').hidden = !['despido_sin_causa', 'fin_prueba', 'despido_indirecto'].includes(inp.tipo);
+  $('#row-prea').hidden = !preavisoAplica(inp.tipo, inp.fecha);
   $('#row-integ').hidden = !['despido_sin_causa', 'despido_indirecto'].includes(inp.tipo);
 
   let res;
@@ -897,7 +912,7 @@ function updateLiq() {
   const est = liq ? liq.estado : 'borrador';
   const vence = addHabiles(inp.fecha, 4);
   let simHtml = '';
-  if (!locked && ['despido_sin_causa', 'fin_prueba', 'despido_indirecto'].includes(inp.tipo)) {
+  if (!locked && preavisoAplica(inp.tipo, inp.fecha)) {
     const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend };
     const remEmp = S.remuneraciones.filter(r => r.empleadoId === emp.id);
     const sinP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: false }, P: S.parametros });
@@ -1096,7 +1111,7 @@ function renderPar() {
       <span id="imp-emp-nombre" class="muted"></span>
     </div>
     <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Columnas que reconoce</summary>
-      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria. El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
+      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria, Régimen 710 (Sí/No). El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
     </details>
     <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
   </form>
@@ -1168,11 +1183,12 @@ const ACT = {
       legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
-      libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '' });
+      libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked });
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
       const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
       Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
+      if (!!prev.rifl !== !!nuevo.rifl) log(nuevo.id, `Régimen 710 (RIFL): ${prev.rifl ? 'Sí' : 'No'} → ${nuevo.rifl ? 'Sí' : 'No'}`);
       Object.assign(prev, nuevo);
     }
     save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
@@ -1272,8 +1288,8 @@ const ACT = {
   impEmpPlantilla: () => {
     const headers = ['Legajo', 'Nombre', 'Apellido', 'DNI', 'CUIL', 'Fecha nacimiento', 'Teléfono', 'Email', 'Domicilio',
       'Contacto emergencia', 'Teléfono emergencia', 'CBU', 'Banco', 'Estado', 'Local', 'Razón social', 'Puesto', 'Alta', 'Categoría CCT',
-      'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. DNI / precaria', 'Vto. libreta sanitaria'];
-    const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Sabores Incas', 'Camarero', '', '', '', '2024-03-01', 500000, '', ''];
+      'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. DNI / precaria', 'Vto. libreta sanitaria', 'Régimen 710'];
+    const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Sabores Incas', 'Camarero', '', '', '', '2024-03-01', 500000, '', '', ''];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ejemplo]), 'Empleados');
     XLSX.writeFile(wb, 'plantilla-empleados.xlsx');
@@ -1337,7 +1353,8 @@ document.addEventListener('change', e => {
           sueldoActual: d.sueldoActual !== undefined && String(d.sueldoActual).trim() !== '' ? impNum(d.sueldoActual) : (prev ? prev.sueldoActual : 0),
           docs: prev ? prev.docs : { dni: false, cuil: false, contrato: false },
           libretaSanitariaVenc: impFecha(d.libretaSanitariaVenc) || (prev ? prev.libretaSanitariaVenc : ''),
-          dniVenc: impFecha(d.dniVenc) || (prev ? prev.dniVenc : '')
+          dniVenc: impFecha(d.dniVenc) || (prev ? prev.dniVenc : ''),
+          rifl: d.rifl !== undefined && String(d.rifl).trim() !== '' ? impBool(d.rifl) : (prev ? !!prev.rifl : false)
         });
         cambios.push({ prev, nuevo, isNew: !prev });
       });

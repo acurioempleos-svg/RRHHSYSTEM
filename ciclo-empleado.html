@@ -222,7 +222,22 @@ const DEFAULT_P = {
   vacaciones: [{ hasta: 5, dias: 14 }, { hasta: 10, dias: 21 }, { hasta: 20, dias: 28 }, { hasta: 999, dias: 35 }],
   mesesPrueba: 6,
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
+  colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, estado: true, vencDni: true, vencLibreta: true },
 };
+const COLS_EMP = [                                                     // columnas opcionales de la pestaña Empleados (Legajo y Nombre son fijas)
+  { id: 'banco', label: 'Banco' },
+  { id: 'cbu', label: 'CBU / alias' },
+  { id: 'razon', label: 'Razón social' },
+  { id: 'local', label: 'Local' },
+  { id: 'puesto', label: 'Puesto' },
+  { id: 'ingreso', label: 'Ingreso' },
+  { id: 'finPrueba', label: 'Fin de prueba' },
+  { id: 'alta', label: 'Alta (N/S)' },
+  { id: 'estado', label: 'Estado' },
+  { id: 'vencDni', label: 'Venc. DNI / precaria' },
+  { id: 'vencLibreta', label: 'Venc. libreta sanitaria' },
+];
+const colVisible = id => S.parametros.colsEmp ? S.parametros.colsEmp[id] !== false : true;
 
 // Último día del período de prueba (ingreso + N meses − 1 día)
 function finDePrueba(ingISO, meses) {
@@ -450,10 +465,12 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], bancosExtra: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
+  const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
   b.parametros = Object.assign(clone(DEFAULT_P), b.parametros);
+  b.parametros.colsEmp = colsEmp;
   delete b.parametros.aportes;
   return b;
 }
@@ -505,8 +522,20 @@ const PUESTOS = ['Bacha', 'Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almace
   'Camarero', 'Camarero Jr', 'Corredor', 'Jefe de barra', 'Barra', 'Chef', 'Sous Chef', 'Cocina', 'Produccion', 'Volante',
   'Valet Parking', 'Director', 'Auditora jefe', 'Auditora', 'RRHH', 'Mantenimiento', 'Gerente general', 'Gerente de compras',
   'Compras', 'Jefa de administracion', 'Administracion'];
-const canonLocal = v => { v = (v || '').trim(); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
+const canonLocal = v => { v = (v || '').trim().replace(/^\d+\.\s*/, ''); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
 const canonRazon = v => { v = (v || '').trim(); return RAZONES.find(r => r.toLowerCase() === v.toLowerCase()) || v; };
+const BANCOS = ['Banco de la Nación Argentina', 'Banco de la Provincia de Buenos Aires', 'Banco Ciudad', 'Banco Galicia', 'Banco Santander', 'BBVA', 'Banco Macro', 'HSBC', 'ICBC', 'Banco Supervielle', 'Banco Patagonia', 'Banco Comafi', 'Banco Credicoop', 'Banco Hipotecario', 'Banco Itaú', 'Banco de Córdoba', 'Banco de San Juan', 'Brubank', 'Ualá', 'Naranja X', 'Mercado Pago', 'Prex', 'Otro'];
+const bancosLista = () => {
+  const extra = (S && S.bancosExtra) || [];
+  const base = BANCOS.filter(b => b !== 'Otro');
+  const todos = [...base, ...extra.filter(b => !base.some(x => x.toLowerCase() === b.toLowerCase()))];
+  return [...todos, 'Otro'];
+};
+function registrarBancoNuevo(nombre) {
+  const n = (nombre || '').trim(); if (!n || n === 'Otro') return;
+  S.bancosExtra = S.bancosExtra || [];
+  if (!bancosLista().some(b => b.toLowerCase() === n.toLowerCase())) S.bancosExtra.push(n);
+}
 
 /* Orden de los puestos en la nómina: lo define el usuario en Parámetros → "Orden de los puestos".
    Mientras no lo toque, se usa este orden de partida: Salón antes que Cocina y, dentro de cada área,
@@ -580,7 +609,7 @@ const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
 const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
-const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '' };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '' };
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
 /* ================= Alertas del panel general ================= */
@@ -659,6 +688,20 @@ function renderEmp() {
   const rng = (key, label) => `<div class="rng"><label>Desde<input type="date" data-f="${key}D" value="${esc(F[key + 'D'] || '')}" aria-label="${label} desde"></label><label>Hasta<input type="date" data-f="${key}H" value="${esc(F[key + 'H'] || '')}" aria-label="${label} hasta"></label></div>`;
   const venc = (key, label) => `<select data-f="${key}" aria-label="Filtrar por ${label}"><option value="">Todos</option>${[['vencido', 'Vencido'], ['prox', 'Vence en 15 días'], ['vigente', 'Vigente'], ['sin', 'Sin fecha']].map(([v, l]) => opt(v, F[key], l)).join('')}</select>`;
   const puestosEnUso = ordenPuestos().filter(p => S.empleados.some(e => (e.puesto || '').trim() === p));
+  const COLDEFS = {
+    banco: { th: '<th>Banco</th>', ftr: `<th>${pick('banco', vals('banco'), 'banco')}</th>` },
+    cbu: { th: '<th>CBU / alias</th>', ftr: `<th>${txt('cbu', 'CBU / alias')}</th>` },
+    razon: { th: '<th>Razón social</th>', ftr: `<th>${pick('razon', vals('razonSocial'), 'razón social')}</th>` },
+    local: { th: '<th>Local</th>', ftr: `<th>${pick('local', vals('local'), 'local')}</th>` },
+    puesto: { th: '<th>Puesto</th>', ftr: `<th>${pick('puesto', puestosEnUso, 'puesto')}</th>` },
+    ingreso: { th: '<th>Ingreso</th>', ftr: `<th>${rng('ing', 'Ingreso')}</th>` },
+    finPrueba: { th: '<th>Fin de prueba</th>', ftr: `<th>${rng('fp', 'Fin de prueba')}</th>` },
+    alta: { th: '<th title="N = alta normal, S = alta especial">Alta</th>', ftr: `<th><select data-f="alta" aria-label="Filtrar por alta"><option value="">Todas</option>${opt('N', F.alta, 'N (normal)')}${opt('S', F.alta, 'S (especial)')}${opt('__none__', F.alta, 'Sin alta')}</select></th>` },
+    estado: { th: '<th>Estado</th>', ftr: `<th><select id="fe" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select></th>` },
+    vencDni: { th: '<th>Venc. DNI / precaria</th>', ftr: `<th>${venc('dni', 'vencimiento de DNI / precaria')}</th>` },
+    vencLibreta: { th: '<th>Venc. libreta</th>', ftr: `<th>${venc('lib', 'vencimiento de libreta')}</th>` },
+  };
+  const cols = COLS_EMP.filter(c => colVisible(c.id));
   $('#v-emp').innerHTML = `
     <div class="bar">
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
@@ -666,21 +709,13 @@ function renderEmp() {
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
     <div class="card tablewrap"><table class="grid"><thead>
-      <tr><th>Legajo</th><th>Nombre</th><th>Razón social</th><th>Local</th><th>Puesto</th><th>Ingreso</th><th>Fin de prueba</th><th title="N = alta normal, S = alta especial">Alta</th><th>Estado</th><th>Venc. DNI / precaria</th><th>Venc. libreta</th></tr>
+      <tr><th>Legajo</th><th>Nombre</th>${cols.map(c => COLDEFS[c.id].th).join('')}</tr>
       <tr class="frow">
         <th>${txt('legajo', 'legajo')}</th>
         <th>${txt('nombre', 'nombre')}</th>
-        <th>${pick('razon', vals('razonSocial'), 'razón social')}</th>
-        <th>${pick('local', vals('local'), 'local')}</th>
-        <th>${pick('puesto', puestosEnUso, 'puesto')}</th>
-        <th>${rng('ing', 'Ingreso')}</th>
-        <th>${rng('fp', 'Fin de prueba')}</th>
-        <th><select data-f="alta" aria-label="Filtrar por alta"><option value="">Todas</option>${opt('N', F.alta, 'N (normal)')}${opt('S', F.alta, 'S (especial)')}${opt('__none__', F.alta, 'Sin alta')}</select></th>
-        <th><select id="fe" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select></th>
-        <th>${venc('dni', 'vencimiento de DNI / precaria')}</th>
-        <th>${venc('lib', 'vencimiento de libreta')}</th>
+        ${cols.map(c => COLDEFS[c.id].ftr).join('')}
       </tr></thead><tbody id="emp-rows"></tbody></table></div>
-    <p class="muted"><span id="emp-count"></span> Alta: N = normal, S = especial. Vacío = sin alta.</p>`;
+    <p class="muted"><span id="emp-count"></span> Alta: N = normal, S = especial. Vacío = sin alta.${cols.length < COLS_EMP.length ? ' Hay columnas ocultas — se pueden mostrar de nuevo en Parámetros.' : ''}</p>`;
   paintRows();
 }
 function paintRows() {
@@ -692,14 +727,28 @@ function paintRows() {
   const ven = (v, f) => !f || f === (!v ? 'sin' : v < hoy ? 'vencido' : v <= lim ? 'prox' : 'vigente');
   const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || `${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`.toLowerCase().includes(q))
       && txt(e.legajo, F.legajo) && txt(`${e.apellido} ${e.nombre}`, F.nombre)
-      && pick(e.razonSocial, F.razon) && pick(e.local, F.local) && pick(e.puesto, F.puesto)
+      && pick(e.razonSocial, F.razon) && pick(e.local, F.local) && pick(e.puesto, F.puesto) && pick(e.banco, F.banco) && txt(e.cbu, F.cbu)
       && rng(e.fechaIngreso, F.ingD, F.ingH) && rng(finPruebaDe(e), F.fpD, F.fpH)
       && (!F.alta || (F.alta === '__none__' ? !e.alta : e.alta === F.alta))
       && ven(e.dniVenc, F.dni) && ven(e.libretaSanitariaVenc, F.lib))
     .sort(ordenNomina());
   const vcell = e => f => !f ? '—' : `<span class="${!['activo', 'licencia'].includes(e.estado) ? '' : f < hoy ? 'v-bad' : f <= lim ? 'v-soon' : ''}">${fdate(f)}</span>`;
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td><td>${esc(e.razonSocial)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td><td>${fdate(e.fechaIngreso)}</td><td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td><td>${altaPill(e)}</td><td>${chip(e.estado)}</td><td>${vcell(e)(e.dniVenc)}</td><td>${vcell(e)(e.libretaSanitariaVenc)}</td></tr>`).join('')
-    : `<tr><td colspan="11" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
+  const COLCELLS = {
+    banco: e => `<td>${esc(e.banco)}</td>`,
+    cbu: e => `<td>${esc(e.cbu)}</td>`,
+    razon: e => `<td>${esc(e.razonSocial)}</td>`,
+    local: e => `<td>${esc(e.local)}</td>`,
+    puesto: e => `<td>${esc(e.puesto)}</td>`,
+    ingreso: e => `<td>${fdate(e.fechaIngreso)}</td>`,
+    finPrueba: e => `<td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td>`,
+    alta: e => `<td>${altaPill(e)}</td>`,
+    estado: e => `<td>${chip(e.estado)}</td>`,
+    vencDni: e => `<td>${vcell(e)(e.dniVenc)}</td>`,
+    vencLibreta: e => `<td>${vcell(e)(e.libretaSanitariaVenc)}</td>`,
+  };
+  const cols = COLS_EMP.filter(c => colVisible(c.id));
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`).join('')
+    : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
 }
 
@@ -730,8 +779,12 @@ function renderDetail() {
       ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${inp('Teléfono', 'tel', 'tel')}
       ${inp('Email', 'email', 'email')}${inp('Domicilio', 'domicilio')}
       ${inp('Contacto de emergencia', 'emergenciaNombre')}${inp('Teléfono de emergencia', 'emergenciaTel', 'tel')}
-      ${inp('CBU / alias', 'cbu')}${inp('Banco', 'banco')}
     </div>
+    <div class="sub">Cuenta bancaria</div>
+    <div class="frm">
+      ${inp('CBU / alias', 'cbu')}<label class="fld"><span>Banco</span><input name="banco" list="bancos" value="${esc(e.banco ?? '')}"></label>
+    </div>
+    <datalist id="bancos">${bancosLista().map(b => `<option value="${esc(b)}">`).join('')}</datalist>
     <div class="sub">Datos laborales</div>
     <div class="frm">
       ${inp('Legajo', 'legajo', 'text', 'placeholder="Automático si lo dejás vacío"')}${sel('Estado', 'estado', ESTADOS)}
@@ -941,6 +994,25 @@ function renderEst() {
       <p class="muted" style="margin-bottom:0">Se cuentan los empleados activos y en licencia.</p>
     </div>
     <div class="card">
+      <h2>Costo de nómina por local y puesto</h2>
+      <p class="muted" style="margin-top:0">Suma del sueldo mensual normal y habitual de los empleados activos y en licencia. Es una estimación: no incluye cargas sociales ni el resto de la liquidación mensual.</p>
+      <div class="frm" style="max-width:640px">
+        <label class="fld"><span>Local</span><select id="cn-local"><option value="">Todos los locales</option>${locales.map(l => `<option value="${esc(l)}" ${UI.costoLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+        <label class="fld"><span>Puesto</span><select id="cn-puesto"><option value="">Todos los puestos</option>${puestos.map(p => `<option value="${esc(p)}" ${UI.costoPuesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      </div>
+      <div id="cn-res"></div>
+    </div>
+    <div class="card">
+      <h2>Altas y bajas por período</h2>
+      <p class="muted" style="margin-top:0">Rotación de personal: altas según fecha de ingreso, bajas según fecha de la liquidación de egreso.</p>
+      <div class="frm" style="max-width:640px">
+        <label class="fld"><span>Desde</span><input type="date" id="per-desde" value="${esc(UI.perDesde)}"></label>
+        <label class="fld"><span>Hasta</span><input type="date" id="per-hasta" value="${esc(UI.perHasta)}"></label>
+        <label class="fld"><span>Local</span><select id="per-local"><option value="">Todos los locales</option>${locales.map(l => `<option value="${esc(l)}" ${UI.perLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      </div>
+      <div id="st-per"></div>
+    </div>
+    <div class="card">
       <h2>Rotación por local (últimos 12 meses)</h2>
       <label class="fld" style="max-width:280px"><span>Local</span><select id="st-rot-local">${locales.map(l => `<option value="${esc(l)}" ${UI.stRotLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <div id="st-rot"></div>
@@ -955,7 +1027,7 @@ function renderEst() {
       <div id="h-res"></div>
     </div>
   </div>`;
-  paintEst(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintHist();
+  paintEst(); paintCostoNomina(); paintPeriodo(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintHist();
 }
 function paintEst() {
   const l = UI.stLocal, p = UI.stPuesto, loc = e => (e.local || '').trim(), base = enNomina();
@@ -967,6 +1039,38 @@ function paintEst() {
   const filas = Object.entries(cuenta).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   $('#st-res').innerHTML = `<div class="stat"><strong>${n}</strong><span>${esc(titulo)}</span></div>` +
     (filas.length ? `<table style="max-width:520px"><thead><tr><th>${cab}</th><th class="num">Cantidad</th></tr></thead><tbody>${filas.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v}</td></tr>`).join('')}</tbody></table>` : '');
+}
+function paintCostoNomina() {
+  const l = UI.costoLocal, p = UI.costoPuesto, loc = e => (e.local || '').trim(), base = enNomina();
+  const filtrado = base.filter(e => (!l || loc(e) === l) && (!p || e.puesto === p));
+  const total = filtrado.reduce((s, e) => s + (+e.sueldoActual || 0), 0);
+  const titulo = p && l ? `${p} en ${l}` : p ? `${p} en todos los locales` : l ? `Nómina de ${l}` : 'Nómina total';
+  let cab = '', cuenta = {};
+  if (!p) { cab = 'Puesto'; base.filter(e => !l || loc(e) === l).forEach(e => { const k = e.puesto || 'Sin puesto'; cuenta[k] = (cuenta[k] || 0) + (+e.sueldoActual || 0); }); }
+  else if (!l) { cab = 'Local'; base.filter(e => e.puesto === p).forEach(e => { const k = loc(e) || 'Sin local'; cuenta[k] = (cuenta[k] || 0) + (+e.sueldoActual || 0); }); }
+  else { cab = 'Empleado'; filtrado.forEach(e => { cuenta[`${e.apellido}, ${e.nombre}`] = +e.sueldoActual || 0; }); }
+  const filas = Object.entries(cuenta).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: r2(v) }));
+  $('#cn-res').innerHTML = `<div class="stat"><strong style="font-size:34px">${money(total)}</strong><span>${esc(titulo)} (${filtrado.length} empleado${filtrado.length === 1 ? '' : 's'})</span></div>` + barras(filas, { money: true });
+}
+function paintPeriodo() {
+  const desde = UI.perDesde || '0000-01-01', hasta = UI.perHasta || '9999-12-31', l = UI.perLocal, loc = e => (e.local || '').trim();
+  const altas = S.empleados.filter(e => (!l || loc(e) === l) && e.fechaIngreso && e.fechaIngreso >= desde && e.fechaIngreso <= hasta)
+    .sort((a, b) => a.fechaIngreso.localeCompare(b.fechaIngreso));
+  const bajas = S.liquidaciones.filter(x => x.inputs && x.inputs.fecha >= desde && x.inputs.fecha <= hasta)
+    .map(x => ({ l: x, emp: S.empleados.find(e => e.id === x.empleadoId) }))
+    .filter(x => x.emp && (!l || loc(x.emp) === l))
+    .sort((a, b) => a.l.inputs.fecha.localeCompare(b.l.inputs.fecha));
+  const neto = altas.length - bajas.length;
+  $('#st-per').innerHTML = `
+    <div style="display:flex;gap:28px;flex-wrap:wrap;margin:14px 0 18px">
+      <div class="stat" style="margin:0"><strong style="color:var(--ok)">${altas.length}</strong><span>altas</span></div>
+      <div class="stat" style="margin:0"><strong style="color:var(--danger)">${bajas.length}</strong><span>bajas</span></div>
+      <div class="stat" style="margin:0"><strong>${neto >= 0 ? '+' : ''}${neto}</strong><span>saldo neto</span></div>
+    </div>
+    <div class="cols">
+      <div><h3>Altas (${altas.length})</h3>${altas.length ? `<table><thead><tr><th>Fecha</th><th>Empleado</th><th>Local</th><th>Puesto</th></tr></thead><tbody>${altas.map(e => `<tr><td>${fdate(e.fechaIngreso)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}</td><td>${esc(e.local)}</td><td>${esc(e.puesto)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin altas en el período.</p>'}</div>
+      <div><h3>Bajas (${bajas.length})</h3>${bajas.length ? `<table><thead><tr><th>Fecha</th><th>Empleado</th><th>Local</th><th>Motivo</th></tr></thead><tbody>${bajas.map(({ l: x, emp }) => `<tr><td>${fdate(x.inputs.fecha)}</td><td>${esc(emp.apellido)}, ${esc(emp.nombre)}</td><td>${esc(emp.local)}</td><td>${esc(TIPOS[x.inputs.tipo] || x.inputs.tipo)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Sin bajas en el período.</p>'}</div>
+    </div>`;
 }
 function paintRotacion() {
   const loc = UI.stRotLocal;
@@ -1044,6 +1148,11 @@ function renderPar() {
     <div class="frm">${num('par-v1', 'Hasta 5 años', P.vacaciones[0].dias, 'step="1" min="0"')}${num('par-v2', 'Más de 5 y hasta 10', P.vacaciones[1].dias, 'step="1" min="0"')}${num('par-v3', 'Más de 10 y hasta 20', P.vacaciones[2].dias, 'step="1" min="0"')}${num('par-v4', 'Más de 20 años', P.vacaciones[3].dias, 'step="1" min="0"')}</div>
     <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
   </form>
+  <div class="card">
+    <h2>Columnas visibles en Empleados</h2>
+    <p class="muted" style="margin-top:0">Elegí qué columnas mostrar en la tabla de la pestaña Empleados. Legajo y Nombre siempre se muestran. Se guarda al instante.</p>
+    <div class="docs">${COLS_EMP.map(c => `<label><input type="checkbox" data-col="${c.id}" ${colVisible(c.id) ? 'checked' : ''}> ${esc(c.label)}</label>`).join('')}</div>
+  </div>
   <div class="card">
     <h2>Orden de los puestos</h2>
     <p class="muted" style="margin-top:0">Es el orden en que aparece la nómina en Empleados (y en las listas de puestos). Arrastrá cada puesto o usá las flechas. Dentro de un mismo puesto se ordena por apellido. Se guarda al instante.</p>
@@ -1123,6 +1232,7 @@ const ACT = {
       if (!!prev.rifl !== !!nuevo.rifl) log(nuevo.id, `Régimen 710 (RIFL): ${prev.rifl ? 'Sí' : 'No'} → ${nuevo.rifl ? 'Sí' : 'No'}`);
       Object.assign(prev, nuevo);
     }
+    registrarBancoNuevo(nuevo.banco);
     save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
   },
   delEmp: () => {
@@ -1227,6 +1337,11 @@ document.addEventListener('input', e => {
   else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
   else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }
   else if (t.id === 'st-rot-local') { UI.stRotLocal = t.value; paintRotacion(); }
+  else if (t.id === 'cn-local') { UI.costoLocal = t.value; paintCostoNomina(); }
+  else if (t.id === 'cn-puesto') { UI.costoPuesto = t.value; paintCostoNomina(); }
+  else if (t.id === 'per-desde') { UI.perDesde = t.value; paintPeriodo(); }
+  else if (t.id === 'per-hasta') { UI.perHasta = t.value; paintPeriodo(); }
+  else if (t.id === 'per-local') { UI.perLocal = t.value; paintPeriodo(); }
   else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
   else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
   else if (t.closest && t.closest('#liq-form')) onLiqInput(t);
@@ -1235,6 +1350,11 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.col) {
+    S.parametros.colsEmp = S.parametros.colsEmp || {};
+    S.parametros.colsEmp[e.target.dataset.col] = e.target.checked;
+    save(); toast('Columnas actualizadas'); return;
+  }
   if (e.target.id !== 'imp-emp') return;
   const file = e.target.files[0]; if (!file) return;
   const nombreSpan = $('#imp-emp-nombre'); if (nombreSpan) nombreSpan.textContent = file.name;
@@ -1288,6 +1408,7 @@ document.addEventListener('change', e => {
       cambios.forEach(({ prev, nuevo, isNew }) => {
         if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado por importación (${ESTADOS[nuevo.estado] || nuevo.estado})`); }
         else { Object.assign(prev, nuevo); log(nuevo.id, 'Legajo actualizado por importación'); }
+        registrarBancoNuevo(nuevo.banco);
       });
       save(); migrarDatos(); paintRespaldo(); go(UI.tab);
       const box = resBox();
@@ -1335,6 +1456,7 @@ function migrarDatos() {                                      // "E. Camarero" �
       if (PUESTOS.includes(n)) { e.puesto = n; cambio = true; }
     }
     if (e.local && canonLocal(e.local) !== e.local) { e.local = canonLocal(e.local); cambio = true; }
+    if (e.razonSocial && canonRazon(e.razonSocial) !== e.razonSocial) { e.razonSocial = canonRazon(e.razonSocial); cambio = true; }
   });
   if (cambio) save();
 }

@@ -371,14 +371,25 @@ async function crKey(pass, salt) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
-async function crEncrypt(text, pass) {
+async function crEncrypt(bytes, pass) {
   const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await crKey(pass, salt), new TextEncoder().encode(text));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await crKey(pass, salt), bytes);
   return { salt: b64(salt), iv: b64(iv), data: b64(ct) };
 }
 async function crDecrypt(env, pass) {
   const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, await crKey(pass, unb64(env.salt)), unb64(env.data));
-  return new TextDecoder().decode(pt);
+  return new Uint8Array(pt);
+}
+// Compresión gzip nativa (antes de cifrar / después de descifrar) para entrar en el límite de 100kb de JSONBin free.
+async function gzComp(str) {
+  const cs = new CompressionStream('gzip');
+  const stream = new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(cs);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function gzDecomp(bytes) {
+  const ds = new DecompressionStream('gzip');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new TextDecoder().decode(await new Response(stream).arrayBuffer());
 }
 const JB_KEY = 'rrhh_ciclo_jb_cfg', JB_META = 'rrhh_ciclo_jb_meta';
 // Configuración precargada: no hace falta cargar nada en Parámetros en cada computadora.
@@ -402,7 +413,7 @@ async function jbUpload() {
   try {
     if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
     const stamp = new Date().toISOString();
-    const env = Object.assign({ v: 1, actualizado: stamp, _local: localId }, await crEncrypt(JSON.stringify(S), cfg.clave));
+    const env = Object.assign({ v: 2, actualizado: stamp, _local: localId }, await crEncrypt(await gzComp(JSON.stringify(S)), cfg.clave));
     if (!cfg.binId) {
       const r = await fetch('https://api.jsonbin.io/v3/b', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': 'rrhh_ciclo' }, body: JSON.stringify(env) });
       const j = await r.json().catch(() => ({}));
@@ -441,7 +452,11 @@ async function jbPull(mode = 'auto') {
     const viejo = mode !== 'force' && env.actualizado && meta.lastRemote && env.actualizado <= meta.lastRemote;
     if (propio || viejo) { setSync('on', 'Sincronizado con JSONBin'); return; }
     let data;
-    try { data = JSON.parse(await crDecrypt(env, cfg.clave)); } catch (e) { setSync('err', 'JSONBin: clave incorrecta o datos dañados'); return; }
+    try {
+      const pt = await crDecrypt(env, cfg.clave);
+      const txt = (env.v >= 2) ? await gzDecomp(pt) : new TextDecoder().decode(pt);
+      data = JSON.parse(txt);
+    } catch (e) { setSync('err', 'JSONBin: clave incorrecta o datos dañados'); return; }
     if (!data || !Array.isArray(data.empleados)) { setSync('err', 'JSONBin: los datos de la nube no tienen el formato esperado'); return; }
     if (mode === 'auto' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;   // no pisar lo que se está tipeando
     const sinSync = !meta.lastRemote && S.empleados.length > 0;

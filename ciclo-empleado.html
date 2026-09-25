@@ -45,6 +45,11 @@ td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
 .grid tbody tr[data-act]{cursor:pointer}
 .grid tbody tr[data-act]:hover{background:#F1F4F3}
+#v-emp .grid th,#v-emp .grid td{padding:6px 9px;font-size:13.5px}
+#v-emp .grid th:nth-child(1),#v-emp .grid td:nth-child(1){position:sticky;left:0;background:#fff;z-index:2}
+#v-emp .grid th:nth-child(2),#v-emp .grid td:nth-child(2){position:sticky;left:var(--sticky1,64px);background:#fff;z-index:2;box-shadow:2px 0 4px -2px rgba(0,0,0,.15)}
+#v-emp .grid thead th{z-index:3}
+#v-emp .grid tbody tr:hover td:nth-child(1),#v-emp .grid tbody tr:hover td:nth-child(2){background:#F1F4F3}
 td.num,th.num{text-align:right}
 .empty{color:var(--muted);text-align:center;padding:28px 14px}
 .chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12.5px;font-weight:500;background:#E6ECEA;color:#41565C}
@@ -238,6 +243,11 @@ const COLS_EMP = [                                                     // column
   { id: 'vencLibreta', label: 'Venc. libreta sanitaria' },
 ];
 const colVisible = id => S.parametros.colsEmp ? S.parametros.colsEmp[id] !== false : true;
+function ordenColsEmp() {
+  const todos = COLS_EMP.map(c => c.id);
+  const guardado = (S.ordenColsEmp || []).filter((id, i, a) => todos.includes(id) && a.indexOf(id) === i);
+  return guardado.concat(todos.filter(id => !guardado.includes(id)));
+}
 
 // Último día del período de prueba (ingreso + N meses − 1 día)
 function finDePrueba(ingISO, meses) {
@@ -461,11 +471,12 @@ function jbInit() {
   jbPoll = setInterval(() => { if (!document.hidden) jbPull('auto'); }, 20000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && jbConfig()) jbPull('auto'); });
+window.addEventListener('resize', () => { if (UI.tab === 'emp' && !UI.detail) ajustarStickyEmp(); });
 function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], bancosExtra: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -480,6 +491,12 @@ let S = load();
 
 /* ================= Utilidades UI ================= */
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+function ajustarStickyEmp() {
+  const th1 = $('#v-emp table.grid thead tr:first-child th:first-child');
+  const t = $('#v-emp table.grid');
+  if (!th1 || !t) return;
+  t.style.setProperty('--sticky1', Math.ceil(th1.getBoundingClientRect().width) + 'px');
+}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n || 0);
 const fdate = s => s ? s.split('-').reverse().join('/') : '—';
@@ -701,7 +718,7 @@ function renderEmp() {
     vencDni: { th: '<th>Venc. DNI / precaria</th>', ftr: `<th>${venc('dni', 'vencimiento de DNI / precaria')}</th>` },
     vencLibreta: { th: '<th>Venc. libreta</th>', ftr: `<th>${venc('lib', 'vencimiento de libreta')}</th>` },
   };
-  const cols = COLS_EMP.filter(c => colVisible(c.id));
+  const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
   $('#v-emp').innerHTML = `
     <div class="bar">
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
@@ -746,10 +763,11 @@ function paintRows() {
     vencDni: e => `<td>${vcell(e)(e.dniVenc)}</td>`,
     vencLibreta: e => `<td>${vcell(e)(e.libretaSanitariaVenc)}</td>`,
   };
-  const cols = COLS_EMP.filter(c => colVisible(c.id));
+  const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
   $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
+  ajustarStickyEmp();
 }
 
 function renderDetail() {
@@ -1149,9 +1167,10 @@ function renderPar() {
     <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
   </form>
   <div class="card">
-    <h2>Columnas visibles en Empleados</h2>
-    <p class="muted" style="margin-top:0">Elegí qué columnas mostrar en la tabla de la pestaña Empleados. Legajo y Nombre siempre se muestran. Se guarda al instante.</p>
-    <div class="docs">${COLS_EMP.map(c => `<label><input type="checkbox" data-col="${c.id}" ${colVisible(c.id) ? 'checked' : ''}> ${esc(c.label)}</label>`).join('')}</div>
+    <h2>Columnas de la tabla de Empleados</h2>
+    <p class="muted" style="margin-top:0">Elegí qué columnas mostrar y en qué orden, arrastrándolas o con las flechas. Legajo y Nombre siempre se muestran primero. Se guarda al instante.</p>
+    <button class="btn sm" type="button" data-act="colsReset">Restablecer orden original</button>
+    <ul class="ord" id="ord-cols"></ul>
   </div>
   <div class="card">
     <h2>Orden de los puestos</h2>
@@ -1194,13 +1213,21 @@ function renderPar() {
     </div>
   </form>
   </div>`;
-  paintOrdenPuestos();
+  paintOrdenPuestos(); paintOrdenCols();
 }
 function paintOrdenPuestos() {
   const box = $('#ord-puestos'); if (!box) return;
   const ord = ordenPuestos(), cnt = {};
   S.empleados.forEach(e => { const p = (e.puesto || '').trim(); if (p) cnt[p] = (cnt[p] || 0) + 1; });
-  box.innerHTML = ord.map((p, i) => `<li class="ord-item" draggable="true" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(p)}</span><span class="muted">${cnt[p] ? cnt[p] + (cnt[p] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(p)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(p)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
+  box.innerHTML = ord.map((p, i) => `<li class="ord-item" draggable="true" data-kind="puesto" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(p)}</span><span class="muted">${cnt[p] ? cnt[p] + (cnt[p] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(p)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="puestoMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(p)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
+}
+function paintOrdenCols() {
+  const box = $('#ord-cols'); if (!box) return;
+  const ord = ordenColsEmp();
+  box.innerHTML = ord.map((id, i) => {
+    const c = COLS_EMP.find(x => x.id === id) || { label: id };
+    return `<li class="ord-item" draggable="true" data-kind="col" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;margin:0"><input type="checkbox" data-col="${id}" ${colVisible(id) ? 'checked' : ''}><span class="ord-name">${esc(c.label)}</span></label><span class="ord-btns"><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(c.label)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(c.label)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`;
+  }).join('');
 }
 
 /* ================= Acciones ================= */
@@ -1209,6 +1236,8 @@ const ACT = {
   clearFilters: () => { UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
+  colMove: b => { const ord = ordenColsEmp(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenColsEmp = ord; save(); paintOrdenCols(); },
+  colsReset: () => { if (!confirm('¿Volver al orden original de columnas?')) return; S.ordenColsEmp = []; save(); paintOrdenCols(); toast('Orden restablecido'); },
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
   openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
   back: () => { UI.detail = null; renderEmp(); },
@@ -1435,18 +1464,23 @@ $('#imp').addEventListener('change', e => {
   rd.readAsText(file);
 });
 
-/* Arrastrar y soltar para ordenar los puestos (en pantallas táctiles se usan las flechas) */
-let dragI = null;
+/* Arrastrar y soltar para ordenar los puestos y las columnas (en pantallas táctiles se usan las flechas) */
+let dragI = null, dragK = null;
 const ordItem = e => { const el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement); return el && el.closest ? el.closest('.ord-item') : null; };
-document.addEventListener('dragstart', e => { const li = ordItem(e); if (!li) return; dragI = +li.dataset.pi; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragI)); } catch (_) {} li.classList.add('dragging'); });
-document.addEventListener('dragover', e => { const li = ordItem(e); if (!li || dragI === null) return; e.preventDefault(); $$('.ord-item.over').forEach(x => { if (x !== li) x.classList.remove('over'); }); li.classList.add('over'); });
+const ORD_KINDS = {
+  puesto: { get: ordenPuestos, set: v => S.ordenPuestos = v, paint: paintOrdenPuestos },
+  col: { get: ordenColsEmp, set: v => S.ordenColsEmp = v, paint: paintOrdenCols },
+};
+document.addEventListener('dragstart', e => { const li = ordItem(e); if (!li) return; dragI = +li.dataset.pi; dragK = li.dataset.kind; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragI)); } catch (_) {} li.classList.add('dragging'); });
+document.addEventListener('dragover', e => { const li = ordItem(e); if (!li || dragI === null || li.dataset.kind !== dragK) return; e.preventDefault(); $$('.ord-item.over').forEach(x => { if (x !== li) x.classList.remove('over'); }); li.classList.add('over'); });
 document.addEventListener('drop', e => {
-  const li = ordItem(e); if (!li || dragI === null) return; e.preventDefault();
-  const to = +li.dataset.pi, ord = ordenPuestos();
-  if (to !== dragI) { const [m] = ord.splice(dragI, 1); ord.splice(to, 0, m); S.ordenPuestos = ord; save(); }
-  dragI = null; paintOrdenPuestos();
+  const li = ordItem(e); if (!li || dragI === null || li.dataset.kind !== dragK) return; e.preventDefault();
+  const K = ORD_KINDS[dragK]; if (!K) return;
+  const to = +li.dataset.pi, ord = K.get();
+  if (to !== dragI) { const [m] = ord.splice(dragI, 1); ord.splice(to, 0, m); K.set(ord); save(); }
+  dragI = null; dragK = null; K.paint();
 });
-document.addEventListener('dragend', () => { dragI = null; $$('.ord-item').forEach(x => x.classList.remove('dragging', 'over')); });
+document.addEventListener('dragend', () => { dragI = null; dragK = null; $$('.ord-item').forEach(x => x.classList.remove('dragging', 'over')); });
 
 function migrarDatos() {                                      // "E. Camarero" → "Camarero"; "bcp" → "BCP"
   let cambio = false;

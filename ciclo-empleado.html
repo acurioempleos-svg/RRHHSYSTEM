@@ -13,14 +13,16 @@
 *{box-sizing:border-box}
 html{scroll-padding-top:70px}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.01em}
-header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:20px;padding:10px 22px;flex-wrap:wrap}
-header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
-.tabs{display:flex;gap:4px}
-.tabs button{background:none;border:0;color:#B9C7CB;font:inherit;font-weight:500;padding:7px 14px;border-radius:6px;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:16px;padding:10px 22px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap}
+header::-webkit-scrollbar{height:0}
+header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em;flex:none}
+.tabs{display:flex;gap:4px;flex:none}
+.tabs button{background:none;border:0;color:#B9C7CB;font:inherit;font-weight:500;padding:7px 14px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .tabs button:hover{color:#fff}
 .tabs button[aria-current=page]{background:#ffffff1c;color:#fff}
-.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:13px;color:#B9C7CB}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:13px;color:#B9C7CB;flex:none}
 .hdr-right .warn{color:#F2C46B}
+.detail-bar{position:sticky;top:var(--hh,58px);z-index:4;background:var(--bg);padding:10px 0;margin:0 0 14px}
 main{max-width:1180px;margin:0 auto;padding:22px}
 .view[hidden]{display:none}
 h2{font-size:17px;margin:0 0 12px;font-weight:600}
@@ -487,7 +489,9 @@ function jbInit() {
   jbPoll = setInterval(() => { if (!document.hidden) jbPull('auto'); }, 20000);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && jbConfig()) jbPull('auto'); });
-window.addEventListener('resize', () => { if (UI.tab === 'emp' && !UI.detail) ajustarStickyEmp(); });
+window.addEventListener('resize', () => { if (UI.tab === 'emp' && !UI.detail) ajustarStickyEmp(); setHH(); });
+function setHH() { const h = document.querySelector('header'); if (h) document.documentElement.style.setProperty('--hh', h.offsetHeight + 'px'); }
+setHH();
 function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
@@ -802,7 +806,7 @@ function renderDetail() {
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
   $('#v-emp').innerHTML = `
-  <div class="bar"><button class="btn" data-act="back">Volver a empleados</button>
+  <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
     ${!isNew && canEgreso ? `<button class="btn primary" style="margin-left:auto" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <div class="cols">

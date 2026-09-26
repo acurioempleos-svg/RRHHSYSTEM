@@ -11,9 +11,7 @@
 :root{--bg:#F1F4F3;--panel:#fff;--ink:#1B2B30;--muted:#5E7076;--line:#D7DFDD;--accent:#0D6B58;--accent-d:#0A5343;--signal:#B4700F;--danger:#B23A2B;--ok:#2F7D4F;--r:8px}
 *{box-sizing:border-box}
 html{scroll-padding-top:70px}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
-body,input,textarea,select,button,option{text-transform:uppercase}
-input::placeholder,textarea::placeholder{text-transform:uppercase}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.01em}
 header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:20px;padding:10px 22px;flex-wrap:wrap}
 header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
 .tabs{display:flex;gap:4px}
@@ -1388,8 +1386,13 @@ const ACT = {
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
+const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password']);
 document.addEventListener('input', e => {
   const t = e.target;
+  if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly) {
+    const up = t.value.toUpperCase();
+    if (up !== t.value) { const p = t.selectionStart, q = t.selectionEnd; t.value = up; t.setSelectionRange(p, q); }
+  }
   if (t.id === 'q') { UI.q = t.value; paintRows(); }
   else if (t.id === 'fe') { UI.fe = t.value; paintRows(); }
   else if (t.dataset && t.dataset.f !== undefined) { UI.f[t.dataset.f] = t.value; paintRows(); }

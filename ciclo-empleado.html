@@ -12,6 +12,8 @@
 *{box-sizing:border-box}
 html{scroll-padding-top:70px}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
+body,input,textarea,select,button,option{text-transform:uppercase}
+input::placeholder,textarea::placeholder{text-transform:uppercase}
 header{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;display:flex;align-items:center;gap:20px;padding:10px 22px;flex-wrap:wrap}
 header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
 .tabs{display:flex;gap:4px}
@@ -491,7 +493,7 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -796,6 +798,7 @@ function renderDetail() {
   const lic = S.licencias.filter(l => l.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
   const sanc = S.sanciones.filter(s => s.empleadoId === e.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const his = S.historial.filter(h => h.empleadoId === e.id).sort((a, b) => b.ts.localeCompare(a.ts));
+  const com = S.comentarios.filter(c => c.empleadoId === e.id).sort((a, b) => b.ts.localeCompare(a.ts));
   const liqs = S.liquidaciones.filter(l => l.empleadoId === e.id);
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
@@ -861,6 +864,11 @@ function renderDetail() {
       ${sanc.length ? `<table style="margin-top:10px"><tbody>${sanc.map(s => `<tr><td>${fdate(s.fecha)}</td><td>${esc(s.tipo)}${s.tipo === 'Suspensión' && s.dias ? ` (${s.dias} días)` : ''}<div class="muted">${esc(s.motivo || '')}</div></td><td class="num"><button class="btn sm danger" data-act="delSancion" data-id="${s.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin-bottom:0">Sin sanciones registradas.</p>'}
     </div>
     ${liqs.length ? `<div class="card"><h3>Liquidaciones</h3><table><tbody>${liqs.map(l => `<tr><td>${fdate(l.inputs.fecha)}</td><td>${esc(TIPOS[l.inputs.tipo])}</td><td class="num">${money(totalDe(l.result))}</td><td>${LIQ_ESTADOS[l.estado]}</td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div class="card"><h3>Comentarios</h3>
+      <div class="row"><label class="fld full"><span>Nuevo comentario</span><textarea id="co-texto" rows="2" placeholder="Escribí una observación sobre este colaborador"></textarea></label></div>
+      <div style="margin-top:8px"><button class="btn" data-act="addComentario">Agregar comentario</button></div>
+      <div class="hist" style="margin-top:10px">${com.length ? com.map(c => `<p><time>${new Date(c.ts).toLocaleString('es-AR')}</time>${esc(c.texto)}<button class="btn sm danger" style="float:right" data-act="delComentario" data-id="${c.id}">Quitar</button></p>`).join('') : '<p class="muted">Sin comentarios.</p>'}</div>
+    </div>
     <div class="card"><h3>Historial</h3><div class="hist">${his.length ? his.map(h => `<p><time>${new Date(h.ts).toLocaleString('es-AR')}</time>${esc(h.texto)}</p>`).join('') : '<p class="muted">Sin movimientos.</p>'}</div></div>
    </div>`}
   </div>`;
@@ -1281,7 +1289,7 @@ const ACT = {
   },
   delEmp: () => {
     const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
-    ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial'].forEach(k => S[k] = S[k].filter(x => x.empleadoId !== e.id));
+    ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial', 'comentarios'].forEach(k => S[k] = S[k].filter(x => x.empleadoId !== e.id));
     S.empleados = S.empleados.filter(x => x.id !== e.id); save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
   },
   addRem: () => {
@@ -1313,6 +1321,13 @@ const ACT = {
     log(e.id, `Sanción: ${tipo}${tipo === 'Suspensión' && dias ? ` (${dias} días)` : ''}${motivo ? ' — ' + motivo : ''}`); save(); keepScroll(renderDetail);
   },
   delSancion: b => { S.sanciones = S.sanciones.filter(s => s.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  addComentario: () => {
+    const e = empActual(), texto = $('#co-texto').value.trim();
+    if (!texto) { toast('Escribí el comentario antes de agregarlo.'); return; }
+    S.comentarios.push({ id: uid(), empleadoId: e.id, ts: new Date().toISOString(), texto });
+    save(); keepScroll(renderDetail);
+  },
+  delComentario: b => { S.comentarios = S.comentarios.filter(c => c.id !== b.dataset.id); save(); keepScroll(renderDetail); },
   startEgreso: () => { const e = empActual(); pickEmp(e.id); UI.detail = null; go('liq'); },
   openLiq: b => { const l = S.liquidaciones.find(x => x.id === b.dataset.id); UI.liq = { id: l.id, empId: l.empleadoId }; UI.detail = null; go('liq'); },
   saveLiq: () => persistLiq('borrador'),

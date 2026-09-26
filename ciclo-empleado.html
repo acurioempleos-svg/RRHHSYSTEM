@@ -63,6 +63,16 @@ td.num,th.num{text-align:right}
 .cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .cols.liq{grid-template-columns:minmax(0,340px) minmax(0,1fr)}
 @media(max-width:860px){.cols,.cols.liq{grid-template-columns:1fr}}
+@media(max-width:640px){
+  #v-emp .grid tbody{display:block}
+  #v-emp .grid tbody tr{display:block;border:1px solid var(--line);border-radius:var(--r);padding:4px 12px;margin:10px}
+  #v-emp .grid tbody td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:8px 0;border-bottom:1px solid var(--line);position:static;background:none;box-shadow:none}
+  #v-emp .grid tbody tr:last-child{margin-bottom:0}
+  #v-emp .grid tbody td:last-child{border-bottom:0}
+  #v-emp .grid tbody td::before{content:attr(data-label);font-weight:600;color:var(--muted);font-size:12px;flex:none}
+  #v-emp .grid tbody td[data-label=Nombre]{font-weight:600}
+  #v-emp .grid thead{white-space:nowrap}
+}
 .frm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .frm .full{grid-column:1/-1}
 .fld{display:block}
@@ -756,13 +766,13 @@ function renderEmp() {
   paintRows();
 }
 function paintRows() {
-  const q = UI.q.toLowerCase(), F = UI.f, hoy = today(), lim = fmtISO(new Date(Date.now() + 15 * DAY));
   const norm = v => stripAcc(v || '').toLowerCase();
+  const q = norm(UI.q), F = UI.f, hoy = today(), lim = fmtISO(new Date(Date.now() + 15 * DAY));
   const txt = (v, f) => !f || norm(v).includes(norm(f).trim());
   const pick = (v, f) => !f || (f === '__none__' ? !(v || '').trim() : (v || '').trim() === f);
   const rng = (v, d, h) => (!d && !h) || (!!v && (!d || v >= d) && (!h || v <= h));
   const ven = (v, f) => !f || f === (!v ? 'sin' : v < hoy ? 'vencido' : v <= lim ? 'prox' : 'vigente');
-  const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || `${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`.toLowerCase().includes(q))
+  const rows = S.empleados.filter(e => (!UI.fe || e.estado === UI.fe) && (!q || norm(`${e.nombre} ${e.apellido} ${e.dni} ${e.legajo}`).includes(q))
       && txt(e.legajo, F.legajo) && txt(`${e.apellido} ${e.nombre}`, F.nombre)
       && pick(e.razonSocial, F.razon) && pick(e.local, F.local) && pick(e.puesto, F.puesto) && pick(e.banco, F.banco) && txt(e.cbu, F.cbu)
       && rng(e.fechaIngreso, F.ingD, F.ingH) && rng(finPruebaDe(e), F.fpD, F.fpH)
@@ -771,20 +781,20 @@ function paintRows() {
     .sort(ordenNomina());
   const vcell = e => f => !f ? '—' : `<span class="${!['activo', 'licencia'].includes(e.estado) ? '' : f < hoy ? 'v-bad' : f <= lim ? 'v-soon' : ''}">${fdate(f)}</span>`;
   const COLCELLS = {
-    banco: e => `<td>${esc(e.banco)}</td>`,
-    cbu: e => `<td>${esc(e.cbu)}</td>`,
-    razon: e => `<td>${esc(e.razonSocial)}</td>`,
-    local: e => `<td>${esc(e.local)}</td>`,
-    puesto: e => `<td>${esc(e.puesto)}</td>`,
-    ingreso: e => `<td>${fdate(e.fechaIngreso)}</td>`,
-    finPrueba: e => `<td>${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td>`,
-    alta: e => `<td>${altaPill(e)}</td>`,
-    estado: e => `<td>${chip(e.estado)}</td>`,
-    vencDni: e => `<td>${vcell(e)(e.dniVenc)}</td>`,
-    vencLibreta: e => `<td>${vcell(e)(e.libretaSanitariaVenc)}</td>`,
+    banco: e => `<td data-label="Banco">${esc(e.banco)}</td>`,
+    cbu: e => `<td data-label="CBU / alias">${esc(e.cbu)}</td>`,
+    razon: e => `<td data-label="Razón social">${esc(e.razonSocial)}</td>`,
+    local: e => `<td data-label="Local">${esc(e.local)}</td>`,
+    puesto: e => `<td data-label="Puesto">${esc(e.puesto)}</td>`,
+    ingreso: e => `<td data-label="Ingreso">${fdate(e.fechaIngreso)}</td>`,
+    finPrueba: e => `<td data-label="Fin de prueba">${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td>`,
+    alta: e => `<td data-label="Alta">${altaPill(e)}</td>`,
+    estado: e => `<td data-label="Estado">${chip(e.estado)}</td>`,
+    vencDni: e => `<td data-label="Venc. DNI / precaria">${vcell(e)(e.dniVenc)}</td>`,
+    vencLibreta: e => `<td data-label="Venc. libreta">${vcell(e)(e.libretaSanitariaVenc)}</td>`,
   };
   const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td>${esc(e.legajo)}</td><td>${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`).join('')
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td data-label="Legajo">${esc(e.legajo)}</td><td data-label="Nombre">${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
   ajustarStickyEmp();
@@ -1283,7 +1293,7 @@ const ACT = {
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
       const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
-      Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
+      Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : k === 'sueldoActual' ? money(prev[k] || 0) + ' → ' + money(nuevo[k] || 0) : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
       if (!!prev.rifl !== !!nuevo.rifl) log(nuevo.id, `Régimen 710 (RIFL): ${prev.rifl ? 'Sí' : 'No'} → ${nuevo.rifl ? 'Sí' : 'No'}`);
       Object.assign(prev, nuevo);
     }

@@ -57,6 +57,13 @@ td.num,th.num{text-align:right}
 .empty{color:var(--muted);text-align:center;padding:28px 14px}
 .chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12.5px;font-weight:500;background:#E6ECEA;color:#41565C}
 .alta{display:inline-block;min-width:26px;text-align:center;font-weight:700;border-radius:6px;padding:1px 8px;color:#fff}.alta-N{background:#2F7D4F}.alta-S{background:#B23A2B}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:middle;border:1px solid rgba(0,0,0,.12)}
+.colorpick{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.colorpick label{cursor:pointer;display:inline-flex;position:relative}
+.colorpick input{position:absolute;opacity:0;width:0;height:0}
+.cdot{width:24px;height:24px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px transparent,inset 0 0 0 1px rgba(0,0,0,.08)}
+.colorpick input:checked+.cdot{box-shadow:0 0 0 2px var(--ink),inset 0 0 0 1px rgba(0,0,0,.08)}
+.colorpick input:focus-visible+.cdot{outline:2px solid var(--accent);outline-offset:2px}
 .stat{display:flex;align-items:baseline;gap:14px;margin:18px 0 12px}.stat strong{font-size:52px;line-height:1;font-weight:700;color:var(--accent);letter-spacing:-.02em}.stat span{font-size:16px}
 .st-activo{background:#DDF0E4;color:#1F6B3F}.st-licencia{background:#F8E9CB;color:#8A5608}.st-egreso{background:#F6DDD7;color:#9A3222}
 .st-liquidado{background:#D3E8E3;color:#0A5343}.st-preingreso{background:#DCE7F3;color:#28527F}
@@ -241,6 +248,7 @@ const DEFAULT_P = {
   mesesPrueba: 6,
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
   colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, estado: true, vencDni: true, vencLibreta: true },
+  historialMesesNube: 12,                                              // a la nube (JSONBin) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
 };
 const COLS_EMP = [                                                     // columnas opcionales de la pestaña Empleados (Legajo y Nombre son fijas)
   { id: 'banco', label: 'Banco' },
@@ -419,6 +427,12 @@ function jbPush() {                                                   // subida 
   jbRev++; setJbMeta({ dirty: true }); setSync('off', 'Cambios sin subir a JSONBin…');
   clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 1500);
 }
+const historialMesesNube = () => +((S.parametros || {}).historialMesesNube ?? 12);
+function historialParaNube(his) {
+  const n = historialMesesNube(); if (!n) return his;
+  const corte = new Date(); corte.setMonth(corte.getMonth() - n);
+  return his.filter(h => h.ts >= corte.toISOString());
+}
 async function jbUpload() {
   const cfg = jbConfig(); if (!cfg) return;
   if (jbBusy) { clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 1500); return; }
@@ -426,7 +440,8 @@ async function jbUpload() {
   try {
     if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
     const stamp = new Date().toISOString();
-    const env = Object.assign({ v: 2, actualizado: stamp, _local: localId }, await crEncrypt(await gzComp(JSON.stringify(S)), cfg.clave));
+    const payload = historialMesesNube() ? Object.assign({}, S, { historial: historialParaNube(S.historial) }) : S;
+    const env = Object.assign({ v: 2, actualizado: stamp, _local: localId }, await crEncrypt(await gzComp(JSON.stringify(payload)), cfg.clave));
     if (!cfg.binId) {
       const r = await fetch('https://api.jsonbin.io/v3/b', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': 'rrhh_ciclo' }, body: JSON.stringify(env) });
       const j = await r.json().catch(() => ({}));
@@ -481,7 +496,11 @@ async function jbPull(mode = 'auto') {
     }
     jbApplyingRemote = true;
     try {
+      const historialPropio = S.historial;
       S = normalize(data);
+      const idsNube = new Set(S.historial.map(h => h.id));
+      const faltantes = historialPropio.filter(h => !idsNube.has(h.id));   // ej. historial viejo recortado al subir a la nube (ver historialMesesNube)
+      if (faltantes.length) S.historial = S.historial.concat(faltantes);
       try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
       if (UI.detail && UI.detail !== 'new' && !S.empleados.some(x => x.id === UI.detail)) UI.detail = null;
       go(UI.tab); paintRespaldo();
@@ -506,7 +525,7 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -571,6 +590,25 @@ const PUESTOS = ['Bacha', 'Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almace
   'Compras', 'Jefa de administracion', 'Administracion'];
 const canonLocal = v => { v = (v || '').trim().replace(/^\d+\.\s*/, ''); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
 const canonRazon = v => { v = (v || '').trim(); return RAZONES.find(r => r.toLowerCase() === v.toLowerCase()) || v; };
+/* Colores pastel para agrupar empleados a simple vista (chip/fondo de fila). "dot" es una versión
+   un poco más saturada del mismo tono, para que se note en el puntito chico de la tabla. */
+const COLORES_EMP = [
+  { id: 'rosa', nombre: 'Rosa', bg: '#FBE1E7', dot: '#F0A9BE' },
+  { id: 'durazno', nombre: 'Durazno', bg: '#FDE9D9', dot: '#F3B57C' },
+  { id: 'amarillo', nombre: 'Amarillo', bg: '#FCF3CE', dot: '#E7C955' },
+  { id: 'verde', nombre: 'Verde', bg: '#E1F3E1', dot: '#8FCB93' },
+  { id: 'menta', nombre: 'Menta', bg: '#DCF3EC', dot: '#7BCBB1' },
+  { id: 'celeste', nombre: 'Celeste', bg: '#DCEAF9', dot: '#82B4E6' },
+  { id: 'lavanda', nombre: 'Lavanda', bg: '#E7E1F7', dot: '#B39DDB' },
+  { id: 'lila', nombre: 'Lila', bg: '#F3E1F0', dot: '#D89ACB' },
+  { id: 'gris', nombre: 'Gris', bg: '#E9EBEC', dot: '#ADB6B9' },
+];
+const colorDe = id => COLORES_EMP.find(c => c.id === id);
+/* Estilo de fila: un colaborador "destacado" siempre se ve con el resaltado brillante (para que
+   sobresalga aunque además tenga un color de grupo asignado); si no está destacado, se ve su
+   color pastel de grupo. El resaltado usa un amarillo cálido bien visible pero no chillón. */
+const DESTACADO_BG = '#FFF0B3';
+const filaBg = e => e.destacado ? DESTACADO_BG : (e.color && colorDe(e.color) ? colorDe(e.color).bg : '');
 const BANCOS = ['Banco de la Nación Argentina', 'Banco de la Provincia de Buenos Aires', 'Banco Ciudad', 'Banco Galicia', 'Banco Santander', 'BBVA', 'Banco Macro', 'HSBC', 'ICBC', 'Banco Supervielle', 'Banco Patagonia', 'Banco Comafi', 'Banco Credicoop', 'Banco Hipotecario', 'Banco Itaú', 'Banco de Córdoba', 'Banco de San Juan', 'Brubank', 'Ualá', 'Naranja X', 'Mercado Pago', 'Prex', 'Otro'];
 const bancosLista = () => {
   const extra = (S && S.bancosExtra) || [];
@@ -601,9 +639,20 @@ function ordenPuestos() {
   const base = todos.slice().sort((a, b) => areaDe(a) - areaDe(b) || nivelDe(a) - nivelDe(b) || posEnArea(a) - posEnArea(b));
   return guardado.concat(base.filter(p => !guardado.includes(p)));
 }
+/* Orden de los locales en la nómina: por defecto el orden de LOCALES, pero se puede
+   reordenar desde Parámetros → "Orden de los locales" (igual que el orden de los puestos). */
+function localesExtra() { return [...new Set(S.empleados.map(e => (e.local || '').trim()).filter(l => l && !LOCALES.includes(l)))]; }
+function ordenLocales() {
+  const todos = [...LOCALES, ...localesExtra()];
+  const guardado = (S.ordenLocales || []).filter((l, i, a) => todos.includes(l) && a.indexOf(l) === i);
+  return guardado.concat(todos.filter(l => !guardado.includes(l)));
+}
 const ordenNomina = () => {
-  const om = new Map(ordenPuestos().map((p, i) => [p, i]));
-  return (a, b) => (om.has(a.puesto) ? om.get(a.puesto) : 9999) - (om.has(b.puesto) ? om.get(b.puesto) : 9999) || (a.apellido || '').localeCompare(b.apellido || '');
+  const oml = new Map(ordenLocales().map((l, i) => [l, i]));
+  const omp = new Map(ordenPuestos().map((p, i) => [p, i]));
+  return (a, b) => (oml.has(a.local) ? oml.get(a.local) : 9999) - (oml.has(b.local) ? oml.get(b.local) : 9999)
+    || (omp.has(a.puesto) ? omp.get(a.puesto) : 9999) - (omp.has(b.puesto) ? omp.get(b.puesto) : 9999)
+    || (a.apellido || '').localeCompare(b.apellido || '');
 };
 
 /* ================= Importación masiva de empleados (Excel/CSV) ================= */
@@ -794,7 +843,11 @@ function paintRows() {
     vencLibreta: e => `<td data-label="Venc. libreta">${vcell(e)(e.libretaSanitariaVenc)}</td>`,
   };
   const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"><td data-label="Legajo">${esc(e.legajo)}</td><td data-label="Nombre">${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`).join('')
+  $('#emp-rows').innerHTML = rows.length ? rows.map(e => {
+    const bg = filaBg(e), st = bg ? ` style="background:${bg}"` : '';
+    const dot = e.color && colorDe(e.color) ? `<span class="dot" style="background:${colorDe(e.color).dot}" title="Color: ${esc(colorDe(e.color).nombre)}"></span>` : '';
+    return `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
+  }).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
   ajustarStickyEmp();
@@ -842,8 +895,15 @@ function renderDetail() {
       <label class="fld"><span>Puesto</span><select name="puesto"><option value="">Elegí un puesto</option>${ordenPuestos().map(p => `<option value="${esc(p)}" ${e.puesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
       ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
+      <label class="fld full"><span>Color (para agrupar a simple vista en la tabla)</span>
+        <div class="colorpick" role="radiogroup" aria-label="Color del colaborador">
+          <label title="Sin color"><input type="radio" name="color" value="" ${!e.color ? 'checked' : ''}><span class="cdot" style="background:#fff;border:1px dashed var(--line)"></span></label>
+          ${COLORES_EMP.map(c => `<label title="${esc(c.nombre)}"><input type="radio" name="color" value="${c.id}" ${e.color === c.id ? 'checked' : ''}><span class="cdot" style="background:${c.dot}"></span></label>`).join('')}
+        </div>
+      </label>
     </div>
     <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
+    <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
     <div class="sub">Documentación de ingreso</div>
     <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
@@ -1209,8 +1269,14 @@ function renderPar() {
     <ul class="ord" id="ord-cols"></ul>
   </div>
   <div class="card">
+    <h2>Orden de los locales</h2>
+    <p class="muted" style="margin-top:0">Los colaboradores de la tabla de Empleados se agrupan primero por local (en este orden) y, dentro de cada local, por puesto. Arrastrá cada local o usá las flechas. Se guarda al instante.</p>
+    <button class="btn sm" type="button" data-act="localesReset">Restablecer orden original</button>
+    <ul class="ord" id="ord-locales"></ul>
+  </div>
+  <div class="card">
     <h2>Orden de los puestos</h2>
-    <p class="muted" style="margin-top:0">Es el orden en que aparece la nómina en Empleados (y en las listas de puestos). Arrastrá cada puesto o usá las flechas. Dentro de un mismo puesto se ordena por apellido. Se guarda al instante.</p>
+    <p class="muted" style="margin-top:0">Es el orden en que aparece la nómina en Empleados dentro de cada local (y en las listas de puestos). Arrastrá cada puesto o usá las flechas. Dentro de un mismo local y puesto se ordena por apellido. Se guarda al instante.</p>
     <button class="btn sm" type="button" data-act="puestosReset">Restablecer orden original</button>
     <ul class="ord" id="ord-puestos"></ul>
   </div>
@@ -1234,7 +1300,9 @@ function renderPar() {
       <label class="fld"><span>X-MASTER-KEY de JSONBin</span><input type="password" id="jb-key" value="${esc(jbc.apiKey || '')}" autocomplete="off"></label>
       <label class="fld"><span>Clave de cifrado (mín. 8 caracteres)</span><input type="password" id="jb-clave" value="${esc(jbc.clave || '')}" autocomplete="off"></label>
       ${txt('jb-bin', 'ID del bin (vacío la primera vez)', jbc.binId)}
+      ${num('par-histmeses', 'Historial que se sube a la nube (meses)', P.historialMesesNube ?? 12, 'step="1" min="0"')}
     </div>
+    <p class="muted" id="jb-tam" style="margin:6px 0 0">Historial guardado: ${S.historial.length} registros (${historialParaNube(S.historial).length} entran en lo que se sube a la nube). <button class="btn sm" type="button" data-act="jbTamano" style="margin-left:6px">Calcular tamaño</button></p>
     <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Cómo configurar JSONBin (una sola vez)</summary>
       <ol style="margin:8px 0 0;padding-left:20px">
         <li>Creá una cuenta gratis en <b>jsonbin.io</b>.</li>
@@ -1249,7 +1317,13 @@ function renderPar() {
     </div>
   </form>
   </div>`;
-  paintOrdenPuestos(); paintOrdenCols();
+  paintOrdenLocales(); paintOrdenPuestos(); paintOrdenCols();
+}
+function paintOrdenLocales() {
+  const box = $('#ord-locales'); if (!box) return;
+  const ord = ordenLocales(), cnt = {};
+  S.empleados.forEach(e => { const l = (e.local || '').trim(); if (l) cnt[l] = (cnt[l] || 0) + 1; });
+  box.innerHTML = ord.map((l, i) => `<li class="ord-item" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
 }
 function paintOrdenPuestos() {
   const box = $('#ord-puestos'); if (!box) return;
@@ -1272,6 +1346,8 @@ const ACT = {
   clearFilters: () => { UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
+  localMove: b => { const ord = ordenLocales(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenLocales = ord; save(); paintOrdenLocales(); },
+  localesReset: () => { if (!confirm('¿Volver al orden original de locales?')) return; S.ordenLocales = []; save(); paintOrdenLocales(); toast('Orden restablecido'); },
   colMove: b => { const ord = ordenColsEmp(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenColsEmp = ord; save(); paintOrdenCols(); },
   colsReset: () => { if (!confirm('¿Volver al orden original de columnas?')) return; S.ordenColsEmp = []; save(); paintOrdenCols(); toast('Orden restablecido'); },
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
@@ -1289,7 +1365,8 @@ const ACT = {
       legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
-      libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked });
+      libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
+      color: d.color || '', destacado: !!f.elements.destacado.checked });
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
       const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
@@ -1368,7 +1445,16 @@ const ACT = {
     const g = id => +$('#' + id).value || 0, P = S.parametros;
     P.mesesPrueba = g('par-prueba'); P.topeCCT = g('par-tope');
     P.vacaciones = [{ hasta: 5, dias: g('par-v1') }, { hasta: 10, dias: g('par-v2') }, { hasta: 20, dias: g('par-v3') }, { hasta: 999, dias: g('par-v4') }];
+    if ($('#par-histmeses')) P.historialMesesNube = g('par-histmeses');
     save(); toast('Parámetros guardados');
+  },
+  jbTamano: async b => {
+    b.textContent = 'Calculando…'; b.disabled = true;
+    try {
+      const full = await gzComp(JSON.stringify(S)), nube = await gzComp(JSON.stringify(Object.assign({}, S, { historial: historialParaNube(S.historial) })));
+      const kb = n => (n / 1024).toFixed(1) + ' KB';
+      $('#jb-tam').innerHTML = `Comprimido: ${kb(full.length)} completo, ${kb(nube.length)} lo que se sube a la nube (el límite gratis de JSONBin es 100 KB por bin, ya cifrado). <button class="btn sm" type="button" data-act="jbTamano" style="margin-left:6px">Recalcular</button>`;
+    } catch (e) { toast('No se pudo calcular el tamaño.'); b.disabled = false; b.textContent = 'Calcular tamaño'; }
   },
   jbConectar: () => {
     const v = id => $('#' + id).value.trim();
@@ -1517,6 +1603,7 @@ let dragI = null, dragK = null;
 const ordItem = e => { const el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement); return el && el.closest ? el.closest('.ord-item') : null; };
 const ORD_KINDS = {
   puesto: { get: ordenPuestos, set: v => S.ordenPuestos = v, paint: paintOrdenPuestos },
+  local: { get: ordenLocales, set: v => S.ordenLocales = v, paint: paintOrdenLocales },
   col: { get: ordenColsEmp, set: v => S.ordenColsEmp = v, paint: paintOrdenCols },
 };
 document.addEventListener('dragstart', e => { const li = ordItem(e); if (!li) return; dragI = +li.dataset.pi; dragK = li.dataset.kind; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragI)); } catch (_) {} li.classList.add('dragging'); });

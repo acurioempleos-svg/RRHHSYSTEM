@@ -155,11 +155,24 @@ td.num,th.num{text-align:right}
 .tabs .bdg{display:inline-block;min-width:18px;padding:0 6px;margin-left:5px;border-radius:99px;background:#E4685B;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:18px}
 .bdg[hidden]{display:none}
 .btn:disabled{opacity:.4;cursor:default}.btn:disabled:hover{border-color:var(--line);color:var(--ink)}
-.frow th{padding:6px 8px;background:#F6F8F7;vertical-align:top;font-weight:400}
-.frow input,.frow select{padding:4px 6px;font-size:12.5px;min-width:96px}
-.frow .rng{display:grid;gap:3px}
-.frow .rng label{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted)}
-.frow .rng input{min-width:0}
+.fpanel{padding:0;margin-bottom:14px}
+.fpanel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 12px;font-weight:600;user-select:none}
+.fpanel>summary::-webkit-details-marker{display:none}
+.fpanel>summary .chev{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin:0 4px 0 2px}
+.fpanel[open]>summary .chev{transform:rotate(45deg)}
+.fpanel[open]>summary{border-bottom:1px solid var(--line)}
+.fpanel .fcount{display:inline-block;min-width:20px;padding:0 7px;border-radius:99px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:20px}
+.fpanel .fcount[hidden]{display:none}
+.fpanel .fspace{flex:1}
+.fg-f{display:flex;flex-wrap:wrap;gap:8px 10px;padding:10px 14px 12px}
+.ff{display:flex;flex-direction:column;gap:2px;flex:0 1 128px;min-width:110px}
+.ff.rng2{flex:0 1 275px;min-width:265px}
+.ff-l{font-size:11px;font-weight:600;color:var(--muted);line-height:1.2}
+.ff input,.ff select{padding:3px 7px;font-size:13px;min-width:0;height:28px}
+.ff.on input,.ff.on select{border-color:var(--accent);background:#F1F8F6}
+.ff.on .ff-l{color:var(--accent)}
+.rr{display:flex;align-items:center;gap:4px}.rr>span{color:var(--muted);font-size:12px}.rr input{flex:1}
+@media(max-width:760px){.ff,.ff.rng2{flex:1 1 45%}}
 .v-bad{color:var(--danger);font-weight:600}.v-soon{color:var(--signal);font-weight:600}
 .ord{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
 .ord-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:grab}
@@ -815,36 +828,52 @@ function renderEmp() {
   const opt = (v, cur, lab) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(lab ?? v)}</option>`;
   const pick = (key, lista, label) => `<select data-f="${key}" aria-label="Filtrar por ${label}"><option value="">Todos</option>${lista.map(v => opt(v, F[key])).join('')}${opt('__none__', F[key], '(vacío)')}</select>`;
   const txt = (key, label) => `<input type="search" data-f="${key}" value="${esc(F[key] || '')}" placeholder="Filtrar…" aria-label="Filtrar por ${label}">`;
-  const rng = (key, label) => `<div class="rng"><label>Desde<input type="date" data-f="${key}D" value="${esc(F[key + 'D'] || '')}" aria-label="${label} desde"></label><label>Hasta<input type="date" data-f="${key}H" value="${esc(F[key + 'H'] || '')}" aria-label="${label} hasta"></label></div>`;
+  const rng = (key, label) => `<div class="rr"><input type="date" data-f="${key}D" value="${esc(F[key + 'D'] || '')}" aria-label="${label} desde"><span>a</span><input type="date" data-f="${key}H" value="${esc(F[key + 'H'] || '')}" aria-label="${label} hasta"></div>`;
   const venc = (key, label) => `<select data-f="${key}" aria-label="Filtrar por ${label}"><option value="">Todos</option>${[['vencido', 'Vencido'], ['prox', 'Vence en 15 días'], ['vigente', 'Vigente'], ['sin', 'Sin fecha']].map(([v, l]) => opt(v, F[key], l)).join('')}</select>`;
   const puestosEnUso = ordenPuestos().filter(p => S.empleados.some(e => (e.puesto || '').trim() === p));
   const COLDEFS = {
-    banco: { th: '<th>Banco</th>', ftr: `<th>${pick('banco', vals('banco'), 'banco')}</th>` },
-    cbu: { th: '<th>CBU / alias</th>', ftr: `<th>${txt('cbu', 'CBU / alias')}</th>` },
-    razon: { th: '<th>Razón social</th>', ftr: `<th>${pick('razon', vals('razonSocial'), 'razón social')}</th>` },
-    local: { th: '<th>Local</th>', ftr: `<th>${pick('local', vals('local'), 'local')}</th>` },
-    puesto: { th: '<th>Puesto</th>', ftr: `<th>${pick('puesto', puestosEnUso, 'puesto')}</th>` },
-    ingreso: { th: '<th>Ingreso</th>', ftr: `<th>${rng('ing', 'Ingreso')}</th>` },
-    finPrueba: { th: '<th>Fin de prueba</th>', ftr: `<th>${rng('fp', 'Fin de prueba')}</th>` },
-    alta: { th: '<th title="N = alta normal, S = alta especial">Alta</th>', ftr: `<th><select data-f="alta" aria-label="Filtrar por alta"><option value="">Todas</option>${opt('N', F.alta, 'N (normal)')}${opt('S', F.alta, 'S (especial)')}${opt('__none__', F.alta, 'Sin alta')}</select></th>` },
-    estado: { th: '<th>Estado</th>', ftr: `<th><select id="fe" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select></th>` },
-    vencDni: { th: '<th>Venc. DNI / precaria</th>', ftr: `<th>${venc('dni', 'vencimiento de DNI / precaria')}</th>` },
-    vencLibreta: { th: '<th>Venc. libreta</th>', ftr: `<th>${venc('lib', 'vencimiento de libreta')}</th>` },
+    banco: { th: '<th>Banco</th>' }, cbu: { th: '<th>CBU / alias</th>' }, razon: { th: '<th>Razón social</th>' },
+    local: { th: '<th>Local</th>' }, puesto: { th: '<th>Puesto</th>' }, ingreso: { th: '<th>Ingreso</th>' },
+    finPrueba: { th: '<th>Fin de prueba</th>' },
+    alta: { th: '<th title="N = alta normal, S = alta especial">Alta</th>' },
+    estado: { th: '<th>Estado</th>' },
+    vencDni: { th: '<th>Venc. DNI / precaria</th>' }, vencLibreta: { th: '<th>Venc. libreta</th>' },
   };
+  const FLD = {
+    estado: ['Estado', `<select id="fe" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.fe === k ? 'selected' : ''}>${v}</option>`).join('')}</select>`],
+    alta: ['Alta', `<select data-f="alta" aria-label="Filtrar por alta"><option value="">Todas</option>${opt('N', F.alta, 'N (normal)')}${opt('S', F.alta, 'S (especial)')}${opt('__none__', F.alta, 'Sin alta')}</select>`],
+    razon: ['Razón social', pick('razon', vals('razonSocial'), 'razón social')],
+    local: ['Local', pick('local', vals('local'), 'local')],
+    puesto: ['Puesto', pick('puesto', puestosEnUso, 'puesto')],
+    banco: ['Banco', pick('banco', vals('banco'), 'banco')],
+    cbu: ['CBU / alias', txt('cbu', 'CBU / alias')],
+    ingreso: ['Ingreso', rng('ing', 'Ingreso'), 'rng2'],
+    finPrueba: ['Fin de prueba', rng('fp', 'Fin de prueba'), 'rng2'],
+    vencDni: ['Venc. DNI / precaria', venc('dni', 'vencimiento de DNI / precaria')],
+    vencLibreta: ['Venc. libreta', venc('lib', 'vencimiento de libreta')],
+  };
+  const GRUPOS = [
+    ['Empleado', ['legajo', 'nombre', 'estado', 'alta']],
+    ['Empresa y pago', ['razon', 'local', 'puesto', 'banco', 'cbu']],
+    ['Fechas y vencimientos', ['ingreso', 'finPrueba', 'vencDni', 'vencLibreta']],
+  ];
+  FLD.legajo = ['Legajo', txt('legajo', 'legajo')];
+  FLD.nombre = ['Nombre', txt('nombre', 'nombre')];
+  const ff = id => { const [l, h, c] = FLD[id]; return `<div class="ff ${c || ''}"><span class="ff-l">${l}</span>${h}</div>`; };
+  const panel = `<div class="fg-f">${GRUPOS.flatMap(g => g[1]).filter(id => id === 'legajo' || id === 'nombre' || colVisible(id)).map(ff).join('')}</div>`;
   const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
   $('#v-emp').innerHTML = `
     <div class="bar">
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
-      <button class="btn" data-act="clearFilters">Limpiar filtros</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
+    <details class="card fpanel" ${UI.fOpen === true ? 'open' : ''} ontoggle="UI.fOpen = this.open">
+      <summary><span class="chev"></span>Filtros <span class="fcount" id="fcount" hidden></span><span class="fspace"></span><button type="button" class="btn sm" style="padding:2px 9px" id="fclear" data-act="clearFilters">Limpiar filtros</button></summary>
+      ${panel}
+    </details>
     <div class="card tablewrap"><table class="grid"><thead>
       <tr><th>Legajo</th><th>Nombre</th>${cols.map(c => COLDEFS[c.id].th).join('')}</tr>
-      <tr class="frow">
-        <th>${txt('legajo', 'legajo')}</th>
-        <th>${txt('nombre', 'nombre')}</th>
-        ${cols.map(c => COLDEFS[c.id].ftr).join('')}
-      </tr></thead><tbody id="emp-rows"></tbody></table></div>
+      </thead><tbody id="emp-rows"></tbody></table></div>
     <p class="muted"><span id="emp-count"></span> Alta: N = normal, S = especial. Vacío = sin alta.${cols.length < COLS_EMP.length ? ' Hay columnas ocultas — se pueden mostrar de nuevo en Parámetros.' : ''}</p>`;
   paintRows();
 }
@@ -891,6 +920,10 @@ function paintRows() {
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
   ajustarStickyEmp();
+  let n = 0;
+  $$('#v-emp .ff').forEach(f => { const on = $$('input,select', f).some(x => x.value); f.classList.toggle('on', on); if (on) n++; });
+  const fc = $('#fcount'); if (fc) { fc.textContent = n; fc.hidden = !n; }
+  const cl = $('#fclear'); if (cl) cl.disabled = !n && !UI.q;
 }
 
 function renderDetail() {
@@ -1539,7 +1572,7 @@ async function descargarPlanilla(mes) {
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; go(b.dataset.tab); },
-  clearFilters: () => { UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
+  clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
   localMove: b => { const ord = ordenLocales(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenLocales = ord; save(); paintOrdenLocales(); },

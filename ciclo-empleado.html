@@ -97,6 +97,8 @@ td.num,th.num{text-align:right}
 .frm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .frm .full{grid-column:1/-1}
 .fld{display:block}
+.fld[hidden]{display:none}
+#liq-form .frm{align-items:end}
 .fld>span{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
 .sub{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
 .sub:first-child{margin-top:0;padding-top:0;border:0}
@@ -107,7 +109,7 @@ td.num,th.num{text-align:right}
 .row>*{flex:1;min-width:110px}
 .row>.btn{flex:0 0 auto}
 .muted{color:var(--muted);font-size:13px}
-.sw{display:flex;align-items:center;gap:10px;cursor:pointer;margin:6px 0}
+.sw{display:flex;align-items:center;gap:10px;cursor:pointer;margin:8px 0;position:relative;line-height:1.3}
 .sw[hidden]{display:none}
 .sw input{position:absolute;opacity:0;width:0;height:0}
 .sw .knob{width:38px;height:22px;background:#C4CFCD;border-radius:99px;position:relative;flex:0 0 auto;transition:background .15s}
@@ -184,9 +186,9 @@ td.num,th.num{text-align:right}
 .ord-btns{display:flex;gap:4px}
 .ord-item.loc{flex-wrap:wrap}
 .sw-row{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:2px 0 4px 64px}
-.sw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.16);padding:0;cursor:pointer}
-.sw:hover{transform:scale(1.12)}
-.sw[aria-pressed=true]{outline:2px solid var(--accent);outline-offset:2px}
+.csw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.16);padding:0;cursor:pointer}
+.csw:hover{transform:scale(1.12)}
+.csw[aria-pressed=true]{outline:2px solid var(--accent);outline-offset:2px}
 .sync{display:inline-flex;align-items:center;gap:5px}
 .sync .dot{width:7px;height:7px;border-radius:50%;background:#7C8B8F;flex:0 0 auto}
 .sync.on .dot{background:#3FD584}
@@ -389,6 +391,10 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   if (t === 'abandono_trabajo') avisos.push('Abandono de trabajo: se liquida como egreso sin indemnización. Verificá que se haya cursado la intimación previa a reintegrarse (art. 244 LCT) antes de dar por configurado el abandono.');
   if (t === 'jubilacion') avisos.push('Retiro por jubilación: se liquida sin indemnización por antigüedad, asumiendo que el empleado reúne los requisitos para jubilarse. Si la empresa intimó a jubilarse antes de que estén cumplidos, corresponde indemnización reducida (arts. 252/253 LCT) y hay que calcularla aparte.');
 
+  // 7. Feriados trabajados y agregados no remunerativos del mes de egreso (cargados en el legajo)
+  if (+egreso.feriados > 0) add('FERIADOS', `Feriados trabajados del mes (${egreso.feriados})`, v30 * egreso.feriados);
+  (egreso.nremun || []).forEach(n => add('NREM', n.concepto || 'Agregado no remunerativo', +n.monto || 0, false));
+
   const total = r2(C.reduce((s, c) => s + c.monto, 0));
   return { conceptos: C, total, avisos,
            meta: { mrnh: r2(mrnh), anios, meses, sueldo, base245: r2(base245), mesesPre, antigReal: +antigReal.toFixed(2) } };
@@ -558,7 +564,7 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -616,13 +622,13 @@ const LIQ_ESTADOS = { borrador: 'Borrador', aprobada: 'Aprobada', pagada: 'Pagad
 const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', contrato: 'Registro / contrato firmado' };
 const SANC_TIPOS = ['Apercibimiento', 'Suspensión', 'Otra'];
 const LOCALES = ['BCP', 'BCBL', 'BCB', 'BCC', 'Tanta', 'La Mar'];
-const RAZONES = ['Sabores Incas', 'Inca Central', 'Ccome', 'Barra chalaca caseros'];
+const RAZONES = ['Sabores Incas', 'Inka Central', 'Ccome', 'Barra chalaca caseros'];
 const PUESTOS = ['Bacha', 'Gerencia', 'Pasteleria', 'Bacha', 'Limpieza', 'Almacen', 'Vigilancia', 'Supervision', 'Caja', 'Recepcion',
   'Camarero', 'Camarero Jr', 'Corredor', 'Jefe de barra', 'Barra', 'Chef', 'Sous Chef', 'Cocina', 'Produccion', 'Volante',
   'Valet Parking', 'Director', 'Auditora jefe', 'Auditora', 'RRHH', 'Mantenimiento', 'Gerente general', 'Gerente de compras',
   'Compras', 'Jefa de administracion', 'Administracion'];
 const canonLocal = v => { v = (v || '').trim().replace(/^\d+\.\s*/, ''); return LOCALES.find(l => l.toLowerCase() === v.toLowerCase()) || v; };
-const canonRazon = v => { v = (v || '').trim(); return RAZONES.find(r => r.toLowerCase() === v.toLowerCase()) || v; };
+const canonRazon = v => { v = (v || '').trim(); if (/^inca central$/i.test(v)) return 'Inka Central'; return RAZONES.find(r => r.toLowerCase() === v.toLowerCase()) || v; };
 /* Colores pastel para agrupar empleados a simple vista (chip/fondo de fila). "dot" es una versión
    un poco más saturada del mismo tono, para que se note en el puntito chico de la tabla. */
 const COLORES_EMP = [
@@ -938,6 +944,9 @@ function renderDetail() {
   const sanc = S.sanciones.filter(s => s.empleadoId === e.id).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const his = S.historial.filter(h => h.empleadoId === e.id).sort((a, b) => b.ts.localeCompare(a.ts));
   const com = S.comentarios.filter(c => c.empleadoId === e.id).sort((a, b) => b.ts.localeCompare(a.ts));
+  const fer = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'feriado').sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const nre = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'nremun').sort((a, b) => b.mes.localeCompare(a.mes));
+  const jornal = (+e.sueldoActual || 0) / 30;
   const liqs = S.liquidaciones.filter(l => l.empleadoId === e.id);
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
@@ -1004,6 +1013,16 @@ function renderDetail() {
       <div class="row"><label class="fld"><span>Tipo</span><select id="li-tipo">${['Enfermedad', 'Accidente', 'Maternidad / paternidad', 'Estudio', 'Sin goce de sueldo', 'Otra'].map(t => `<option>${t}</option>`).join('')}</select></label><label class="fld"><span>Desde</span><input type="date" id="li-desde"></label><label class="fld"><span>Hasta</span><input type="date" id="li-hasta"></label><button class="btn" data-act="addLic">Agregar</button></div>
       ${lic.length ? `<table style="margin-top:10px"><tbody>${lic.map(l => `<tr><td>${esc(l.tipo)}</td><td>${fdate(l.desde)} al ${fdate(l.hasta)}</td><td class="num"><button class="btn sm danger" data-act="delLic" data-id="${l.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
     </div>
+    <div class="card"><h3>Feriados trabajados</h3>
+      <p class="muted" style="margin-top:0">Cada feriado trabajado suma un jornal adicional (sueldo ÷ 30${jornal ? ' = ' + money(jornal) : ''}). Va a la columna FERIADO de la planilla de sueldos y a la liquidación final.</p>
+      <div class="row"><label class="fld"><span>Fecha del feriado</span><input type="date" id="fw-fecha"></label><button class="btn" data-act="addFeriado">Agregar</button></div>
+      ${fer.length ? `<table style="margin-top:10px"><tbody>${fer.map(n => `<tr><td>${fdate(n.fecha)}${esFeriado(n.fecha) ? '' : '<div class="muted">No figura como feriado nacional</div>'}</td><td class="num">${money(jornal)}</td><td class="num"><button class="btn sm danger" data-act="delNovedad" data-id="${n.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
+    </div>
+    <div class="card"><h3>Agregados no remunerativos</h3>
+      <p class="muted" style="margin-top:0">Conceptos que se suman al total sin ser remunerativos. Van a la columna NREMUN de la planilla del mes y a la liquidación final.</p>
+      <div class="row"><label class="fld"><span>Período</span><input type="month" id="nr-mes" value="${today().slice(0, 7)}"></label><label class="fld"><span>Concepto</span><input type="text" id="nr-conc" placeholder="Ej.: viáticos"></label><label class="fld"><span>Monto</span><input type="number" id="nr-monto" step="0.01" min="0"></label><button class="btn" data-act="addNRem">Agregar</button></div>
+      ${nre.length ? `<table style="margin-top:10px"><tbody>${nre.map(n => `<tr><td>${fper(n.mes)}</td><td>${esc(n.concepto || 'Agregado no remunerativo')}</td><td class="num">${money(n.monto)}</td><td class="num"><button class="btn sm danger" data-act="delNovedad" data-id="${n.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
+    </div>
     <div class="card"><h3>Sanciones y apercibimientos</h3>
       <div class="row"><label class="fld"><span>Tipo</span><select id="sa-tipo">${SANC_TIPOS.map(t => `<option>${t}</option>`).join('')}</select></label><label class="fld"><span>Fecha</span><input type="date" id="sa-fecha" value="${today()}"></label><label class="fld"><span>Días (si es suspensión)</span><input type="number" id="sa-dias" min="0" step="1" value="0"></label><button class="btn" data-act="addSancion">Agregar</button></div>
       <label class="fld full" style="margin-top:8px"><span>Motivo</span><input type="text" id="sa-motivo" placeholder="Descripción breve"></label>
@@ -1066,6 +1085,9 @@ function renderLiq() {
   updateLiq();
 }
 
+const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
+  return { feriados: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'feriado' && n.mes === m).length,
+           nremun: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'nremun' && n.mes === m).map(n => ({ concepto: n.concepto, monto: n.monto })) }; };
 function readLiqForm() {
   return { tipo: $('#l-tipo').value, fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
     montoPactado: +$('#l-monto').value || 0, vacGozadas: +$('#l-vg').value || 0, vacPend: +$('#l-vp').value || 0 };
@@ -1092,7 +1114,7 @@ function updateLiq() {
     if (!inp.fecha) { box.innerHTML = '<div class="msg">Elegí la fecha de egreso.</div>'; return; }
     if (pd(inp.fecha) < pd(emp.fechaIngreso)) { box.innerHTML = '<div class="msg">La fecha de egreso es anterior a la fecha de ingreso.</div>'; return; }
     res = calcularLiquidacion({ emp, rem: S.remuneraciones.filter(r => r.empleadoId === emp.id),
-      egreso: { tipo: inp.tipo, fecha: inp.fecha, pagarPreaviso: inp.pagarPreaviso, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend },
+      egreso: { tipo: inp.tipo, fecha: inp.fecha, pagarPreaviso: inp.pagarPreaviso, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ...novMes(emp.id, inp.fecha) },
       P: S.parametros });
     L.res = res;
   }
@@ -1101,7 +1123,7 @@ function updateLiq() {
   const vence = addHabiles(inp.fecha, 4);
   let simHtml = '';
   if (!locked && preavisoAplica(inp.tipo, inp.fecha)) {
-    const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend };
+    const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ...novMes(emp.id, inp.fecha) };
     const remEmp = S.remuneraciones.filter(r => r.empleadoId === emp.id);
     const sinP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: false }, P: S.parametros });
     const conP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: true }, P: S.parametros });
@@ -1402,7 +1424,7 @@ function paintOrdenLocales() {
   const box = $('#ord-locales'); if (!box) return;
   const ord = ordenLocales(), cnt = {}, cl = S.parametros.coloresLocal || {};
   S.empleados.forEach(e => { const l = (e.local || '').trim(); if (l) cnt[l] = (cnt[l] || 0) + 1; });
-  const colorCtl = l => `<span class="sw-row" role="group" aria-label="Color de ${esc(l)}">${PALETA_LOCAL.map(c => `<button type="button" class="sw" data-act="localColor" data-local="${esc(l)}" data-color="${c.hex}" style="background:${c.hex}" title="${c.nombre}" aria-label="${c.nombre}" aria-pressed="${(cl[l] || '').toLowerCase() === c.hex.toLowerCase()}"></button>`).join('')}<button type="button" class="btn sm" data-act="localColorQuitar" data-local="${esc(l)}" ${cl[l] ? '' : 'disabled'} aria-label="Quitar el color de ${esc(l)}">Sin color</button></span>`;
+  const colorCtl = l => `<span class="sw-row" role="group" aria-label="Color de ${esc(l)}">${PALETA_LOCAL.map(c => `<button type="button" class="csw" data-act="localColor" data-local="${esc(l)}" data-color="${c.hex}" style="background:${c.hex}" title="${c.nombre}" aria-label="${c.nombre}" aria-pressed="${(cl[l] || '').toLowerCase() === c.hex.toLowerCase()}"></button>`).join('')}<button type="button" class="btn sm" data-act="localColorQuitar" data-local="${esc(l)}" ${cl[l] ? '' : 'disabled'} aria-label="Quitar el color de ${esc(l)}">Sin color</button></span>`;
   box.innerHTML = ord.map((l, i) => `<li class="ord-item loc" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span>${colorCtl(l)}</li>`).join('');
 }
 function paintOrdenPuestos() {
@@ -1442,11 +1464,16 @@ function planillaDatos(mes) {
     });
     S.sanciones.filter(s => s.empleadoId === e.id && s.tipo === 'Suspensión' && +s.dias > 0 && s.fecha >= ini && s.fecha <= fin)
       .forEach(s => { aus += +s.dias; notas.push(`Suspensión ${s.dias} d (${fdate(s.fecha)})`); });
+    const fer = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'feriado' && n.fecha >= ini && n.fecha <= fin);
+    const nre = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'nremun' && n.mes === mes);
+    const nremun = r2(nre.reduce((t, n) => t + (+n.monto || 0), 0));
+    if (fer.length) notas.push(`Feriados trabajados ${fer.length} (${fer.map(n => fdate(n.fecha).slice(0, 5)).sort().join(', ')})`);
+    nre.forEach(n => notas.push(`No remunerativo: ${n.concepto || 'agregado'} ${money(n.monto)}`));
     const leg = String(e.legajo ?? '').trim();
     return {
       local, etiqueta: etiqueta(local), legajo: /^\d+$/.test(leg) ? +leg : leg,
       nombre: `${e.apellido || ''} ${e.nombre || ''}`.replace(/\s+/g, ' ').trim(),
-      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, obs: notas.join(' · '),
+      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, feriados: fer.length, nremun, obs: notas.join(' · '),
     };
   });
   const locales = [];
@@ -1499,10 +1526,10 @@ async function descargarPlanilla(mes) {
   [['Haberes', AMAR], ['JORNAL', VERDE], ['HORA', ROSA], ['FERIADO', GRIS], ['HS EXTRAS', GRIS], ['PVAC', GRIS], ['AUSENCIAS', GRIS], ['PRESENTISMO', GRIS]]
     .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f }));
   ws.getCell('G1').note = 'A completar: monto que se paga por transferencia. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
-  ws.getCell('J1').note = 'A completar: días de feriado trabajados.';
+  ws.getCell('J1').note = 'Días de feriado trabajados en el mes, tomados de los feriados cargados en cada legajo.';
   ws.getCell('K1').note = 'A completar: horas extra (se pagan a hora × 1,5).';
   ws.getCell('L1').note = 'Días de vacaciones del mes, tomados de las vacaciones cargadas en el programa.';
-  ws.getCell('M1').note = 'A completar: conceptos no remunerativos (se suman al total).';
+  ws.getCell('M1').note = 'Suma de los agregados no remunerativos del mes cargados en cada legajo (se suman al total).';
   ws.getCell('N1').note = 'Días de licencia sin goce de sueldo y de suspensión del mes, tomados del programa. Las demás licencias figuran en Observaciones y no se descuentan.';
   ws.getCell('O1').note = 'A completar: adelantos (se restan del total).';
   ws.getCell('P1').note = 'A completar: cantidad de presentismo a descontar (cada unidad resta 1/10 del sueldo).';
@@ -1522,10 +1549,10 @@ async function descargarPlanilla(mes) {
     put(r, 7, '', { size: 10, fill: AMAR, fmt: FMT.p0, borde: true });
     put(r, 8, { formula: `ROUNDUP(I${r}-G${r},-3)` }, { size: 10, fill: VERDE, fmt: FMT.p0, borde: true });
     put(r, 9, { formula: `S${r}+V${r}+W${r}+X${r}-Y${r}-Z${r}-O${r}+M${r}` }, { size: 10, bold: true, fill: ROSA, fmt: FMT.p0, borde: true });
-    put(r, 10, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 10, f.feriados || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 11, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 12, f.vac || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
-    put(r, 13, '', { fill: LILA, fmt: FMT.n, borde: true });
+    put(r, 13, f.nremun || '', { fill: LILA, fmt: FMT.n, borde: true });
     put(r, 14, f.aus || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 15, '', { borde: true });
     put(r, 16, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
@@ -1624,7 +1651,7 @@ const ACT = {
   },
   delEmp: () => {
     const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
-    ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial', 'comentarios'].forEach(k => S[k] = S[k].filter(x => x.empleadoId !== e.id));
+    ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial', 'comentarios', 'novedades'].forEach(k => S[k] = (S[k] || []).filter(x => x.empleadoId !== e.id));
     S.empleados = S.empleados.filter(x => x.id !== e.id); save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
   },
   addRem: () => {
@@ -1655,6 +1682,20 @@ const ACT = {
     S.sanciones.push({ id: uid(), empleadoId: e.id, fecha: f, tipo, motivo, dias: tipo === 'Suspensión' ? dias : 0 });
     log(e.id, `Sanción: ${tipo}${tipo === 'Suspensión' && dias ? ` (${dias} días)` : ''}${motivo ? ' — ' + motivo : ''}`); save(); keepScroll(renderDetail);
   },
+  addFeriado: () => {
+    const e = empActual(), f = $('#fw-fecha').value;
+    if (!f) { toast('Elegí la fecha del feriado trabajado.'); return; }
+    if (S.novedades.some(n => n.empleadoId === e.id && n.tipo === 'feriado' && n.fecha === f)) { toast('Ese feriado ya está cargado.'); return; }
+    S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'feriado', fecha: f, mes: f.slice(0, 7) });
+    log(e.id, `Feriado trabajado: ${fdate(f)}`); save(); keepScroll(renderDetail);
+  },
+  addNRem: () => {
+    const e = empActual(), mes = $('#nr-mes').value, concepto = $('#nr-conc').value.trim(), monto = +$('#nr-monto').value || 0;
+    if (!mes || !(monto > 0)) { toast('Completá el período y un monto mayor a cero.'); return; }
+    S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'nremun', mes, concepto, monto });
+    log(e.id, `Agregado no remunerativo ${fper(mes)}: ${concepto || 'sin concepto'} ${money(monto)}`); save(); keepScroll(renderDetail);
+  },
+  delNovedad: b => { S.novedades = S.novedades.filter(n => n.id !== b.dataset.id); save(); keepScroll(renderDetail); },
   delSancion: b => { S.sanciones = S.sanciones.filter(s => s.id !== b.dataset.id); save(); keepScroll(renderDetail); },
   addComentario: () => {
     const e = empActual(), texto = $('#co-texto').value.trim();
@@ -1732,7 +1773,7 @@ const ACT = {
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
-const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password']);
+const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'checkbox', 'radio', 'file', 'color', 'time', 'datetime-local', 'range', 'url']);
 document.addEventListener('input', e => {
   const t = e.target;
   if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly) {

@@ -155,6 +155,11 @@ td.num,th.num{text-align:right}
 .ord-item .ord-n{width:22px;color:var(--muted);font-size:13px;text-align:right}
 .ord-item .ord-name{flex:1;font-weight:500}
 .ord-btns{display:flex;gap:4px}
+.ord-item.loc{flex-wrap:wrap}
+.sw-row{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:2px 0 4px 64px}
+.sw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.16);padding:0;cursor:pointer}
+.sw:hover{transform:scale(1.12)}
+.sw[aria-pressed=true]{outline:2px solid var(--accent);outline-offset:2px}
 .sync{display:inline-flex;align-items:center;gap:5px}
 .sync .dot{width:7px;height:7px;border-radius:50%;background:#7C8B8F;flex:0 0 auto}
 .sync.on .dot{background:#3FD584}
@@ -610,6 +615,15 @@ const colorDe = id => COLORES_EMP.find(c => c.id === id);
    color pastel de grupo. El resaltado usa un amarillo cálido bien visible pero no chillón. */
 const DESTACADO_BG = '#FFF0B3';
 const HEX6 = /^#[0-9a-f]{6}$/i;
+/* Paleta de pasteles sobrios (tonos apagados, con un toque de gris) para pintar locales. */
+const PALETA_LOCAL = [
+  { hex: '#DCE6F2', nombre: 'Azul niebla' }, { hex: '#D3E7EF', nombre: 'Celeste hielo' },
+  { hex: '#D9EAE3', nombre: 'Verde menta' }, { hex: '#DFE9D6', nombre: 'Verde salvia' },
+  { hex: '#F3EEC9', nombre: 'Crema' }, { hex: '#EFE6D6', nombre: 'Arena' },
+  { hex: '#F5E1D2', nombre: 'Durazno' }, { hex: '#F0DAD6', nombre: 'Terracota suave' },
+  { hex: '#F1DDE3', nombre: 'Rosa empolvado' }, { hex: '#E5DEEE', nombre: 'Lavanda' },
+  { hex: '#E4E7EA', nombre: 'Gris perla' },
+];
 const colorLocal = e => { const c = ((S.parametros || {}).coloresLocal || {})[(e.local || '').trim()]; return HEX6.test(c || '') ? c : ''; };
 const esOscuro = hex => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 140; };
 const filaBg = e => e.destacado ? DESTACADO_BG : (e.color && colorDe(e.color) ? colorDe(e.color).bg : colorLocal(e));
@@ -1275,8 +1289,8 @@ function renderPar() {
   </div>
   <div class="card">
     <h2>Locales: orden y color</h2>
-    <p class="muted" style="margin-top:0">Los colaboradores de la tabla de Empleados se agrupan primero por local (en este orden) y, dentro de cada local, por puesto. Arrastrá cada local o usá las flechas. Con el selector de color, todos los colaboradores del local se pintan solos de ese color en Empleados y en la planilla de sueldos (un color propio del legajo o el resaltado "destacado" tienen prioridad). Se guarda al instante.</p>
-    <button class="btn sm" type="button" data-act="localesReset">Restablecer orden original</button>
+    <p class="muted" style="margin-top:0">Los colaboradores de la tabla de Empleados se agrupan primero por local (en este orden) y, dentro de cada local, por puesto. Arrastrá cada local o usá las flechas. Elegí una muestra de color para cada local: todos sus colaboradores se pintan solos de ese color en Empleados y en la planilla de sueldos (un color propio del legajo o el resaltado "destacado" tienen prioridad). Se guarda al instante.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="localesReset">Restablecer orden original</button><button class="btn sm" type="button" data-act="localColoresSugeridos">Asignar colores sugeridos</button></div>
     <ul class="ord" id="ord-locales"></ul>
   </div>
   <div class="card">
@@ -1334,8 +1348,8 @@ function paintOrdenLocales() {
   const box = $('#ord-locales'); if (!box) return;
   const ord = ordenLocales(), cnt = {}, cl = S.parametros.coloresLocal || {};
   S.empleados.forEach(e => { const l = (e.local || '').trim(); if (l) cnt[l] = (cnt[l] || 0) + 1; });
-  const colorCtl = l => `<input type="color" class="loc-color" data-local="${esc(l)}" value="${HEX6.test(cl[l] || '') ? cl[l] : '#ffffff'}" title="Color de ${esc(l)}" aria-label="Color de ${esc(l)}" style="width:38px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer"><button type="button" class="btn sm" data-act="localColorQuitar" data-local="${esc(l)}" ${cl[l] ? '' : 'disabled'} aria-label="Quitar el color de ${esc(l)}">Sin color</button>`;
-  box.innerHTML = ord.map((l, i) => `<li class="ord-item" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span>${colorCtl(l)}<span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
+  const colorCtl = l => `<span class="sw-row" role="group" aria-label="Color de ${esc(l)}">${PALETA_LOCAL.map(c => `<button type="button" class="sw" data-act="localColor" data-local="${esc(l)}" data-color="${c.hex}" style="background:${c.hex}" title="${c.nombre}" aria-label="${c.nombre}" aria-pressed="${(cl[l] || '').toLowerCase() === c.hex.toLowerCase()}"></button>`).join('')}<button type="button" class="btn sm" data-act="localColorQuitar" data-local="${esc(l)}" ${cl[l] ? '' : 'disabled'} aria-label="Quitar el color de ${esc(l)}">Sin color</button></span>`;
+  box.innerHTML = ord.map((l, i) => `<li class="ord-item loc" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span>${colorCtl(l)}</li>`).join('');
 }
 function paintOrdenPuestos() {
   const box = $('#ord-puestos'); if (!box) return;
@@ -1509,6 +1523,12 @@ const ACT = {
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
   localMove: b => { const ord = ordenLocales(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenLocales = ord; save(); paintOrdenLocales(); },
   localesReset: () => { if (!confirm('¿Volver al orden original de locales?')) return; S.ordenLocales = []; save(); paintOrdenLocales(); toast('Orden restablecido'); },
+  localColor: b => { const P = S.parametros; P.coloresLocal = P.coloresLocal || {}; P.coloresLocal[b.dataset.local] = b.dataset.color; save(); paintOrdenLocales(); toast('Color guardado'); },
+  localColoresSugeridos: () => {
+    const P = S.parametros; P.coloresLocal = P.coloresLocal || {};
+    ordenLocales().forEach((l, i) => { P.coloresLocal[l] = PALETA_LOCAL[[0, 6, 2, 9, 4, 8, 1, 7, 3, 5, 10][i % PALETA_LOCAL.length]].hex; });
+    save(); paintOrdenLocales(); toast('Colores sugeridos aplicados');
+  },
   localColorQuitar: b => { const P = S.parametros; P.coloresLocal = P.coloresLocal || {}; delete P.coloresLocal[b.dataset.local]; save(); paintOrdenLocales(); toast('Color quitado'); },
   planillaSueldos: async b => {
     const mes = ($('#pl-mes') || {}).value || UI.planillaMes || today().slice(0, 7);
@@ -1658,7 +1678,7 @@ const ACT = {
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
-const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'color']);
+const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password']);
 document.addEventListener('input', e => {
   const t = e.target;
   if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly) {
@@ -1685,10 +1705,6 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
-  if (e.target.classList && e.target.classList.contains('loc-color')) {
-    const P = S.parametros; P.coloresLocal = P.coloresLocal || {}; P.coloresLocal[e.target.dataset.local] = e.target.value;
-    save(); paintOrdenLocales(); toast('Color guardado'); return;
-  }
   if (e.target.dataset && e.target.dataset.col) {
     S.parametros.colsEmp = S.parametros.colsEmp || {};
     S.parametros.colsEmp[e.target.dataset.col] = e.target.checked;

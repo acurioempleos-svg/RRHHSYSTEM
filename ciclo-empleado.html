@@ -53,6 +53,16 @@ tr:last-child td{border-bottom:0}
 #v-emp .grid th:nth-child(2),#v-emp .grid td:nth-child(2){position:sticky;left:var(--sticky1,64px);background:#fff;z-index:2;box-shadow:2px 0 4px -2px rgba(0,0,0,.15)}
 #v-emp .grid thead th{z-index:3}
 #v-emp .grid tbody tr:hover td:nth-child(1),#v-emp .grid tbody tr:hover td:nth-child(2){background:#F1F4F3}
+#v-emp .grid tbody td{border-bottom:1px solid #E9EEEC}
+#v-emp .grid td[data-label=Nombre]{min-width:230px}
+#v-emp .grid tbody tr.tint td{border-bottom:1px solid rgba(255,255,255,.9)}
+#v-emp .grid tbody tr.tint:hover{filter:brightness(.965)}
+#v-emp .grid tbody tr:hover td:nth-child(1){box-shadow:inset 3px 0 0 var(--accent)}
+#v-emp .grid tbody tr.grp td{position:static;box-shadow:none;border-bottom:0;border-top:12px solid #fff;padding:9px 14px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+#v-emp .grid tbody tr.grp:first-child td{border-top:0}
+#v-emp .grid tbody tr.grp .grp-l{position:sticky;left:14px;display:inline-block}
+#v-emp .grid tbody tr.grp .grp-n{font-weight:500;letter-spacing:0;text-transform:none;opacity:.7;margin-left:10px}
+#v-emp .grid tbody tr.grp:hover{filter:none}
 td.num,th.num{text-align:right}
 .empty{color:var(--muted);text-align:center;padding:28px 14px}
 .chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12.5px;font-weight:500;background:#E6ECEA;color:#41565C}
@@ -79,6 +89,10 @@ td.num,th.num{text-align:right}
   #v-emp .grid tbody td::before{content:attr(data-label);font-weight:600;color:var(--muted);font-size:12px;flex:none}
   #v-emp .grid tbody td[data-label=Nombre]{font-weight:600}
   #v-emp .grid thead{white-space:nowrap}
+  #v-emp .grid tbody tr.grp{border:0;padding:0;margin:16px 10px 4px}
+  #v-emp .grid tbody tr.grp td{display:block;border-radius:8px;padding:8px 12px}
+  #v-emp .grid tbody tr.grp td::before{content:none}
+  #v-emp .grid td[data-label=Nombre]{min-width:0}
 }
 .frm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .frm .full{grid-column:1/-1}
@@ -627,6 +641,7 @@ const PALETA_LOCAL = [
 const colorLocal = e => { const c = ((S.parametros || {}).coloresLocal || {})[(e.local || '').trim()]; return HEX6.test(c || '') ? c : ''; };
 const esOscuro = hex => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 140; };
 const filaBg = e => e.destacado ? DESTACADO_BG : (e.color && colorDe(e.color) ? colorDe(e.color).bg : colorLocal(e));
+const sombra = (hex, f = 0.06) => { const n = parseInt(hex.slice(1), 16); const c = s => Math.round(((n >> s) & 255) * (1 - f)).toString(16).padStart(2, '0'); return '#' + c(16) + c(8) + c(0); };
 const filaFg = bg => bg && HEX6.test(bg) && esOscuro(bg) ? '#fff' : '';   // texto blanco si el usuario elige un color oscuro
 const BANCOS = ['Banco de la Nación Argentina', 'Banco de la Provincia de Buenos Aires', 'Banco Ciudad', 'Banco Galicia', 'Banco Santander', 'BBVA', 'Banco Macro', 'HSBC', 'ICBC', 'Banco Supervielle', 'Banco Patagonia', 'Banco Comafi', 'Banco Credicoop', 'Banco Hipotecario', 'Banco Itaú', 'Banco de Córdoba', 'Banco de San Juan', 'Brubank', 'Ualá', 'Naranja X', 'Mercado Pago', 'Prex', 'Otro'];
 const bancosLista = () => {
@@ -862,10 +877,16 @@ function paintRows() {
     vencLibreta: e => `<td data-label="Venc. libreta">${vcell(e)(e.libretaSanitariaVenc)}</td>`,
   };
   const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
-  $('#emp-rows').innerHTML = rows.length ? rows.map(e => {
+  const cntLoc = {}; rows.forEach(e => { const k = (e.local || '').trim(); cntLoc[k] = (cntLoc[k] || 0) + 1; });
+  const filaGrupo = k => {
+    const c = colorLocal({ local: k }), bg = c ? sombra(c) : '#E9EEEC', fg = c && esOscuro(c) ? '#fff' : '#2A3B40', n = cntLoc[k];
+    return `<tr class="grp"><td colspan="${2 + cols.length}" style="background:${bg};color:${fg}"><span class="grp-l">${esc(k || 'Sin local')}<span class="grp-n">${n} ${n === 1 ? 'colaborador' : 'colaboradores'}</span></span></td></tr>`;
+  };
+  $('#emp-rows').innerHTML = rows.length ? rows.map((e, idx) => {
+    const cab = (idx === 0 || (rows[idx - 1].local || '').trim() !== (e.local || '').trim()) ? filaGrupo((e.local || '').trim()) : '';
     const bg = filaBg(e), fg = filaFg(bg), st = bg ? ` style="background:${bg}${fg ? ';color:' + fg : ''}"` : '';
     const dot = e.color && colorDe(e.color) ? `<span class="dot" style="background:${colorDe(e.color).dot}" title="Color: ${esc(colorDe(e.color).nombre)}"></span>` : '';
-    return `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
+    return cab + `<tr class="${bg ? 'tint' : ''}" data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
   }).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;

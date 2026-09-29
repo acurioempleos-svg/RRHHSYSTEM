@@ -248,6 +248,7 @@ const DEFAULT_P = {
   mesesPrueba: 6,
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
   colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, estado: true, vencDni: true, vencLibreta: true },
+  coloresLocal: {},                                                    // color de fondo (#RRGGBB) por local: pinta a sus colaboradores en Empleados y en la planilla de sueldos
   historialMesesNube: 12,                                              // a la nube (JSONBin) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
 };
 const COLS_EMP = [                                                     // columnas opcionales de la pestaña Empleados (Legajo y Nombre son fijas)
@@ -608,7 +609,11 @@ const colorDe = id => COLORES_EMP.find(c => c.id === id);
    sobresalga aunque además tenga un color de grupo asignado); si no está destacado, se ve su
    color pastel de grupo. El resaltado usa un amarillo cálido bien visible pero no chillón. */
 const DESTACADO_BG = '#FFF0B3';
-const filaBg = e => e.destacado ? DESTACADO_BG : (e.color && colorDe(e.color) ? colorDe(e.color).bg : '');
+const HEX6 = /^#[0-9a-f]{6}$/i;
+const colorLocal = e => { const c = ((S.parametros || {}).coloresLocal || {})[(e.local || '').trim()]; return HEX6.test(c || '') ? c : ''; };
+const esOscuro = hex => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 140; };
+const filaBg = e => e.destacado ? DESTACADO_BG : (e.color && colorDe(e.color) ? colorDe(e.color).bg : colorLocal(e));
+const filaFg = bg => bg && HEX6.test(bg) && esOscuro(bg) ? '#fff' : '';   // texto blanco si el usuario elige un color oscuro
 const BANCOS = ['Banco de la Nación Argentina', 'Banco de la Provincia de Buenos Aires', 'Banco Ciudad', 'Banco Galicia', 'Banco Santander', 'BBVA', 'Banco Macro', 'HSBC', 'ICBC', 'Banco Supervielle', 'Banco Patagonia', 'Banco Comafi', 'Banco Credicoop', 'Banco Hipotecario', 'Banco Itaú', 'Banco de Córdoba', 'Banco de San Juan', 'Brubank', 'Ualá', 'Naranja X', 'Mercado Pago', 'Prex', 'Otro'];
 const bancosLista = () => {
   const extra = (S && S.bancosExtra) || [];
@@ -844,7 +849,7 @@ function paintRows() {
   };
   const cols = ordenColsEmp().filter(id => colVisible(id)).map(id => ({ id }));
   $('#emp-rows').innerHTML = rows.length ? rows.map(e => {
-    const bg = filaBg(e), st = bg ? ` style="background:${bg}"` : '';
+    const bg = filaBg(e), fg = filaFg(bg), st = bg ? ` style="background:${bg}${fg ? ';color:' + fg : ''}"` : '';
     const dot = e.color && colorDe(e.color) ? `<span class="dot" style="background:${colorDe(e.color).dot}" title="Color: ${esc(colorDe(e.color).nombre)}"></span>` : '';
     return `<tr data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
   }).join('')
@@ -1269,10 +1274,16 @@ function renderPar() {
     <ul class="ord" id="ord-cols"></ul>
   </div>
   <div class="card">
-    <h2>Orden de los locales</h2>
-    <p class="muted" style="margin-top:0">Los colaboradores de la tabla de Empleados se agrupan primero por local (en este orden) y, dentro de cada local, por puesto. Arrastrá cada local o usá las flechas. Se guarda al instante.</p>
+    <h2>Locales: orden y color</h2>
+    <p class="muted" style="margin-top:0">Los colaboradores de la tabla de Empleados se agrupan primero por local (en este orden) y, dentro de cada local, por puesto. Arrastrá cada local o usá las flechas. Con el selector de color, todos los colaboradores del local se pintan solos de ese color en Empleados y en la planilla de sueldos (un color propio del legajo o el resaltado "destacado" tienen prioridad). Se guarda al instante.</p>
     <button class="btn sm" type="button" data-act="localesReset">Restablecer orden original</button>
     <ul class="ord" id="ord-locales"></ul>
+  </div>
+  <div class="card">
+    <h2>Planilla de sueldos (Excel)</h2>
+    <p class="muted" style="margin-top:0">Arma una planilla con el mismo formato que SUELDO_SEPTIEMBRE: una fila por colaborador en nómina (activos y en licencia), agrupados por local y pintados con el color de su local, con resumen de totales por local al final. Toma del programa legajo, nombre, local, ingreso y sueldo, y del mes elegido las vacaciones (P.VAC) y los ausentes (licencia sin goce y suspensiones). Transferencia, feriado, hs extra, no remunerativo, adelantos y presentismo quedan vacíos para completar en Excel; las fórmulas calculan solas.</p>
+    <div class="frm"><label class="fld"><span>Mes</span><input type="month" id="pl-mes" value="${esc(UI.planillaMes || today().slice(0, 7))}"></label></div>
+    <div style="margin-top:14px"><button class="btn primary" type="button" data-act="planillaSueldos">Descargar planilla de sueldos</button></div>
   </div>
   <div class="card">
     <h2>Orden de los puestos</h2>
@@ -1321,9 +1332,10 @@ function renderPar() {
 }
 function paintOrdenLocales() {
   const box = $('#ord-locales'); if (!box) return;
-  const ord = ordenLocales(), cnt = {};
+  const ord = ordenLocales(), cnt = {}, cl = S.parametros.coloresLocal || {};
   S.empleados.forEach(e => { const l = (e.local || '').trim(); if (l) cnt[l] = (cnt[l] || 0) + 1; });
-  box.innerHTML = ord.map((l, i) => `<li class="ord-item" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span><span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
+  const colorCtl = l => `<input type="color" class="loc-color" data-local="${esc(l)}" value="${HEX6.test(cl[l] || '') ? cl[l] : '#ffffff'}" title="Color de ${esc(l)}" aria-label="Color de ${esc(l)}" style="width:38px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer"><button type="button" class="btn sm" data-act="localColorQuitar" data-local="${esc(l)}" ${cl[l] ? '' : 'disabled'} aria-label="Quitar el color de ${esc(l)}">Sin color</button>`;
+  box.innerHTML = ord.map((l, i) => `<li class="ord-item" draggable="true" data-kind="local" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><span class="ord-name">${esc(l)}</span><span class="muted">${cnt[l] ? cnt[l] + (cnt[l] === 1 ? ' empleado' : ' empleados') : ''}</span>${colorCtl(l)}<span class="ord-btns"><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(l)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="localMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(l)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`).join('');
 }
 function paintOrdenPuestos() {
   const box = $('#ord-puestos'); if (!box) return;
@@ -1340,6 +1352,155 @@ function paintOrdenCols() {
   }).join('');
 }
 
+/* ================= Planilla de sueldos (Excel) =================
+   Réplica del formato de SUELDO_<MES>.xlsx. Usa ExcelJS (SheetJS de la versión gratuita no guarda colores ni estilos);
+   se descarga de la CDN solo cuando se aprieta el botón. */
+const MESES_ES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+function planillaDatos(mes) {
+  const [Y, M] = mes.split('-').map(Number);
+  const ini = mes + '-01', fin = fmtISO(new Date(Y, M, 0));
+  const solape = (d, h) => { const a = d > ini ? d : ini, b = h < fin ? h : fin; return b >= a ? dias(pd(a), pd(b)) : 0; };
+  const rango = (d, h) => d === h ? fdate(d) : `${fdate(d)} al ${fdate(h)}`;
+  const ordL = ordenLocales();
+  const etiqueta = l => l ? `${ordL.indexOf(l) + 1 || ordL.length + 1}. ${l}` : `${ordL.length + 1}. Sin local`;
+  const filas = enNomina().slice().sort(ordenNomina()).map(e => {
+    const local = (e.local || '').trim(), notas = [];
+    let vac = 0, aus = 0;
+    S.vacaciones.filter(v => v.empleadoId === e.id).forEach(v => { const n = solape(v.desde, v.hasta); if (n) { vac += n; notas.push(`Vacaciones ${n} d (${rango(v.desde, v.hasta)})`); } });
+    S.licencias.filter(l => l.empleadoId === e.id).forEach(l => {
+      const n = solape(l.desde, l.hasta); if (!n) return;
+      if (l.tipo === 'Sin goce de sueldo') { aus += n; notas.push(`Licencia sin goce ${n} d (${rango(l.desde, l.hasta)})`); }
+      else notas.push(`Licencia ${String(l.tipo).toLowerCase()} ${n} d (${rango(l.desde, l.hasta)}), no descontada`);
+    });
+    S.sanciones.filter(s => s.empleadoId === e.id && s.tipo === 'Suspensión' && +s.dias > 0 && s.fecha >= ini && s.fecha <= fin)
+      .forEach(s => { aus += +s.dias; notas.push(`Suspensión ${s.dias} d (${fdate(s.fecha)})`); });
+    const leg = String(e.legajo ?? '').trim();
+    return {
+      local, etiqueta: etiqueta(local), legajo: /^\d+$/.test(leg) ? +leg : leg,
+      nombre: `${e.apellido || ''} ${e.nombre || ''}`.replace(/\s+/g, ' ').trim(),
+      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, obs: notas.join(' · '),
+    };
+  });
+  const locales = [];
+  filas.forEach(f => { if (!locales.some(x => x.etiqueta === f.etiqueta)) locales.push({ etiqueta: f.etiqueta, local: f.local }); });
+  return { Y, M, filas, locales };
+}
+async function cargarExcelJS() {
+  if (window.ExcelJS) return window.ExcelJS;
+  const urls = ['https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
+  for (const u of urls) {
+    try {
+      await new Promise((ok, ko) => { const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = () => { s.remove(); ko(); }; document.head.appendChild(s); });
+      if (window.ExcelJS) return window.ExcelJS;
+    } catch (_) {}
+  }
+  throw new Error('No se pudo cargar la librería de Excel. Revisá la conexión a internet e intentá de nuevo.');
+}
+async function descargarPlanilla(mes) {
+  const EJ = await cargarExcelJS();
+  const { Y, M, filas, locales } = planillaDatos(mes);
+  if (!filas.length) throw new Error('No hay colaboradores en nómina (activos o en licencia) para armar la planilla.');
+  const nomMes = MESES_ES[M - 1];
+  const wb = new EJ.Workbook();
+  wb.calcProperties.fullCalcOnLoad = true;
+  const ws = wb.addWorksheet('SUELDO ' + nomMes, { views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }] });
+  const FMT = {
+    p0: String.raw`_-"$"* #,##0_-;\-"$"* #,##0_-;_-"$"* "-"??_-;_-@`,
+    p2: String.raw`_-"$"* #,##0.00_-;\-"$"* #,##0.00_-;_-"$"* "-"??_-;_-@`,
+    s: String.raw`_-"$"\ * #,##0.00_-;\-"$"\ * #,##0.00_-;_-"$"\ * "-"??_-;_-@`,
+    t: String.raw`_-* #,##0.00_-;\-* #,##0.00_-;_-* "-"??_-;_-@`,
+    h: '[$ $]#,##0.00', n: '#,##0', f: 'd/mm/yyyy',
+  };
+  const GRIS = 'FFD9D9D9', AMAR = 'FFFFF2CC', VERDE = 'FFD9EAD3', ROSA = 'FFEAD1DC', LILA = 'FFB4A7D6', LILA2 = 'FFD9D2E9';
+  const hair = { style: 'hair' }, borde = { top: hair, left: hair, bottom: hair, right: hair };
+  const put = (r, c, v, o = {}) => {
+    const cell = ws.getCell(r, c);
+    if (v !== undefined && v !== null && v !== '') cell.value = v;
+    cell.font = { name: o.name || 'Calibri', size: o.size || 9, bold: !!o.bold, color: o.fg ? { argb: o.fg } : undefined };
+    if (o.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: o.fill } };
+    if (o.fmt) cell.numFmt = o.fmt;
+    if (o.borde) cell.border = borde;
+    return cell;
+  };
+  const colorDeLocal = local => { const c = colorLocal({ local }); return c ? { fill: 'FF' + c.slice(1).toUpperCase(), fg: esOscuro(c) ? 'FFFFFFFF' : undefined } : {}; };
+
+  // Encabezados (fila 1)
+  ['Legajo P', 'Legajo', 'Nombre completo', 'Local', 'Fecha de ingreso', 'Sueldo', 'Transferencia', 'Efectivo', 'Sueldo total', 'FERIADO', 'HS EXTRA', 'P.VAC', 'NREMUN', 'AUSENTES', 'ADELANTOS', 'PRSENTISMO', 'Observaciones']
+    .forEach((t, i) => put(1, i + 1, t, { name: 'Arial', size: 10, bold: true }));
+  put(1, 18, M, { name: 'Arial', size: 10 }).note = 'Número de mes de la planilla. Lo usa la columna AUSENCIAS para descontar los días previos al ingreso.';
+  [['Haberes', AMAR], ['JORNAL', VERDE], ['HORA', ROSA], ['FERIADO', GRIS], ['HS EXTRAS', GRIS], ['PVAC', GRIS], ['AUSENCIAS', GRIS], ['PRESENTISMO', GRIS]]
+    .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f }));
+  ws.getCell('G1').note = 'A completar: monto que se paga por transferencia. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
+  ws.getCell('J1').note = 'A completar: días de feriado trabajados.';
+  ws.getCell('K1').note = 'A completar: horas extra (se pagan a hora × 1,5).';
+  ws.getCell('L1').note = 'Días de vacaciones del mes, tomados de las vacaciones cargadas en el programa.';
+  ws.getCell('M1').note = 'A completar: conceptos no remunerativos (se suman al total).';
+  ws.getCell('N1').note = 'Días de licencia sin goce de sueldo y de suspensión del mes, tomados del programa. Las demás licencias figuran en Observaciones y no se descuentan.';
+  ws.getCell('O1').note = 'A completar: adelantos (se restan del total).';
+  ws.getCell('P1').note = 'A completar: cantidad de presentismo a descontar (cada unidad resta 1/10 del sueldo).';
+
+  // Filas de colaboradores
+  filas.forEach((f, i) => {
+    const r = i + 2, loc = colorDeLocal(f.local);
+    const id = { bold: true, borde: true, ...loc, fill: loc.fill || undefined };
+    put(r, 1, f.legajo !== '' ? `${f.etiqueta}-${f.legajo}` : '', id);
+    put(r, 2, f.legajo, id);
+    put(r, 3, f.nombre, id);
+    put(r, 4, f.etiqueta, id);
+    let ing = '';
+    if (f.ingreso) { const [y, m, d] = f.ingreso.split('-').map(Number); ing = new Date(Date.UTC(y, m - 1, d)); }
+    put(r, 5, ing, { ...id, fmt: FMT.f });
+    put(r, 6, f.sueldo, { size: 10, bold: true, fill: GRIS, fmt: FMT.p0, borde: true });
+    put(r, 7, '', { size: 10, fill: AMAR, fmt: FMT.p0, borde: true });
+    put(r, 8, { formula: `ROUNDUP(I${r}-G${r},-3)` }, { size: 10, fill: VERDE, fmt: FMT.p0, borde: true });
+    put(r, 9, { formula: `S${r}+V${r}+W${r}+X${r}-Y${r}-Z${r}-O${r}+M${r}` }, { size: 10, bold: true, fill: ROSA, fmt: FMT.p0, borde: true });
+    put(r, 10, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 11, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 12, f.vac || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 13, '', { fill: LILA, fmt: FMT.n, borde: true });
+    put(r, 14, f.aus || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 15, '', { borde: true });
+    put(r, 16, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 17, f.obs, { borde: true });
+    put(r, 19, { formula: `F${r}` }, { bold: true, fill: AMAR, fmt: FMT.s, borde: true });
+    put(r, 20, { formula: `S${r}/30` }, { fill: VERDE, fmt: FMT.t, borde: true });
+    put(r, 21, { formula: `T${r}/8` }, { bold: true, fill: ROSA, fmt: FMT.h, borde: true });
+    put(r, 22, { formula: `J${r}*T${r}` }, { bold: true, fill: GRIS, fmt: FMT.p2, borde: true });
+    put(r, 23, { formula: `K${r}*U${r}*1.5` }, { bold: true, fill: GRIS, fmt: FMT.p2, borde: true });
+    put(r, 24, { formula: `S${r}/25*L${r}-S${r}/30*L${r}` }, { fill: LILA2, fmt: FMT.n, borde: true });
+    put(r, 25, { formula: `IF(E${r}>DATE(${Y},R$1,1),((DAY(E${r})-1)*T${r})+(T${r}*N${r}),T${r}*N${r})` }, { bold: true, fill: GRIS, fmt: FMT.p2, borde: true });
+    put(r, 26, { formula: `S${r}*P${r}/10` }, { bold: true, fill: GRIS, fmt: FMT.p2, borde: true });
+  });
+
+  // Resumen por local (mismo esquema que la planilla original)
+  const last = filas.length + 1, h = last + 3;
+  [['SUELDOS', 6, GRIS], ['TOTAL TRANSFERENCIA', 7, AMAR], ['TOTAL EFECTIVO', 8, VERDE], ['TOTAL A PAGAR', 9, ROSA]].forEach(([t, c, fl]) => put(h, c, t, { size: 10, bold: true, fill: fl }));
+  put(h, 12, 'LOCAL', { bold: true, fill: ROSA }); put(h, 13, 'HRS EXTRA', { bold: true, fill: ROSA });
+  locales.forEach((L, i) => {
+    const r = h + 1 + i, loc = colorDeLocal(L.local);
+    put(r, 4, L.etiqueta, { bold: true, ...loc });
+    ['F', 'G', 'H', 'I'].forEach((col, k) => put(r, 6 + k, { formula: `SUMIF($D$2:$D$${last},$D${r},${col}$2:${col}$${last})` }, { size: 10, bold: k === 0, fill: [GRIS, AMAR, VERDE, ROSA][k], fmt: FMT.p0 }));
+    put(r, 12, L.etiqueta, { bold: true, ...loc });
+    put(r, 13, { formula: `SUMIF(D:D,L${r},W:W)` }, { bold: true, ...loc, fmt: FMT.p2 });
+  });
+  const tr = h + 1 + locales.length;
+  put(tr, 4, 'TOTAL', { size: 10, bold: true });
+  ['F', 'G', 'H', 'I'].forEach((col, k) => put(tr, 6 + k, { formula: `SUM(${col}${h + 1}:${col}${tr - 1})` }, { size: 10, bold: true, fill: GRIS, fmt: FMT.p0 }));
+
+  // Anchos, columnas ocultas (A y B, como en la original) y filtro
+  [[1, 14.7], [2, 12.7], [3, 32], [4, 15], [5, 12], [6, 13.2], [7, 14.9], [8, 15.3], [9, 13.2], [10, 9], [11, 9], [12, 8], [13, 11], [14, 10], [15, 11], [16, 12], [17, 43], [18, 5], [19, 14], [20, 11], [21, 11], [22, 12], [23, 12], [24, 11], [25, 12], [26, 13]]
+    .forEach(([c, w]) => { ws.getColumn(c).width = w; });
+  ws.getColumn(1).hidden = true; ws.getColumn(2).hidden = true;
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: last, column: 17 } };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `SUELDO_${nomMes}.xlsx`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; go(b.dataset.tab); },
@@ -1348,6 +1509,16 @@ const ACT = {
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
   localMove: b => { const ord = ordenLocales(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenLocales = ord; save(); paintOrdenLocales(); },
   localesReset: () => { if (!confirm('¿Volver al orden original de locales?')) return; S.ordenLocales = []; save(); paintOrdenLocales(); toast('Orden restablecido'); },
+  localColorQuitar: b => { const P = S.parametros; P.coloresLocal = P.coloresLocal || {}; delete P.coloresLocal[b.dataset.local]; save(); paintOrdenLocales(); toast('Color quitado'); },
+  planillaSueldos: async b => {
+    const mes = ($('#pl-mes') || {}).value || UI.planillaMes || today().slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(mes)) { toast('Elegí el mes de la planilla.'); return; }
+    UI.planillaMes = mes;
+    const txt = b.textContent; b.disabled = true; b.textContent = 'Generando…';
+    try { await descargarPlanilla(mes); toast('Planilla generada'); }
+    catch (err) { toast((err && err.message) || 'No se pudo generar la planilla.'); }
+    finally { b.disabled = false; b.textContent = txt; }
+  },
   colMove: b => { const ord = ordenColsEmp(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenColsEmp = ord; save(); paintOrdenCols(); },
   colsReset: () => { if (!confirm('¿Volver al orden original de columnas?')) return; S.ordenColsEmp = []; save(); paintOrdenCols(); toast('Orden restablecido'); },
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
@@ -1487,7 +1658,7 @@ const ACT = {
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
-const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password']);
+const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'color']);
 document.addEventListener('input', e => {
   const t = e.target;
   if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly) {
@@ -1506,6 +1677,7 @@ document.addEventListener('input', e => {
   else if (t.id === 'per-hasta') { UI.perHasta = t.value; paintPeriodo(); }
   else if (t.id === 'per-local') { UI.perLocal = t.value; paintPeriodo(); }
   else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
+  else if (t.id === 'pl-mes') UI.planillaMes = t.value;
   else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
   else if (t.closest && t.closest('#liq-form')) onLiqInput(t);
   else if (t.dataset && t.dataset.cierre) {
@@ -1513,6 +1685,10 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
+  if (e.target.classList && e.target.classList.contains('loc-color')) {
+    const P = S.parametros; P.coloresLocal = P.coloresLocal || {}; P.coloresLocal[e.target.dataset.local] = e.target.value;
+    save(); paintOrdenLocales(); toast('Color guardado'); return;
+  }
   if (e.target.dataset && e.target.dataset.col) {
     S.parametros.colsEmp = S.parametros.colsEmp || {};
     S.parametros.colsEmp[e.target.dataset.col] = e.target.checked;

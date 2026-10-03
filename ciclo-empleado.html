@@ -335,6 +335,14 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   const dTrab = Math.min(30, dias(ing > iniMes ? ing : iniMes, f));
   add('DIAS', `Días trabajados del mes (${dTrab})`, v30 * dTrab);
 
+  // Renuncia / desvinculación con pago de días trabajados: se paga únicamente el período trabajado
+  if (t === 'renuncia_dias' || t === 'desvinculacion_dias') {
+    avisos.push('Liquidación de solo días trabajados: se paga únicamente el período trabajado del mes. No incluye SAC, vacaciones, preaviso, integración, indemnizaciones, feriados ni otros agregados.');
+    const totalSolo = r2(C.reduce((s, c) => s + c.monto, 0));
+    return { conceptos: C, total: totalSolo, avisos,
+             meta: { mrnh: r2(mrnh), anios, meses, sueldo, base245: 0, mesesPre: 0, antigReal: +antigReal.toFixed(2) } };
+  }
+
   // 2. SAC proporcional
   const s1 = f.getMonth() < 6;
   const iniSem = new Date(f.getFullYear(), s1 ? 0 : 6, 1);
@@ -617,7 +625,7 @@ function lineChart(points, { w = 560, h = 150, fmtY = n => n } = {}) {    // poi
 const log = (empleadoId, texto) => S.historial.push({ id: uid(), empleadoId, ts: new Date().toISOString(), texto });
 
 const ESTADOS = { candidato: 'Candidato', preingreso: 'Preingreso', activo: 'Activo', licencia: 'En licencia', egreso: 'Egreso en curso', liquidado: 'Liquidado', archivado: 'Archivado' };
-const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba (art. 92 bis)', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento' };
+const TIPOS = { renuncia: 'Renuncia', despido_con_causa: 'Despido con causa', despido_sin_causa: 'Despido sin causa', despido_indirecto: 'Despido indirecto', abandono_trabajo: 'Abandono de trabajo', mutuo_acuerdo: 'Mutuo acuerdo (art. 241)', fin_prueba: 'Fin de período de prueba (art. 92 bis)', jubilacion: 'Intimación / retiro por jubilación', fallecimiento: 'Fallecimiento', renuncia_dias: 'Renuncia – pago de días trabajados', desvinculacion_dias: 'Desvinculación – pago de días trabajados' };
 const LIQ_ESTADOS = { borrador: 'Borrador', aprobada: 'Aprobada', pagada: 'Pagada', cerrada: 'Cerrada' };
 const DOCS = { dni: 'DNI (copia)', cuil: 'Constancia de CUIL', contrato: 'Registro / contrato firmado' };
 const SANC_TIPOS = ['Apercibimiento', 'Suspensión', 'Otra'];
@@ -1058,7 +1066,9 @@ function renderLiq() {
   const elegibles = S.empleados.filter(e => ['activo', 'licencia', 'egreso'].includes(e.estado) || (emp && e.id === emp.id));
   const mine = S.liquidaciones.slice().reverse();
 
+  const hayVolver = !!(UI.liqFrom || (Lc && Lc.empId));
   $('#v-liq').innerHTML = `
+  ${hayVolver ? `<div class="no-print" style="margin-bottom:12px"><button class="btn" data-act="liqBack">← Volver${UI.liqFrom ? ' al legajo' : ''}</button></div>` : ''}
   <div class="cols liq">
    <div class="stack">
     <div class="card" id="liq-form">
@@ -1137,7 +1147,7 @@ function updateLiq() {
   }
   let acciones = '';
   if (est === 'borrador') acciones = `<div class="actions"><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
-  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>Medio</span><select id="pay-medio"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option></select></label><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
+  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>En efectivo</span><input type="number" id="pay-efe" step="0.01" min="0" value="0"></label><label class="fld"><span>Por transferencia</span><input type="number" id="pay-tra" step="0.01" min="0" value="${totalDe(res)}"></label><div class="muted" id="pay-chk" style="flex-basis:100%;margin:0">Total a pagar: ${money(totalDe(res))}. Repartí el monto entre efectivo y transferencia: al cargar uno, el otro se completa solo.</div><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
   else {
     const c = liq.cierre || {}, ok = c.recibo && c.art80 && c.baja;
     acciones = `<div class="checks"><h3>Cierre del legajo</h3>
@@ -1157,7 +1167,7 @@ function updateLiq() {
       ${hab.map(row).join('')}${nor.map(row).join('')}
     </tbody></table>
     <div class="neto"><span>Total a cobrar</span><strong>${money(totalDe(res))}</strong></div>
-    <div class="rc-foot">Mejor remuneración ${money(res.meta.mrnh)}, antigüedad ${res.meta.anios} ${res.meta.anios === 1 ? 'año' : 'años'} (${Math.floor(res.meta.meses / 12)} años y ${res.meta.meses % 12} meses). Plazo de pago (art. 128): ${fdate(vence)}, sin contar fines de semana ni feriados.${liq && liq.pago ? ` Pagada el ${fdate(liq.pago.fecha)} por ${esc(liq.pago.medio.toLowerCase())}.` : ''}</div>
+    <div class="rc-foot">Mejor remuneración ${money(res.meta.mrnh)}, antigüedad ${res.meta.anios} ${res.meta.anios === 1 ? 'año' : 'años'} (${Math.floor(res.meta.meses / 12)} años y ${res.meta.meses % 12} meses). Plazo de pago (art. 128): ${fdate(vence)}, sin contar fines de semana ni feriados.${liq && liq.pago ? ` Pagada el ${fdate(liq.pago.fecha)} por ${esc(liq.pago.medio.toLowerCase())}${liq.pago.efectivo > 0 && liq.pago.transferencia > 0 ? ` (${money(liq.pago.efectivo)} en efectivo y ${money(liq.pago.transferencia)} por transferencia)` : ''}.` : ''}</div>
     ${acciones}${simHtml}`;
 }
 
@@ -1179,8 +1189,15 @@ function pickEmp(id) {
   UI.liq = ultima ? { id: ultima.id, empId: id } : { empId: id };
   renderLiq();
 }
+function onPayInput(t) {
+  const l = S.liquidaciones.find(x => x.id === UI.liq.id); if (!l) return;
+  const tot = totalDe(l.result), otro = $(t.id === 'pay-efe' ? '#pay-tra' : '#pay-efe');
+  const v = Math.min(Math.max(+t.value || 0, 0), tot);
+  if ((+t.value || 0) > tot) t.value = tot;
+  otro.value = r2(tot - v);
+}
 function onLiqInput(t) {
-  if (t.id === 'l-emp') return pickEmp(t.value);
+  if (t.id === 'l-emp') { UI.liqFrom = null; return pickEmp(t.value); }
   if (t.id === 'l-tipo') { $('#l-prea').checked = false; $('#l-integ').checked = false; }
   if (t.id === 'l-fecha' && UI.liq && UI.liq.empId) $('#l-vg').value = vacAuto(UI.liq.empId, t.value);
   updateLiq();
@@ -1598,7 +1615,7 @@ async function descargarPlanilla(mes) {
 
 /* ================= Acciones ================= */
 const ACT = {
-  tab: b => { UI.detail = null; go(b.dataset.tab); },
+  tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
   clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
@@ -1704,8 +1721,12 @@ const ACT = {
     save(); keepScroll(renderDetail);
   },
   delComentario: b => { S.comentarios = S.comentarios.filter(c => c.id !== b.dataset.id); save(); keepScroll(renderDetail); },
-  startEgreso: () => { const e = empActual(); pickEmp(e.id); UI.detail = null; go('liq'); },
-  openLiq: b => { const l = S.liquidaciones.find(x => x.id === b.dataset.id); UI.liq = { id: l.id, empId: l.empleadoId }; UI.detail = null; go('liq'); },
+  startEgreso: () => { const e = empActual(); pickEmp(e.id); UI.liqFrom = e.id; UI.detail = null; go('liq'); },
+  openLiq: b => { const l = S.liquidaciones.find(x => x.id === b.dataset.id); UI.liqFrom = UI.detail && UI.detail !== 'new' ? UI.detail : null; UI.liq = { id: l.id, empId: l.empleadoId }; UI.detail = null; go('liq'); },
+  liqBack: () => {
+    if (UI.liqFrom) { UI.detail = UI.liqFrom; UI.liqFrom = null; UI.liq = null; go('emp'); }
+    else { UI.liq = null; renderLiq(); window.scrollTo(0, 0); }
+  },
   saveLiq: () => persistLiq('borrador'),
   approveLiq: () => persistLiq('aprobada'),
   reopenLiq: () => { const l = S.liquidaciones.find(x => x.id === UI.liq.id); l.estado = 'borrador'; log(l.empleadoId, 'Liquidación vuelta a borrador'); save(); renderLiq(); },
@@ -1719,8 +1740,12 @@ const ACT = {
   payLiq: () => {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId), fp = $('#pay-fecha').value;
     if (!fp) { toast('Elegí la fecha de pago.'); return; }
-    l.pago = { fecha: fp, medio: $('#pay-medio').value }; l.estado = 'pagada'; e.estado = 'liquidado';
-    log(e.id, `Liquidación pagada el ${fdate(fp)} (${l.pago.medio}), total ${money(totalDe(l.result))}`); save(); renderLiq(); toast('Pago registrado');
+    const tot = totalDe(l.result), efe = r2(+$('#pay-efe').value || 0), tra = r2(+$('#pay-tra').value || 0);
+    if (efe < 0 || tra < 0) { toast('Los montos no pueden ser negativos.'); return; }
+    if (Math.abs(r2(efe + tra) - tot) > 0.01) { toast(`Efectivo + transferencia (${money(efe + tra)}) debe ser igual al total (${money(tot)}).`); return; }
+    const medio = efe > 0 && tra > 0 ? 'Efectivo y transferencia' : efe > 0 ? 'Efectivo' : 'Transferencia';
+    l.pago = { fecha: fp, medio, efectivo: efe, transferencia: tra }; l.estado = 'pagada'; e.estado = 'liquidado';
+    log(e.id, `Liquidación pagada el ${fdate(fp)} (${medio.toLowerCase()}${efe > 0 && tra > 0 ? `: ${money(efe)} efectivo + ${money(tra)} transferencia` : ''}), total ${money(tot)}`); save(); renderLiq(); toast('Pago registrado');
   },
   archiveLiq: () => {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
@@ -1794,6 +1819,7 @@ document.addEventListener('input', e => {
   else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
   else if (t.id === 'pl-mes') UI.planillaMes = t.value;
   else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
+  else if (t.id === 'pay-efe' || t.id === 'pay-tra') onPayInput(t);
   else if (t.closest && t.closest('#liq-form')) onLiqInput(t);
   else if (t.dataset && t.dataset.cierre) {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id); l.cierre = l.cierre || {}; l.cierre[t.dataset.cierre] = t.checked; save(); updateLiq();

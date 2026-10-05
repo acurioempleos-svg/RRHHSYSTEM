@@ -766,7 +766,7 @@ const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
 const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
-const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '' };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '' };
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
 /* ================= Alertas del panel general ================= */
@@ -787,15 +787,17 @@ function calcAlertas() {
     const item = { l, emp: S.empleados.find(x => x.id === l.empleadoId), atraso };
     if (atraso >= 60) bands.d60.push(item); else if (atraso >= 30) bands.d30.push(item); else if (atraso >= 15) bands.d15.push(item);
   });
-  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands };
+  const vigentes = S.empleados.filter(e => !['liquidado', 'archivado', 'egreso'].includes(e.estado));
+  const solAlta = vigentes.filter(e => e.solicitaAlta), solAumento = vigentes.filter(e => e.solicitaAumento);
+  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands, solAlta, solAumento };
 }
-const alertasTotal = A => A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
+const alertasTotal = A => A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
 function paintBadge() { const b = $('#ale-n'); if (!b) return; const n = alertasTotal(calcAlertas()); b.textContent = n; b.hidden = !n; }
 function renderAle() {
   const h = renderAlertas();
   $('#v-ale').innerHTML = `<h2>Alertas</h2>` +
     (h || `<div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>`) +
-    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar y liquidaciones con el plazo de pago vencido.</p>`;
+    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo y liquidaciones con el plazo de pago vencido.</p>`;
 }
 function renderAlertas() {
   const A = calcAlertas();
@@ -805,6 +807,8 @@ function renderAlertas() {
   const liqLink = (l, txt) => `<span class="lnk" data-act="openLiq" data-id="${l.id}">${esc(txt)}</span>`;
   const blocks = [];
   if (A.prueba.length) blocks.push(`<div class="alert"><h4><span class="n">${A.prueba.length}</span>Fin de período de prueba en los próximos 15 días</h4><ul>${A.prueba.map(e => `<li>${empLink(e)} — vence ${fdate(finPruebaDe(e))}</li>`).join('')}</ul></div>`);
+  if (A.solAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAlta.length}</span>Solicitudes de alta pendientes</h4><ul>${A.solAlta.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
+  if (A.solAumento.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAumento.length}</span>Solicitudes de aumento pendientes</h4><ul>${A.solAumento.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
   if (A.sinAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.sinAlta.length}</span>Empleados en nómina sin alta cargada</h4><ul>${A.sinAlta.map(e => `<li>${empLink(e)}</li>`).join('')}</ul></div>`);
   const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vDni.map(e => ({ e, tipo: 'DNI / precaria', f: e.dniVenc }))];
   if (venc.length) blocks.push(`<div class="alert"><h4><span class="n">${venc.length}</span>Vencimientos de legajo en los próximos 15 días</h4><ul>${venc.map(v => `<li>${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}</li>`).join('')}</ul></div>`);
@@ -995,6 +999,8 @@ function renderDetail() {
     <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
+    <div class="sub">Solicitudes</div>
+    <div class="docs"><label><input type="checkbox" name="solicitaAlta" ${e.solicitaAlta ? 'checked' : ''}> Solicito Alta</label><label><input type="checkbox" name="solicitaAumento" ${e.solicitaAumento ? 'checked' : ''}> Solicito aumento</label></div>
     <div class="sub">Documentación de ingreso</div>
     <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
     <div class="frm" style="margin-top:12px">
@@ -1243,6 +1249,12 @@ function renderEst() {
       <label class="fld" style="max-width:280px"><span>Local</span><select id="st-rot-local">${locales.map(l => `<option value="${esc(l)}" ${UI.stRotLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
       <div id="st-rot"></div>
     </div>
+    <div class="card">
+      <h2>Solicitudes de alta y de aumento</h2>
+      <p class="muted" style="margin-top:0">Empleados con "Solicito Alta" o "Solicito aumento" tildado en el legajo (se excluyen egresados, liquidados y archivados).</p>
+      <label class="fld" style="max-width:280px"><span>Local</span><select id="sol-local"><option value="">Todos los locales</option>${locales.map(l => `<option value="${esc(l)}" ${UI.solLocal === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      <div id="st-sol"></div>
+    </div>
     <div class="card"><h2>Antigüedad promedio</h2><div id="st-antig"></div></div>
     <div class="card"><h2>Motivos de egreso</h2><div id="st-motivos"></div></div>
     <div class="card"><h2>Costo de liquidaciones por local</h2><p class="muted" style="margin-top:0">Suma de liquidaciones aprobadas, pagadas o cerradas.</p><div id="st-costo"></div></div>
@@ -1253,7 +1265,22 @@ function renderEst() {
       <div id="h-res"></div>
     </div>
   </div>`;
-  paintEst(); paintCostoNomina(); paintPeriodo(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintHist();
+  paintEst(); paintCostoNomina(); paintPeriodo(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintSolicitudes(); paintHist();
+}
+function paintSolicitudes() {
+  const l = UI.solLocal || '', loc = e => (e.local || '').trim();
+  const base = S.empleados.filter(e => !['liquidado', 'archivado', 'egreso'].includes(e.estado) && (e.solicitaAlta || e.solicitaAumento) && (!l || loc(e) === l));
+  const nAlta = base.filter(e => e.solicitaAlta).length, nAum = base.filter(e => e.solicitaAumento).length;
+  if (!base.length) { $('#st-sol').innerHTML = `<div class="stat"><strong>0</strong><span>Sin solicitudes pendientes${l ? ' en ' + esc(l) : ''}</span></div>`; return; }
+  const porLocal = {};
+  base.forEach(e => { const k = loc(e) || 'Sin local'; porLocal[k] = porLocal[k] || { a: 0, u: 0 }; if (e.solicitaAlta) porLocal[k].a++; if (e.solicitaAumento) porLocal[k].u++; });
+  const filasLocal = Object.entries(porLocal).sort((x, y) => (y[1].a + y[1].u) - (x[1].a + x[1].u) || x[0].localeCompare(y[0]));
+  const lista = base.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
+  $('#st-sol').innerHTML = `<div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div class="stat"><strong>${nAlta}</strong><span>Solicitan alta</span></div>
+      <div class="stat"><strong>${nAum}</strong><span>Solicitan aumento</span></div></div>
+    ${l ? '' : `<table style="max-width:520px;margin-bottom:14px"><thead><tr><th>Local</th><th class="num">Solicitan alta</th><th class="num">Solicitan aumento</th></tr></thead><tbody>${filasLocal.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.a}</td><td class="num">${v.u}</td></tr>`).join('')}</tbody></table>`}
+    <table><thead><tr><th>Empleado</th><th>Local</th><th>Puesto</th><th>Estado</th><th>Solicita</th></tr></thead><tbody>${lista.map(e => `<tr><td><span class="lnk" data-act="openEmp" data-id="${e.id}">${esc(e.apellido)}, ${esc(e.nombre)}</span></td><td>${esc(e.local || '—')}</td><td>${esc(e.puesto || '—')}</td><td>${chip(e.estado)}</td><td>${[e.solicitaAlta ? 'Alta' : '', e.solicitaAumento ? 'Aumento' : ''].filter(Boolean).join(' y ')}</td></tr>`).join('')}</tbody></table>`;
 }
 function paintEst() {
   const l = UI.stLocal, p = UI.stPuesto, loc = e => (e.local || '').trim(), base = enNomina();
@@ -1655,11 +1682,14 @@ const ACT = {
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
-      color: d.color || '', destacado: !!f.elements.destacado.checked });
+      color: d.color || '', destacado: !!f.elements.destacado.checked,
+      solicitaAlta: !!f.elements.solicitaAlta.checked, solicitaAumento: !!f.elements.solicitaAumento.checked });
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
       const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
       Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : k === 'sueldoActual' ? money(prev[k] || 0) + ' → ' + money(nuevo[k] || 0) : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
+      if (!!prev.solicitaAlta !== !!nuevo.solicitaAlta) log(nuevo.id, `Solicito Alta: ${prev.solicitaAlta ? 'Sí' : 'No'} → ${nuevo.solicitaAlta ? 'Sí' : 'No'}`);
+      if (!!prev.solicitaAumento !== !!nuevo.solicitaAumento) log(nuevo.id, `Solicito aumento: ${prev.solicitaAumento ? 'Sí' : 'No'} → ${nuevo.solicitaAumento ? 'Sí' : 'No'}`);
       if (!!prev.rifl !== !!nuevo.rifl) log(nuevo.id, `Régimen 710 (RIFL): ${prev.rifl ? 'Sí' : 'No'} → ${nuevo.rifl ? 'Sí' : 'No'}`);
       Object.assign(prev, nuevo);
     }
@@ -1810,6 +1840,7 @@ document.addEventListener('input', e => {
   else if (t.dataset && t.dataset.f !== undefined) { UI.f[t.dataset.f] = t.value; paintRows(); }
   else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
   else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }
+  else if (t.id === 'sol-local') { UI.solLocal = t.value; paintSolicitudes(); }
   else if (t.id === 'st-rot-local') { UI.stRotLocal = t.value; paintRotacion(); }
   else if (t.id === 'cn-local') { UI.costoLocal = t.value; paintCostoNomina(); }
   else if (t.id === 'cn-puesto') { UI.costoPuesto = t.value; paintCostoNomina(); }

@@ -213,6 +213,8 @@ td.num,th.num{text-align:right}
 .simbox .win{color:var(--ok);font-weight:600}
 @media print{header,.bar,#liq-form,#liq-list,.actions,.checks,.no-print,#toast{display:none!important}body{background:#fff}main{padding:0;max-width:none}.card{border:0}.cols.liq{display:block}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body.print-only{-webkit-print-color-adjust:exact;print-color-adjust:exact}body.print-only header,body.print-only .view[hidden]{display:none!important}body.print-only .view>*:not(.print-target){display:none!important}body.print-only #liq-list.print-target,body.print-only #ficha.print-target{display:block!important}}
+.llbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:10px 0}.llbar .fld{margin:0}
 </style>
 </head>
 <body>
@@ -789,15 +791,18 @@ function calcAlertas() {
   });
   const vigentes = S.empleados.filter(e => !['liquidado', 'archivado', 'egreso'].includes(e.estado));
   const solAlta = vigentes.filter(e => e.solicitaAlta), solAumento = vigentes.filter(e => e.solicitaAumento);
-  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands, solAlta, solAumento };
+  const nomE = id => S.empleados.find(x => x.id === id), enNom = id => nomE(id) && ['activo', 'licencia'].includes(nomE(id).estado);
+  const finPronto = arr => arr.filter(x => x.hasta >= hoy && x.hasta <= lim && enNom(x.empleadoId)).sort((a, b) => a.hasta.localeCompare(b.hasta)).map(x => ({ e: nomE(x.empleadoId), x }));
+  const licFin = finPronto(S.licencias), vacFin = finPronto(S.vacaciones);
+  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands, solAlta, solAumento, licFin, vacFin };
 }
-const alertasTotal = A => A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
+const alertasTotal = A => A.licFin.length + A.vacFin.length + A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
 function paintBadge() { const b = $('#ale-n'); if (!b) return; const n = alertasTotal(calcAlertas()); b.textContent = n; b.hidden = !n; }
 function renderAle() {
   const h = renderAlertas();
   $('#v-ale').innerHTML = `<h2>Alertas</h2>` +
     (h || `<div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>`) +
-    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo y liquidaciones con el plazo de pago vencido.</p>`;
+    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días y liquidaciones con el plazo de pago vencido.</p>`;
 }
 function renderAlertas() {
   const A = calcAlertas();
@@ -809,6 +814,8 @@ function renderAlertas() {
   if (A.prueba.length) blocks.push(`<div class="alert"><h4><span class="n">${A.prueba.length}</span>Fin de período de prueba en los próximos 15 días</h4><ul>${A.prueba.map(e => `<li>${empLink(e)} — vence ${fdate(finPruebaDe(e))}</li>`).join('')}</ul></div>`);
   if (A.solAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAlta.length}</span>Solicitudes de alta pendientes</h4><ul>${A.solAlta.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
   if (A.solAumento.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAumento.length}</span>Solicitudes de aumento pendientes</h4><ul>${A.solAumento.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
+  if (A.licFin.length) blocks.push(`<div class="alert"><h4><span class="n">${A.licFin.length}</span>Licencias que terminan en los próximos 15 días</h4><ul>${A.licFin.map(({ e, x }) => `<li>${empLink(e)} — ${esc(x.tipo)}, termina ${fdate(x.hasta)}</li>`).join('')}</ul></div>`);
+  if (A.vacFin.length) blocks.push(`<div class="alert"><h4><span class="n">${A.vacFin.length}</span>Vacaciones que terminan en los próximos 15 días</h4><ul>${A.vacFin.map(({ e, x }) => `<li>${empLink(e)} — ${fdate(x.desde)} al ${fdate(x.hasta)}</li>`).join('')}</ul></div>`);
   if (A.sinAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.sinAlta.length}</span>Empleados en nómina sin alta cargada</h4><ul>${A.sinAlta.map(e => `<li>${empLink(e)}</li>`).join('')}</ul></div>`);
   const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vDni.map(e => ({ e, tipo: 'DNI / precaria', f: e.dniVenc }))];
   if (venc.length) blocks.push(`<div class="alert"><h4><span class="n">${venc.length}</span>Vencimientos de legajo en los próximos 15 días</h4><ul>${venc.map(v => `<li>${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}</li>`).join('')}</ul></div>`);
@@ -883,6 +890,9 @@ function renderEmp() {
   $('#v-emp').innerHTML = `
     <div class="bar">
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
+      <select id="vista-sel" aria-label="Vistas guardadas"><option value="">Vistas guardadas…</option>${(S.vistasEmp || []).map(v => `<option value="${v.id}" ${UI.vistaSel === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
+      <button class="btn" data-act="vistaSave">Guardar vista</button>${(S.vistasEmp || []).length ? '<button class="btn danger" data-act="vistaDel">Borrar vista</button>' : ''}
+      <button class="btn" data-act="empXlsx">Descargar Excel</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
     <details class="card fpanel" ${UI.fOpen === true ? 'open' : ''} ontoggle="UI.fOpen = this.open">
@@ -909,6 +919,7 @@ function paintRows() {
       && (!F.alta || (F.alta === '__none__' ? !e.alta : e.alta === F.alta))
       && ven(e.dniVenc, F.dni) && ven(e.libretaSanitariaVenc, F.lib))
     .sort(ordenNomina());
+  UI.rowsVis = rows;
   const vcell = e => f => !f ? '—' : `<span class="${!['activo', 'licencia'].includes(e.estado) ? '' : f < hoy ? 'v-bad' : f <= lim ? 'v-soon' : ''}">${fdate(f)}</span>`;
   const COLCELLS = {
     banco: e => `<td data-label="Banco">${esc(e.banco)}</td>`,
@@ -944,7 +955,21 @@ function paintRows() {
   const cl = $('#fclear'); if (cl) cl.disabled = !n && !UI.q;
 }
 
+function saldoVac(e, anio = new Date().getFullYear()) {
+  if (!e || !e.fechaIngreso) return null;
+  const ing = pd(e.fechaIngreso), ini = new Date(anio, 0, 1), fin = new Date(anio, 11, 31), V = S.parametros.vacaciones;
+  if (ing > fin) return null;
+  const tramo = V.find(x => (fin - ing) / (365.25 * DAY) <= x.hasta) || V[V.length - 1], trab = dias(ing > ini ? ing : ini, fin);
+  const corresp = ing > ini && trab < 183 ? Math.floor(trab / 20) : tramo.dias;
+  const goz = S.vacaciones.filter(v => v.empleadoId === e.id && +v.anio === anio).reduce((t, v) => t + (+v.dias || 0), 0);
+  return { anio, corresp, goz, rest: corresp - goz };
+}
+function saldoVacHtml(e) {
+  const v = saldoVac(e); if (!v) return '';
+  return `<p style="margin:6px 0 10px"><b>Saldo ${v.anio}:</b> corresponden ${v.corresp} días · gozados ${v.goz} · <b class="${v.rest < 0 ? 'v-bad' : ''}">restantes ${v.rest}</b> <span class="muted">(estimado según la antigüedad al 31/12 y la tabla de Parámetros)</span></p>`;
+}
 function renderDetail() {
+  UI.dirty = false;
   const isNew = UI.detail === 'new';
   const e = isNew ? { estado: 'preingreso', modalidad: 'indeterminado', docs: {} } : S.empleados.find(x => x.id === UI.detail);
   if (!e) { UI.detail = null; return renderEmp(); }
@@ -963,7 +988,7 @@ function renderDetail() {
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
   $('#v-emp').innerHTML = `
-  <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>
+  <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>${isNew ? '' : '<button class="btn" data-act="fichaPrint">Imprimir ficha / PDF</button>'}
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
     ${!isNew && canEgreso ? `<button class="btn primary" style="margin-left:auto" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <div class="cols">
@@ -1019,7 +1044,7 @@ function renderDetail() {
       <div class="row" style="margin-top:12px"><label class="fld"><span>Período</span><input type="month" id="r-per"></label><label class="fld"><span>Monto</span><input type="number" id="r-val" step="0.01" min="0"></label><button class="btn" data-act="addRem">Agregar</button></div>
       ${rem.length ? `<table style="margin-top:10px"><tbody>${rem.slice(0, 12).map(r => `<tr><td>${fper(r.periodo)}</td><td class="num">${money(r.habitual)}</td><td class="num"><button class="btn sm danger" data-act="delRem" data-id="${r.id}" aria-label="Quitar ${fper(r.periodo)}">Quitar</button></td></tr>`).join('')}</tbody></table>${rem.length > 12 ? `<p class="muted">Se muestran los últimos 12 de ${rem.length}.</p>` : ''}` : ''}
     </div>
-    <div class="card"><h3>Vacaciones gozadas</h3>
+    <div class="card"><h3>Vacaciones gozadas</h3>${saldoVacHtml(e)}
       <div class="row"><label class="fld"><span>Desde</span><input type="date" id="v-desde"></label><label class="fld"><span>Hasta</span><input type="date" id="v-hasta"></label><button class="btn" data-act="addVac">Agregar</button></div>
       ${vac.length ? `<table style="margin-top:10px"><tbody>${vac.map(v => `<tr><td>${fdate(v.desde)} al ${fdate(v.hasta)}</td><td class="num">${v.dias} días</td><td class="num"><button class="btn sm danger" data-act="delVac" data-id="${v.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
     </div>
@@ -1059,6 +1084,38 @@ const empActual = () => S.empleados.find(x => x.id === UI.detail);
 const vacAuto = (empId, fecha) => S.vacaciones.filter(v => v.empleadoId === empId && String(v.anio) === String(fecha).slice(0, 4)).reduce((s, v) => s + v.dias, 0);
 const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
 
+UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
+function imprimirSolo(sel, cb) {
+  const t = $(sel); if (!t) return;
+  t.classList.add('print-target'); document.body.classList.add('print-only');
+  const fin = () => { t.classList.remove('print-target'); document.body.classList.remove('print-only'); window.removeEventListener('afterprint', fin); if (cb) cb(); };
+  window.addEventListener('afterprint', fin); window.print();
+}
+function liqFilas() {
+  const L = UI.ll, q = stripAcc(L.q || '').toLowerCase(), oml = new Map(ordenLocales().map((l, i) => [l, i]));
+  return S.liquidaciones.map(l => { const e = S.empleados.find(x => x.id === l.empleadoId) || {};
+      return { l, e, nom: `${e.apellido || '—'}, ${e.nombre || ''}`, local: (e.local || '').trim() || 'Sin local', razon: (e.razonSocial || '').trim() || 'Sin razón social', monto: totalDe(l.result) || 0, efe: +(l.pago && l.pago.efectivo) || 0, tra: +(l.pago && l.pago.transferencia) || 0 }; })
+    .filter(r => (!q || stripAcc(`${r.nom} ${r.e.legajo || ''} ${r.e.dni || ''}`).toLowerCase().includes(q)) && (!L.tipo || r.l.inputs.tipo === L.tipo) && (!L.estado || r.l.estado === L.estado) && (!L.local || r.local === L.local) && (!L.razon || r.razon === L.razon)
+      && (!L.desde || r.l.inputs.fecha >= L.desde) && (!L.hasta || r.l.inputs.fecha <= L.hasta))
+    .sort((a, b) => (oml.get(a.local) ?? 999) - (oml.get(b.local) ?? 999) || a.nom.localeCompare(b.nom));
+}
+function liqSumas(f, k) {
+  const m = {}; f.forEach(r => { const o = m[r[k]] = m[r[k]] || { n: 0, t: 0, efe: 0, tra: 0 }; o.n++; o.t = r2(o.t + r.monto); o.efe = r2(o.efe + r.efe); o.tra = r2(o.tra + r.tra); });
+  return Object.entries(m).sort((a, b) => k === 'razon' ? b[1].t - a[1].t : 0);
+}
+function liqPorMes(f) { const m = {}; f.forEach(r => { const k = (r.l.inputs.fecha || '').slice(0, 7); if (k) m[k] = r2((m[k] || 0) + r.monto); }); return Object.keys(m).sort().map(k => [k, m[k]]); }
+function paintLiqLista() {
+  const box = $('#ll-res'); if (!box) return;
+  const f = liqFilas(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
+  const sum = (k, cab) => `<table><thead><tr><th>${cab}</th><th class="num">Liq.</th><th class="num">Total</th><th class="num">Efectivo</th><th class="num">Transf.</th></tr></thead><tbody>${liqSumas(f, k).map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td><td class="num">${money(v.efe)}</td><td class="num">${money(v.tra)}</td></tr>`).join('')}</tbody></table>`;
+  const pm = r => r.efe || r.tra ? ['', ''].map((_, i) => `<td class="num">${money(i ? r.tra : r.efe)}</td>`).join('') : '<td class="num">—</td><td class="num">—</td>';
+  box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid"><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${LIQ_ESTADOS[r.l.estado]}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="cols" style="margin-top:16px"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>
+    <h3 style="margin-top:16px">Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}
+    <div class="stat" style="margin-top:14px"><strong>${money(tot)}</strong><span>Total de ${f.length} liquidacion${f.length === 1 ? '' : 'es'} · pagado en efectivo ${money(efe)} · por transferencia ${money(tra)} (solo liquidaciones ya pagadas). Incluye borradores si no filtrás por estado.</span></div>`
+    : '<p class="muted" style="margin:0">No hay liquidaciones que coincidan.</p>';
+  const n = ['tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
+}
 function renderLiq() {
   const L = UI.liq;
   const liq = L && L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
@@ -1070,7 +1127,6 @@ function renderLiq() {
   const locked = !!liq && liq.estado !== 'borrador';
   const dis = locked || !emp ? 'disabled' : '';
   const elegibles = S.empleados.filter(e => ['activo', 'licencia', 'egreso'].includes(e.estado) || (emp && e.id === emp.id));
-  const mine = S.liquidaciones.slice().reverse();
 
   const hayVolver = !!(UI.liqFrom || (Lc && Lc.empId));
   $('#v-liq').innerHTML = `
@@ -1092,13 +1148,28 @@ function renderLiq() {
         <label class="fld"><span>Vacaciones pendientes de años anteriores (días)</span><input type="number" id="l-vp" step="0.01" min="0" value="${inp.vacPend ?? 0}" ${dis}></label>
       </div>
     </div>
-    <div class="card" id="liq-list"><h3>Liquidaciones guardadas</h3>
-      ${mine.length ? `<table><tbody>${mine.map(l => { const em = S.empleados.find(x => x.id === l.empleadoId); return `<tr><td>${esc(em ? em.apellido + ', ' + em.nombre : '—')}<div class="muted">${fdate(l.inputs.fecha)} · ${esc(TIPOS[l.inputs.tipo])}</div></td><td class="num">${money(totalDe(l.result))}<div class="muted">${LIQ_ESTADOS[l.estado]}</div></td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`; }).join('')}</tbody></table>` : '<p class="muted" style="margin:0">Todavía no guardaste ninguna.</p>'}
-    </div>
    </div>
    <div class="card recibo" id="liq-res"></div>
+  </div>
+  <div id="liq-list"><h2 style="margin:20px 0 10px">Liquidaciones guardadas</h2>
+    <div class="bar no-print">
+      <input type="search" id="ll-q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.ll.q)}" aria-label="Buscar empleado">
+      <button class="btn" data-act="llXlsx">Descargar Excel</button>
+      <button class="btn" data-act="llPrint">Imprimir</button>
+    </div>
+    <details class="card fpanel no-print" ${UI.llOpen === true ? 'open' : ''} ontoggle="UI.llOpen = this.open">
+      <summary><span class="chev"></span>Filtros <span class="fcount" id="llcount" hidden></span><span class="fspace"></span><button type="button" class="btn sm" style="padding:2px 9px" data-act="llClear">Limpiar filtros</button></summary>
+      <div class="fg-f">
+        <div class="ff"><span class="ff-l">Tipo</span><select id="ll-tipo" aria-label="Filtrar por tipo"><option value="">Todos</option>${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${UI.ll.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="ff"><span class="ff-l">Estado</span><select id="ll-estado" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(LIQ_ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.ll.estado === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="ff"><span class="ff-l">Local</span><select id="ll-local" aria-label="Filtrar por local"><option value="">Todos</option>${ordenLocales().map(v => `<option value="${esc(v)}" ${UI.ll.local === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+        <div class="ff"><span class="ff-l">Razón social</span><select id="ll-razon" aria-label="Filtrar por razón social"><option value="">Todas</option>${RAZONES.map(v => `<option value="${esc(v)}" ${UI.ll.razon === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+        <div class="ff"><span class="ff-l">Egreso</span><div class="rr"><input type="date" id="ll-desde" value="${esc(UI.ll.desde)}" aria-label="Egreso desde"><span>a</span><input type="date" id="ll-hasta" value="${esc(UI.ll.hasta)}" aria-label="Egreso hasta"></div></div>
+      </div>
+    </details>
+    <div class="card" id="ll-res"></div>
   </div>`;
-  updateLiq();
+  updateLiq(); paintLiqLista();
 }
 
 const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
@@ -1215,7 +1286,8 @@ function renderEst() {
   const puestos = ordenPuestos();
   const emps = S.empleados.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
   $('#v-est').innerHTML = `
-  <div class="stack">
+  <div class="stack" id="est-area">
+    <div class="bar no-print"><button class="btn" data-act="estPrint">Imprimir informe / guardar PDF</button><button class="btn" data-act="estXlsx">Descargar Excel</button></div>
     <div class="card">
       <h2>Cantidad de empleados</h2>
       <div class="frm" style="max-width:640px">
@@ -1643,7 +1715,7 @@ async function descargarPlanilla(mes) {
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
-  clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; renderEmp(); },
+  clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; UI.vistaSel = ''; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
   localMove: b => { const ord = ordenLocales(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenLocales = ord; save(); paintOrdenLocales(); },
@@ -1694,7 +1766,7 @@ const ACT = {
       Object.assign(prev, nuevo);
     }
     registrarBancoNuevo(nuevo.banco);
-    save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
+    UI.dirty = false; save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
   },
   delEmp: () => {
     const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
@@ -1782,6 +1854,64 @@ const ACT = {
     l.estado = 'cerrada'; e.estado = 'archivado'; log(e.id, 'Legajo archivado'); save(); renderLiq(); toast('Legajo archivado');
   },
   print: () => window.print(),
+  estPrint: () => imprimirSolo('#est-area'),
+  vistaSave: () => {
+    const name = prompt('Nombre de la vista (ej. Sin libreta sanitaria en BCP):', ''); if (!name || !name.trim()) return;
+    S.vistasEmp = S.vistasEmp || [];
+    const ex = S.vistasEmp.find(v => v.name.toLowerCase() === name.trim().toLowerCase()), o = { id: ex ? ex.id : uid(), name: name.trim(), q: UI.q, fe: UI.fe, f: clone(UI.f) };
+    if (ex) Object.assign(ex, o); else S.vistasEmp.push(o);
+    UI.vistaSel = o.id; save(); renderEmp(); toast('Vista guardada');
+  },
+  vistaDel: () => {
+    const v = (S.vistasEmp || []).find(x => x.id === UI.vistaSel); if (!v) return toast('Elegí primero la vista que querés borrar.');
+    if (!confirm(`¿Borrar la vista "${v.name}"?`)) return;
+    S.vistasEmp = S.vistasEmp.filter(x => x.id !== v.id); UI.vistaSel = ''; save(); renderEmp(); toast('Vista borrada');
+  },
+  fichaPrint: () => {
+    const e = S.empleados.find(x => x.id === UI.detail); if (!e) return;
+    const sv = saldoVac(e), fila = (k, v) => `<tr><th style="text-align:left;width:34%">${k}</th><td>${esc(v || '—')}</td></tr>`;
+    const by = (arr, k) => arr.filter(x => x.empleadoId === e.id).sort((a, b) => b[k].localeCompare(a[k]));
+    const lst = (t, arr, fn) => arr.length ? `<h3>${t}</h3><table><tbody>${arr.map(fn).join('')}</tbody></table>` : '';
+    const d = document.createElement('div'); d.id = 'ficha'; d.className = 'card'; d.style.display = 'none';
+    d.innerHTML = `<h2>Ficha del legajo ${esc(e.legajo)} — ${esc(e.apellido)}, ${esc(e.nombre)}</h2><p class="muted">Emitida el ${fdate(today())}</p>
+      <table><tbody>${fila('DNI', e.dni)}${fila('CUIL', e.cuil)}${fila('Fecha de nacimiento', e.fechaNac ? fdate(e.fechaNac) : '')}${fila('Teléfono', e.tel)}${fila('Email', e.email)}${fila('Domicilio', e.domicilio)}${fila('Contacto de emergencia', [e.emergenciaNombre, e.emergenciaTel].filter(Boolean).join(' — '))}${fila('Estado', ESTADOS[e.estado])}${fila('Razón social', e.razonSocial)}${fila('Local', e.local)}${fila('Puesto', e.puesto)}${fila('Categoría CCT', e.categoriaCCT)}${fila('Modalidad', e.modalidad)}${fila('Alta', e.alta)}${fila('Fecha de ingreso', e.fechaIngreso ? fdate(e.fechaIngreso) : '')}${fila('Fin de prueba', e.fechaIngreso ? fdate(finPruebaDe(e)) : '')}${fila('Sueldo', e.sueldoActual ? money(e.sueldoActual) : '')}${fila('Banco / CBU', [e.banco, e.cbu].filter(Boolean).join(' — '))}${fila('Venc. DNI / precaria', e.dniVenc ? fdate(e.dniVenc) : '')}${fila('Venc. libreta sanitaria', e.libretaSanitariaVenc ? fdate(e.libretaSanitariaVenc) : '')}${fila('Documentación', Object.entries(DOCS).map(([k, v]) => `${v}: ${e.docs?.[k] ? 'sí' : 'no'}`).join(' · '))}${sv ? fila('Vacaciones ' + sv.anio, `corresponden ${sv.corresp}, gozadas ${sv.goz}, restantes ${sv.rest}`) : ''}</tbody></table>
+      ${lst('Vacaciones gozadas', by(S.vacaciones, 'desde'), v => `<tr><td>${fdate(v.desde)} al ${fdate(v.hasta)}</td><td>${v.dias} días</td></tr>`)}
+      ${lst('Licencias', by(S.licencias, 'desde'), l => `<tr><td>${esc(l.tipo)}</td><td>${fdate(l.desde)} al ${fdate(l.hasta)}</td></tr>`)}
+      ${lst('Sanciones', by(S.sanciones, 'fecha'), x => `<tr><td>${fdate(x.fecha)}</td><td>${esc(x.tipo)}</td><td>${esc(x.motivo || '')}</td></tr>`)}`;
+    $('#v-emp').appendChild(d); imprimirSolo('#ficha', () => d.remove());
+  },
+  llPrint: () => imprimirSolo('#liq-list'),
+  llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
+  llXlsx: () => {
+    const f = liqFilas(); if (!f.length) return toast('No hay liquidaciones para exportar.');
+    const wb = XLSX.utils.book_new(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), n);
+    add('Liquidaciones', [['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transferencia'], ...f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], r.monto, r.efe, r.tra]), [], ['TOTAL', '', '', '', '', '', tot, efe, tra]]);
+    [['local', 'Local', 'Por local'], ['razon', 'Razón social', 'Por razón social']].forEach(([k, c, n]) => add(n, [[c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], ...liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), [], ['TOTAL', f.length, tot, efe, tra]]));
+    add('Por mes', [['Mes de egreso', 'Total'], ...liqPorMes(f).map(([m, v]) => [fper(m), v]), [], ['TOTAL', tot]]);
+    XLSX.writeFile(wb, `liquidaciones-${today()}.xlsx`);
+  },
+  empXlsx: () => {
+    const rows = UI.rowsVis || []; if (!rows.length) return toast('No hay empleados para exportar.');
+    const G = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };
+    const ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Legajo', 'Nombre', ...ids.map(id => G[id][0])], ...rows.map(e => [e.legajo, `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) ?? '')])]), 'Empleados');
+    XLSX.writeFile(wb, `empleados-${today()}.xlsx`);
+  },
+  estXlsx: () => {
+    const wb = XLSX.utils.book_new(), usados = new Set();
+    $$('#est-area > .card').forEach((c, i) => {
+      const h = $('h2', c), rows = [];
+      $$('.stat, .sbox', c).forEach(x => rows.push([$('strong', x).textContent.trim(), $('span', x).textContent.trim()]));
+      $$('.brow', c).forEach(b => rows.push([b.children[0].textContent.trim(), b.children[2].textContent.trim()]));
+      $$('table', c).forEach(t => { if (rows.length) rows.push([]); $$('tr', t).forEach(tr => rows.push([...tr.children].map(x => x.textContent.trim()))); });
+      if (!rows.length) return;
+      let n = ((h ? h.textContent : 'Hoja ' + (i + 1)).replace(/[\\/?*[\]:]/g, '').slice(0, 28)) || 'Hoja';
+      while (usados.has(n)) n = n.slice(0, 26) + '_' + i; usados.add(n);
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), n);
+    });
+    if (!wb.SheetNames.length) return toast('No hay datos para exportar.');
+    XLSX.writeFile(wb, `estadistica-${today()}.xlsx`);
+  },
   savePar: () => {
     const g = id => +$('#' + id).value || 0, P = S.parametros;
     P.mesesPrueba = g('par-prueba'); P.topeCCT = g('par-tope');
@@ -1827,6 +1957,14 @@ const ACT = {
 };
 
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
+const NAV_ACTS = new Set(['tab', 'back', 'openEmp', 'newEmp', 'openLiq']);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b || !UI.dirty || !NAV_ACTS.has(b.dataset.act)) return;
+  if (!confirm('Tenés cambios sin guardar en el legajo. ¿Salir sin guardar?')) { e.stopPropagation(); e.preventDefault(); } else UI.dirty = false;
+}, true);
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#emp-form')) UI.dirty = true; });
+window.addEventListener('beforeunload', e => { if (UI.dirty) { e.preventDefault(); e.returnValue = ''; } });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
 const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'checkbox', 'radio', 'file', 'color', 'time', 'datetime-local', 'range', 'url']);
 document.addEventListener('input', e => {
@@ -1838,6 +1976,8 @@ document.addEventListener('input', e => {
   if (t.id === 'q') { UI.q = t.value; paintRows(); }
   else if (t.id === 'fe') { UI.fe = t.value; paintRows(); }
   else if (t.dataset && t.dataset.f !== undefined) { UI.f[t.dataset.f] = t.value; paintRows(); }
+  else if (t.id === 'vista-sel') { const v = (S.vistasEmp || []).find(x => x.id === t.value); UI.vistaSel = t.value; if (v) { UI.q = v.q; UI.fe = v.fe; UI.f = clone(v.f); } renderEmp(); }
+  else if (t.id && t.id.startsWith('ll-')) { UI.ll[t.id.slice(3)] = t.value; paintLiqLista(); }
   else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
   else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }
   else if (t.id === 'sol-local') { UI.solLocal = t.value; paintSolicitudes(); }

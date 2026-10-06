@@ -1599,16 +1599,14 @@ function planillaDatos(mes) {
   filas.forEach(f => { if (!locales.some(x => x.etiqueta === f.etiqueta)) locales.push({ etiqueta: f.etiqueta, local: f.local }); });
   return { Y, M, filas, locales };
 }
+async function cargarScript(urls, listo, msg) {   // carga el primer CDN que responda; no recarga si ya está lista
+  if (listo()) return;
+  for (const u of urls) { try { await new Promise((ok, ko) => { const el = document.createElement('script'); el.src = u; el.onload = ok; el.onerror = () => { el.remove(); ko(); }; document.head.appendChild(el); }); if (listo()) return; } catch (_) {} }
+  throw new Error(msg);
+}
 async function cargarExcelJS() {
-  if (window.ExcelJS) return window.ExcelJS;
-  const urls = ['https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'];
-  for (const u of urls) {
-    try {
-      await new Promise((ok, ko) => { const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = () => { s.remove(); ko(); }; document.head.appendChild(s); });
-      if (window.ExcelJS) return window.ExcelJS;
-    } catch (_) {}
-  }
-  throw new Error('No se pudo cargar la librería de Excel. Revisá la conexión a internet e intentá de nuevo.');
+  await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'], () => window.ExcelJS, 'No se pudo cargar la librería de Excel. Revisá la conexión a internet e intentá de nuevo.');
+  return window.ExcelJS;
 }
 async function descargarPlanilla(mes) {
   const EJ = await cargarExcelJS();
@@ -1721,13 +1719,9 @@ async function descargarPlanilla(mes) {
 const PDF_C = { ink: [27, 43, 48], acc: [13, 107, 88], accL: [227, 241, 237], gold: [180, 112, 15], line: [215, 223, 221], mut: [94, 112, 118], zeb: [246, 249, 248], bad: [178, 58, 43], ok: [47, 125, 79], blue: [31, 78, 140] };
 const mp = n => money(n).replace(/\u00a0/g, ' ');
 async function cargarPDF() {
-  const J = () => window.jspdf && window.jspdf.jsPDF;
-  const carga = async urls => {
-    for (const u of urls) { try { await new Promise((ok, ko) => { const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = () => { s.remove(); ko(); }; document.head.appendChild(s); }); return; } catch (_) {} }
-    throw new Error('No se pudo cargar la librería de PDF. Revisá la conexión a internet e intentá de nuevo.');
-  };
-  if (!J()) await carga(['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']);
-  if (!J().API.autoTable) await carga(['https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js']);
+  const J = () => window.jspdf && window.jspdf.jsPDF, msg = 'No se pudo cargar la librería de PDF. Revisá la conexión a internet e intentá de nuevo.';
+  await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'], J, msg);
+  await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'], () => J().API.autoTable, msg);
   return J();
 }
 /* o = { titulo, sub, archivo, orient:'p'|'l', kpis:[{l,v,n,c}], barra:{l,v}, secs:[{t,n,head,body,foot,num,cols,tone,fs,vacio}] } */
@@ -1846,10 +1840,11 @@ async function pdfAltas() {
   });
 }
 
+const GEMP = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };   // columnas exportables de Empleados (Excel y PDF)
 /* ---- Nómina de empleados (vista actual con filtros y columnas visibles) ---- */
 async function pdfEmpleados() {
   const rows = UI.rowsVis || []; if (!rows.length) { toast('No hay empleados para exportar.'); return false; }
-  const G = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };
+  const G = GEMP;
   const ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), P = PDF_C, tone = {}, ia = ids.indexOf('alta'), ie = ids.indexOf('estado');
   if (ia >= 0) tone[ia + 2] = { N: P.ok, S: P.gold };
   if (ie >= 0) tone[ie + 2] = { 'Activo': P.ok, 'En licencia': P.gold, 'Candidato': P.blue, 'Preingreso': P.blue, 'Egreso en curso': P.bad, 'Liquidado': P.mut, 'Archivado': P.mut };
@@ -2134,7 +2129,7 @@ const ACT = {
   },
   empXlsx: () => {
     const rows = UI.rowsVis || []; if (!rows.length) return toast('No hay empleados para exportar.');
-    const G = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };
+  const G = GEMP;
     const ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Legajo', 'Nombre', ...ids.map(id => G[id][0])], ...rows.map(e => [e.legajo, `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) ?? '')])]), 'Empleados');
     XLSX.writeFile(wb, `empleados-${today()}.xlsx`);

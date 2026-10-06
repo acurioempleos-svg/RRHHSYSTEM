@@ -1290,7 +1290,7 @@ function renderEst() {
   const emps = S.empleados.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
   $('#v-est').innerHTML = `
   <div class="stack" id="est-area">
-    <div class="bar no-print"><button class="btn" data-act="estPrint">Imprimir informe / guardar PDF</button><button class="btn" data-act="estXlsx">Descargar Excel</button></div>
+    <div class="bar no-print"><button class="btn" data-act="estPdf">Descargar PDF</button><button class="btn" data-act="estXlsx">Descargar Excel</button></div>
     <div class="card">
       <h2>Cantidad de empleados</h2>
       <div class="frm" style="max-width:640px">
@@ -1762,6 +1762,33 @@ async function pdfInforme(o) {
     F(C.line); doc.roundedRect(M, y + 14, w, 7, 3.5, 3.5, 'F'); if (b.v > 0) { F(C.acc); doc.roundedRect(M, y + 14, Math.max(7, w * b.v / 100), 7, 3.5, 3.5, 'F'); }
     y += 42;
   }
+  // Gráficos de torta (donut) con leyenda
+  if (o.tortas && o.tortas.length) {
+    const tt = o.tortas, cw = (W - 2 * M - gap * (tt.length - 1)) / tt.length, PAL = [C.acc, C.gold, C.bad, C.blue, [95, 158, 160], [142, 98, 170], [196, 160, 60], [120, 130, 135]];
+    const prep = p => { let d = p.d.filter(x => x.v > 0); if (d.length > 8) { const r = d.slice(7).reduce((a, x) => a + x.v, 0); d = [...d.slice(0, 7), { l: 'Otros', v: r }]; } return d.map((x, i) => ({ ...x, c: x.c || PAL[i % PAL.length] })); };
+    const ds = tt.map(prep), ch = Math.max(140, ...ds.map(d => 44 + d.length * 13));
+    tt.forEach((p, i) => {
+      const x = M + i * (cw + gap), d = ds[i], tot = d.reduce((a, z) => a + z.v, 0), r = 42, cx = x + 16 + r, cy = y + 38 + r;
+      F([255, 255, 255]); D(C.line); doc.setLineWidth(.6); doc.roundedRect(x, y, cw, ch, 5, 5, 'FD');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); T(C.ink); tx(p.t, x + 14, y + 20);
+      if (!tot) { doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); T(C.mut); tx('Sin datos', x + 14, y + 44); return; }
+      let a = -Math.PI / 2;
+      d.forEach(z => {
+        const b = a + z.v / tot * 2 * Math.PI; F(z.c);
+        if (d.length === 1) doc.circle(cx, cy, r, 'F');
+        else { const n = Math.max(2, Math.ceil((b - a) / .08)), pts = [[cx, cy]]; for (let k = 0; k <= n; k++) { const t = a + (b - a) * k / n; pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]); } D([255, 255, 255]); doc.setLineWidth(1.2); doc.lines(pts.slice(1).map((q, k) => [q[0] - pts[k][0], q[1] - pts[k][1]]), cx, cy, [1, 1], 'FD', true); }
+        a = b;
+      });
+      F([255, 255, 255]); doc.circle(cx, cy, r * .58, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); T(C.ink); tx(tot, cx, cy + 3, 'center'); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); T(C.mut); tx('TOTAL', cx, cy + 13, 'center');
+      const lx = cx + r + 18, lw = x + cw - 14 - lx - 52;
+      d.forEach((z, k) => {
+        const ly = y + 40 + k * 13; F(z.c); doc.rect(lx, ly - 6, 7, 7, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); T(C.ink);
+        let t = z.l; while (doc.getTextWidth(t) > lw && t.length > 4) t = t.slice(0, -1); if (t !== z.l) t += '..';
+        tx(t, lx + 11, ly); doc.setFont('helvetica', 'bold'); tx(`${z.v} (${Math.round(z.v * 100 / tot)}%)`, x + cw - 14, ly, 'right');
+      });
+    });
+    y += ch + 22;
+  }
   // Secciones
   (o.secs || []).forEach(s => {
     if (y > H - 120) { doc.addPage(); y = 56; }
@@ -1809,6 +1836,7 @@ async function pdfAltas() {
     titulo: 'Informe de altas', sub: 'Situación de altas del personal en nómina y solicitudes pendientes', archivo: `informe-altas-${today()}.pdf`,
     kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
     barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
+    tortas: [{ t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: sin.length, c: P.bad }] }, { t: 'Sin alta por local', d: resumen.map(r => ({ l: r[0], v: r[4] })) }],
     secs: [
       { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], ctr: [1, 2, 3, 4, 5, 6], cols: { 0: { cellWidth: 110 } } },
       { t: 'Solicitudes de alta pendientes', n: cnt(sol), head: HEAD, body: sol.map(fila), tone, cols, vacio: 'No hay solicitudes de alta pendientes.' },
@@ -1830,6 +1858,40 @@ async function pdfEmpleados() {
     orient: 'l', titulo: 'Nómina de colaboradores', sub: filtrada ? 'Vista filtrada de la nómina' : 'Listado completo de colaboradores', archivo: `empleados-${today()}.pdf`,
     kpis: [{ l: 'Colaboradores', v: rows.length }, { l: 'Activos', v: rows.filter(e => e.estado === 'activo').length, c: P.ok }, { l: 'En licencia', v: rows.filter(e => e.estado === 'licencia').length, c: P.gold }, { l: 'Sin alta', v: nomn.filter(e => !e.alta).length, c: P.bad, n: 'en nómina' }],
     secs: [{ t: 'Detalle', n: `${rows.length} registro${rows.length === 1 ? '' : 's'}`, head: ['Legajo', 'Nombre', ...ids.map(id => G[id][0])], body: rows.map(e => [e.legajo || '—', `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) || '—')]), tone, fs: ids.length > 7 ? 7.5 : 8.5 }],
+  });
+}
+
+/* ---- Estadística (toma los datos que muestra cada tarjeta del panel; sin historial de movimientos) ---- */
+async function pdfEst() {
+  const area = $('#est-area'); if (!area) return false;
+  const nom = enNomina(), P = PDF_C, lc = e => (e.local || '').trim() || 'Sin local', txt = x => ((x && x.textContent) || '').replace(/\s+/g, ' ').trim(), secs = [];
+  $$('#est-area > .card', area).forEach(c => {
+    if ($('#h-res', c)) return;
+    const h2 = txt($('h2', c)), stats = $$('.stat, .sbox', c).map(x => [txt($('span', x)), txt($('strong', x))]), nota = stats.map(x => `${x[1]} · ${x[0]}`).join('   |   ').slice(0, 80);
+    if ($('#st-rot', c)) {
+      const ing = $$('[title^="Ingresos"]', c), egr = $$('[title^="Egresos"]', c), g = (el, w) => (el.getAttribute('title') || '').replace(new RegExp('^' + w + '\\s+'), '');
+      const rows = ing.map((el, i) => [g(el, 'Ingresos').replace(/:\s*\d+$/, ''), +(g(el, 'Ingresos').match(/(\d+)$/) || [0, 0])[1], +(g(egr[i], 'Egresos').match(/(\d+)$/) || [0, 0])[1]]);
+      secs.push({ t: h2, n: 'Local: ' + ($('#st-rot-local', c) || {}).value, head: ['Mes', 'Ingresos', 'Egresos'], body: rows, ctr: [1, 2] }); return;
+    }
+    let primera = true; const nn = () => { const v = primera ? nota : ''; primera = false; return v; };
+    $$('table', c).forEach(t => {
+      const ths = $$('thead th', t), keep = ths.map((th, i) => txt(th) ? i : -1).filter(i => i >= 0), rows = $$('tbody tr', t).map(tr => [...tr.children]).filter(r => r.length > 1).map(r => keep.map(i => txt(r[i])));
+      if (!keep.length) return;
+      const h3 = t.parentElement && t.parentElement.querySelector('h3'), mon = keep.map((_, j) => rows.length && rows.every(r => /^-?\$/.test(r[j])));
+      secs.push({ t: h3 ? `${h2} · ${txt(h3)}` : h2, n: nn(), head: keep.map(i => txt(ths[i])), body: rows, num: mon.map((m, j) => m ? j : -1).filter(j => j >= 0), ctr: keep.map((i, j) => !mon[j] && ths[i].classList.contains('num') ? j : -1).filter(j => j >= 0), vacio: 'Sin datos.' });
+    });
+    const br = $$('.brow', c).map(b => [txt(b.children[0]), txt(b.children[2])]);
+    if (br.length) secs.push({ t: h2, n: nn(), head: ['Concepto', 'Valor'], body: br, num: br.every(r => /^-?\$/.test(r[1])) ? [1] : [], ctr: br.every(r => /^-?\$/.test(r[1])) ? [] : [1] });
+    if (primera && stats.length && !c.querySelector('table')) secs.push({ t: h2, head: ['Indicador', 'Valor'], body: stats, ctr: [1] });
+  });
+  const oi = new Map(ordenLocales().map((l, i) => [l, i])), porLocal = {}; nom.forEach(e => { porLocal[lc(e)] = (porLocal[lc(e)] || 0) + 1; });
+  const costo = nom.reduce((a, e) => a + (+e.sueldoActual || 0), 0), cf = nom.filter(e => e.fechaIngreso), ant = cf.length ? cf.reduce((a, e) => a + (new Date() - pd(e.fechaIngreso)) / (365.25 * DAY), 0) / cf.length : 0;
+  const nN = nom.filter(e => e.alta === 'N').length, nS = nom.filter(e => e.alta === 'S').length, sol = S.empleados.filter(e => !['liquidado', 'archivado', 'egreso'].includes(e.estado) && e.solicitaAlta).length;
+  return pdfInforme({
+    titulo: 'Informe de estadística', sub: 'Indicadores de personal, costos, rotación y altas', archivo: `estadistica-${today()}.pdf`,
+    kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Costo mensual', v: mp(costo), n: 'sueldos habituales (estimado)' }, { l: 'Antigüedad promedio', v: ant.toFixed(1) + ' años', c: P.blue }, { l: 'Solicitan alta', v: sol, c: P.gold }],
+    tortas: [{ t: 'Empleados por local', d: Object.entries(porLocal).sort((a, b) => (oi.get(a[0]) ?? 999) - (oi.get(b[0]) ?? 999)).map(([l, v]) => ({ l, v })) }, { t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: nom.length - nN - nS, c: P.bad }] }],
+    secs,
   });
 }
 
@@ -2048,6 +2110,7 @@ const ACT = {
   },
   llPrint: () => imprimirSolo('#liq-list'),
   llPdf: conPdf(() => pdfLiq()),
+  estPdf: conPdf(() => pdfEst()),
   empPdf: conPdf(() => pdfEmpleados()),
   empAltasPdf: conPdf(() => pdfAltas()),
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },

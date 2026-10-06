@@ -1718,6 +1718,8 @@ async function descargarPlanilla(mes) {
    oscura y filas alternadas, pie con paginación. Usa jsPDF + AutoTable (se cargan la primera vez que se usan). */
 const PDF_C = { ink: [27, 43, 48], acc: [13, 107, 88], accL: [227, 241, 237], gold: [180, 112, 15], line: [215, 223, 221], mut: [94, 112, 118], zeb: [246, 249, 248], bad: [178, 58, 43], ok: [47, 125, 79], blue: [31, 78, 140] };
 const mp = n => money(n).replace(/\u00a0/g, ' ');
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const pcLocal = l => { const h = colorLocal({ local: l }); return h ? hexRgb(h) : undefined; };   // color del local (Parámetros) en RGB para los PDF
 async function cargarPDF() {
   const J = () => window.jspdf && window.jspdf.jsPDF, msg = 'No se pudo cargar la librería de PDF. Revisá la conexión a internet e intentá de nuevo.';
   await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'], J, msg);
@@ -1776,7 +1778,7 @@ async function pdfInforme(o) {
       F([255, 255, 255]); doc.circle(cx, cy, r * .58, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(15); T(C.ink); tx(tot, cx, cy + 3, 'center'); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); T(C.mut); tx('TOTAL', cx, cy + 13, 'center');
       const lx = cx + r + 18, lw = x + cw - 14 - lx - 52;
       d.forEach((z, k) => {
-        const ly = y + 40 + k * 13; F(z.c); doc.rect(lx, ly - 6, 7, 7, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); T(C.ink);
+        const ly = y + 40 + k * 13; F(z.c); D(C.line); doc.setLineWidth(.4); doc.rect(lx, ly - 6, 7, 7, 'FD'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); T(C.ink);
         let t = z.l; while (doc.getTextWidth(t) > lw && t.length > 4) t = t.slice(0, -1); if (t !== z.l) t += '..';
         tx(t, lx + 11, ly); doc.setFont('helvetica', 'bold'); tx(`${z.v} (${Math.round(z.v * 100 / tot)}%)`, x + cw - 14, ly, 'right');
       });
@@ -1790,13 +1792,13 @@ async function pdfInforme(o) {
     if (s.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); T(C.mut); tx(s.n, W - M, y + 12, 'right'); }
     y += 24;
     if (!s.body.length) { F(C.accL); doc.roundedRect(M, y, W - 2 * M, 30, 5, 5, 'F'); doc.setFont('helvetica', 'italic'); doc.setFontSize(9); T(C.acc); tx(s.vacio || 'Sin registros.', M + 14, y + 19); y += 52; return; }
-    const cs = {}, ha = {}; (s.num || []).forEach(i => { ha[i] = 'right'; }); (s.ctr || []).forEach(i => { ha[i] = 'center'; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = v; });
+    const LL = s.locs || (s.loc != null ? s.body.map(r => r[s.loc]) : null), cs = {}, ha = {}; (s.num || []).forEach(i => { ha[i] = 'right'; }); (s.ctr || []).forEach(i => { ha[i] = 'center'; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = v; });
     doc.autoTable({
       startY: y, head: [s.head], body: s.body, foot: s.foot ? [s.foot] : undefined, showFoot: 'lastPage', theme: 'plain', margin: { left: M, right: M, top: 46, bottom: 44 },
       styles: { font: 'helvetica', fontSize: s.fs || 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, textColor: C.ink, overflow: 'linebreak' },
       headStyles: { fillColor: C.ink, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: (s.fs || 8.5) - .5, valign: 'middle' },
       footStyles: { fillColor: C.accL, textColor: C.acc, fontStyle: 'bold' }, alternateRowStyles: { fillColor: C.zeb }, columnStyles: cs,
-      didParseCell: d => { if (ha[d.column.index]) d.cell.styles.halign = ha[d.column.index]; const t = d.section === 'body' && s.tone && s.tone[d.column.index]; if (t) { const c = t[d.cell.text.join('')]; if (c) { d.cell.styles.textColor = c; d.cell.styles.fontStyle = 'bold'; } } },
+      didParseCell: d => { if (ha[d.column.index]) d.cell.styles.halign = ha[d.column.index]; if (d.section === 'body' && LL) { const h = colorLocal({ local: LL[d.row.index] }); if (h) { d.cell.styles.fillColor = hexRgb(h); if (esOscuro(h)) d.cell.styles.textColor = [255, 255, 255]; } } const t = d.section === 'body' && s.tone && s.tone[d.column.index]; if (t) { const c = t[d.cell.text.join('')]; if (c) { d.cell.styles.textColor = c; d.cell.styles.fontStyle = 'bold'; } } },
       didDrawCell: d => { if (d.section === 'body') { D(C.line); doc.setLineWidth(.4); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } },
     });
     y = doc.lastAutoTable.finalY + 26;
@@ -1830,12 +1832,12 @@ async function pdfAltas() {
     titulo: 'Informe de altas', sub: 'Situación de altas del personal en nómina y solicitudes pendientes', archivo: `informe-altas-${today()}.pdf`,
     kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
     barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
-    tortas: [{ t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: sin.length, c: P.bad }] }, { t: 'Sin alta por local', d: resumen.map(r => ({ l: r[0], v: r[4] })) }],
+    tortas: [{ t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: sin.length, c: P.bad }] }, { t: 'Sin alta por local', d: resumen.map(r => ({ l: r[0], v: r[4], c: pcLocal(r[0]) })) }],
     secs: [
-      { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], ctr: [1, 2, 3, 4, 5, 6], cols: { 0: { cellWidth: 110 } } },
-      { t: 'Solicitudes de alta pendientes', n: cnt(sol), head: HEAD, body: sol.map(fila), tone, cols, vacio: 'No hay solicitudes de alta pendientes.' },
-      { t: 'En nómina sin alta', n: cnt(sin), head: HEAD, body: sin.map(fila), tone, cols, vacio: 'Todos los colaboradores en nómina tienen alta.' },
-      { t: 'En nómina con alta', n: cnt(con), head: HEAD, body: con.map(fila), tone, cols, vacio: 'Todavía no hay altas cargadas.' },
+      { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], loc: 0, ctr: [1, 2, 3, 4, 5, 6], cols: { 0: { cellWidth: 110 } } },
+      { t: 'Solicitudes de alta pendientes', n: cnt(sol), head: HEAD, body: sol.map(fila), tone, cols, loc: 2, vacio: 'No hay solicitudes de alta pendientes.' },
+      { t: 'En nómina sin alta', n: cnt(sin), head: HEAD, body: sin.map(fila), tone, cols, loc: 2, vacio: 'Todos los colaboradores en nómina tienen alta.' },
+      { t: 'En nómina con alta', n: cnt(con), head: HEAD, body: con.map(fila), tone, cols, loc: 2, vacio: 'Todavía no hay altas cargadas.' },
     ],
   });
 }
@@ -1852,11 +1854,35 @@ async function pdfEmpleados() {
   return pdfInforme({
     orient: 'l', titulo: 'Nómina de colaboradores', sub: filtrada ? 'Vista filtrada de la nómina' : 'Listado completo de colaboradores', archivo: `empleados-${today()}.pdf`,
     kpis: [{ l: 'Colaboradores', v: rows.length }, { l: 'Activos', v: rows.filter(e => e.estado === 'activo').length, c: P.ok }, { l: 'En licencia', v: rows.filter(e => e.estado === 'licencia').length, c: P.gold }, { l: 'Sin alta', v: nomn.filter(e => !e.alta).length, c: P.bad, n: 'en nómina' }],
-    secs: [{ t: 'Detalle', n: `${rows.length} registro${rows.length === 1 ? '' : 's'}`, head: ['Legajo', 'Nombre', ...ids.map(id => G[id][0])], body: rows.map(e => [e.legajo || '—', `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) || '—')]), tone, fs: ids.length > 7 ? 7.5 : 8.5 }],
+    secs: [{ t: 'Detalle', locs: rows.map(e => e.local), n: `${rows.length} registro${rows.length === 1 ? '' : 's'}`, head: ['Legajo', 'Nombre', ...ids.map(id => G[id][0])], body: rows.map(e => [e.legajo || '—', `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) || '—')]), tone, fs: ids.length > 7 ? 7.5 : 8.5 }],
   });
 }
 
 /* ---- Estadística (toma los datos que muestra cada tarjeta del panel; sin historial de movimientos) ---- */
+function estSecs() {   // secciones (título, cabecera, filas) tomadas de las tarjetas del panel de Estadística, sin el historial
+  const area = $('#est-area'); if (!area) return [];
+  const txt = x => ((x && x.textContent) || '').replace(/\s+/g, ' ').trim(), secs = [];
+  $$('#est-area > .card', area).forEach(c => {
+    if ($('#h-res', c)) return;
+    const h2 = txt($('h2', c)), stats = $$('.stat, .sbox', c).map(x => [txt($('span', x)), txt($('strong', x))]), nota = stats.map(x => `${x[1]} · ${x[0]}`).join('   |   ').slice(0, 80);
+    if ($('#st-rot', c)) {
+      const ing = $$('[title^="Ingresos"]', c), egr = $$('[title^="Egresos"]', c), g = (el, w) => (el.getAttribute('title') || '').replace(new RegExp('^' + w + '\\s+'), '');
+      const rows = ing.map((el, i) => [g(el, 'Ingresos').replace(/:\s*\d+$/, ''), +(g(el, 'Ingresos').match(/(\d+)$/) || [0, 0])[1], +(g(egr[i], 'Egresos').match(/(\d+)$/) || [0, 0])[1]]);
+      secs.push({ t: h2, n: 'Local: ' + ($('#st-rot-local', c) || {}).value, head: ['Mes', 'Ingresos', 'Egresos'], body: rows, ctr: [1, 2] }); return;
+    }
+    let primera = true; const nn = () => { const v = primera ? nota : ''; primera = false; return v; };
+    $$('table', c).forEach(t => {
+      const ths = $$('thead th', t), keep = ths.map((th, i) => txt(th) ? i : -1).filter(i => i >= 0), rows = $$('tbody tr', t).map(tr => [...tr.children]).filter(r => r.length > 1).map(r => keep.map(i => txt(r[i])));
+      if (!keep.length) return;
+      const h3 = t.parentElement && t.parentElement.querySelector('h3'), mon = keep.map((_, j) => rows.length && rows.every(r => /^-?\$/.test(r[j])));
+      secs.push({ t: h3 ? `${h2} · ${txt(h3)}` : h2, n: nn(), loc: (j => j >= 0 ? j : undefined)(keep.findIndex(i => txt(ths[i]) === 'Local')), head: keep.map(i => txt(ths[i])), body: rows, num: mon.map((m, j) => m ? j : -1).filter(j => j >= 0), ctr: keep.map((i, j) => !mon[j] && ths[i].classList.contains('num') ? j : -1).filter(j => j >= 0), vacio: 'Sin datos.' });
+    });
+    const br = $$('.brow', c).map(b => [txt(b.children[0]), txt(b.children[2])]);
+    if (br.length) secs.push({ t: h2, n: nn(), loc: br.some(r => colorLocal({ local: r[0] })) ? 0 : undefined, head: ['Concepto', 'Valor'], body: br, num: br.every(r => /^-?\$/.test(r[1])) ? [1] : [], ctr: br.every(r => /^-?\$/.test(r[1])) ? [] : [1] });
+    if (primera && stats.length && !c.querySelector('table')) secs.push({ t: h2, head: ['Indicador', 'Valor'], body: stats, ctr: [1] });
+  });
+  return secs;
+}
 async function pdfEst() {
   const area = $('#est-area'); if (!area) return false;
   const nom = enNomina(), P = PDF_C, lc = e => (e.local || '').trim() || 'Sin local', txt = x => ((x && x.textContent) || '').replace(/\s+/g, ' ').trim(), secs = [];
@@ -1885,7 +1911,7 @@ async function pdfEst() {
   return pdfInforme({
     titulo: 'Informe de estadística', sub: 'Indicadores de personal, costos, rotación y altas', archivo: `estadistica-${today()}.pdf`,
     kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Costo mensual', v: mp(costo), n: 'sueldos habituales (estimado)' }, { l: 'Antigüedad promedio', v: ant.toFixed(1) + ' años', c: P.blue }, { l: 'Solicitan alta', v: sol, c: P.gold }],
-    tortas: [{ t: 'Empleados por local', d: Object.entries(porLocal).sort((a, b) => (oi.get(a[0]) ?? 999) - (oi.get(b[0]) ?? 999)).map(([l, v]) => ({ l, v })) }, { t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: nom.length - nN - nS, c: P.bad }] }],
+    tortas: [{ t: 'Empleados por local', d: Object.entries(porLocal).sort((a, b) => (oi.get(a[0]) ?? 999) - (oi.get(b[0]) ?? 999)).map(([l, v]) => ({ l, v, c: pcLocal(l) })) }, { t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: nom.length - nN - nS, c: P.bad }] }],
     secs,
   });
 }
@@ -1895,12 +1921,12 @@ async function pdfLiq() {
   const f = liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
   const sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), L = UI.ll, P = PDF_C;
   const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], L.estado && LIQ_ESTADOS[L.estado], L.local, L.razon, (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`].filter(Boolean);
-  const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], ctr: [1], num: [2, 3, 4] });
+  const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], loc: k === 'local' ? 0 : undefined, ctr: [1], num: [2, 3, 4] });
   return pdfInforme({
     orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones-${today()}.pdf`,
     kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: 'solo liquidaciones pagadas' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: 'solo liquidaciones pagadas' }],
     secs: [
-      { t: 'Detalle de liquidaciones', n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
+      { t: 'Detalle de liquidaciones', locs: f.map(r => r.local), n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
         body: f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
         foot: ['TOTAL', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [6, 7, 8], cols: { 0: { cellWidth: 66 } }, fs: 8, tone: { 5: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
       suma('local', 'Local'), suma('razon', 'Razón social'),
@@ -1911,20 +1937,26 @@ async function pdfLiq() {
 
 /* ================= Excel con diseño (ExcelJS) ================= */
 const XL = { ink: 'FF1B2B30', acc: 'FF0D6B58', accL: 'FFE3F1ED', zeb: 'FFF6F9F8', line: 'FFD7DFDD' };
+async function xlsGuardar(wb, nombre) {
+  const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = nombre;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('Excel generado');
+}
 function xlsHoja(wb, nombre, titulo, sub, head, rows, o = {}) {
   const ws = wb.addWorksheet(nombre, { views: [{ showGridLines: false, state: 'frozen', ySplit: 5 }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '5:5' } });
   const n = head.length, span = Math.max(n, 6), num = o.num || [], fl = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), fn = (sz, b, c) => ({ name: 'Calibri', size: sz, bold: !!b, color: { argb: c || XL.ink } });
-  const MONEY = '"$" #,##0.00;[Red]-"$" #,##0.00;"-"', fmt = i => (o.fmt && o.fmt[i]) || MONEY, al = (i, v) => ({ vertical: 'middle', horizontal: num.includes(i) ? 'right' : 'left', indent: 1, ...v });
-  (o.w || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  const MONEY = '"$" #,##0.00;[Red]-"$" #,##0.00;"-"', fmt = i => (o.fmt && o.fmt[i]) || MONEY, al = (i, v) => ({ vertical: 'middle', horizontal: num.includes(i) ? 'right' : (o.ctr || []).includes(i) ? 'center' : 'left', indent: 1, ...v });
+  (o.w || head.map((h, i) => Math.min(48, Math.max(String(h).length + 4, 11, ...rows.map(r => String(r[i] ?? '').length + 3))))).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  const lo = o.locs || (o.loc != null ? rows.map(r => r[o.loc]) : []);   // local de cada fila: la pinta con su color
   for (let c = 1; c <= span; c++) { ws.getCell(1, c).fill = fl(XL.ink); ws.getCell(2, c).fill = fl(XL.ink); ws.getCell(3, c).fill = fl(XL.acc); }
   ws.mergeCells(1, 1, 1, span); ws.mergeCells(2, 1, 2, span);
   Object.assign(ws.getCell(1, 1), { value: titulo, font: fn(18, 1, 'FFFFFFFF'), alignment: { vertical: 'middle', indent: 1 } });
   Object.assign(ws.getCell(2, 1), { value: sub, font: fn(10, 0, 'FFB9C7CB'), alignment: { vertical: 'top', indent: 1 } });
   [38, 22, 4, 10, 26].forEach((h, i) => { ws.getRow(i + 1).height = h; });
   head.forEach((h, i) => Object.assign(ws.getCell(5, i + 1), { value: h, font: fn(10, 1, 'FFFFFFFF'), fill: fl(XL.acc), alignment: al(i, { wrapText: true }) }));
-  rows.forEach((r, ri) => { ws.getRow(6 + ri).height = 20; r.forEach((v, i) => {
+  rows.forEach((r, ri) => { ws.getRow(6 + ri).height = 20; const lh = lo[ri] ? colorLocal({ local: lo[ri] }) : ''; r.forEach((v, i) => {
     const c = ws.getCell(6 + ri, i + 1), t = o.tone && o.tone[i] && o.tone[i][v];
-    Object.assign(c, { value: v, font: fn(10, !!t, t && t[1]), fill: fl(t ? t[0] : ri % 2 ? XL.zeb : 'FFFFFFFF'), border: { bottom: { style: 'thin', color: { argb: XL.line } } }, alignment: al(i) });
+    Object.assign(c, { value: v, font: fn(10, !!t, t ? t[1] : lh && esOscuro(lh) ? 'FFFFFFFF' : undefined), fill: fl(t ? t[0] : lh ? 'FF' + lh.slice(1).toUpperCase() : ri % 2 ? XL.zeb : 'FFFFFFFF'), border: { bottom: { style: 'thin', color: { argb: XL.line } } }, alignment: al(i) });
     if (num.includes(i) && typeof v === 'number') c.numFmt = fmt(i);
   }); });
   if (o.tot) { const tr = 6 + rows.length; ws.getRow(tr).height = 26; o.tot.forEach((v, i) => {
@@ -2118,36 +2150,32 @@ const ACT = {
       const TN = { Borrador: ['FFFFF2CC', 'FF7A5A00'], Aprobada: ['FFDCE9F7', 'FF1F4E8C'], Pagada: ['FFD9EAD3', 'FF1E6B3A'], Cerrada: ['FFE6E6E6', 'FF555555'] };
       xlsHoja(wb, 'Liquidaciones', 'Liquidaciones', sub, ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transferencia'],
         f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], r.monto, r.efe, r.tra]),
-        { w: [12, 32, 14, 26, 24, 13, 17, 17, 17], num: [6, 7, 8], tone: { 5: TN }, tot: ['TOTAL', '', '', '', '', '', tot, efe, tra] });
+        { w: [12, 32, 14, 26, 24, 13, 17, 17, 17], num: [6, 7, 8], locs: f.map(r => r.local), tone: { 5: TN }, tot: ['TOTAL', '', '', '', '', '', tot, efe, tra] });
       [['local', 'Local', 'Por local'], ['razon', 'Razón social', 'Por razón social']].forEach(([k, c, nom]) =>
-        xlsHoja(wb, nom, 'Liquidaciones ' + nom.toLowerCase(), sub, S5(c), liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), { w: [30, 16, 18, 18, 18], num: [1, 2, 3, 4], fmt: N, tot: ['TOTAL', f.length, tot, efe, tra] }));
+        xlsHoja(wb, nom, 'Liquidaciones ' + nom.toLowerCase(), sub, S5(c), liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), { w: [30, 16, 18, 18, 18], num: [1, 2, 3, 4], fmt: N, loc: k === 'local' ? 0 : undefined, tot: ['TOTAL', f.length, tot, efe, tra] }));
       xlsHoja(wb, 'Por mes', 'Liquidaciones por mes de egreso', sub, ['Mes de egreso', 'Total'], liqPorMes(f).map(([m, v]) => [fper(m), v]), { w: [30, 20], num: [1], tot: ['TOTAL', tot] });
-      const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = `liquidaciones-${today()}.xlsx`;
-      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('Excel generado');
+      await xlsGuardar(wb, `liquidaciones-${today()}.xlsx`);
     } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el Excel.'); }
   },
-  empXlsx: () => {
+  empXlsx: async () => {
     const rows = UI.rowsVis || []; if (!rows.length) return toast('No hay empleados para exportar.');
-  const G = GEMP;
-    const ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Legajo', 'Nombre', ...ids.map(id => G[id][0])], ...rows.map(e => [e.legajo, `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) ?? '')])]), 'Empleados');
-    XLSX.writeFile(wb, `empleados-${today()}.xlsx`);
+    try {
+      const G = GEMP, ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), EJ = await cargarExcelJS(), wb = new EJ.Workbook();
+      xlsHoja(wb, 'Empleados', 'Nómina de colaboradores', `${rows.length} registro${rows.length === 1 ? '' : 's'}  ·  Emitido el ${fdate(today())}  ·  Acurio Restaurantes`, ['Legajo', 'Nombre', ...ids.map(id => G[id][0])],
+        rows.map(e => [e.legajo || '', `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) ?? '')]), { locs: rows.map(e => e.local), ctr: [ids.indexOf('alta') + 2].filter(i => i > 1) });
+      await xlsGuardar(wb, `empleados-${today()}.xlsx`);
+    } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el Excel.'); }
   },
-  estXlsx: () => {
-    const wb = XLSX.utils.book_new(), usados = new Set();
-    $$('#est-area > .card').forEach((c, i) => {
-      const h = $('h2', c), rows = [];
-      $$('.stat, .sbox', c).forEach(x => rows.push([$('strong', x).textContent.trim(), $('span', x).textContent.trim()]));
-      $$('.brow', c).forEach(b => rows.push([b.children[0].textContent.trim(), b.children[2].textContent.trim()]));
-      $$('table', c).forEach(t => { if (rows.length) rows.push([]); $$('tr', t).forEach(tr => rows.push([...tr.children].map(x => x.textContent.trim()))); });
-      if (!rows.length) return;
-      let n = ((h ? h.textContent : 'Hoja ' + (i + 1)).replace(/[\\/?*[\]:]/g, '').slice(0, 28)) || 'Hoja';
-      while (usados.has(n)) n = n.slice(0, 26) + '_' + i; usados.add(n);
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), n);
-    });
-    if (!wb.SheetNames.length) return toast('No hay datos para exportar.');
-    XLSX.writeFile(wb, `estadistica-${today()}.xlsx`);
+  estXlsx: async () => {
+    try {
+      const secs = estSecs(); if (!secs.length) return toast('No hay datos para exportar.');
+      const EJ = await cargarExcelJS(), wb = new EJ.Workbook(), usados = new Set(), sub = `Estadística  ·  Emitido el ${fdate(today())}  ·  Acurio Restaurantes`, num = v => { const n = Number(String(v).replace(/[^\d,-]/g, '').replace(',', '.')); return isNaN(n) ? v : n; };
+      secs.forEach((x, i) => {
+        let n = x.t.replace(/[\\/?*[\]:]/g, '').slice(0, 27) || 'Hoja'; while (usados.has(n)) n = n.slice(0, 24) + '_' + i; usados.add(n);
+        xlsHoja(wb, n, x.t, x.n ? sub + '  ·  ' + x.n : sub, x.head, x.body.map(r => r.map((v, j) => (x.num || []).includes(j) ? num(v) : /^\d+$/.test(v) ? +v : v)), { num: x.num, ctr: x.ctr, loc: x.loc });
+      });
+      await xlsGuardar(wb, `estadistica-${today()}.xlsx`);
+    } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el Excel.'); }
   },
   savePar: () => {
     const g = id => +$('#' + id).value || 0, P = S.parametros;

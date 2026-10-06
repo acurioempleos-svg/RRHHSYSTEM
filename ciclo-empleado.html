@@ -893,6 +893,8 @@ function renderEmp() {
       <select id="vista-sel" aria-label="Vistas guardadas"><option value="">Vistas guardadas…</option>${(S.vistasEmp || []).map(v => `<option value="${v.id}" ${UI.vistaSel === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <button class="btn" data-act="vistaSave">Guardar vista</button>${(S.vistasEmp || []).length ? '<button class="btn danger" data-act="vistaDel">Borrar vista</button>' : ''}
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
+      <button class="btn" data-act="empPdf">Descargar PDF</button>
+      <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
     <details class="card fpanel" ${UI.fOpen === true ? 'open' : ''} ontoggle="UI.fOpen = this.open">
@@ -1155,6 +1157,7 @@ function renderLiq() {
     <div class="bar no-print">
       <input type="search" id="ll-q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.ll.q)}" aria-label="Buscar empleado">
       <button class="btn" data-act="llXlsx">Descargar Excel</button>
+      <button class="btn" data-act="llPdf">Descargar PDF</button>
       <button class="btn" data-act="llPrint">Imprimir</button>
     </div>
     <details class="card fpanel no-print" ${UI.llOpen === true ? 'open' : ''} ontoggle="UI.llOpen = this.open">
@@ -1712,6 +1715,169 @@ async function descargarPlanilla(mes) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 }
 
+/* ================= PDF ejecutivo (diseño compartido) =================
+   Un solo motor para todos los informes PDF: banda de título, tarjetas de indicadores, tablas con cabecera
+   oscura y filas alternadas, pie con paginación. Usa jsPDF + AutoTable (se cargan la primera vez que se usan). */
+const PDF_C = { ink: [27, 43, 48], acc: [13, 107, 88], accL: [227, 241, 237], gold: [180, 112, 15], line: [215, 223, 221], mut: [94, 112, 118], zeb: [246, 249, 248], bad: [178, 58, 43], ok: [47, 125, 79], blue: [31, 78, 140] };
+const mp = n => money(n).replace(/\u00a0/g, ' ');
+async function cargarPDF() {
+  const J = () => window.jspdf && window.jspdf.jsPDF;
+  const carga = async urls => {
+    for (const u of urls) { try { await new Promise((ok, ko) => { const s = document.createElement('script'); s.src = u; s.onload = ok; s.onerror = () => { s.remove(); ko(); }; document.head.appendChild(s); }); return; } catch (_) {} }
+    throw new Error('No se pudo cargar la librería de PDF. Revisá la conexión a internet e intentá de nuevo.');
+  };
+  if (!J()) await carga(['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']);
+  if (!J().API.autoTable) await carga(['https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js']);
+  return J();
+}
+/* o = { titulo, sub, archivo, orient:'p'|'l', kpis:[{l,v,n,c}], barra:{l,v}, secs:[{t,n,head,body,foot,num,cols,tone,fs,vacio}] } */
+async function pdfInforme(o) {
+  const JS = await cargarPDF(), doc = new JS({ orientation: o.orient || 'p', unit: 'pt', format: 'a4' }), C = PDF_C;
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 36, ahora = new Date();
+  const F = c => doc.setFillColor(...c), T = c => doc.setTextColor(...c), D = c => doc.setDrawColor(...c), tx = (s, x, y, al) => doc.text(String(s), x, y, al ? { align: al } : undefined);
+  doc.setProperties({ title: o.titulo, author: 'Acurio Restaurantes · RR.HH.', subject: o.sub || '' });
+  // Banda de título
+  F(C.ink); doc.rect(0, 0, W, 92, 'F'); F(C.acc); doc.rect(0, 92, W, 4, 'F'); F(C.gold); doc.rect(0, 92, 96, 4, 'F');
+  F(C.acc); doc.roundedRect(M, 26, 40, 40, 8, 8, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(22); T([255, 255, 255]); tx('A', M + 20, 54, 'center');
+  doc.setFontSize(7.5); T([242, 196, 107]); tx('ACURIO RESTAURANTES  ·  RECURSOS HUMANOS', M + 54, 34);
+  doc.setFontSize(20); T([255, 255, 255]); tx(o.titulo, M + 54, 56);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); T([185, 199, 203]); tx(o.sub || '', M + 54, 73);
+  doc.setFontSize(8); tx('Emitido el ' + ahora.toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }), W - M, 40, 'right');
+  tx(ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + ' hs', W - M, 53, 'right');
+  doc.setFont('helvetica', 'bold'); T([242, 196, 107]); tx('CONFIDENCIAL', W - M, 70, 'right');
+  let y = 116;
+  // Tarjetas de indicadores
+  const K = o.kpis || [], gap = 10, kw = (W - 2 * M - gap * (K.length - 1)) / (K.length || 1);
+  K.forEach((k, i) => {
+    const x = M + i * (kw + gap), c = k.c || C.acc;
+    F([255, 255, 255]); D(C.line); doc.setLineWidth(.6); doc.roundedRect(x, y, kw, 58, 5, 5, 'FD'); F(c); doc.rect(x, y + 6, 4, 46, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(String(k.v).length > 11 ? 14 : 21); T(c); tx(k.v, x + 14, y + 29);
+    doc.setFontSize(7.5); T(C.ink); tx(String(k.l).toUpperCase(), x + 14, y + 42);
+    if (k.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); T(C.mut); tx(k.n, x + 14, y + 52); }
+  });
+  if (K.length) y += 78;
+  if (o.barra) {
+    const b = o.barra, w = W - 2 * M;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); T(C.ink); tx(b.l, M, y + 8); T(C.acc); tx(b.v + '%', W - M, y + 8, 'right');
+    F(C.line); doc.roundedRect(M, y + 14, w, 7, 3.5, 3.5, 'F'); if (b.v > 0) { F(C.acc); doc.roundedRect(M, y + 14, Math.max(7, w * b.v / 100), 7, 3.5, 3.5, 'F'); }
+    y += 42;
+  }
+  // Secciones
+  (o.secs || []).forEach(s => {
+    if (y > H - 120) { doc.addPage(); y = 56; }
+    F(C.acc); doc.rect(M, y, 4, 15, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); T(C.ink); tx(s.t, M + 12, y + 12);
+    if (s.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); T(C.mut); tx(s.n, W - M, y + 12, 'right'); }
+    y += 24;
+    if (!s.body.length) { F(C.accL); doc.roundedRect(M, y, W - 2 * M, 30, 5, 5, 'F'); doc.setFont('helvetica', 'italic'); doc.setFontSize(9); T(C.acc); tx(s.vacio || 'Sin registros.', M + 14, y + 19); y += 52; return; }
+    const cs = {}; (s.num || []).forEach(i => { cs[i] = { halign: 'right' }; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = { ...cs[i], ...v }; });
+    doc.autoTable({
+      startY: y, head: [s.head], body: s.body, foot: s.foot ? [s.foot] : undefined, showFoot: 'lastPage', theme: 'plain', margin: { left: M, right: M, top: 46, bottom: 44 },
+      styles: { font: 'helvetica', fontSize: s.fs || 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, textColor: C.ink, overflow: 'linebreak' },
+      headStyles: { fillColor: C.ink, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: (s.fs || 8.5) - .5, valign: 'middle' },
+      footStyles: { fillColor: C.accL, textColor: C.acc, fontStyle: 'bold' }, alternateRowStyles: { fillColor: C.zeb }, columnStyles: cs,
+      didParseCell: d => { const t = d.section === 'body' && s.tone && s.tone[d.column.index]; if (t) { const c = t[d.cell.text.join('')]; if (c) { d.cell.styles.textColor = c; d.cell.styles.fontStyle = 'bold'; } } },
+      didDrawCell: d => { if (d.section === 'body') { D(C.line); doc.setLineWidth(.4); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } },
+    });
+    y = doc.lastAutoTable.finalY + 26;
+  });
+  // Cabecera reducida (desde la pág. 2) y pie en todas las páginas
+  const N = doc.getNumberOfPages();
+  for (let i = 1; i <= N; i++) {
+    doc.setPage(i);
+    if (i > 1) { F(C.ink); doc.rect(0, 0, W, 26, 'F'); F(C.acc); doc.rect(0, 26, W, 2, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); T([255, 255, 255]); tx(o.titulo, M, 17); doc.setFont('helvetica', 'normal'); T([185, 199, 203]); tx('Acurio Restaurantes · RR.HH.', W - M, 17, 'right'); }
+    D(C.line); doc.setLineWidth(.6); doc.line(M, H - 30, W - M, H - 30);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); T(C.mut);
+    tx('Documento confidencial · uso interno de Recursos Humanos', M, H - 18); tx(`Emitido ${fdate(today())}`, W / 2, H - 18, 'center');
+    doc.setFont('helvetica', 'bold'); T(C.ink); tx(`Página ${i} de ${N}`, W - M, H - 18, 'right');
+  }
+  doc.save(o.archivo);
+}
+const conPdf = fn => async () => { try { if (await fn() !== false) toast('PDF generado'); } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el PDF.'); } };
+
+/* ---- Informe de altas (botón en Empleados) ---- */
+async function pdfAltas() {
+  const nom = enNomina().sort(ordenNomina()), vig = S.empleados.filter(e => !['liquidado', 'archivado', 'egreso'].includes(e.estado)), sol = vig.filter(e => e.solicitaAlta).sort(ordenNomina());
+  const con = nom.filter(e => e.alta), sin = nom.filter(e => !e.alta), nN = con.filter(e => e.alta === 'N').length, nS = con.length - nN, pct = nom.length ? Math.round(con.length * 100 / nom.length) : 0;
+  const nm = e => `${e.apellido}, ${e.nombre}`, lc = e => (e.local || '').trim() || 'Sin local', AL = e => e.alta === 'N' ? 'N · Normal' : e.alta === 'S' ? 'S · Especial' : 'Sin alta';
+  const oi = new Map(ordenLocales().map((l, i) => [l, i])), locs = [...new Set([...nom, ...sol].map(lc))].sort((a, b) => (oi.get(a) ?? 999) - (oi.get(b) ?? 999));
+  const resumen = locs.map(l => { const a = nom.filter(e => lc(e) === l), c = a.filter(e => e.alta).length; return [l, a.length, a.filter(e => e.alta === 'N').length, a.filter(e => e.alta === 'S').length, a.length - c, sol.filter(e => lc(e) === l).length, (a.length ? Math.round(c * 100 / a.length) : 0) + '%']; });
+  const P = PDF_C, tone = { 6: { 'N · Normal': P.ok, 'S · Especial': P.gold, 'Sin alta': P.bad } };
+  const HEAD = ['Legajo', 'Empleado', 'Local', 'Puesto', 'Estado', 'Ingreso', 'Alta'], cols = { 0: { cellWidth: 44 }, 5: { cellWidth: 52 }, 6: { cellWidth: 60 } };
+  const fila = e => [e.legajo || '—', nm(e), lc(e), e.puesto || '—', ESTADOS[e.estado] || e.estado, fdate(e.fechaIngreso), AL(e)];
+  const cnt = a => `${a.length} colaborador${a.length === 1 ? '' : 'es'}`;
+  return pdfInforme({
+    titulo: 'Informe de altas', sub: 'Situación de altas del personal en nómina y solicitudes pendientes', archivo: `informe-altas-${today()}.pdf`,
+    kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
+    barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
+    secs: [
+      { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], num: [1, 2, 3, 4, 5, 6] },
+      { t: 'Solicitudes de alta pendientes', n: cnt(sol), head: HEAD, body: sol.map(fila), tone, cols, vacio: 'No hay solicitudes de alta pendientes.' },
+      { t: 'En nómina sin alta', n: cnt(sin), head: HEAD, body: sin.map(fila), tone, cols, vacio: 'Todos los colaboradores en nómina tienen alta.' },
+      { t: 'En nómina con alta', n: cnt(con), head: HEAD, body: con.map(fila), tone, cols, vacio: 'Todavía no hay altas cargadas.' },
+    ],
+  });
+}
+
+/* ---- Nómina de empleados (vista actual con filtros y columnas visibles) ---- */
+async function pdfEmpleados() {
+  const rows = UI.rowsVis || []; if (!rows.length) { toast('No hay empleados para exportar.'); return false; }
+  const G = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };
+  const ids = ordenColsEmp().filter(id => colVisible(id) && G[id]), P = PDF_C, tone = {}, ia = ids.indexOf('alta'), ie = ids.indexOf('estado');
+  if (ia >= 0) tone[ia + 2] = { N: P.ok, S: P.gold };
+  if (ie >= 0) tone[ie + 2] = { 'Activo': P.ok, 'En licencia': P.gold, 'Candidato': P.blue, 'Preingreso': P.blue, 'Egreso en curso': P.bad, 'Liquidado': P.mut, 'Archivado': P.mut };
+  const filtrada = UI.q || UI.fe || Object.values(UI.f || {}).some(Boolean), nomn = rows.filter(e => ['activo', 'licencia'].includes(e.estado));
+  return pdfInforme({
+    orient: 'l', titulo: 'Nómina de colaboradores', sub: filtrada ? 'Vista filtrada de la nómina' : 'Listado completo de colaboradores', archivo: `empleados-${today()}.pdf`,
+    kpis: [{ l: 'Colaboradores', v: rows.length }, { l: 'Activos', v: rows.filter(e => e.estado === 'activo').length, c: P.ok }, { l: 'En licencia', v: rows.filter(e => e.estado === 'licencia').length, c: P.gold }, { l: 'Sin alta', v: nomn.filter(e => !e.alta).length, c: P.bad, n: 'en nómina' }],
+    secs: [{ t: 'Detalle', n: `${rows.length} registro${rows.length === 1 ? '' : 's'}`, head: ['Legajo', 'Nombre', ...ids.map(id => G[id][0])], body: rows.map(e => [e.legajo || '—', `${e.apellido}, ${e.nombre}`, ...ids.map(id => G[id][1](e) || '—')]), tone, fs: ids.length > 7 ? 7.5 : 8.5 }],
+  });
+}
+
+/* ---- Liquidaciones (respeta los filtros de la lista) ---- */
+async function pdfLiq() {
+  const f = liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
+  const sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), L = UI.ll, P = PDF_C;
+  const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], L.estado && LIQ_ESTADOS[L.estado], L.local, L.razon, (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`].filter(Boolean);
+  const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], num: [1, 2, 3, 4] });
+  return pdfInforme({
+    orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones-${today()}.pdf`,
+    kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: 'solo liquidaciones pagadas' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: 'solo liquidaciones pagadas' }],
+    secs: [
+      { t: 'Detalle de liquidaciones', n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
+        body: f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
+        foot: ['TOTAL', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [6, 7, 8], cols: { 0: { cellWidth: 52 } }, fs: 8, tone: { 5: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
+      suma('local', 'Local'), suma('razon', 'Razón social'),
+      { t: 'Total por mes de egreso', head: ['Mes', 'Total'], body: liqPorMes(f).map(([m, v]) => [fper(m), mp(v)]), foot: ['TOTAL', mp(tot)], num: [1] },
+    ],
+  });
+}
+
+/* ================= Excel con diseño (ExcelJS) ================= */
+const XL = { ink: 'FF1B2B30', acc: 'FF0D6B58', accL: 'FFE3F1ED', zeb: 'FFF6F9F8', line: 'FFD7DFDD' };
+function xlsHoja(wb, nombre, titulo, sub, head, rows, o = {}) {
+  const ws = wb.addWorksheet(nombre, { views: [{ showGridLines: false, state: 'frozen', ySplit: 5 }], pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '5:5' } });
+  const n = head.length, span = Math.max(n, 6), num = o.num || [], fl = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), fn = (sz, b, c) => ({ name: 'Calibri', size: sz, bold: !!b, color: { argb: c || XL.ink } });
+  const MONEY = '"$" #,##0.00;[Red]-"$" #,##0.00;"-"', fmt = i => (o.fmt && o.fmt[i]) || MONEY, al = (i, v) => ({ vertical: 'middle', horizontal: num.includes(i) ? 'right' : 'left', indent: 1, ...v });
+  (o.w || []).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  for (let c = 1; c <= span; c++) { ws.getCell(1, c).fill = fl(XL.ink); ws.getCell(2, c).fill = fl(XL.ink); ws.getCell(3, c).fill = fl(XL.acc); }
+  ws.mergeCells(1, 1, 1, span); ws.mergeCells(2, 1, 2, span);
+  Object.assign(ws.getCell(1, 1), { value: titulo, font: fn(18, 1, 'FFFFFFFF'), alignment: { vertical: 'middle', indent: 1 } });
+  Object.assign(ws.getCell(2, 1), { value: sub, font: fn(10, 0, 'FFB9C7CB'), alignment: { vertical: 'top', indent: 1 } });
+  [38, 22, 4, 10, 26].forEach((h, i) => { ws.getRow(i + 1).height = h; });
+  head.forEach((h, i) => Object.assign(ws.getCell(5, i + 1), { value: h, font: fn(10, 1, 'FFFFFFFF'), fill: fl(XL.acc), alignment: al(i, { wrapText: true }) }));
+  rows.forEach((r, ri) => { ws.getRow(6 + ri).height = 20; r.forEach((v, i) => {
+    const c = ws.getCell(6 + ri, i + 1), t = o.tone && o.tone[i] && o.tone[i][v];
+    Object.assign(c, { value: v, font: fn(10, !!t, t && t[1]), fill: fl(t ? t[0] : ri % 2 ? XL.zeb : 'FFFFFFFF'), border: { bottom: { style: 'thin', color: { argb: XL.line } } }, alignment: al(i) });
+    if (num.includes(i) && typeof v === 'number') c.numFmt = fmt(i);
+  }); });
+  if (o.tot) { const tr = 6 + rows.length; ws.getRow(tr).height = 26; o.tot.forEach((v, i) => {
+    const c = ws.getCell(tr, i + 1); Object.assign(c, { value: v, font: fn(11, 1, XL.acc), fill: fl(XL.accL), border: { top: { style: 'medium', color: { argb: XL.acc } } }, alignment: al(i) });
+    if (num.includes(i) && typeof v === 'number') c.numFmt = fmt(i);
+  }); }
+  ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5 + rows.length, column: n } };
+  return ws;
+}
+
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
@@ -1881,14 +2047,27 @@ const ACT = {
     $('#v-emp').appendChild(d); imprimirSolo('#ficha', () => d.remove());
   },
   llPrint: () => imprimirSolo('#liq-list'),
+  llPdf: conPdf(() => pdfLiq()),
+  empPdf: conPdf(() => pdfEmpleados()),
+  empAltasPdf: conPdf(() => pdfAltas()),
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
-  llXlsx: () => {
+  llXlsx: async () => {
     const f = liqFilas(); if (!f.length) return toast('No hay liquidaciones para exportar.');
-    const wb = XLSX.utils.book_new(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), add = (n, rows) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), n);
-    add('Liquidaciones', [['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transferencia'], ...f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], r.monto, r.efe, r.tra]), [], ['TOTAL', '', '', '', '', '', tot, efe, tra]]);
-    [['local', 'Local', 'Por local'], ['razon', 'Razón social', 'Por razón social']].forEach(([k, c, n]) => add(n, [[c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], ...liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), [], ['TOTAL', f.length, tot, efe, tra]]));
-    add('Por mes', [['Mes de egreso', 'Total'], ...liqPorMes(f).map(([m, v]) => [fper(m), v]), [], ['TOTAL', tot]]);
-    XLSX.writeFile(wb, `liquidaciones-${today()}.xlsx`);
+    try {
+      const EJ = await cargarExcelJS(), wb = new EJ.Workbook(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
+      wb.creator = 'Acurio Restaurantes · RR.HH.';
+      const sub = `${f.length} liquidacion${f.length === 1 ? '' : 'es'}  ·  Emitido el ${fdate(today())}  ·  Acurio Restaurantes`, N = { 1: '0' }, S5 = c => [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'];
+      const TN = { Borrador: ['FFFFF2CC', 'FF7A5A00'], Aprobada: ['FFDCE9F7', 'FF1F4E8C'], Pagada: ['FFD9EAD3', 'FF1E6B3A'], Cerrada: ['FFE6E6E6', 'FF555555'] };
+      xlsHoja(wb, 'Liquidaciones', 'Liquidaciones', sub, ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transferencia'],
+        f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], r.monto, r.efe, r.tra]),
+        { w: [12, 32, 14, 26, 24, 13, 17, 17, 17], num: [6, 7, 8], tone: { 5: TN }, tot: ['TOTAL', '', '', '', '', '', tot, efe, tra] });
+      [['local', 'Local', 'Por local'], ['razon', 'Razón social', 'Por razón social']].forEach(([k, c, nom]) =>
+        xlsHoja(wb, nom, 'Liquidaciones ' + nom.toLowerCase(), sub, S5(c), liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), { w: [30, 16, 18, 18, 18], num: [1, 2, 3, 4], fmt: N, tot: ['TOTAL', f.length, tot, efe, tra] }));
+      xlsHoja(wb, 'Por mes', 'Liquidaciones por mes de egreso', sub, ['Mes de egreso', 'Total'], liqPorMes(f).map(([m, v]) => [fper(m), v]), { w: [30, 20], num: [1], tot: ['TOTAL', tot] });
+      const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = `liquidaciones-${today()}.xlsx`;
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast('Excel generado');
+    } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el Excel.'); }
   },
   empXlsx: () => {
     const rows = UI.rowsVis || []; if (!rows.length) return toast('No hay empleados para exportar.');

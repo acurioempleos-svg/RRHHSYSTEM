@@ -1769,13 +1769,13 @@ async function pdfInforme(o) {
     if (s.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); T(C.mut); tx(s.n, W - M, y + 12, 'right'); }
     y += 24;
     if (!s.body.length) { F(C.accL); doc.roundedRect(M, y, W - 2 * M, 30, 5, 5, 'F'); doc.setFont('helvetica', 'italic'); doc.setFontSize(9); T(C.acc); tx(s.vacio || 'Sin registros.', M + 14, y + 19); y += 52; return; }
-    const cs = {}; (s.num || []).forEach(i => { cs[i] = { halign: 'right' }; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = { ...cs[i], ...v }; });
+    const cs = {}, ha = {}; (s.num || []).forEach(i => { ha[i] = 'right'; }); (s.ctr || []).forEach(i => { ha[i] = 'center'; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = v; });
     doc.autoTable({
       startY: y, head: [s.head], body: s.body, foot: s.foot ? [s.foot] : undefined, showFoot: 'lastPage', theme: 'plain', margin: { left: M, right: M, top: 46, bottom: 44 },
       styles: { font: 'helvetica', fontSize: s.fs || 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, textColor: C.ink, overflow: 'linebreak' },
       headStyles: { fillColor: C.ink, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: (s.fs || 8.5) - .5, valign: 'middle' },
       footStyles: { fillColor: C.accL, textColor: C.acc, fontStyle: 'bold' }, alternateRowStyles: { fillColor: C.zeb }, columnStyles: cs,
-      didParseCell: d => { const t = d.section === 'body' && s.tone && s.tone[d.column.index]; if (t) { const c = t[d.cell.text.join('')]; if (c) { d.cell.styles.textColor = c; d.cell.styles.fontStyle = 'bold'; } } },
+      didParseCell: d => { if (ha[d.column.index]) d.cell.styles.halign = ha[d.column.index]; const t = d.section === 'body' && s.tone && s.tone[d.column.index]; if (t) { const c = t[d.cell.text.join('')]; if (c) { d.cell.styles.textColor = c; d.cell.styles.fontStyle = 'bold'; } } },
       didDrawCell: d => { if (d.section === 'body') { D(C.line); doc.setLineWidth(.4); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } },
     });
     y = doc.lastAutoTable.finalY + 26;
@@ -1802,7 +1802,7 @@ async function pdfAltas() {
   const oi = new Map(ordenLocales().map((l, i) => [l, i])), locs = [...new Set([...nom, ...sol].map(lc))].sort((a, b) => (oi.get(a) ?? 999) - (oi.get(b) ?? 999));
   const resumen = locs.map(l => { const a = nom.filter(e => lc(e) === l), c = a.filter(e => e.alta).length; return [l, a.length, a.filter(e => e.alta === 'N').length, a.filter(e => e.alta === 'S').length, a.length - c, sol.filter(e => lc(e) === l).length, (a.length ? Math.round(c * 100 / a.length) : 0) + '%']; });
   const P = PDF_C, tone = { 6: { 'N · Normal': P.ok, 'S · Especial': P.gold, 'Sin alta': P.bad } };
-  const HEAD = ['Legajo', 'Empleado', 'Local', 'Puesto', 'Estado', 'Ingreso', 'Alta'], cols = { 0: { cellWidth: 44 }, 5: { cellWidth: 52 }, 6: { cellWidth: 60 } };
+  const HEAD = ['Legajo', 'Empleado', 'Local', 'Puesto', 'Estado', 'Ingreso', 'Alta'], cols = { 0: { cellWidth: 46 }, 5: { cellWidth: 66 }, 6: { cellWidth: 76 } };
   const fila = e => [e.legajo || '—', nm(e), lc(e), e.puesto || '—', ESTADOS[e.estado] || e.estado, fdate(e.fechaIngreso), AL(e)];
   const cnt = a => `${a.length} colaborador${a.length === 1 ? '' : 'es'}`;
   return pdfInforme({
@@ -1810,7 +1810,7 @@ async function pdfAltas() {
     kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
     barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
     secs: [
-      { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], num: [1, 2, 3, 4, 5, 6] },
+      { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Solicitan alta', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sol.length, pct + '%'], ctr: [1, 2, 3, 4, 5, 6], cols: { 0: { cellWidth: 110 } } },
       { t: 'Solicitudes de alta pendientes', n: cnt(sol), head: HEAD, body: sol.map(fila), tone, cols, vacio: 'No hay solicitudes de alta pendientes.' },
       { t: 'En nómina sin alta', n: cnt(sin), head: HEAD, body: sin.map(fila), tone, cols, vacio: 'Todos los colaboradores en nómina tienen alta.' },
       { t: 'En nómina con alta', n: cnt(con), head: HEAD, body: con.map(fila), tone, cols, vacio: 'Todavía no hay altas cargadas.' },
@@ -1838,14 +1838,14 @@ async function pdfLiq() {
   const f = liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
   const sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), L = UI.ll, P = PDF_C;
   const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], L.estado && LIQ_ESTADOS[L.estado], L.local, L.razon, (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`].filter(Boolean);
-  const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], num: [1, 2, 3, 4] });
+  const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], ctr: [1], num: [2, 3, 4] });
   return pdfInforme({
     orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones-${today()}.pdf`,
     kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: 'solo liquidaciones pagadas' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: 'solo liquidaciones pagadas' }],
     secs: [
       { t: 'Detalle de liquidaciones', n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
         body: f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
-        foot: ['TOTAL', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [6, 7, 8], cols: { 0: { cellWidth: 52 } }, fs: 8, tone: { 5: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
+        foot: ['TOTAL', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [6, 7, 8], cols: { 0: { cellWidth: 66 } }, fs: 8, tone: { 5: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
       suma('local', 'Local'), suma('razon', 'Razón social'),
       { t: 'Total por mes de egreso', head: ['Mes', 'Total'], body: liqPorMes(f).map(([m, v]) => [fper(m), mp(v)]), foot: ['TOTAL', mp(tot)], num: [1] },
     ],

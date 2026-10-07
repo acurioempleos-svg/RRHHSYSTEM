@@ -215,12 +215,19 @@ td.num,th.num{text-align:right}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{body.print-only{-webkit-print-color-adjust:exact;print-color-adjust:exact}body.print-only header,body.print-only .view[hidden]{display:none!important}body.print-only .view>*:not(.print-target){display:none!important}body.print-only #liq-list.print-target,body.print-only #ficha.print-target{display:block!important}}
 .llbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:10px 0}.llbar .fld{margin:0}
+.modesw{display:flex;gap:2px;background:#ffffff14;border-radius:8px;padding:2px;flex:none}.modesw button{background:none;border:0;color:#B9C7CB;font:inherit;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer}.modesw button[aria-current=page]{background:#fff;color:var(--ink)}
+.p-w{max-width:420px;margin:30px auto}.p-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.p-bar .btn[aria-current=page]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.p-sw{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}.p-sw .btn{flex:none}.p-sw .btn[aria-current=page]{background:var(--accent);border-color:var(--accent);color:#fff}
+.p-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}.p-grid button{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 12px;font:inherit;font-weight:600;cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:center}.p-grid button:hover{border-color:var(--accent);color:var(--accent)}.p-grid i{font-style:normal;font-size:28px}
+.p-log{height:340px;overflow-y:auto;background:var(--bg);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:6px;margin:10px 0}.m{max-width:80%;padding:7px 11px;border-radius:12px;background:#fff;align-self:flex-start}.m.e{align-self:flex-end;background:var(--accent);color:#fff}.m small{display:block;font-size:11px;opacity:.7}
+.p-row{display:flex;gap:8px}.p-row input{flex:1}.p-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.p-st-pend{color:var(--signal)}.p-st-ok{color:var(--ok)}.p-st-no{color:var(--danger)}.p-it{padding:9px 0;border-bottom:1px solid var(--line)}.p-it:last-child{border:0}
 </style>
 </head>
 <body>
 <header>
   <h1>Ciclo del empleado</h1>
-  <nav class="tabs" aria-label="Secciones">
+  <div class="modesw" role="group" aria-label="Cambiar de página"><button data-m="c" aria-current="page">Ciclo</button><button data-m="p" aria-current="false">Empleados</button></div>
+  <nav class="tabs" id="tabsnav" aria-label="Secciones">
     <button data-act="tab" data-tab="emp">Empleados</button>
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
@@ -240,6 +247,7 @@ td.num,th.num{text-align:right}
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
   <section class="view" id="v-par" hidden></section>
+  <section class="view" id="v-portal" hidden></section>
 </main>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -2386,10 +2394,161 @@ function migrarDatos() {                                      // "E. Camarero" �
   });
   if (cambio) save();
 }
+/* ================= Portal del empleado (Firebase Realtime Database por REST) ================= */
+const PQ = new URLSearchParams(location.search), SOLO = /*SOLO*/PQ.has('empleado');
+if (SOLO) jbApplyingRemote = true;                       // el celular del empleado nunca sube datos de Ciclo a la nube
+if (PQ.get('fb')) try { localStorage.setItem('rrhh_portal_fb', PQ.get('fb')); } catch (e) {}
+const FBK = 'rrhh_portal_fb', fbUrl = () => (localStorage.getItem(FBK) || '').replace(/\/$/, '');
+async function pfb(m, p, b) {
+  const u = fbUrl(); if (!u) throw new Error('Falta la URL de Firebase (Empleados → Configuración)');
+  const r = await fetch(`${u}/portal/${p}.json`, { method: m, body: b === undefined ? undefined : JSON.stringify(b) });
+  if (!r.ok) throw new Error('Firebase: HTTP ' + r.status); return r.json();
+}
+const plst = o => Object.entries(o || {}).map(([k, v]) => Object.assign({ k }, v)).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+const ptree = o => Object.entries(o || {}).flatMap(([d, r]) => Object.entries(r).map(([k, v]) => Object.assign({ k, d }, v))).sort((a, b) => b.ts - a.ts);
+const pdig = s => String(s || '').replace(/\D/g, ''), pdt = t => new Date(t).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+const PS = { m: 'c', emp: null, v: 'home', adm: 'bandeja', chat: null, t: null };
+try { PS.emp = JSON.parse(localStorage.getItem('rrhh_portal_ses') || 'null'); } catch (e) {}
+const pv = $('#v-portal'), perr = e => toast(e.message || 'Sin conexión'), pe = esc;
+const ST = { pend: 'Pendiente', ok: 'Aprobado', no: 'Rechazado' };
+const stTag = x => `<span class="p-st-${x.est || 'pend'}">${ST[x.est || 'pend']}${x.por ? ' · ' + pe(x.por) : ''}</span>`;
+const detalle = x => x.tipo === 'vac' ? `Vacaciones ${fdate(x.desde)} al ${fdate(x.hasta)}` : `Adelanto ${money(x.monto)}`;
+const pBar = () => SOLO ? '' : `<div class="p-bar"><button class="btn sm" data-p="mode" data-a="1" aria-current="${PS.adm ? 'page' : 'false'}">Administrar (RRHH)</button><button class="btn sm" data-p="mode" data-a="" aria-current="${PS.adm ? 'false' : 'page'}">Vista del empleado</button></div>`;
+function renderPortal() { clearInterval(PS.t); PS.t = null; if (!SOLO && PS.adm) return pAdmin(); if (!PS.emp) return pLogin(); pEmp(); }
+function pLogin() {
+  pv.innerHTML = pBar() + `<div class="card p-w stack"><h2>Portal del empleado</h2><p class="muted">Ingresá con tu DNI y tu número de legajo.</p><label class="fld"><span>DNI</span><input id="p-dni" inputmode="numeric" autocomplete="off"></label><label class="fld"><span>Legajo</span><input id="p-leg" autocomplete="off"></label><button class="btn primary" data-p="login">Ingresar</button></div>`;
+}
+const BTNS = [['chat', '💬', 'Hablar con RRHH'], ['vac', '🏖️', 'Solicitar vacaciones'], ['adel', '💵', 'Solicitar adelanto'], ['cv', '📄', 'Enviar CV de un conocido'], ['cur', '📖', 'Cursos y carta'], ['eve', '🎉', 'Eventos']];
+async function pEmp() {
+  const e = PS.emp, v = PS.v, back = '<div class="p-sw"><button class="btn sm" data-p="v" data-v="home">← Inicio</button>' + BTNS.concat(e.enc ? [['eq', '👥', 'Mi equipo']] : []).map(x => `<button class="btn sm" data-p="v" data-v="${x[0]}" aria-current="${v === x[0] ? 'page' : 'false'}">${x[1]} ${x[2]}</button>`).join('') + '</div>';
+  if (v === 'home') {
+    const b = BTNS.concat(e.enc ? [['eq', '👥', 'Pedidos de mi equipo']] : []);
+    pv.innerHTML = pBar() + `<div class="card"><h2>Hola, ${pe(e.nom || e.n)}</h2><p class="muted">${pe(e.local || '')} · ${pe(e.puesto || '')} <button class="btn sm" data-p="logout">Salir</button></p></div><div class="p-grid">${b.map(x => `<button data-p="v" data-v="${x[0]}"><i>${x[1]}</i>${x[2]}</button>`).join('')}</div>`; return;
+  }
+  const head = t => pBar() + `<div class="card stack"><div>${back}</div><h2>${t}</h2>`;
+  if (v === 'chat') {
+    pv.innerHTML = head('Chat con RRHH') + `<div id="p-log" class="p-log"></div><div class="p-row"><input id="p-msg" placeholder="Escribí tu mensaje" autocomplete="off"><button class="btn primary" data-p="send">Enviar</button></div></div>`;
+    const load = () => pThread(e.dni, 'e'); load(); PS.t = setInterval(load, 4000); return;
+  }
+  if (v === 'vac' || v === 'adel') {
+    const vac = v === 'vac';
+    pv.innerHTML = head(vac ? 'Solicitar vacaciones' : 'Solicitar adelanto') + `<p class="muted">${vac ? 'Le llega a tus encargados y a RRHH.' : 'Le llega a RRHH.'}</p>` +
+      (vac ? '<div class="p-2"><label class="fld"><span>Desde</span><input type="date" id="p-d"></label><label class="fld"><span>Hasta</span><input type="date" id="p-h"></label></div>' : '<label class="fld"><span>Monto ($)</span><input type="number" id="p-m" min="0"></label>') +
+      `<label class="fld"><span>Comentario (opcional)</span><textarea id="p-x" rows="2"></textarea></label><button class="btn primary" data-p="sub" data-t="${v}">Enviar solicitud</button><h3>Mis solicitudes</h3><div id="p-h2"><p class="muted">Cargando…</p></div></div>`;
+    try { const r = plst(await pfb('GET', 'reqs/' + e.dni)).filter(x => x.tipo === v).reverse(); $('#p-h2').innerHTML = r.map(x => `<div class="p-it">${detalle(x)} — ${stTag(x)}<br><small class="muted">${pdt(x.ts)}${x.nota ? ' · ' + pe(x.nota) : ''}</small></div>`).join('') || '<p class="muted">Todavía no pediste ninguna.</p>'; } catch (x) { perr(x); } return;
+  }
+  if (v === 'cv') {
+    pv.innerHTML = head('Enviar CV de un conocido') + `<label class="fld"><span>Nombre y apellido</span><input id="p-c"></label><div class="p-2"><label class="fld"><span>Teléfono / WhatsApp</span><input id="p-t"></label><label class="fld"><span>Puesto que busca</span><input id="p-p"></label></div><label class="fld"><span>Comentario (¿lo conocés de dónde? ¿experiencia?)</span><textarea id="p-x" rows="3"></textarea></label><button class="btn primary" data-p="sub" data-t="cv">Enviar a RRHH</button></div>`; return;
+  }
+  if (v === 'cur') {
+    pv.innerHTML = head('Cursos y carta') + `<input type="search" id="p-q" placeholder="Buscar un plato o ingrediente"><div id="p-l"><p class="muted">Cargando…</p></div></div>`;
+    try {
+      const c = plst(await pfb('GET', 'cursos')); const draw = () => { const q = stripAcc($('#p-q').value).toLowerCase(); $('#p-l').innerHTML = c.map(x => { const it = (x.items || []).filter(i => !q || stripAcc(i.p + ' ' + i.d).toLowerCase().includes(q)); return it.length ? `<details ${q ? 'open' : ''} class="p-it"><summary><b>${pe(x.t)}</b> <span class="chip">${pe(x.marca)}</span></summary>${it.map(i => `<div class="p-it"><b>${pe(i.p)}</b><br><span class="muted">${pe(i.d)}</span></div>`).join('')}</details>` : ''; }).join('') || '<p class="muted">Todavía no hay cursos cargados.</p>'; };
+      draw(); $('#p-q').oninput = draw;
+    } catch (x) { perr(x); } return;
+  }
+  if (v === 'eve') {
+    pv.innerHTML = head('Eventos') + '<div id="p-l"><p class="muted">Cargando…</p></div></div>';
+    try { const r = plst(await pfb('GET', 'eventos')).filter(x => !x.f || x.f >= today()).sort((a, b) => (a.f || '9').localeCompare(b.f || '9')); $('#p-l').innerHTML = r.map(x => `<div class="p-it"><b>${pe(x.t)}</b> <span class="chip">${fdate(x.f)}</span><br><span class="muted">${pe(x.lugar || '')}</span><div>${pe(x.d || '')}</div></div>`).join('') || '<p class="muted">No hay eventos próximos.</p>'; } catch (x) { perr(x); } return;
+  }
+  if (v === 'eq') {
+    pv.innerHTML = head('Vacaciones de mi equipo (' + pe(e.local) + ')') + '<div id="p-l"><p class="muted">Cargando…</p></div></div>';
+    try { const r = ptree(await pfb('GET', 'reqs')).filter(x => x.tipo === 'vac' && x.local === e.local && x.dni !== e.dni); $('#p-l').innerHTML = r.map(x => `<div class="p-it"><b>${pe(x.n)}</b> — ${detalle(x)} — ${stTag(x)}<br>${pe(x.nota || '')}<div class="p-row"><button class="btn sm" data-p="st" data-d="${x.d}" data-k="${x.k}" data-s="ok">Aprobar</button><button class="btn sm danger" data-p="st" data-d="${x.d}" data-k="${x.k}" data-s="no">Rechazar</button></div></div>`).join('') || '<p class="muted">Sin pedidos.</p>'; } catch (x) { perr(x); }
+  }
+}
+async function pThread(dni, yo) {                               // yo: 'e' (empleado) o 'r' (RRHH): mis mensajes van a la derecha
+  try {
+    const m = plst(await pfb('GET', 'msgs/' + dni)), l = $('#p-log'); if (!l) return;
+    l.innerHTML = m.map(x => `<div class="m ${x.de === yo ? 'e' : ''}">${pe(x.t)}<small>${pdt(x.ts)}</small></div>`).join('') || '<p class="muted">Todavía no hay mensajes.</p>'; l.scrollTop = l.scrollHeight;
+  } catch (x) {}
+}
+const ASUB = [['bandeja', 'Bandeja'], ['cursos', 'Cursos y carta'], ['eventos', 'Eventos'], ['cfg', 'Configuración']];
+async function pAdmin() {
+  const a = PS.adm, bar = pBar() + `<div class="p-bar">${ASUB.map(s => `<button class="btn sm" data-p="sub2" data-s="${s[0]}" aria-current="${a === s[0] ? 'page' : 'false'}">${s[1]}</button>`).join('')}<button class="btn sm" data-p="refresh">Actualizar</button></div>`;
+  pv.innerHTML = bar + '<div id="p-a" class="stack"><p class="muted">Cargando…</p></div>'; const A = $('#p-a');
+  try {
+    if (a === 'cfg') {
+      const link = fbUrl() ? `${location.origin}${location.pathname.replace(/[^/]*$/, '')}portal-empleado.html?empleado&fb=${encodeURIComponent(fbUrl())}` : '';
+      A.innerHTML = `<div class="card stack"><h3>Firebase Realtime Database</h3><label class="fld"><span>URL de la base (ej: https://tu-proyecto-default-rtdb.firebaseio.com)</span><input id="p-fb" value="${pe(fbUrl())}"></label><div class="p-row"><button class="btn primary" data-p="fbsave">Guardar</button><button class="btn" data-p="pub">Publicar nómina de empleados</button></div><p class="muted">Publicar nómina copia nombre, DNI, legajo, local y puesto de los empleados activos (solo eso) para que puedan ingresar. Repetilo cuando haya altas.</p><p class="muted">Reglas de Firebase necesarias: <code>{"rules":{"portal":{".read":true,".write":true}}}</code> — son abiertas: no cargues datos sensibles en el chat. Más adelante se pueden cerrar con Firebase Auth.</p></div>
+      <div class="card stack"><h3>Link para los empleados</h3><p class="muted">Subí la copia <b>portal-empleado.html</b> (sin las claves de Ciclo) y compartí este link, por ejemplo por WhatsApp:</p><input readonly value="${pe(link)}" onclick="this.select()"></div>`; return;
+    }
+    if (a === 'cursos') {
+      const c = plst(await pfb('GET', 'cursos'));
+      A.innerHTML = `<div class="card stack"><h3>Nuevo curso / carta</h3><div class="p-2"><label class="fld"><span>Marca</span><select id="p-ma">${['General'].concat(LOCALES).map(l => `<option>${l}</option>`).join('')}</select></label><label class="fld"><span>Título</span><input id="p-t" placeholder="Carta de platos fríos"></label></div><label class="fld"><span>Una línea por plato: Plato | qué lleva</span><textarea id="p-it" rows="6" placeholder="Ceviche clásico | Pescado del día, leche de tigre, cebolla, ají limo, choclo, camote"></textarea></label><button class="btn primary" data-p="addc">Guardar curso</button></div>` +
+        c.map(x => `<div class="card"><b>${pe(x.t)}</b> <span class="chip">${pe(x.marca)}</span> <span class="muted">${(x.items || []).length} platos</span> <button class="btn sm danger" data-p="del" data-c="cursos" data-k="${x.k}">Borrar</button></div>`).join(''); return;
+    }
+    if (a === 'eventos') {
+      const c = plst(await pfb('GET', 'eventos')).sort((x, y) => (y.f || '').localeCompare(x.f || ''));
+      A.innerHTML = `<div class="card stack"><h3>Nuevo evento</h3><div class="p-2"><label class="fld"><span>Título</span><input id="p-t"></label><label class="fld"><span>Fecha</span><input type="date" id="p-f"></label></div><label class="fld"><span>Lugar</span><input id="p-l2"></label><label class="fld"><span>Detalle</span><textarea id="p-x" rows="2"></textarea></label><button class="btn primary" data-p="adde">Publicar evento</button></div>` +
+        c.map(x => `<div class="card"><b>${pe(x.t)}</b> <span class="chip">${fdate(x.f)}</span> ${pe(x.lugar || '')} <button class="btn sm danger" data-p="del" data-c="eventos" data-k="${x.k}">Borrar</button></div>`).join(''); return;
+    }
+    const [ch, rq, cv] = await Promise.all([pfb('GET', 'chats'), pfb('GET', 'reqs'), pfb('GET', 'cvs')]);
+    const chats = plst(ch).reverse(), R = ptree(rq), CV = plst(cv).reverse();
+    let h = '';
+    if (PS.chat) h += `<div class="card stack"><h3>Chat con ${pe((ch[PS.chat] || {}).n || PS.chat)} <button class="btn sm" data-p="close">Cerrar</button></h3><div id="p-log" class="p-log"></div><div class="p-row"><input id="p-rep" placeholder="Respuesta" autocomplete="off"><button class="btn primary" data-p="rep">Responder</button></div></div>`;
+    h += `<div class="card"><h3>Chats (${chats.length})</h3>${chats.map(x => `<div class="p-it"><a href="#" data-p="open" data-d="${x.k}"><b>${pe(x.n)}</b></a> <span class="chip">${pe(x.local || '')}</span> ${x.unread ? '<span class="p-st-no">● nuevo</span>' : ''}<br><span class="muted">${pe(x.last || '')} · ${pdt(x.ts)}</span></div>`).join('') || '<p class="muted">Sin chats.</p>'}</div>`;
+    h += `<div class="card"><h3>Vacaciones y adelantos (${R.length})</h3>${R.map(x => `<div class="p-it"><b>${pe(x.n)}</b> <span class="chip">${pe(x.local)}</span> — ${detalle(x)} — ${stTag(x)}<br><span class="muted">${pdt(x.ts)} ${pe(x.nota || '')}</span><div class="p-row"><button class="btn sm" data-p="st" data-d="${x.d}" data-k="${x.k}" data-s="ok">Aprobar</button><button class="btn sm danger" data-p="st" data-d="${x.d}" data-k="${x.k}" data-s="no">Rechazar</button></div></div>`).join('') || '<p class="muted">Sin solicitudes.</p>'}</div>`;
+    h += `<div class="card"><h3>CVs recomendados (${CV.length})</h3>${CV.map(x => `<div class="p-it"><b>${pe(x.cand)}</b> · ${pe(x.tel || '')} · busca: ${pe(x.puesto || '—')}<br><span class="muted">Lo recomienda ${pe(x.n)} (${pe(x.local)}) · ${pdt(x.ts)} ${pe(x.nota || '')}</span></div>`).join('') || '<p class="muted">Sin CVs.</p>'}</div>`;
+    A.innerHTML = h;
+    if (PS.chat) { pThread(PS.chat, 'r'); PS.t = setInterval(() => pThread(PS.chat, 'r'), 4000); }
+  } catch (x) { A.innerHTML = `<div class="card"><p class="muted">${pe(x.message)}</p></div>`; }
+}
+const g = i => ($('#p-' + i) || {}).value || '';
+const PA = {
+  mode: d => { PS.adm = !!d.a; renderPortal(); },
+  v: d => { PS.v = d.v; renderPortal(); },
+  sub2: d => { PS.adm = d.s; PS.chat = null; renderPortal(); }, refresh: () => renderPortal(),
+  logout: () => { PS.emp = null; localStorage.removeItem('rrhh_portal_ses'); renderPortal(); },
+  login: async () => {
+    const d = pdig(g('dni')); try {
+      const r = await pfb('GET', 'roster/' + d); if (!r || String(r.l).trim() !== g('leg').trim()) return toast('DNI o legajo incorrectos');
+      PS.emp = Object.assign({ dni: d }, r); localStorage.setItem('rrhh_portal_ses', JSON.stringify(PS.emp)); PS.v = 'home'; renderPortal();
+    } catch (x) { perr(x); }
+  },
+  send: async () => {
+    const i = $('#p-msg'), t = i.value.trim(), e = PS.emp; if (!t) return; i.value = '';
+    try { await pfb('POST', 'msgs/' + e.dni, { de: 'e', t, ts: Date.now() }); await pfb('PATCH', 'chats/' + e.dni, { n: e.n, local: e.local || '', last: t, ts: Date.now(), unread: true }); pThread(e.dni, 'e'); } catch (x) { perr(x); }
+  },
+  sub: async d => {
+    const e = PS.emp, t = d.t, o = { dni: e.dni, n: e.n, local: e.local || '', ts: Date.now(), nota: g('x') };
+    if (t === 'cv') { o.cand = g('c').trim(); o.tel = g('t'); o.puesto = g('p'); if (!o.cand) return toast('Falta el nombre'); }
+    else { o.tipo = t; o.est = 'pend'; if (t === 'vac') { o.desde = g('d'); o.hasta = g('h'); if (!o.desde || o.hasta < o.desde) return toast('Revisá las fechas'); } else { o.monto = +g('m'); if (!(o.monto > 0)) return toast('Indicá el monto'); } }
+    try { await pfb('POST', (t === 'cv' ? 'cvs' : 'reqs/' + e.dni), o); toast(t === 'cv' ? 'CV enviado a RRHH' : 'Solicitud enviada'); pEmp(); } catch (x) { perr(x); }
+  },
+  st: async d => { try { await pfb('PATCH', `reqs/${d.d}/${d.k}`, { est: d.s, por: PS.emp ? PS.emp.n : 'RRHH' }); renderPortal(); } catch (x) { perr(x); } },
+  open: d => { PS.chat = d.d; renderPortal(); pfb('PATCH', 'chats/' + d.d, { unread: false }).catch(() => {}); },
+  close: () => { PS.chat = null; renderPortal(); },
+  rep: async () => { const i = $('#p-rep'), t = i.value.trim(); if (!t) return; i.value = ''; try { await pfb('POST', 'msgs/' + PS.chat, { de: 'r', t, ts: Date.now() }); await pfb('PATCH', 'chats/' + PS.chat, { last: 'RRHH: ' + t, ts: Date.now(), unread: false }); pThread(PS.chat, 'r'); } catch (x) { perr(x); } },
+  addc: async () => {
+    const items = g('it').split('\n').map(l => l.split('|')).filter(p => p[0].trim()).map(p => ({ p: p[0].trim(), d: (p[1] || '').trim() }));
+    if (!g('t').trim() || !items.length) return toast('Poné título y al menos un plato');
+    try { await pfb('POST', 'cursos', { marca: g('ma'), t: g('t').trim(), items, ts: Date.now() }); renderPortal(); } catch (x) { perr(x); }
+  },
+  adde: async () => { if (!g('t').trim()) return toast('Falta el título'); try { await pfb('POST', 'eventos', { t: g('t').trim(), f: g('f'), lugar: g('l2'), d: g('x'), ts: Date.now() }); renderPortal(); } catch (x) { perr(x); } },
+  del: async d => { if (!confirm('¿Borrar?')) return; try { await pfb('DELETE', `${d.c}/${d.k}`); renderPortal(); } catch (x) { perr(x); } },
+  fbsave: () => { localStorage.setItem(FBK, g('fb').trim()); toast('Guardado'); renderPortal(); },
+  pub: async () => {
+    const ro = {}; S.empleados.filter(e => !/egres|baja/i.test(e.estado || '') && pdig(e.dni) && e.legajo).forEach(e => { ro[pdig(e.dni)] = { n: `${e.nombre} ${e.apellido}`.trim(), nom: String(e.nombre || '').split(' ')[0], l: String(e.legajo).trim(), local: e.local || '', puesto: e.puesto || '', enc: JEFES_PUESTOS.concat('Gerencia').includes(e.puesto) ? 1 : 0 }; });
+    try { await pfb('PUT', 'roster', ro); toast(Object.keys(ro).length + ' empleados publicados'); } catch (x) { perr(x); }
+  }
+};
+pv.addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b && PA[b.dataset.p]) { e.preventDefault(); PA[b.dataset.p](b.dataset, b); } });
+pv.addEventListener('keydown', e => { if (e.key !== 'Enter') return; if (e.target.id === 'p-msg') PA.send(); else if (e.target.id === 'p-rep') PA.rep(); else if (e.target.id === 'p-dni' || e.target.id === 'p-leg') PA.login(); });
+function setMode(m) {
+  PS.m = m; $('#tabsnav').style.display = m === 'p' ? 'none' : '';
+  $$('.modesw button').forEach(b => b.setAttribute('aria-current', b.dataset.m === m ? 'page' : 'false'));
+  if (m === 'p') { $$('.view').forEach(v => v.hidden = v.id !== 'v-portal'); renderPortal(); window.scrollTo(0, 0); } else { clearInterval(PS.t); go(UI.tab); }
+}
+const goOrig = go; go = function (t) { if (PS.m === 'p' && !SOLO) { UI.tab = t; return; } goOrig(t); };
+$$('.modesw button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+
 migrarDatos();
 paintRespaldo();
-go('emp');
-jbInit();
+if (SOLO) {
+  document.title = 'Portal del empleado'; $('header h1').textContent = 'Portal del empleado';
+  ['#tabsnav', '.modesw', '.hdr-right'].forEach(s => $(s).style.display = 'none');
+  setMode('p');
+} else { go('emp'); jbInit(); }
 </script>
 </body>
 </html>

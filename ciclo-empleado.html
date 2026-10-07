@@ -1093,12 +1093,13 @@ function imprimirSolo(sel, cb) {
   const fin = () => { t.classList.remove('print-target'); document.body.classList.remove('print-only'); window.removeEventListener('afterprint', fin); if (cb) cb(); };
   window.addEventListener('afterprint', fin); window.print();
 }
-function liqFilas() {
-  const L = UI.ll, q = stripAcc(L.q || '').toLowerCase(), oml = new Map(ordenLocales().map((l, i) => [l, i]));
+function liqFilas(ov) {
+  const L = ov ? { ...UI.ll, estado: '', desde: '', hasta: '' } : UI.ll, q = stripAcc(L.q || '').toLowerCase(), oml = new Map(ordenLocales().map((l, i) => [l, i]));
   return S.liquidaciones.map(l => { const e = S.empleados.find(x => x.id === l.empleadoId) || {};
-      return { l, e, nom: `${e.apellido || '—'}, ${e.nombre || ''}`, local: (e.local || '').trim() || 'Sin local', razon: (e.razonSocial || '').trim() || 'Sin razón social', monto: totalDe(l.result) || 0, efe: +(l.pago && l.pago.efectivo) || 0, tra: +(l.pago && l.pago.transferencia) || 0 }; })
+      return { l, e, nom: `${e.apellido || '—'}, ${e.nombre || ''}`, local: (e.local || '').trim() || 'Sin local', razon: (e.razonSocial || '').trim() || 'Sin razón social', monto: totalDe(l.result) || 0, efe: +((l.pago || l.reparto || {}).efectivo) || 0, tra: +((l.pago || l.reparto || {}).transferencia) || 0 }; })
     .filter(r => (!q || stripAcc(`${r.nom} ${r.e.legajo || ''} ${r.e.dni || ''}`).toLowerCase().includes(q)) && (!L.tipo || r.l.inputs.tipo === L.tipo) && (!L.estado || r.l.estado === L.estado) && (!L.local || r.local === L.local) && (!L.razon || r.razon === L.razon)
-      && (!L.desde || r.l.inputs.fecha >= L.desde) && (!L.hasta || r.l.inputs.fecha <= L.hasta))
+      && (!L.desde || r.l.inputs.fecha >= L.desde) && (!L.hasta || r.l.inputs.fecha <= L.hasta)
+      && (!ov || (ov.estados.includes(r.l.estado) && (() => { const fx = (ov.campo === 'pago' ? (r.l.pago && r.l.pago.fecha) : r.l.inputs.fecha) || ''; return (!ov.desde || fx >= ov.desde) && (!ov.hasta || fx <= ov.hasta); })())))
     .sort((a, b) => (oml.get(a.local) ?? 999) - (oml.get(b.local) ?? 999) || a.nom.localeCompare(b.nom));
 }
 function liqSumas(f, k) {
@@ -1106,6 +1107,37 @@ function liqSumas(f, k) {
   return Object.entries(m).sort((a, b) => k === 'razon' ? b[1].t - a[1].t : 0);
 }
 function liqPorMes(f) { const m = {}; f.forEach(r => { const k = (r.l.inputs.fecha || '').slice(0, 7); if (k) m[k] = r2((m[k] || 0) + r.monto); }); return Object.keys(m).sort().map(k => [k, m[k]]); }
+const infDesc = ov => [ov.tipo === 'borrador' ? 'Borradores esperando aprobación' : 'Pagadas', (ov.desde || ov.hasta) && `${ov.campo === 'pago' ? 'pago' : 'egreso'} ${ov.desde ? fdate(ov.desde) : '...'} a ${ov.hasta ? fdate(ov.hasta) : '...'}`].filter(Boolean);
+function dlgInforme(fmt) {
+  const L = UI.ll, pag = L.estado === 'pagada' || L.estado === 'cerrada';
+  const old = $('#dlg-inf'); if (old) old.remove();
+  const d = document.createElement('dialog'); d.id = 'dlg-inf';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:460px;width:92%;color:var(--ink)';
+  d.innerHTML = `<h3 style="margin:0 0 12px">Descargar informe de liquidaciones (${fmt === 'pdf' ? 'PDF' : 'Excel'})</h3>
+    <div style="display:grid;gap:8px;margin-bottom:12px">
+      <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="inf-esc" id="inf-bor" ${pag ? '' : 'checked'}> Borradores (esperando aprobación)</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="inf-esc" id="inf-pag" ${pag ? 'checked' : ''}> Pagadas (incluye las ya archivadas)</label>
+    </div>
+    <label class="fld" style="margin-bottom:10px"><span>El rango de fechas se aplica sobre</span><select id="inf-campo"><option value="egreso">Fecha de egreso</option><option value="pago">Fecha de pago (solo pagadas)</option></select></label>
+    <div style="display:flex;gap:10px;margin-bottom:10px"><label class="fld" style="flex:1"><span>Desde</span><input type="date" id="inf-desde" value="${esc(L.desde)}"></label><label class="fld" style="flex:1"><span>Hasta</span><input type="date" id="inf-hasta" value="${esc(L.hasta)}"></label></div>
+    <p class="muted" style="margin:0 0 14px">Las fechas son opcionales. Se mantienen los demás filtros de la lista (búsqueda, tipo, local y razón social).</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="inf-cancel">Cancelar</button><button type="button" class="btn primary" id="inf-ok">Descargar</button></div>`;
+  document.body.appendChild(d);
+  const sync = () => { const b = d.querySelector('#inf-bor').checked, c = d.querySelector('#inf-campo'); c.querySelector('[value=pago]').disabled = b; if (b) c.value = 'egreso'; };
+  d.querySelectorAll('input[name=inf-esc]').forEach(r => r.addEventListener('change', sync)); sync();
+  const cerrar = () => { d.close(); d.remove(); };
+  d.querySelector('#inf-cancel').addEventListener('click', cerrar);
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.querySelector('#inf-ok').addEventListener('click', async () => {
+    const bor = d.querySelector('#inf-bor').checked, desde = d.querySelector('#inf-desde').value, hasta = d.querySelector('#inf-hasta').value;
+    if (desde && hasta && desde > hasta) { toast('La fecha "desde" no puede ser posterior a "hasta".'); return; }
+    const ov = { tipo: bor ? 'borrador' : 'pagada', estados: bor ? ['borrador'] : ['pagada', 'cerrada'], desde, hasta, campo: d.querySelector('#inf-campo').value };
+    const f = liqFilas(ov); cerrar();
+    if (!f.length) return toast('No hay liquidaciones que coincidan con esa selección.');
+    if (fmt === 'pdf') await conPdf(() => pdfLiq(f, ov))(); else await ACT.llXlsxGo(f, ov);
+  });
+  d.showModal();
+}
 function paintLiqLista() {
   const box = $('#ll-res'); if (!box) return;
   const f = liqFilas(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
@@ -1114,7 +1146,7 @@ function paintLiqLista() {
   box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid"><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${LIQ_ESTADOS[r.l.estado]}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
     <div class="cols" style="margin-top:16px"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>
     <h3 style="margin-top:16px">Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}
-    <div class="stat" style="margin-top:14px"><strong>${money(tot)}</strong><span>Total de ${f.length} liquidacion${f.length === 1 ? '' : 'es'} · pagado en efectivo ${money(efe)} · por transferencia ${money(tra)} (solo liquidaciones ya pagadas). Incluye borradores si no filtrás por estado.</span></div>`
+    <div class="stat" style="margin-top:14px"><strong>${money(tot)}</strong><span>Total de ${f.length} liquidacion${f.length === 1 ? '' : 'es'} · pagado en efectivo ${money(efe)} · por transferencia ${money(tra)} (pagos registrados; en borradores y aprobadas se muestra el reparto previsto). Incluye borradores si no filtrás por estado.</span></div>`
     : '<p class="muted" style="margin:0">No hay liquidaciones que coincidan.</p>';
   const n = ['tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
 }
@@ -1225,9 +1257,12 @@ function updateLiq() {
         <tr><td>Diferencia</td><td class="num" colspan="2" style="text-align:right">${money(dif)} adicional pagando preaviso</td></tr>
       </tbody></table></div>`;
   }
+  const totRes = totalDe(res), repBase = locked ? (liq && liq.reparto) : (L.rep || (liq && liq.reparto));
+  const repE = repBase ? Math.min(Math.max(+repBase.efectivo || 0, 0), totRes) : 0, repT = r2(totRes - repE);
+  if (!locked) L.rep = { efectivo: repE, transferencia: repT };
   let acciones = '';
-  if (est === 'borrador') acciones = `<div class="actions"><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
-  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>En efectivo</span><input type="number" id="pay-efe" step="0.01" min="0" value="0"></label><label class="fld"><span>Por transferencia</span><input type="number" id="pay-tra" step="0.01" min="0" value="${totalDe(res)}"></label><div class="muted" id="pay-chk" style="flex-basis:100%;margin:0">Total a pagar: ${money(totalDe(res))}. Repartí el monto entre efectivo y transferencia: al cargar uno, el otro se completa solo.</div><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
+  if (est === 'borrador') acciones = `<div class="actions"><label class="fld"><span>En efectivo</span><input type="number" id="rep-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="rep-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" style="flex-basis:100%;margin:0">Total a cobrar: ${money(totRes)}. Elegí cuánto va en efectivo y cuánto por transferencia: al cargar uno, el otro se completa solo. Se guarda con el borrador.</div><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
+  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>En efectivo</span><input type="number" id="pay-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="pay-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" id="pay-chk" style="flex-basis:100%;margin:0">Total a pagar: ${money(totalDe(res))}. Repartí el monto entre efectivo y transferencia: al cargar uno, el otro se completa solo.</div><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
   else {
     const c = liq.cierre || {}, ok = c.recibo && c.art80 && c.baja;
     acciones = `<div class="checks"><h3>Cierre del legajo</h3>
@@ -1258,7 +1293,7 @@ function persistLiq(estado) {
   let liq = L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
   const nueva = !liq;
   if (nueva) { liq = { id: uid(), empleadoId: emp.id, creada: today(), cierre: {}, pago: null }; S.liquidaciones.push(liq); L.id = liq.id; }
-  liq.inputs = clone(L.inputs); liq.result = clone(L.res); liq.parametros = clone(S.parametros); liq.estado = estado; liq.actualizada = today();
+  liq.inputs = clone(L.inputs); liq.result = clone(L.res); liq.parametros = clone(S.parametros); liq.estado = estado; liq.actualizada = today(); liq.reparto = L.rep ? clone(L.rep) : null;
   emp.estado = 'egreso'; emp.fechaEgreso = liq.inputs.fecha; emp.tipoEgreso = liq.inputs.tipo;
   log(emp.id, `Liquidación ${nueva ? 'creada' : 'actualizada'} (${TIPOS[liq.inputs.tipo]}, egreso ${fdate(liq.inputs.fecha)}): ${LIQ_ESTADOS[estado].toLowerCase()}, total ${money(totalDe(liq.result))}`);
   save(); renderLiq(); toast(estado === 'aprobada' ? 'Liquidación aprobada' : 'Borrador guardado');
@@ -1268,6 +1303,15 @@ function pickEmp(id) {
   const ultima = S.liquidaciones.filter(l => l.empleadoId === id).slice(-1)[0];
   UI.liq = ultima ? { id: ultima.id, empId: id } : { empId: id };
   renderLiq();
+}
+function onRepInput(t) {
+  const L = UI.liq; if (!L || !L.res) return;
+  const tot = totalDe(L.res), esE = t.id === 'rep-efe', otro = $(esE ? '#rep-tra' : '#rep-efe');
+  const v = Math.min(Math.max(+t.value || 0, 0), tot);
+  if ((+t.value || 0) > tot) t.value = tot;
+  otro.value = r2(tot - v);
+  const efe = esE ? v : r2(tot - v);
+  L.rep = { efectivo: efe, transferencia: r2(tot - efe) };
 }
 function onPayInput(t) {
   const l = S.liquidaciones.find(x => x.id === UI.liq.id); if (!l) return;
@@ -1925,14 +1969,14 @@ async function pdfEst() {
 }
 
 /* ---- Liquidaciones (respeta los filtros de la lista) ---- */
-async function pdfLiq() {
-  const f = liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
+async function pdfLiq(f0, ov) {
+  const f = f0 || liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
   const sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), L = UI.ll, P = PDF_C;
-  const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], L.estado && LIQ_ESTADOS[L.estado], L.local, L.razon, (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`].filter(Boolean);
+  const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], ...(ov ? infDesc(ov) : [L.estado && LIQ_ESTADOS[L.estado], (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`]), L.local, L.razon].filter(Boolean);
   const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], loc: k === 'local' ? 0 : undefined, ctr: [1], num: [2, 3, 4] });
   return pdfInforme({
-    orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones-${today()}.pdf`,
-    kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: 'solo liquidaciones pagadas' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: 'solo liquidaciones pagadas' }],
+    orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones${ov ? '-' + (ov.tipo === 'borrador' ? 'borradores' : 'pagadas') : ''}-${today()}.pdf`,
+    kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: ov && ov.tipo === 'borrador' ? 'reparto previsto' : 'pagado o previsto' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: ov && ov.tipo === 'borrador' ? 'reparto previsto' : 'pagado o previsto' }],
     secs: [
       { t: 'Detalle de liquidaciones', locs: f.map(r => r.local), n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
         body: f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
@@ -2144,17 +2188,18 @@ const ACT = {
     $('#v-emp').appendChild(d); imprimirSolo('#ficha', () => d.remove());
   },
   llPrint: () => imprimirSolo('#liq-list'),
-  llPdf: conPdf(() => pdfLiq()),
+  llPdf: () => dlgInforme('pdf'),
   estPdf: conPdf(() => pdfEst()),
   empPdf: conPdf(() => pdfEmpleados()),
   empAltasPdf: conPdf(() => pdfAltas()),
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
-  llXlsx: async () => {
-    const f = liqFilas(); if (!f.length) return toast('No hay liquidaciones para exportar.');
+  llXlsx: () => dlgInforme('xlsx'),
+  llXlsxGo: async (f, ov) => {
+    if (!f.length) return toast('No hay liquidaciones para exportar.');
     try {
       const EJ = await cargarExcelJS(), wb = new EJ.Workbook(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
       wb.creator = 'Acurio Restaurantes · RR.HH.';
-      const sub = `${f.length} liquidacion${f.length === 1 ? '' : 'es'}  ·  Emitido el ${fdate(today())}  ·  Acurio Restaurantes`, N = { 1: '0' }, S5 = c => [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'];
+      const sub = `${f.length} liquidacion${f.length === 1 ? '' : 'es'}  ·  Emitido el ${fdate(today())}  ·  Acurio Restaurantes${ov ? '  ·  ' + infDesc(ov).join(' · ') : ''}`, N = { 1: '0' }, S5 = c => [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'];
       const TN = { Borrador: ['FFFFF2CC', 'FF7A5A00'], Aprobada: ['FFDCE9F7', 'FF1F4E8C'], Pagada: ['FFD9EAD3', 'FF1E6B3A'], Cerrada: ['FFE6E6E6', 'FF555555'] };
       xlsHoja(wb, 'Liquidaciones', 'Liquidaciones', sub, ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transferencia'],
         f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], r.monto, r.efe, r.tra]),
@@ -2162,7 +2207,7 @@ const ACT = {
       [['local', 'Local', 'Por local'], ['razon', 'Razón social', 'Por razón social']].forEach(([k, c, nom]) =>
         xlsHoja(wb, nom, 'Liquidaciones ' + nom.toLowerCase(), sub, S5(c), liqSumas(f, k).map(([x, v]) => [x, v.n, v.t, v.efe, v.tra]), { w: [30, 16, 18, 18, 18], num: [1, 2, 3, 4], fmt: N, loc: k === 'local' ? 0 : undefined, tot: ['TOTAL', f.length, tot, efe, tra] }));
       xlsHoja(wb, 'Por mes', 'Liquidaciones por mes de egreso', sub, ['Mes de egreso', 'Total'], liqPorMes(f).map(([m, v]) => [fper(m), v]), { w: [30, 20], num: [1], tot: ['TOTAL', tot] });
-      await xlsGuardar(wb, `liquidaciones-${today()}.xlsx`);
+      await xlsGuardar(wb, `liquidaciones${ov ? '-' + (ov.tipo === 'borrador' ? 'borradores' : 'pagadas') : ''}-${today()}.xlsx`);
     } catch (e) { console.error(e); toast(e.message || 'No se pudo generar el Excel.'); }
   },
   empXlsx: async () => {
@@ -2263,6 +2308,7 @@ document.addEventListener('input', e => {
   else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
   else if (t.id === 'pl-mes') UI.planillaMes = t.value;
   else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
+  else if (t.id === 'rep-efe' || t.id === 'rep-tra') onRepInput(t);
   else if (t.id === 'pay-efe' || t.id === 'pay-tra') onPayInput(t);
   else if (t.closest && t.closest('#liq-form')) onLiqInput(t);
   else if (t.dataset && t.dataset.cierre) {

@@ -218,7 +218,14 @@ td.num,th.num{text-align:right}
 .pt-nav{display:flex;gap:6px;overflow-x:auto;margin:10px 0}.pt-nav .btn{white-space:nowrap}
 .pt-msg{max-width:80%;padding:8px 10px;border-radius:10px;margin:6px 0;background:var(--bg,#f0f4f3)}.pt-msg.yo{margin-left:auto;background:#0D6B58;color:#fff}
 .pt-chat{max-height:50vh;overflow:auto}.pt-tag{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
-.pt-card{margin:10px 0}#pt-root{max-width:760px;margin:0 auto;padding:14px}
+.pt-card{margin:10px 0}.pt-h{font-size:28px;margin:6px 0 16px}
+.pt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px 12px}
+.pt-tile{background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;color:inherit;font:inherit}
+.pt-ic{position:relative;width:78px;height:78px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.pt-tile:active .pt-ic{transform:scale(.95)}
+.pt-lb{font-size:13px;text-align:center;line-height:1.2}
+.pt-bdg{position:absolute;top:-6px;right:-6px;background:#2F6FEB;color:#fff;font:600 12px system-ui;min-width:20px;height:20px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.pt-bar{display:flex;align-items:center;gap:10px;margin:10px 0}#pt-root{max-width:760px;margin:0 auto;padding:14px}
 body.pm header,body.pm main{display:none!important}body:not(.pm) #pt-root{display:none}
 </style>
 </head>
@@ -2433,7 +2440,7 @@ const Portal = (() => {
   const mine = a => a.filter(x => x.legajo === me.legajo);
 
   function mount(el, user, list) {
-    root = el; me = user; tools = list; tool = list[0][0]; sel = null;
+    root = el; me = user; tools = list; tool = null; sel = null;
     clearInterval(poll);
     poll = setInterval(async () => { if (document.hidden || root.contains(document.activeElement) && document.activeElement.matches('input,textarea,select')) return; try { D = await get(); draw(); } catch (e) {} }, 15000);
     root.onclick = onClick;
@@ -2441,11 +2448,18 @@ const Portal = (() => {
   }
   function draw() {
     const top = me.legajo === 'admin' ? '' : `<div class="row" style="justify-content:space-between;align-items:center"><b>${esc(me.nombre)}</b><button class="btn sm" data-pa="out">Salir</button></div>`;
-    const nav = `<div class="pt-nav">${tools.map(([k, n]) => `<button class="btn${k === tool ? ' primary' : ''}" data-pt="${k}">${n}</button>`).join('')}</div>`;
     const f = { chat: vChat, vac: () => vSol('vacaciones'), adel: () => vSol('adelanto'), cv: vCv, cur: () => vLista('cursos'), eve: () => vLista('eventos'), ges: vGes }[tool];
-    root.innerHTML = top + nav + f();
+    if (!tool) { root.innerHTML = top + grid(); return; }
+    const t = tools.find(x => x[0] === tool);
+    root.innerHTML = top + `<div class="pt-bar"><button class="btn sm" data-pt="home">← Apps</button><b>${t[1]} ${t[2]}</b></div>` + f();
     const c = q('.pt-chat'); if (c) c.scrollTop = 1e9;
   }
+  const badge = k => {
+    if (k !== 'ges') return '';
+    const n = D.solicitudes.filter(x => x.estado === 'pend' && (rol() === 'rrhh' || (x.tipo === 'vacaciones' && x.local === me.local))).length;
+    return n ? `<span class="pt-bdg">${n}</span>` : '';
+  };
+  const grid = () => `<h2 class="pt-h">Apps</h2><div class="pt-grid">${tools.map(([k, ic, lb, bg]) => `<button class="pt-tile" data-pt="${k}"><span class="pt-ic" style="background:${bg}">${ic}${badge(k)}</span><span class="pt-lb">${lb}</span></button>`).join('')}</div>`;
   function vChat() {
     const R = rol() === 'rrhh', L = R ? sel : me.legajo;
     if (R && !sel) {
@@ -2486,7 +2500,7 @@ const Portal = (() => {
   }
   async function onClick(e) {
     const t = e.target.closest('[data-pt],[data-pa]'); if (!t) return;
-    if (t.dataset.pt) { tool = t.dataset.pt; sel = null; return draw(); }
+    if (t.dataset.pt) { tool = t.dataset.pt === 'home' ? null : t.dataset.pt; sel = null; return draw(); }
     const a = t.dataset.pa, R = rol() === 'rrhh';
     if (a === 'open') { sel = t.dataset.l; draw(); }
     else if (a === 'back') { sel = null; draw(); }
@@ -2498,16 +2512,16 @@ const Portal = (() => {
     else if (a === 'add') { const k = t.dataset.k; if (!v(k + 't').trim()) return; await mut(d => d[k].push({ id: uid(), titulo: v(k + 't'), fecha: v(k + 'f'), detalle: v(k + 'd') })); draw(); }
     else if (a === 'del') { await mut(d => { d[t.dataset.k] = d[t.dataset.k].filter(x => x.id !== t.dataset.id); }); draw(); }
   }
-  const TOOLS_EMP = [['chat', '💬 Chat RRHH'], ['vac', '🏖 Vacaciones'], ['adel', '💵 Adelantos'], ['cv', '📄 Enviar CV'], ['cur', '🎓 Cursos'], ['eve', '📅 Eventos']];
+  const TOOLS_EMP = [['chat', '💬', 'Chat RRHH', '#E3DDF9'], ['vac', '🏖️', 'Vacaciones', '#DCEBFA'], ['adel', '💵', 'Adelantos', '#DDF1E4'], ['cv', '📄', 'Enviar CVs', '#FBE3EA'], ['cur', '🎓', 'Cursos', '#D9EEF0'], ['eve', '🎉', 'Eventos', '#FFF0D1']];
   function admin() {                                          // pestaña "Portal" para RRHH
     const b = bin();
     $('#v-por').innerHTML = `<div class="card"><h2>Portal del empleado</h2><p class="muted" style="margin-top:0">Cada empleado activo entra con su <b>legajo + DNI</b> desde un link y tiene chat con RRHH, vacaciones, adelantos, envío de CVs, cursos y eventos. Publicá la lista cada vez que cambie la nómina (no pisa chats ni solicitudes). Para que los empleados puedan abrirlo, este HTML tiene que estar subido a un hosting.</p>
       <div class="row"><button class="btn primary" data-act="portalPublicar">Publicar empleados al portal</button>${b ? '<button class="btn" data-act="portalLink">Copiar link para empleados</button>' : ''}</div></div>${b ? '<div id="pt-adm"></div>' : '<p class="muted">Tocá "Publicar empleados al portal" para crear el portal.</p>'}`;
-    if (b) mount($('#pt-adm'), { legajo: 'admin', nombre: 'RRHH', puesto: 'RRHH', local: '' }, [['chat', '💬 Chats con empleados'], ['ges', '🗂 Gestión']]);
+    if (b) mount($('#pt-adm'), { legajo: 'admin', nombre: 'RRHH', puesto: 'RRHH', local: '' }, [['chat', '💬', 'Chats', '#E3DDF9'], ['ges', '🗂️', 'Gestión', '#E8E4F6']]);
   }
   async function employee() {                                 // modo empleado (link con #portal=ID)
     const el = $('#pt-root'); clearInterval(poll);
-    const ok = u => { const L = TOOLS_EMP.slice(); if (STAFF.test(u.puesto || '') || u.puesto === 'RRHH') L.push(['ges', '🗂 Gestión']); mount(el, u, L); };
+    const ok = u => { const L = TOOLS_EMP.slice(); if (STAFF.test(u.puesto || '') || u.puesto === 'RRHH') L.push(['ges', '🗂️', 'Gestión', '#E8E4F6']); mount(el, u, L); };
     const ses = JSON.parse(sessionStorage.getItem('pt_me') || 'null');
     if (ses) try { const d = await get(); const u = d.roster.find(x => x.legajo === ses.l && x.h === ses.h); if (u) return ok(u); } catch (e) {}
     el.onclick = null;

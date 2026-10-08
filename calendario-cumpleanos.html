@@ -641,6 +641,7 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
 <body>
 
 <div class="switcher-bar">
+  <span id="ciclo-status" style="position:absolute;left:14px;font:11px/1.2 'DM Sans',sans-serif;color:#F4E9D4;opacity:.85;max-width:160px"></span>
   <button id="btn-barra" class="active" onclick="showPage('barra')">BARRA CHALACA</button>
   <button id="btn-tanta" onclick="showPage('tanta')">TANTA</button>
   <button id="btn-lamar" onclick="showPage('lamar')">LA MAR</button>
@@ -957,14 +958,135 @@ const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 // nombres — ya NO se comparte información entre locales. Los siguientes son los
 // nombres que ya estaban cargados en el diseño original, usados como punto de
 // partida de Septiembre 2026 para cada local hasta que alguien los edite.
-const DEFAULT_CUMPLE = {
-  barra: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
-  tanta: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
-  lamar: { '2026-09': { '4': ['Quiroz, Roca, Melany, Andrea'], '5': ['Alpaca Vergara, Valeria'], '7': ['Carabes, Lucas'] } },
-  itc:   { '2026-09': {} }
-};
+const DEFAULT_CUMPLE = { barra: {}, tanta: {}, lamar: {}, itc: {} };   // sin nombres de ejemplo: solo lo guardado en JSONBin + lo que viene del ciclo
 
 let cumpleData = JSON.parse(JSON.stringify(DEFAULT_CUMPLE));
+
+/* ============ CONEXIÓN CON "CICLO DEL EMPLEADO" (solo lectura) ============
+   Lee los datos que guarda la app Ciclo del empleado (JSONBin, cifrados) y arma los cumpleaños
+   automáticamente: aparecen los colaboradores en estado Activo o En licencia con fecha de
+   nacimiento cargada, y desaparecen apenas pasan a Egreso / Liquidado / Archivado o se eliminan.
+   Esta página NUNCA escribe en el bin del ciclo. */
+const CICLO_BIN_ID = '6ab67ab9ac6210605af45cd2';
+const CICLO_CLAVE  = 'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit';
+const CICLO_KEYS   = [JSONBIN_API_KEY, JSONBIN_API_KEY.replace(/\.$/, '')];   // por si la clave se copió con o sin el punto final
+const ESTADOS_QUE_CUMPLEN = ['activo', 'licencia'];
+// Local del ciclo → pestaña del calendario. Se evalúa en orden; el primero que coincide gana.
+const LOCAL_MAP = [
+  [/itc/i,                'itc'],
+  [/tanta/i,              'tanta'],
+  [/la\s*mar/i,           'lamar'],
+  [/^bc/i,                'barra'],   // BCP, BCBL, BCB, BCC…
+  [/barra|chalaca/i,      'barra']
+];
+let autoCumple = { barra:{}, tanta:{}, lamar:{}, itc:{} };   // local → 'MM-DD' → [nombres]
+let cicloNombres = { activos: [], inactivos: [] };           // para limpiar cargas manuales viejas
+let cicloOk = false, cicloFirma = '';
+
+const _unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+async function _cKey(pass, salt){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt, iterations:200000, hash:'SHA-256' }, base, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+}
+async function _cDecrypt(env){
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:_unb64(env.iv) }, await _cKey(CICLO_CLAVE, _unb64(env.salt)), _unb64(env.data));
+  return new Uint8Array(pt);
+}
+async function _gunzip(bytes){
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new TextDecoder().decode(await new Response(stream).arrayBuffer());
+}
+async function fetchCicloEnvelope(){
+  let lastErr;
+  for(const key of CICLO_KEYS){
+    try{
+      const r = await fetch('https://api.jsonbin.io/v3/b/' + CICLO_BIN_ID + '/latest', { headers:{ 'X-Master-Key': key, 'X-Bin-Meta':'false' }, cache:'no-store' });
+      if(r.ok) return await r.json();
+      lastErr = new Error('HTTP ' + r.status);
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('sin respuesta');
+}
+
+const _norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function _tokens(t){ return _norm(t).split(/[^a-z0-9ñ]+/).filter(Boolean); }
+// Dos nombres "son la misma persona" si comparten todas las palabras del más corto (mínimo 2 palabras).
+function mismaPersona(a, b){
+  const A = _tokens(a), B = _tokens(b);
+  if(A.length < 2 || B.length < 2) return _norm(a).trim() === _norm(b).trim();
+  const [corto, largo] = A.length <= B.length ? [A, B] : [B, A];
+  return corto.every(w => largo.indexOf(w) !== -1);
+}
+function localDelCiclo(txt){
+  const t = String(txt||'').trim();
+  for(const [re, k] of LOCAL_MAP) if(re.test(t)) return k;
+  return null;
+}
+function nombreCiclo(e){
+  const ap = (e.apellido||'').trim(), no = (e.nombre||'').trim();
+  return ap && no ? ap + ', ' + no : (ap || no);
+}
+
+async function loadCiclo(){
+  try{
+    if(!window.crypto || !crypto.subtle) throw new Error('el navegador no permite descifrar (abrí el archivo desde https o localhost)');
+    const env = await fetchCicloEnvelope();
+    const pt  = await _cDecrypt(env);
+    const data = JSON.parse(env.v >= 2 ? await _gunzip(pt) : new TextDecoder().decode(pt));
+    if(!data || !Array.isArray(data.empleados)) throw new Error('formato inesperado');
+
+    const nuevo = { barra:{}, tanta:{}, lamar:{}, itc:{} }, activos = [], inactivos = [], sinLocal = new Set();
+    let conFecha = 0, sinFecha = 0;
+    data.empleados.forEach(e => {
+      const nom = nombreCiclo(e); if(!nom) return;
+      if(!ESTADOS_QUE_CUMPLEN.includes(e.estado)){ inactivos.push(nom); return; }
+      activos.push(nom);
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(e.fechaNac || '');
+      if(!m){ sinFecha++; return; }
+      const loc = localDelCiclo(e.local);
+      if(!loc){ sinLocal.add((e.local||'').trim() || '(sin local)'); return; }
+      const k = m[2] + '-' + m[3];
+      (nuevo[loc][k] = nuevo[loc][k] || []).push(nom);
+      conFecha++;
+    });
+    Object.values(nuevo).forEach(porDia => Object.values(porDia).forEach(arr => arr.sort((a,b) => a.localeCompare(b,'es'))));
+
+    const firma = JSON.stringify([nuevo, inactivos.sort()]);
+    const cambio = firma !== cicloFirma;
+    cicloFirma = firma; autoCumple = nuevo; cicloNombres = { activos, inactivos }; cicloOk = true;
+    setCicloStatus('Ciclo del empleado ✓ ' + conFecha + ' cumpleaños' + (sinFecha ? ' · ' + sinFecha + ' sin fecha de nacimiento' : '') + (sinLocal.size ? ' · local sin pestaña: ' + [...sinLocal].join(', ') : ''));
+    if(sinLocal.size) console.warn('Locales del ciclo sin pestaña asignada (ajustá LOCAL_MAP):', [...sinLocal]);
+    return cambio;
+  }catch(e){
+    console.error('No se pudo leer el ciclo del empleado:', e);
+    setCicloStatus('Ciclo del empleado: no se pudo leer (' + (e.message || 'error') + '). Se muestran solo las cargas manuales.');
+    return false;
+  }
+}
+function setCicloStatus(t){ const el = document.getElementById('ciclo-status'); if(el){ el.textContent = t; el.title = t; } }
+
+// Nombres de un día: los del ciclo (automáticos) + las cargas manuales que sigan vigentes.
+// Una carga manual se oculta si corresponde a alguien que ya no está activo en el ciclo,
+// o si ya aparece automáticamente (evita duplicados).
+function namesFor(local, y, m, day){
+  const mm = String(m).padStart(2,'0'), mk = monthKey(y, m);
+  const bisiesto = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const auto = [];
+  const push = d => ((autoCumple[local] || {})[mm + '-' + String(d).padStart(2,'0')] || []).forEach(n => auto.push(n));
+  push(day);
+  if(m === 2 && day === 28 && !bisiesto) push(29);          // los del 29/02 se festejan el 28 en años no bisiestos
+  const manualAll = (cumpleData[local] && cumpleData[local][mk] && cumpleData[local][mk][String(day)]) || [];
+  const manual = [];
+  manualAll.forEach((n, i) => {
+    if(cicloOk){
+      const esActivo = cicloNombres.activos.some(a => mismaPersona(a, n));
+      if(esActivo) return;                                                       // ya viene del ciclo
+      if(cicloNombres.inactivos.some(x => mismaPersona(x, n))) return;           // ya no está en la empresa
+    }
+    manual.push({ n, i });
+  });
+  return { auto, manual, all: auto.concat(manual.map(x => x.n)) };
+}
 
 // Mes que está mirando cada local ahora mismo (independiente entre pestañas)
 let currentMonth = {
@@ -998,6 +1120,7 @@ function deepMergeCumple(defaults, saved){
 async function loadCumpleData(){
   if(!isConfigured()){
     console.warn('Falta configurar JSONBIN_BIN_ID y JSONBIN_API_KEY en el <script>.');
+    await loadCiclo();
     initAllPages();
     showWeeklySummaryIfAny();
     return;
@@ -1014,8 +1137,13 @@ async function loadCumpleData(){
   }catch(e){
     console.error('No se pudieron cargar los cumpleaños:', e);
   }
+  await loadCiclo();
   initAllPages();
   showWeeklySummaryIfAny();
+  // Mantener la lista al día: al volver a la pestaña y cada 15 minutos.
+  const refrescar = async () => { if(document.hidden) return; if(await loadCiclo()){ initAllPages(); if(currentLocal !== null) renderModalNames(); } };
+  setInterval(refrescar, 15 * 60 * 1000);
+  document.addEventListener('visibilitychange', refrescar);
 }
 
 async function saveCumpleData(){
@@ -1119,10 +1247,9 @@ function buildGrid(local){
 function renderDaysForLocal(local){
   const { y, m } = currentMonth[local];
   const mk = monthKey(y, m);
-  const data = (cumpleData[local] && cumpleData[local][mk]) || {};
   document.querySelectorAll('#page-' + local + ' .cell[data-day]').forEach(cell => {
     const day = cell.getAttribute('data-day');
-    const names = data[day] || [];
+    const names = namesFor(local, y, m, +day).all;
     let bday = cell.querySelector('.bday');
     if(names.length > 0){
       if(!bday){
@@ -1146,16 +1273,16 @@ function escapeForDisplay(str){
 
 function renderModalNames(){
   const container = document.getElementById('cumple-modal-names');
-  const mk = monthKey(currentMonth[currentLocal].y, currentMonth[currentLocal].m);
-  const names = (cumpleData[currentLocal][mk] && cumpleData[currentLocal][mk][currentDay]) || [];
-  if(names.length === 0){
+  const { y, m } = currentMonth[currentLocal];
+  const r = namesFor(currentLocal, y, m, +currentDay);
+  if(r.all.length === 0){
     container.innerHTML = '<p class="cumple-modal-empty">Todavía no hay nadie cargado para este día.</p>';
   }else{
-    container.innerHTML = names.map((n, i) =>
-      '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(n) + '</span><button onclick="removeName(' + i + ')">Quitar ✕</button></div>'
-    ).join('');
+    container.innerHTML =
+      r.auto.map(n => '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(n) + '</span><span style="font-size:11px;color:#888" title="Viene del Ciclo del empleado. Para cambiarlo, editá la ficha del colaborador.">del legajo</span></div>').join('') +
+      r.manual.map(x => '<div class="cumple-modal-name-row"><span>' + escapeForDisplay(x.n) + '</span><button onclick="removeName(' + x.i + ')">Quitar ✕</button></div>').join('');
   }
-  renderGreetingSelector(names);
+  renderGreetingSelector(r.all);
 }
 
 /* ============ Generar imagen de saludo: selector de persona ============ */
@@ -1741,7 +1868,7 @@ function buildWeeklyBirthdaySummary(){
     const mk = monthKey(y, m);
     const localesConCumple = [];
     LOCALES.forEach(loc => {
-      const names = (cumpleData[loc] && cumpleData[loc][mk] && cumpleData[loc][mk][String(day)]) || [];
+      const names = namesFor(loc, y, m, day).all;
       if(names.length > 0) localesConCumple.push({ local: loc, names });
     });
     if(localesConCumple.length > 0){

@@ -111,6 +111,11 @@ details.sec>summary::before{content:'\25B8';font-size:12px;transition:transform 
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>.sec-body{padding:2px 0 14px}
 .secs-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
+.btn .dirtytxt{display:none}
+.btn.dirty .dirtytxt{display:inline}
+.btn.dirty::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#FFD27A;margin-right:8px;vertical-align:middle;animation:dirtypulse 1.4s ease-in-out infinite}
+.btn.primary.dirty{background:#B7791F;border-color:#B7791F;color:#fff}
+@keyframes dirtypulse{50%{opacity:.35}}
 .docs label{display:flex;gap:8px;align-items:center}
 .docs input{width:auto}
 .row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
@@ -1002,7 +1007,7 @@ function renderDetail() {
   $('#v-emp').innerHTML = `
   <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>${isNew ? '' : '<button class="btn" data-act="fichaPrint">Imprimir ficha / PDF</button>'}
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
-    <button class="btn primary" type="button" style="margin-left:auto" data-act="saveEmp">${isNew ? 'Crear empleado' : 'Guardar cambios'}</button>
+    <button class="btn primary ${UI.dirty ? 'dirty' : ''}" type="button" style="margin-left:auto" data-act="saveEmp" title="Atajo: Ctrl+D">${isNew ? 'Crear empleado' : 'Guardar cambios'}<span class="dirtytxt"> · sin guardar</span></button>
     ${!isNew && canEgreso ? `<button class="btn primary" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <div class="cols">
    <form class="card" id="emp-form" onsubmit="return false">
@@ -2332,13 +2337,20 @@ document.addEventListener('click', e => {
   if (!b || !UI.dirty || !NAV_ACTS.has(b.dataset.act)) return;
   if (!confirm('Tenés cambios sin guardar en el legajo. ¿Salir sin guardar?')) { e.stopPropagation(); e.preventDefault(); } else UI.dirty = false;
 }, true);
-document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#emp-form')) UI.dirty = true; });
+const paintDirty = () => { const b = $('[data-act=saveEmp]'); if (b) b.classList.toggle('dirty', !!UI.dirty); };
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#emp-form')) { UI.dirty = true; paintDirty(); } });
+// Ctrl+D (Cmd+D en Mac) guarda el legajo abierto; pisa el atajo de "agregar a marcadores" del navegador solo en esa pantalla.
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'd') return;
+  const f = $('#emp-form'); if (!f || f.offsetParent === null) return;
+  e.preventDefault(); ACT.saveEmp();
+});
 document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) UI.secs[d.dataset.sec] = d.open; }, true);
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.name === 'alta' && t.closest && t.closest('#emp-form')) {
     const fld = $('#fecha-alta-fld'); if (fld) fld.hidden = !(t.value === 'N' || t.value === 'S');
-    UI.dirty = true;
+    UI.dirty = true; paintDirty();
   }
 });
 window.addEventListener('beforeunload', e => { if (UI.dirty) { e.preventDefault(); e.returnValue = ''; } });

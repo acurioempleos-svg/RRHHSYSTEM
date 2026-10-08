@@ -2024,7 +2024,8 @@ function xlsHoja(wb, nombre, titulo, sub, head, rows, o = {}) {
 
 
 /* ===== Verificación ARCA (Mis Aportes): copiar DNI / apellido / sexo y marcar 710 ===== */
-const ARCA_URL = 'https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica/ingresoDatos.aspx';
+// Página de inicio de Aportes en Línea (ahí se inicia la sesión). El acceso directo a ingresoDatos.aspx daba "sesión finalizada".
+const ARCA_URL = 'https://www.afip.gob.ar/aportesenlinea/';
 const sexoDeEmp = e => e.sexo || ({ '20': 'M', '27': 'F' }[String(e.cuil || '').replace(/\D/g, '').slice(0, 2)] || '');
 function copiarTxt(t) {
   const ok = () => toast('Copiado: ' + t);
@@ -2051,7 +2052,7 @@ function dlgArca(startId) {
         <select id="arca-sx" style="flex:1"><option value="">Sin indicar${sx ? '' : ' (elegí uno)'}</option><option value="M" ${sx === 'M' ? 'selected' : ''}>Masculino</option><option value="F" ${sx === 'F' ? 'selected' : ''}>Femenino</option></select></div>
       <div style="display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap"><button type="button" class="btn" data-k="abrir">Abrir ARCA</button>
         <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="arca-710" ${e.rifl ? 'checked' : ''}> Aplica régimen 710</label></div>
-      <p class="muted" style="margin:0 0 12px;font-size:13px">En ARCA: pegá el documento, Tab, pegá el apellido, Tab y elegí el sexo (mismo orden que acá). Después el "No soy un robot" y Continuar.</p>
+      <p class="muted" style="margin:0 0 12px;font-size:13px">En ARCA: tocá \"Consulta sin clave fiscal\", después pegá el documento, Tab, pegá el apellido, Tab y elegí el sexo (mismo orden que acá). Después el "No soy un robot" y Continuar.</p>
       <div style="display:flex;gap:8px;justify-content:space-between"><button type="button" class="btn" data-k="prev" ${i ? '' : 'disabled'}>Anterior</button><button type="button" class="btn" data-k="cerrar">Cerrar</button><button type="button" class="btn primary" data-k="next" ${i < lista.length - 1 ? '' : 'disabled'}>Siguiente</button></div>`;
     d.querySelector('#arca-sx').onchange = ev => { e.sexo = ev.target.value; save(); };
     d.querySelector('#arca-710').onchange = ev => { const n = ev.target.checked; if (!!e.rifl !== n) { log(e.id, `Régimen 710 (RIFL): ${e.rifl ? 'Sí' : 'No'} → ${n ? 'Sí' : 'No'}`); e.rifl = n; save(); toast(n ? '710 tildado' : '710 destildado'); } };

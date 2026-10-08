@@ -111,6 +111,24 @@ details.sec>summary::before{content:'\25B8';font-size:12px;transition:transform 
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>.sec-body{padding:2px 0 14px}
 .secs-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
+.cal-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:12px 0}.cal-bar .fld{margin:0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-dow{font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0}
+.cal-cell{display:flex;flex-direction:column;gap:2px;align-items:stretch;text-align:left;min-height:86px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;color:inherit;cursor:pointer;overflow:hidden}
+.cal-cell:hover{border-color:var(--accent)}
+.cal-cell .cal-n{font-weight:600;font-size:13px}
+.cal-cell.hoy .cal-n{color:var(--accent)}
+.cal-cell.hoy{outline:2px solid var(--accent);outline-offset:-2px}
+.cal-cell.sel{box-shadow:0 0 0 3px #0D6B5844;border-color:var(--accent)}
+.cal-cell.ok{background:#EAF5EE;border-color:#B9DCC6}
+.cal-cell.warn{background:#FBF1DC;border-color:#E6C77E}
+.cal-cell.crit{background:#F8DFDA;border-color:#D98B7E}
+.cal-cnt{font-size:12px;font-weight:600}
+.cal-rest{font-size:11px;color:var(--muted)}
+.cal-bd{font-size:11px;color:#8A4B00;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:auto}
+.cal-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:0 0 10px}
+.cal-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1px solid var(--line)}
+@media(max-width:760px){.cal-cell{min-height:60px;padding:4px}.cal-rest,.cal-bd{display:none}}
 .btn .dirtytxt{display:none}
 .btn.dirty .dirtytxt{display:inline}
 .btn.dirty::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#FFD27A;margin-right:8px;vertical-align:middle;animation:dirtypulse 1.4s ease-in-out infinite}
@@ -242,12 +260,15 @@ details.sec>.sec-body{padding:2px 0 14px}
   <nav class="tabs" aria-label="Secciones">
     <button data-act="tab" data-tab="emp">Empleados</button>
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
+    <button data-act="tab" data-tab="cal">Calendario</button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
     <button data-act="tab" data-tab="est">Historial y estadística</button>
     <button data-act="tab" data-tab="par">Parámetros</button>
   </nav>
   <div class="hdr-right">
     <span id="sync" class="sync off"><span class="dot"></span><span id="sync-txt">Sin sincronización</span></span>
+    <!-- Si el calendario está publicado en otra dirección, cambiá el href por esa URL completa. -->
+    <a class="btn sm" href="calendario-cumpleanos.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">🎂 Cumpleaños</a>
     <span id="respaldo"></span>
     <button class="btn sm" data-act="export">Exportar respaldo</button>
     <label class="btn sm" style="cursor:pointer">Importar<input type="file" id="imp" accept="application/json,.json" hidden></label>
@@ -256,6 +277,7 @@ details.sec>.sec-body{padding:2px 0 14px}
 <main>
   <section class="view" id="v-emp"></section>
   <section class="view" id="v-ale" hidden></section>
+  <section class="view" id="v-cal" hidden></section>
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
   <section class="view" id="v-par" hidden></section>
@@ -855,7 +877,7 @@ function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  ({ emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  ({ emp: renderEmp, ale: renderAle, cal: renderCal, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -1626,6 +1648,89 @@ function paintOrdenCols() {
   }).join('');
 }
 
+/* ================= Calendario de vacaciones y licencias (con cumpleaños) ================= */
+const calPersonal = local => S.empleados.filter(e => ['activo', 'licencia'].includes(e.estado) && (!local || (e.local || '').trim() === local));
+function calIdx() {
+  const m = new Map(), add = (id, r) => { if (!m.has(id)) m.set(id, []); m.get(id).push(r); };
+  S.vacaciones.forEach(v => add(v.empleadoId, { tipo: 'Vacaciones', desde: v.desde, hasta: v.hasta }));
+  S.licencias.forEach(l => add(l.empleadoId, { tipo: l.tipo || 'Licencia', desde: l.desde, hasta: l.hasta }));
+  return m;
+}
+const calNom = e => `${e.apellido || ''}, ${e.nombre || ''}`;
+// Cumpleaños de legajos: el 29/02 se muestra el 28/02 en los años no bisiestos.
+function calBdMd(e, y) {
+  const f = String(e.fechaNac || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(f)) return '';
+  const md = f.slice(5, 10), bis = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  return md === '02-29' && !bis ? '02-28' : md;
+}
+function calDia(emps, idx, iso) {
+  const plantel = emps.filter(e => !e.fechaIngreso || e.fechaIngreso <= iso), fuera = [];
+  plantel.forEach(e => { const r = (idx.get(e.id) || []).find(x => x.desde <= iso && iso <= x.hasta); if (r) fuera.push({ e, ...r }); });
+  const cumple = emps.filter(e => calBdMd(e, +iso.slice(0, 4)) === iso.slice(5));
+  return { plantel, fuera, cumple };
+}
+function calSev(local, tot, out) {
+  const min = local ? (+((S.parametros.calMinimos || {})[local]) || 0) : 0, quedan = tot - out;
+  if (min > 0) { if (quedan < min) return 'crit'; if (quedan === min && out > 0) return 'warn'; return out ? 'ok' : ''; }
+  if (!out || !tot) return '';
+  const pct = out / tot; return pct >= 0.4 ? 'crit' : pct >= 0.25 ? 'warn' : 'ok';
+}
+function renderCal() {
+  const box = $('#v-cal'); if (!box) return;
+  const locs = ordenLocales();
+  if (UI.calLocal == null) UI.calLocal = locs.find(l => calPersonal(l).length) || '';
+  if (UI.calLocal && !locs.includes(UI.calLocal)) UI.calLocal = '';
+  if (!/^\d{4}-\d{2}$/.test(UI.calMes || '')) UI.calMes = today().slice(0, 7);
+  if (UI.calBd === undefined) UI.calBd = true;
+  const local = UI.calLocal, [y, m] = UI.calMes.split('-').map(Number), P = S.parametros;
+  const emps = calPersonal(local), idx = calIdx();
+  const min = local ? (+((P.calMinimos || {})[local]) || 0) : 0;
+  const nd = new Date(y, m, 0).getDate(), lead = (new Date(y, m - 1, 1).getDay() + 6) % 7, hoy = today();
+  const iso = d => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const mesTxt = MESES_ES[m - 1].charAt(0) + MESES_ES[m - 1].slice(1).toLowerCase() + ' ' + y;
+  let cells = '', crit = 0, warn = 0;
+  for (let i = 0; i < lead; i++) cells += '<div></div>';
+  for (let d = 1; d <= nd; d++) {
+    const k = iso(d), info = calDia(emps, idx, k), out = info.fuera.length, tot = info.plantel.length, sev = calSev(local, tot, out);
+    if (sev === 'crit') crit++; else if (sev === 'warn') warn++;
+    const tip = [info.fuera.length ? 'Fuera: ' + info.fuera.map(f => `${calNom(f.e)} (${f.tipo})`).join('; ') : '', info.cumple.length ? 'Cumple: ' + info.cumple.map(calNom).join('; ') : ''].filter(Boolean).join('\n');
+    cells += `<button type="button" class="cal-cell ${sev} ${k === hoy ? 'hoy' : ''} ${k === UI.calDia ? 'sel' : ''}" data-act="calDia" data-d="${k}" title="${esc(tip)}"><span class="cal-n">${d}</span>${out ? `<span class="cal-cnt">${out} fuera</span>` : ''}${out || sev ? `<span class="cal-rest">quedan ${tot - out} de ${tot}</span>` : ''}${UI.calBd && info.cumple.length ? `<span class="cal-bd">🎂 ${esc(info.cumple.map(e => e.apellido).join(', '))}</span>` : ''}</button>`;
+  }
+  // cumpleaños del mes (con aviso si ese día la persona está de vacaciones o licencia)
+  const cumples = emps.map(e => ({ e, md: calBdMd(e, y) })).filter(x => x.md && x.md.slice(0, 2) === String(m).padStart(2, '0'))
+    .map(x => { const k = `${y}-${x.md}`, r = (idx.get(x.e.id) || []).find(z => z.desde <= k && k <= z.hasta); return { ...x, k, r, edad: y - +String(x.e.fechaNac).slice(0, 4) }; })
+    .sort((a, b) => a.k.localeCompare(b.k) || calNom(a.e).localeCompare(calNom(b.e)));
+  // detalle del día elegido
+  let det = '';
+  if (UI.calDia && UI.calDia.slice(0, 7) === UI.calMes) {
+    const info = calDia(emps, idx, UI.calDia), out = info.fuera.length, tot = info.plantel.length;
+    const filas = info.fuera.slice().sort((a, b) => (a.e.local || '').localeCompare(b.e.local || '') || calNom(a.e).localeCompare(calNom(b.e)))
+      .map(f => `<tr><td>${esc(calNom(f.e))}</td><td>${esc(f.e.puesto || '—')}</td>${local ? '' : `<td>${esc(f.e.local || '—')}</td>`}<td>${esc(f.tipo)}</td><td>${fdate(f.desde)} al ${fdate(f.hasta)}</td></tr>`).join('');
+    det = `<div class="card" style="margin-top:14px"><h3 style="margin-top:0">${fdate(UI.calDia)} · quedan ${tot - out} de ${tot}${min ? ` (mínimo ${min})` : ''}</h3>
+      ${out ? `<div class="tablewrap"><table class="grid"><thead><tr><th>Nombre</th><th>Puesto</th>${local ? '' : '<th>Local</th>'}<th>Motivo</th><th>Período</th></tr></thead><tbody>${filas}</tbody></table></div>` : '<p class="muted" style="margin:0">Nadie está de vacaciones ni de licencia ese día.</p>'}
+      ${info.cumple.length ? `<p style="margin:12px 0 0">🎂 Cumplen años: ${info.cumple.map(e => { const r = (idx.get(e.id) || []).find(z => z.desde <= UI.calDia && UI.calDia <= z.hasta); return `<b>${esc(calNom(e))}</b> (${y - +String(e.fechaNac).slice(0, 4)})${r ? ` <span class="warn">— ese día está de ${esc(r.tipo.toLowerCase())}</span>` : ''}`; }).join(', ')}</p>` : ''}</div>`;
+  }
+  box.innerHTML = `<div class="card">
+    <h2 style="margin-top:0">Calendario de vacaciones y licencias</h2>
+    <p class="muted" style="margin-top:0">Muestra cuántas personas faltan cada día y cuántas quedan en el local. Cuenta a los empleados <b>activos</b> y <b>en licencia</b> con vacaciones o licencias cargadas en su legajo. No contempla francos ni horarios de cada persona.</p>
+    <div class="cal-bar">
+      <label class="fld"><span>Local</span><select id="cal-local"><option value="">Todos los locales</option>${locs.map(l => `<option value="${esc(l)}" ${l === local ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+      <button class="btn" type="button" data-act="calMes" data-d="-1" aria-label="Mes anterior">◀</button>
+      <label class="fld"><span>Mes</span><input type="month" id="cal-mes" value="${UI.calMes}"></label>
+      <button class="btn" type="button" data-act="calMes" data-d="1" aria-label="Mes siguiente">▶</button>
+      <button class="btn" type="button" data-act="calMes" data-d="0">Hoy</button>
+      ${local ? `<label class="fld" style="max-width:150px"><span>Mínimo de presentes</span><input type="number" id="cal-min" min="0" step="1" value="${min || ''}" placeholder="Sin mínimo"></label>` : ''}
+      <label style="display:flex;gap:6px;align-items:center;margin:0 0 8px 6px"><input type="checkbox" id="cal-bd" style="width:auto" ${UI.calBd ? 'checked' : ''}>Mostrar cumpleaños</label>
+      <span style="margin-left:auto;display:flex;gap:6px">${P.urlCumples ? '<button class="btn" type="button" data-act="calLink">Calendario de cumpleaños ↗</button><button class="btn sm" type="button" data-act="calLinkEdit">Cambiar enlace</button>' : '<button class="btn" type="button" data-act="calLinkEdit">Vincular calendario de cumpleaños</button>'}</span>
+    </div>
+    <h3 style="margin:0 0 8px">${mesTxt}${local ? ' · ' + esc(local) : ''} <span class="muted" style="font-size:13px;font-weight:400">${crit ? `· ${crit} día(s) en rojo` : ''} ${warn ? `· ${warn} en amarillo` : ''}</span></h3>
+    <div class="cal-leg"><span><i style="background:#EAF5EE"></i>Hay ausencias, cubierto</span><span><i style="background:#FBF1DC"></i>${min ? 'Justo en el mínimo' : '25% o más fuera'}</span><span><i style="background:#F8DFDA"></i>${min ? 'Por debajo del mínimo' : '40% o más fuera'}</span><span>🎂 Cumpleaños (según fecha de nacimiento del legajo)</span></div>
+    ${emps.length ? `<div class="cal-grid">${DOW_CAL.map(d => `<div class="cal-dow">${d}</div>`).join('')}${cells}</div>` : '<p class="muted">No hay empleados activos en este local.</p>'}
+  </div>${det}
+  ${UI.calBd && cumples.length ? `<div class="card" style="margin-top:14px"><h3 style="margin-top:0">Cumpleaños de ${mesTxt}</h3><div class="tablewrap"><table class="grid"><thead><tr><th>Día</th><th>Nombre</th>${local ? '' : '<th>Local</th>'}<th>Cumple</th><th>Ese día</th></tr></thead><tbody>${cumples.map(c => `<tr><td>${fdate(c.k)}</td><td>${esc(calNom(c.e))}</td>${local ? '' : `<td>${esc(c.e.local || '—')}</td>`}<td>${c.edad} años</td><td>${c.r ? `<span class="warn">De ${esc(c.r.tipo.toLowerCase())} (${fdate(c.r.desde)} al ${fdate(c.r.hasta)})</span>` : 'Presente'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+}
+const DOW_CAL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
 /* ================= Planilla de sueldos (Excel) =================
    Réplica del formato de SUELDO_<MES>.xlsx. Usa ExcelJS (SheetJS de la versión gratuita no guarda colores ni estilos);
    se descarga de la CDN solo cuando se aprieta el botón. */
@@ -2108,6 +2213,15 @@ const ACT = {
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
   openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
   back: () => { UI.detail = null; renderEmp(); },
+  calMes: b => { const d = +b.dataset.d; if (d === 0) UI.calMes = today().slice(0, 7); else { let [y, m] = (UI.calMes || today().slice(0, 7)).split('-').map(Number); m += d; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } UI.calMes = `${y}-${String(m).padStart(2, '0')}`; } UI.calDia = null; renderCal(); },
+  calDia: b => { UI.calDia = UI.calDia === b.dataset.d ? null : b.dataset.d; keepScroll(renderCal); },
+  calLink: () => { const u = S.parametros.urlCumples; if (u) window.open(u, '_blank', 'noopener'); },
+  calLinkEdit: () => {
+    const P = S.parametros, v = prompt('Pegá el enlace (o el nombre del archivo) del calendario de cumpleaños. Dejalo vacío para quitar el vínculo.', P.urlCumples || '');
+    if (v === null) return;
+    if (/^\s*(javascript|data):/i.test(v)) { toast('Ese enlace no es válido.'); return; }
+    P.urlCumples = v.trim(); save(); renderCal(); toast(P.urlCumples ? 'Enlace guardado' : 'Enlace quitado');
+  },
   secsAll: () => { const ds = $$('#emp-form details.sec'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.secs[x.dataset.sec] = abrir; }); },
   saveEmp: () => {
     const f = $('#emp-form'), d = Object.fromEntries(new FormData(f));
@@ -2351,6 +2465,15 @@ document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'd') return;
   const f = $('#emp-form'); if (!f || f.offsetParent === null) return;
   e.preventDefault(); ACT.saveEmp();
+});
+document.addEventListener('change', e => {
+  const t = e.target; if (!t.id || !t.id.startsWith('cal-')) return;
+  if (t.id === 'cal-local') { UI.calLocal = t.value; UI.calDia = null; }
+  else if (t.id === 'cal-mes') { if (!/^\d{4}-\d{2}$/.test(t.value)) return; UI.calMes = t.value; UI.calDia = null; }
+  else if (t.id === 'cal-bd') UI.calBd = t.checked;
+  else if (t.id === 'cal-min') { const P = S.parametros; P.calMinimos = P.calMinimos || {}; const n = Math.max(0, Math.floor(+t.value || 0)); if (n) P.calMinimos[UI.calLocal] = n; else delete P.calMinimos[UI.calLocal]; save(); }
+  else return;
+  renderCal();
 });
 document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) UI.secs[d.dataset.sec] = d.open; }, true);
 document.addEventListener('change', e => {

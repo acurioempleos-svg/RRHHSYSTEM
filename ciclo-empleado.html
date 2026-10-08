@@ -196,7 +196,13 @@ details.sec>.sec-body{padding:2px 0 14px}
 .ord-item .grip{color:var(--muted);font-size:16px;line-height:1}
 .ord-item .ord-n{width:22px;color:var(--muted);font-size:13px;text-align:right}
 .ord-item .ord-name{flex:1;font-weight:500}
-.ord-btns{display:flex;gap:4px}
+.ord-btns{display:flex;gap:4px;flex:none}
+.ord-item .ord-lbl{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer;margin:0}
+.ord-item .ord-lbl input[type=checkbox]{width:auto;flex:none;margin:0;accent-color:var(--accent)}
+.ord-item .ord-lbl .ord-name{flex:1;min-width:0;white-space:normal;line-height:1.25}
+.ord-item .grip{flex:none}
+.ord-item:has(.ord-lbl input:not(:checked)) .ord-name{color:var(--muted)}
+.ord-item .ord-btns .btn[disabled]{opacity:.35}
 .ord-item.loc{flex-wrap:wrap}
 .sw-row{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:2px 0 4px 64px}
 .csw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.16);padding:0;cursor:pointer}
@@ -740,7 +746,7 @@ const IMP_ALIAS = {
   tel: ['telefono', 'celular', 'tel'], email: ['email', 'mail', 'correo'], domicilio: ['domicilio', 'direccion'],
   emergenciaNombre: ['contacto emergencia', 'emergencia nombre', 'contacto de emergencia'],
   emergenciaTel: ['telefono emergencia', 'emergencia telefono', 'tel emergencia'],
-  cbu: ['cbu'], banco: ['banco'], estado: ['estado'], local: ['local', 'sucursal'], razonSocial: ['razon social', 'razonsocial', 'empresa'], puesto: ['puesto', 'cargo'], alta: ['alta'],
+  cbu: ['cbu'], banco: ['banco'], estado: ['estado'], local: ['local', 'sucursal'], razonSocial: ['razon social', 'razonsocial', 'empresa'], puesto: ['puesto', 'cargo'], alta: ['alta'], fechaAlta: ['fecha alta', 'fecha de alta'], sexo: ['sexo'],
   categoriaCCT: ['categoria cct', 'categoriacct', 'categoria'], modalidad: ['modalidad'], rifl: ['regimen 710', 'regimen 710 rifl', 'rifl', '710'],
   fechaIngreso: ['fecha ingreso', 'fecha de ingreso', 'ingreso'],
   sueldoActual: ['sueldo', 'sueldo actual', 'sueldo mensual', 'sueldo mensual normal y habitual'],
@@ -776,6 +782,7 @@ function impEstado(v) {
 function impBool(v) { const n = normHeader(v); return ['si', 's', 'x', '1', 'true', 'verdadero', 'yes'].includes(n); }
 function impAlta(v) { const n = normHeader(v); return n === 'n' || n === 'normal' ? 'N' : n === 's' || n === 'especial' ? 'S' : ''; }
 function impPuesto(v) { const s = String(v ?? '').trim(); if (!s) return ''; return PUESTOS.find(p => p.toLowerCase() === s.toLowerCase()) || s; }
+function impSexo(v) { const n = normHeader(v); return ['m', 'masculino', 'hombre', 'varon'].includes(n) ? 'M' : ['f', 'femenino', 'mujer'].includes(n) ? 'F' : ''; }
 function impTxt(v, prevVal) { const s = String(v ?? '').trim(); return s !== '' ? s : (prevVal ?? ''); }
 const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e.estado));
 const totalDe = r => r.total ?? r.bruto;
@@ -1560,14 +1567,14 @@ function renderPar() {
   </div>
   <form class="card" onsubmit="return false">
     <h2>Carga masiva de empleados (Excel / CSV)</h2>
-    <p class="muted" style="margin-top:0">Subí una planilla con un empleado por fila. Si el <b>legajo</b> o el <b>DNI</b> de una fila ya existe, se actualiza ese legajo; si no, se crea uno nuevo. No borra ni toca a nadie que no esté en el archivo.</p>
+    <p class="muted" style="margin-top:0">Subí una planilla con un empleado por fila. El <b>DNI</b> es lo único obligatorio: si ya está cargado, se actualiza ese legajo y <b>solo se pisan los datos que vengan con contenido</b> (las celdas vacías no borran nada). Si el DNI no existe, se crea un legajo nuevo y ahí también hacen falta nombre y apellido. No toca a nadie que no esté en el archivo.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn" type="button" data-act="impEmpPlantilla">Descargar plantilla</button>
       <label class="btn primary" style="cursor:pointer">Elegir archivo<input type="file" id="imp-emp" accept=".xlsx,.xls,.csv" hidden></label>
       <span id="imp-emp-nombre" class="muted"></span>
     </div>
     <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Columnas que reconoce</summary>
-      <p style="margin:8px 0 0">Obligatorias: <b>Nombre</b>, <b>Apellido</b>, <b>DNI</b>. Opcionales: Legajo, CUIL, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria, Régimen 710 (Sí/No). El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
+      <p style="margin:8px 0 0">Obligatoria: <b>DNI</b> (para legajos nuevos, también <b>Nombre</b> y <b>Apellido</b>). Opcionales: Nombre, Apellido, Legajo, CUIL, Sexo, Fecha de alta, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria, Régimen 710 (Sí/No). El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
     </details>
     <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
   </form>
@@ -1615,7 +1622,7 @@ function paintOrdenCols() {
   const ord = ordenColsEmp();
   box.innerHTML = ord.map((id, i) => {
     const c = COLS_EMP.find(x => x.id === id) || { label: id };
-    return `<li class="ord-item" draggable="true" data-kind="col" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;margin:0"><input type="checkbox" data-col="${id}" ${colVisible(id) ? 'checked' : ''}><span class="ord-name">${esc(c.label)}</span></label><span class="ord-btns"><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(c.label)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(c.label)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`;
+    return `<li class="ord-item" draggable="true" data-kind="col" data-pi="${i}"><span class="grip" aria-hidden="true">⠿</span><span class="ord-n">${i + 1}</span><label class="ord-lbl"><input type="checkbox" data-col="${id}" ${colVisible(id) ? 'checked' : ''}><span class="ord-name">${esc(c.label)}</span></label><span class="ord-btns"><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="-1" aria-label="Subir ${esc(c.label)}" ${i === 0 ? 'disabled' : ''}>▲</button><button type="button" class="btn sm" data-act="colMove" data-i="${i}" data-d="1" aria-label="Bajar ${esc(c.label)}" ${i === ord.length - 1 ? 'disabled' : ''}>▼</button></span></li>`;
   }).join('');
 }
 
@@ -2408,14 +2415,15 @@ document.addEventListener('change', e => {
       const errores = [], cambios = [];
       rows.forEach((row, i) => {
         const d = {}; Object.entries(colMap).forEach(([h, f]) => d[f] = row[h]);
-        const nombre = String(d.nombre ?? '').trim(), apellido = String(d.apellido ?? '').trim(), dni = String(d.dni ?? '').trim();
-        if (!nombre || !apellido || !dni) { errores.push(`Fila ${i + 2}: falta nombre, apellido o DNI.`); return; }
+        // Único dato obligatorio: el DNI. Con él se busca el legajo; las celdas vacías no pisan lo ya cargado.
+        const dniIn = String(d.dni ?? '').trim();
+        if (!soloDig(dniIn)) { errores.push(`Fila ${i + 2}: falta el DNI.`); return; }
         const legajoRaw = String(d.legajo ?? '').trim();
-        let prev = null;
-        if (legajoRaw) prev = S.empleados.find(x => x.legajo === legajoRaw);
-        if (!prev && dni) prev = S.empleados.find(x => x.dni === dni);
+        const prev = S.empleados.find(x => soloDig(x.dni) === soloDig(dniIn)) || null;
+        const nombre = String(d.nombre ?? '').trim() || (prev ? prev.nombre : ''), apellido = String(d.apellido ?? '').trim() || (prev ? prev.apellido : ''), dni = prev ? (dniIn || prev.dni) : dniIn;
+        if (!prev && (!nombre || !apellido)) { errores.push(`Fila ${i + 2}: el DNI ${dniIn} no está cargado, así que para crear el legajo hacen falta también nombre y apellido.`); return; }
         const legajo = legajoRaw || (prev ? prev.legajo : String(S.empleados.reduce((m, x) => Math.max(m, parseInt(x.legajo) || 0), 0) + cambios.filter(c => c.isNew).length + 1).padStart(4, '0'));
-        if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id))) { errores.push(`Fila ${i + 2}: el legajo ${legajo} ya está usado por otro empleado.`); return; }
+        if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id)) || cambios.some(c => c.nuevo.legajo === legajo && (!prev || c.nuevo.id !== prev.id))) { errores.push(`Fila ${i + 2}: el legajo ${legajo} ya está usado por otro empleado.`); return; }
         const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
           legajo, nombre, apellido, dni,
           cuil: impTxt(d.cuil, prev && prev.cuil), fechaNac: impFecha(d.fechaNac) || (prev ? prev.fechaNac : ''),
@@ -2427,6 +2435,8 @@ document.addEventListener('change', e => {
           razonSocial: d.razonSocial !== undefined && String(d.razonSocial).trim() !== '' ? canonRazon(d.razonSocial) : (prev ? prev.razonSocial : ''),
           puesto: d.puesto !== undefined && String(d.puesto).trim() !== '' ? impPuesto(d.puesto) : (prev ? prev.puesto : ''),
           alta: d.alta !== undefined && String(d.alta).trim() !== '' ? impAlta(d.alta) : (prev ? prev.alta : ''),
+          fechaAlta: impFecha(d.fechaAlta) || (prev ? prev.fechaAlta || '' : ''),
+          sexo: impSexo(d.sexo) || (prev ? prev.sexo || '' : '') || sexoDeCuil(impTxt(d.cuil, prev && prev.cuil)),
           categoriaCCT: impTxt(d.categoriaCCT, prev && prev.categoriaCCT), modalidad: impTxt(d.modalidad, prev && prev.modalidad),
           fechaIngreso: impFecha(d.fechaIngreso) || (prev ? prev.fechaIngreso : ''),
           sueldoActual: d.sueldoActual !== undefined && String(d.sueldoActual).trim() !== '' ? impNum(d.sueldoActual) : (prev ? prev.sueldoActual : 0),

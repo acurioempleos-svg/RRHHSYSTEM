@@ -992,7 +992,8 @@ function renderDetail() {
   $('#v-emp').innerHTML = `
   <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>${isNew ? '' : '<button class="btn" data-act="fichaPrint">Imprimir ficha / PDF</button>'}
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
-    ${!isNew && canEgreso ? `<button class="btn primary" style="margin-left:auto" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
+    <button class="btn primary" type="button" style="margin-left:auto" data-act="saveEmp">${isNew ? 'Crear empleado' : 'Guardar cambios'}</button>
+    ${!isNew && canEgreso ? `<button class="btn primary" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <div class="cols">
    <form class="card" id="emp-form" onsubmit="return false">
     <div class="sub">Datos personales</div>
@@ -1018,7 +1019,7 @@ function renderDetail() {
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
       ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
     </div>
-    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span><button type="button" class="btn" data-act="arca" style="margin-left:26px;align-self:flex-start" title="Abre Mis Aportes (ARCA) con DNI, apellido y sexo ya cargados">Consultar en ARCA</button></div>
+    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
     <div class="sub">Solicitudes</div>
@@ -1029,7 +1030,6 @@ function renderDetail() {
       ${inp('Vencimiento DNI / precaria', 'dniVenc', 'date')}${inp('Vencimiento libreta sanitaria', 'libretaSanitariaVenc', 'date')}
     </div>
     <div style="margin-top:18px;display:flex;gap:8px">
-      <button class="btn primary" type="button" data-act="saveEmp">${isNew ? 'Crear empleado' : 'Guardar cambios'}</button>
       ${!isNew && !['liquidado', 'archivado'].includes(e.estado) && !liqs.length ? `<button class="btn danger" type="button" data-act="delEmp">Eliminar legajo</button>` : ''}
     </div>
    </form>

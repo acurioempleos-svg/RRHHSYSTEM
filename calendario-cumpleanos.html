@@ -641,12 +641,12 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
 <body>
 
 <div class="switcher-bar">
-  <span id="ciclo-status" style="position:absolute;left:14px;font:11px/1.2 'DM Sans',sans-serif;color:#F4E9D4;opacity:.85;max-width:160px"></span>
   <button id="btn-barra" class="active" onclick="showPage('barra')">BARRA CHALACA</button>
   <button id="btn-tanta" onclick="showPage('tanta')">TANTA</button>
   <button id="btn-lamar" onclick="showPage('lamar')">LA MAR</button>
   <button id="btn-itc" onclick="showPage('itc')">ITC</button>
 </div>
+<div id="ciclo-status" style="font:13px/1.4 'DM Sans',sans-serif;padding:7px 14px;text-align:center;background:#FFF4D6;color:#5A4300;border-bottom:1px solid #E6D49A">Conectando con el Ciclo del empleado…</div>
 
 <!-- ================= PAGE: BARRA CHALACA ================= -->
 <div id="page-barra" class="page active theme-barra">
@@ -1030,10 +1030,15 @@ function nombreCiclo(e){
 async function loadCiclo(){
   try{
     if(!window.crypto || !crypto.subtle) throw new Error('el navegador no permite descifrar (abrí el archivo desde https o localhost)');
-    const env = await fetchCicloEnvelope();
-    const pt  = await _cDecrypt(env);
-    const data = JSON.parse(env.v >= 2 ? await _gunzip(pt) : new TextDecoder().decode(pt));
-    if(!data || !Array.isArray(data.empleados)) throw new Error('formato inesperado');
+    let env, pt, data;
+    try{ env = await fetchCicloEnvelope(); }
+    catch(e){ throw new Error('no se pudo leer el bin del ciclo (' + (e.message || e) + '). ' + (/401|403/.test(e.message) ? 'La API key no tiene acceso.' : /404/.test(e.message) ? 'El ID del bin no existe.' : 'Revisá la conexión.')); }
+    if(!env || !env.data || !env.iv || !env.salt) throw new Error('el bin no tiene datos cifrados del ciclo (¿el ciclo ya guardó en la nube?)');
+    try{ pt = await _cDecrypt(env); }
+    catch(e){ throw new Error('la clave de cifrado no coincide con la del ciclo'); }
+    try{ data = JSON.parse(env.v >= 2 ? await _gunzip(pt) : new TextDecoder().decode(pt)); }
+    catch(e){ throw new Error('no se pudieron descomprimir los datos'); }
+    if(!data || !Array.isArray(data.empleados)) throw new Error('los datos no tienen la lista de empleados');
 
     const nuevo = { barra:{}, tanta:{}, lamar:{}, itc:{} }, activos = [], inactivos = [], sinLocal = new Set();
     let conFecha = 0, sinFecha = 0;
@@ -1054,16 +1059,21 @@ async function loadCiclo(){
     const firma = JSON.stringify([nuevo, inactivos.sort()]);
     const cambio = firma !== cicloFirma;
     cicloFirma = firma; autoCumple = nuevo; cicloNombres = { activos, inactivos }; cicloOk = true;
-    setCicloStatus('Ciclo del empleado ✓ ' + conFecha + ' cumpleaños' + (sinFecha ? ' · ' + sinFecha + ' sin fecha de nacimiento' : '') + (sinLocal.size ? ' · local sin pestaña: ' + [...sinLocal].join(', ') : ''));
+    setCicloStatus('Ciclo del empleado conectado ✓ — ' + data.empleados.length + ' empleados leídos, ' + activos.length + ' activos/en licencia, ' + conFecha + ' cumpleaños cargados' + (sinFecha ? ' · ' + sinFecha + ' activos sin fecha de nacimiento' : '') + (sinLocal.size ? ' · locales sin pestaña: ' + [...sinLocal].join(', ') : ''), (sinFecha && !conFecha) || sinLocal.size ? 'warn' : 'ok');
     if(sinLocal.size) console.warn('Locales del ciclo sin pestaña asignada (ajustá LOCAL_MAP):', [...sinLocal]);
     return cambio;
   }catch(e){
     console.error('No se pudo leer el ciclo del empleado:', e);
-    setCicloStatus('Ciclo del empleado: no se pudo leer (' + (e.message || 'error') + '). Se muestran solo las cargas manuales.');
+    setCicloStatus('Ciclo del empleado NO conectado: ' + (e.message || 'error') + '. Se muestran solo las cargas manuales.', 'err');
     return false;
   }
 }
-function setCicloStatus(t){ const el = document.getElementById('ciclo-status'); if(el){ el.textContent = t; el.title = t; } }
+function setCicloStatus(t, nivel){
+  const el = document.getElementById('ciclo-status'); if(!el) return;
+  const c = { ok:['#DDF0E4','#1F6B3F','#B7DCC4'], warn:['#FFF4D6','#5A4300','#E6D49A'], err:['#F8DAD5','#7A1F12','#E3AFA6'] }[nivel || 'warn'];
+  el.style.background = c[0]; el.style.color = c[1]; el.style.borderBottomColor = c[2];
+  el.textContent = t;
+}
 
 // Nombres de un día: los del ciclo (automáticos) + las cargas manuales que sigan vigentes.
 // Una carga manual se oculta si corresponde a alguien que ya no está activo en el ciclo,
@@ -1089,11 +1099,12 @@ function namesFor(local, y, m, day){
 }
 
 // Mes que está mirando cada local ahora mismo (independiente entre pestañas)
+const _hoy = new Date(), _y0 = _hoy.getFullYear(), _m0 = _hoy.getMonth() + 1;
 let currentMonth = {
-  barra: { y: 2026, m: 9 },
-  tanta: { y: 2026, m: 9 },
-  lamar: { y: 2026, m: 9 },
-  itc:   { y: 2026, m: 9 }
+  barra: { y: _y0, m: _m0 },
+  tanta: { y: _y0, m: _m0 },
+  lamar: { y: _y0, m: _m0 },
+  itc:   { y: _y0, m: _m0 }
 };
 
 let currentLocal = null;

@@ -895,7 +895,7 @@ function renderEmp() {
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
       <button class="btn" data-act="empPdf">Descargar PDF</button>
       <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
-      <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
+      <button class="btn" data-act="arcaLista" title="Recorré los empleados con DNI, apellido y sexo listos para copiar a ARCA">Verificar 710 (ARCA)</button><button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
     <details class="card fpanel" ${UI.fOpen === true ? 'open' : ''} ontoggle="UI.fOpen = this.open">
       <summary><span class="chev"></span>Filtros <span class="fcount" id="fcount" hidden></span><span class="fspace"></span><button type="button" class="btn sm" style="padding:2px 9px" id="fclear" data-act="clearFilters">Limpiar filtros</button></summary>
@@ -999,8 +999,9 @@ function renderDetail() {
     <div class="frm">
       ${inp('Nombre', 'nombre')}${inp('Apellido', 'apellido')}
       ${inp('DNI', 'dni', 'text', 'inputmode="numeric"')}${inp('CUIL', 'cuil', 'text', 'inputmode="numeric" placeholder="20-12345678-3"')}
-      ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${inp('Teléfono', 'tel', 'tel')}
-      ${inp('Email', 'email', 'email')}${inp('Domicilio', 'domicilio')}
+      ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${sel('Sexo (para ARCA)', 'sexo', { '': 'Sin indicar (se deduce del CUIL)', M: 'Masculino', F: 'Femenino' })}
+      ${inp('Teléfono', 'tel', 'tel')}${inp('Email', 'email', 'email')}
+      ${inp('Domicilio', 'domicilio')}
       ${inp('Contacto de emergencia', 'emergenciaNombre')}${inp('Teléfono de emergencia', 'emergenciaTel', 'tel')}
     </div>
     <div class="sub">Cuenta bancaria</div>
@@ -1023,7 +1024,7 @@ function renderDetail() {
         </div>
       </label>
     </div>
-    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
+    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span><button type="button" class="btn" data-act="arca" style="margin-left:26px;align-self:flex-start" title="Abre Mis Aportes (ARCA) con DNI, apellido y sexo ya cargados">Consultar en ARCA</button></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
     <div class="sub">Solicitudes</div>
@@ -2021,6 +2022,52 @@ function xlsHoja(wb, nombre, titulo, sub, head, rows, o = {}) {
   return ws;
 }
 
+
+/* ===== Verificación ARCA (Mis Aportes): copiar DNI / apellido / sexo y marcar 710 ===== */
+const ARCA_URL = 'https://serviciossegsoc.afip.gob.ar/MisAportes/app/basica/ingresoDatos.aspx';
+const sexoDeEmp = e => e.sexo || ({ '20': 'M', '27': 'F' }[String(e.cuil || '').replace(/\D/g, '').slice(0, 2)] || '');
+function copiarTxt(t) {
+  const ok = () => toast('Copiado: ' + t);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => copiarViejo(t, ok));
+  else copiarViejo(t, ok);
+}
+function copiarViejo(t, ok) { const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); ok(); } catch (e) { toast('No se pudo copiar.'); } a.remove(); }
+function dlgArca(startId) {
+  const old = $('#dlg-arca'); if (old) old.remove();
+  const lista = S.empleados.filter(e => ['activo', 'licencia', 'preingreso'].includes(e.estado)).sort((a, b) => String(a.legajo).localeCompare(String(b.legajo), undefined, { numeric: true }));
+  if (startId && !lista.some(e => e.id === startId)) { const x = S.empleados.find(e => e.id === startId); if (x) lista.unshift(x); }
+  if (!lista.length) return toast('No hay empleados para verificar.');
+  let i = Math.max(0, lista.findIndex(e => e.id === startId));
+  const d = document.createElement('dialog'); d.id = 'dlg-arca';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:18px 20px;max-width:480px;width:94%;color:var(--ink);position:fixed;right:16px;top:16px;margin:0';
+  document.body.appendChild(d);
+  const fila = (k, lab, val) => `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="muted" style="width:84px">${lab}</span><b style="flex:1;font-size:16px;word-break:break-all">${val ? esc(val) : '<span class="muted">— sin dato —</span>'}</b><button type="button" class="btn" data-k="${k}" ${val ? '' : 'disabled'}>Copiar</button></div>`;
+  function pintar() {
+    const e = lista[i], sx = sexoDeEmp(e), dni = String(e.dni || '').replace(/\D/g, '');
+    d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="margin:0">Verificar en ARCA</h3><span class="muted">${i + 1} de ${lista.length}</span></div>
+      <p style="margin:0 0 12px"><b>${esc(e.apellido)}, ${esc(e.nombre)}</b> <span class="muted">· Legajo ${esc(e.legajo)}</span></p>
+      ${fila('dni', 'Documento', dni)}${fila('ap', 'Apellido', e.apellido)}
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="muted" style="width:84px">Sexo</span>
+        <select id="arca-sx" style="flex:1"><option value="">Sin indicar${sx ? '' : ' (elegí uno)'}</option><option value="M" ${sx === 'M' ? 'selected' : ''}>Masculino</option><option value="F" ${sx === 'F' ? 'selected' : ''}>Femenino</option></select></div>
+      <div style="display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap"><button type="button" class="btn" data-k="abrir">Abrir ARCA</button>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="arca-710" ${e.rifl ? 'checked' : ''}> Aplica régimen 710</label></div>
+      <p class="muted" style="margin:0 0 12px;font-size:13px">En ARCA: pegá el documento, Tab, pegá el apellido, Tab y elegí el sexo (mismo orden que acá). Después el "No soy un robot" y Continuar.</p>
+      <div style="display:flex;gap:8px;justify-content:space-between"><button type="button" class="btn" data-k="prev" ${i ? '' : 'disabled'}>Anterior</button><button type="button" class="btn" data-k="cerrar">Cerrar</button><button type="button" class="btn primary" data-k="next" ${i < lista.length - 1 ? '' : 'disabled'}>Siguiente</button></div>`;
+    d.querySelector('#arca-sx').onchange = ev => { e.sexo = ev.target.value; save(); };
+    d.querySelector('#arca-710').onchange = ev => { const n = ev.target.checked; if (!!e.rifl !== n) { log(e.id, `Régimen 710 (RIFL): ${e.rifl ? 'Sí' : 'No'} → ${n ? 'Sí' : 'No'}`); e.rifl = n; save(); toast(n ? '710 tildado' : '710 destildado'); } };
+    d.querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+      const k = b.dataset.k;
+      if (k === 'dni') copiarTxt(dni); else if (k === 'ap') copiarTxt(e.apellido);
+      else if (k === 'abrir') window.open(ARCA_URL, 'arca');
+      else if (k === 'prev') { i--; pintar(); } else if (k === 'next') { i++; pintar(); }
+      else if (k === 'cerrar') cerrar();
+    });
+  }
+  function cerrar() { d.close(); d.remove(); try { if (!UI.detail) renderEmp(); } catch (e) { } }
+  d.addEventListener('cancel', () => setTimeout(() => cerrar(), 0));
+  pintar(); d.show();
+}
+
 /* ================= Acciones ================= */
 const ACT = {
   tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
@@ -2059,7 +2106,7 @@ const ACT = {
     if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id))) { toast('Ya existe un legajo con ese número.'); return; }
     const docs = {}; Object.keys(DOCS).forEach(k => docs[k] = f.elements['doc_' + k].checked);
     const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
-      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
+      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
@@ -2132,6 +2179,8 @@ const ACT = {
     save(); keepScroll(renderDetail);
   },
   delComentario: b => { S.comentarios = S.comentarios.filter(c => c.id !== b.dataset.id); save(); keepScroll(renderDetail); },
+  arca: () => { const e = empActual(); if (!e) return; dlgArca(e.id); },
+  arcaLista: () => dlgArca(),
   startEgreso: () => { const e = empActual(); pickEmp(e.id); UI.liqFrom = e.id; UI.detail = null; go('liq'); },
   openLiq: b => { const l = S.liquidaciones.find(x => x.id === b.dataset.id); UI.liqFrom = UI.detail && UI.detail !== 'new' ? UI.detail : null; UI.liq = { id: l.id, empId: l.empleadoId }; UI.detail = null; go('liq'); },
   liqBack: () => {

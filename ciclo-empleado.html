@@ -1017,7 +1017,7 @@ function renderDetail() {
       <label class="fld"><span>Razón social</span><select name="razonSocial"><option value="">Sin asignar</option>${RAZONES.map(r => `<option value="${esc(r)}" ${e.razonSocial === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></label>
       <label class="fld"><span>Puesto</span><select name="puesto"><option value="">Elegí un puesto</option>${ordenPuestos().map(p => `<option value="${esc(p)}" ${e.puesto === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
-      ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label>
+      ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label><label class="fld" id="fecha-alta-fld" ${e.alta === 'N' || e.alta === 'S' ? '' : 'hidden'}><span>Fecha de alta</span><input name="fechaAlta" type="date" value="${esc(e.fechaAlta ?? '')}"></label>
     </div>
     <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
@@ -2056,14 +2056,14 @@ const ACT = {
     const docs = {}; Object.keys(DOCS).forEach(k => docs[k] = f.elements['doc_' + k].checked);
     const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
       legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
-      emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '',
+      emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '', fechaAlta: d.alta ? (d.fechaAlta || '') : '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
       color: prev ? (prev.color || '') : '', destacado: !!f.elements.destacado.checked,
       solicitaAlta: !!f.elements.solicitaAlta.checked, solicitaAumento: !!f.elements.solicitaAumento.checked });
     if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
     else {
-      const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
+      const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', fechaAlta: 'Fecha de alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
       Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : k === 'sueldoActual' ? money(prev[k] || 0) + ' → ' + money(nuevo[k] || 0) : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
       if (!!prev.solicitaAlta !== !!nuevo.solicitaAlta) log(nuevo.id, `Solicito Alta: ${prev.solicitaAlta ? 'Sí' : 'No'} → ${nuevo.solicitaAlta ? 'Sí' : 'No'}`);
       if (!!prev.solicitaAumento !== !!nuevo.solicitaAumento) log(nuevo.id, `Solicito aumento: ${prev.solicitaAumento ? 'Sí' : 'No'} → ${nuevo.solicitaAumento ? 'Sí' : 'No'}`);
@@ -2280,6 +2280,13 @@ document.addEventListener('click', e => {
   if (!confirm('Tenés cambios sin guardar en el legajo. ¿Salir sin guardar?')) { e.stopPropagation(); e.preventDefault(); } else UI.dirty = false;
 }, true);
 document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#emp-form')) UI.dirty = true; });
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.name === 'alta' && t.closest && t.closest('#emp-form')) {
+    const fld = $('#fecha-alta-fld'); if (fld) fld.hidden = !(t.value === 'N' || t.value === 'S');
+    UI.dirty = true;
+  }
+});
 window.addEventListener('beforeunload', e => { if (UI.dirty) { e.preventDefault(); e.returnValue = ''; } });
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('tr[data-act]')) e.target.click(); });
 const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'checkbox', 'radio', 'file', 'color', 'time', 'datetime-local', 'range', 'url']);

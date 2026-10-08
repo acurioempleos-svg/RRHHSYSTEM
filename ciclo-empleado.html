@@ -103,6 +103,14 @@ td.num,th.num{text-align:right}
 .sub{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
 .sub:first-child{margin-top:0;padding-top:0;border:0}
 .docs{display:grid;gap:6px}
+details.sec{border-top:1px solid var(--line)}
+details.sec:first-of-type{border-top:0}
+details.sec>summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);padding:12px 0;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>.sec-body{padding:2px 0 14px}
+.secs-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
 .docs label{display:flex;gap:8px;align-items:center}
 .docs input{width:auto}
 .row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
@@ -768,7 +776,7 @@ const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
 const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
-const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '' };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '', secs: {} };
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
 /* ================= Alertas del panel general ================= */
@@ -976,7 +984,9 @@ function renderDetail() {
   const e = isNew ? { estado: 'preingreso', modalidad: 'indeterminado', docs: {} } : S.empleados.find(x => x.id === UI.detail);
   if (!e) { UI.detail = null; return renderEmp(); }
   const inp = (label, name, type = 'text', ex = '', cls = '') => `<label class="fld ${cls}"><span>${label}</span><input name="${name}" type="${type}" value="${esc(e[name] ?? '')}" ${ex}></label>`;
-  const sel = (label, name, opts) => `<label class="fld"><span>${label}</span><select name="${name}">${Object.entries(opts).map(([k, v]) => `<option value="${k}" ${e[name] === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+  const sel = (label, name, opts, cur = e[name]) => `<label class="fld"><span>${label}</span><select name="${name}">${Object.entries(opts).map(([k, v]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+  const so = (id, t) => `<details class="sec" data-sec="${id}" ${UI.secs[id] === false ? '' : 'open'}><summary>${t}</summary><div class="sec-body">`;
+  const sc = '</div></details>';
   const rem = S.remuneraciones.filter(r => r.empleadoId === e.id).sort((a, b) => b.periodo.localeCompare(a.periodo));
   const vac = S.vacaciones.filter(v => v.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
   const lic = S.licencias.filter(l => l.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
@@ -996,21 +1006,22 @@ function renderDetail() {
     ${!isNew && canEgreso ? `<button class="btn primary" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <div class="cols">
    <form class="card" id="emp-form" onsubmit="return false">
-    <div class="sub">Datos personales</div>
+    <div class="secs-tools"><button type="button" class="btn sm" data-act="secsAll">Contraer / expandir todo</button></div>
+    ${so('personales', 'Datos personales')}
     <div class="frm">
       ${inp('Nombre', 'nombre')}${inp('Apellido', 'apellido')}
       ${inp('DNI', 'dni', 'text', 'inputmode="numeric"')}${inp('CUIL', 'cuil', 'text', 'inputmode="numeric" placeholder="20-12345678-3"')}
-      ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${sel('Sexo (para ARCA)', 'sexo', { '': 'Sin indicar (se deduce del CUIL)', M: 'Masculino', F: 'Femenino' })}
+      ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${sel('Sexo (se completa según el CUIL)', 'sexo', { '': 'Sin indicar', M: 'Masculino', F: 'Femenino' }, e.sexo || sexoDeCuil(e.cuil))}
       ${inp('Teléfono', 'tel', 'tel')}${inp('Email', 'email', 'email')}
       ${inp('Domicilio', 'domicilio')}
       ${inp('Contacto de emergencia', 'emergenciaNombre')}${inp('Teléfono de emergencia', 'emergenciaTel', 'tel')}
     </div>
-    <div class="sub">Cuenta bancaria</div>
+    ${sc}${so('bancaria', 'Cuenta bancaria')}
     <div class="frm">
       ${inp('CBU / alias', 'cbu')}<label class="fld"><span>Banco</span><input name="banco" list="bancos" value="${esc(e.banco ?? '')}"></label>
     </div>
     <datalist id="bancos">${bancosLista().map(b => `<option value="${esc(b)}">`).join('')}</datalist>
-    <div class="sub">Datos laborales</div>
+    ${sc}${so('laborales', 'Datos laborales')}
     <div class="frm">
       ${inp('Legajo', 'legajo', 'text', 'placeholder="Automático si lo dejás vacío"')}${sel('Estado', 'estado', ESTADOS)}
       <label class="fld"><span>Local</span><input name="local" list="locales" value="${esc(e.local ?? '')}"></label>
@@ -1022,13 +1033,14 @@ function renderDetail() {
     <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
-    <div class="sub">Solicitudes</div>
+    ${sc}${so('solicitudes', 'Solicitudes')}
     <div class="docs"><label><input type="checkbox" name="solicitaAlta" ${e.solicitaAlta ? 'checked' : ''}> Solicito Alta</label><label><input type="checkbox" name="solicitaAumento" ${e.solicitaAumento ? 'checked' : ''}> Solicito aumento</label></div>
-    <div class="sub">Documentación de ingreso</div>
+    ${sc}${so('docs', 'Documentación de ingreso')}
     <div class="docs">${Object.entries(DOCS).map(([k, v]) => `<label><input type="checkbox" name="doc_${k}" ${e.docs?.[k] ? 'checked' : ''}> ${v}</label>`).join('')}</div>
     <div class="frm" style="margin-top:12px">
       ${inp('Vencimiento DNI / precaria', 'dniVenc', 'date')}${inp('Vencimiento libreta sanitaria', 'libretaSanitariaVenc', 'date')}
     </div>
+    ${sc}
     <div style="margin-top:18px;display:flex;gap:8px">
       ${!isNew && !['liquidado', 'archivado'].includes(e.estado) && !liqs.length ? `<button class="btn danger" type="button" data-act="delEmp">Eliminar legajo</button>` : ''}
     </div>
@@ -2018,6 +2030,44 @@ function xlsHoja(wb, nombre, titulo, sub, head, rows, o = {}) {
 
 
 /* ================= Acciones ================= */
+const soloDig = v => String(v || '').replace(/\D/g, '');
+// Prefijo 20 = masculino, 27 = femenino. Los prefijos 23/24 se usan para ambos sexos: no se deduce.
+function sexoDeCuil(c) { const d = soloDig(c); if (d.length < 2) return ''; const p = d.slice(0, 2); return p === '20' ? 'M' : p === '27' ? 'F' : ''; }
+function cuilDvOk(c) {
+  const w = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]; let t = 0;
+  for (let i = 0; i < 10; i++) t += +c[i] * w[i];
+  let dv = 11 - (t % 11); if (dv === 11) dv = 0;
+  return dv !== 10 && dv === +c[10];
+}
+function cbuDvOk(c) {
+  const dv = (str, w) => { let t = 0; for (let i = 0; i < w.length; i++) t += +str[i] * w[i]; return (10 - (t % 10)) % 10; };
+  return dv(c.slice(0, 7), [7, 1, 3, 9, 7, 1, 3]) === +c[7] && dv(c.slice(8, 21), [3, 9, 7, 1, 3, 9, 7, 1, 3, 9, 7, 1, 3]) === +c[21];
+}
+// Devuelve la lista de observaciones (no bloquean: el usuario decide si guarda igual).
+function validarLegajo(d, prev) {
+  const av = [], otros = S.empleados.filter(x => !prev || x.id !== prev.id);
+  const nom = x => `${x.apellido}, ${x.nombre}`;
+  const dni = soloDig(d.dni), cuil = soloDig(d.cuil), cbu = String(d.cbu || '').trim();
+  if (dni) { const x = otros.find(o => soloDig(o.dni) === dni); if (x) av.push(`El DNI ${d.dni.trim()} ya está cargado en el legajo de ${nom(x)}.`); }
+  if (cuil) {
+    const x = otros.find(o => soloDig(o.cuil) === cuil); if (x) av.push(`El CUIL ${d.cuil.trim()} ya está cargado en el legajo de ${nom(x)}.`);
+    if (cuil.length !== 11) av.push('El CUIL debe tener 11 dígitos.');
+    else {
+      if (!['20', '23', '24', '25', '26', '27'].includes(cuil.slice(0, 2))) av.push(`El prefijo ${cuil.slice(0, 2)} del CUIL no corresponde a una persona física.`);
+      if (!cuilDvOk(cuil)) av.push('El dígito verificador del CUIL no es correcto: revisá que esté bien escrito.');
+      if (dni && cuil.slice(2, 10) !== dni.padStart(8, '0')) av.push('El DNI no coincide con el número que figura dentro del CUIL.');
+      const sx = sexoDeCuil(cuil); if (sx && d.sexo && d.sexo !== sx) av.push(`El sexo elegido no coincide con el prefijo del CUIL (${cuil.slice(0, 2)} = ${sx === 'M' ? 'masculino' : 'femenino'}).`);
+    }
+  }
+  if (cbu && /^[\d\s-]+$/.test(cbu)) {   // si tiene letras o puntos se asume que es un alias
+    const c = soloDig(cbu);
+    if (c.length !== 22) av.push(`El CBU tiene ${c.length} dígitos y debe tener 22.`);
+    else if (!cbuDvOk(c)) av.push('Los dígitos verificadores del CBU no coinciden: probablemente hay un número mal cargado.');
+  }
+  if (d.alta && d.fechaAlta && d.fechaIngreso && d.fechaAlta < d.fechaIngreso) av.push(`La fecha de alta (${fdate(d.fechaAlta)}) es anterior a la fecha de ingreso (${fdate(d.fechaIngreso)}).`);
+  return av;
+}
+
 const ACT = {
   tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
   clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; UI.vistaSel = ''; renderEmp(); },
@@ -2046,6 +2096,7 @@ const ACT = {
   newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
   openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
   back: () => { UI.detail = null; renderEmp(); },
+  secsAll: () => { const ds = $$('#emp-form details.sec'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.secs[x.dataset.sec] = abrir; }); },
   saveEmp: () => {
     const f = $('#emp-form'), d = Object.fromEntries(new FormData(f));
     if (!d.nombre.trim() || !d.apellido.trim() || !d.dni.trim()) { toast('Nombre, apellido y DNI son obligatorios.'); return; }
@@ -2053,9 +2104,11 @@ const ACT = {
     const prev = isNew ? null : empActual();
     const legajo = d.legajo.trim() || String(S.empleados.reduce((m, x) => Math.max(m, parseInt(x.legajo) || 0), 0) + 1).padStart(4, '0');
     if (S.empleados.some(x => x.legajo === legajo && (!prev || x.id !== prev.id))) { toast('Ya existe un legajo con ese número.'); return; }
+    const avisos = validarLegajo(d, prev);
+    if (avisos.length && !confirm('Revisá estos puntos antes de guardar:\n\n' + avisos.map(a => '• ' + a).join('\n') + '\n\n¿Guardar igual?')) return;
     const docs = {}; Object.keys(DOCS).forEach(k => docs[k] = f.elements['doc_' + k].checked);
     const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
-      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
+      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || sexoDeCuil(d.cuil) || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '', fechaAlta: d.alta ? (d.fechaAlta || '') : '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
@@ -2280,6 +2333,7 @@ document.addEventListener('click', e => {
   if (!confirm('Tenés cambios sin guardar en el legajo. ¿Salir sin guardar?')) { e.stopPropagation(); e.preventDefault(); } else UI.dirty = false;
 }, true);
 document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#emp-form')) UI.dirty = true; });
+document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) UI.secs[d.dataset.sec] = d.open; }, true);
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.name === 'alta' && t.closest && t.closest('#emp-form')) {
@@ -2312,6 +2366,7 @@ document.addEventListener('input', e => {
   else if (t.id === 'per-local') { UI.perLocal = t.value; paintPeriodo(); }
   else if (t.id === 'h-emp') { UI.hEmp = t.value; paintHist(); }
   else if (t.id === 'pl-mes') UI.planillaMes = t.value;
+  else if (t.name === 'cuil' && t.closest('#emp-form')) { const sx = sexoDeCuil(t.value), se = $('#emp-form select[name=sexo]'); if (sx && se) se.value = sx; }
   else if (t.name === 'fechaIngreso' && t.closest('#emp-form')) $('#fin-prueba').value = t.value ? fdate(finDePrueba(t.value, S.parametros.mesesPrueba)) : '—';
   else if (t.id === 'rep-efe' || t.id === 'rep-tra') onRepInput(t);
   else if (t.id === 'pay-efe' || t.id === 'pay-tra') onPayInput(t);

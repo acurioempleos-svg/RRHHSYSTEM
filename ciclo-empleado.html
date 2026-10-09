@@ -378,9 +378,15 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   const dTrab = Math.min(30, dias(ing > iniMes ? ing : iniMes, f));
   add('DIAS', `Días trabajados del mes (${dTrab})`, v30 * dTrab);
 
+  // 1 bis. Ajustes manuales de la liquidación: ausencias, presentismo y sumas no remunerativas
+  const ausDias = +egreso.ausDias || 0, presU = +egreso.presDescontar || 0;
+  if (ausDias > 0) C.push({ codigo: 'AUS', desc: `Ausencias a descontar (${ausDias} ${ausDias === 1 ? 'día' : 'días'})`, monto: -r2(v30 * ausDias), remunerativo: true });
+  if (presU > 0) C.push({ codigo: 'PRES', desc: `Presentismo a descontar (${presU}/10 del sueldo)`, monto: -r2(sueldo * presU / 10), remunerativo: true });
+  (egreso.nremunExtra || []).forEach(n => add('NREM_X', n.concepto || 'Suma no remunerativa', +n.monto || 0, false));
+
   // Renuncia / desvinculación con pago de días trabajados: se paga únicamente el período trabajado
   if (t === 'renuncia_dias' || t === 'desvinculacion_dias') {
-    avisos.push('Liquidación de solo días trabajados: se paga únicamente el período trabajado del mes. No incluye SAC, vacaciones, preaviso, integración, indemnizaciones, feriados ni otros agregados.');
+    avisos.push('Liquidación de solo días trabajados: se paga únicamente el período trabajado del mes. No incluye SAC, vacaciones, preaviso, integración, indemnizaciones, feriados ni los agregados del legajo (sí las ausencias, el presentismo y las sumas no remunerativas que cargues acá).');
     const totalSolo = r2(C.reduce((s, c) => s + c.monto, 0));
     return { conceptos: C, total: totalSolo, avisos,
              meta: { mrnh: r2(mrnh), anios, meses, sueldo, base245: 0, mesesPre: 0, antigReal: +antigReal.toFixed(2) } };
@@ -1125,6 +1131,22 @@ const empActual = () => S.empleados.find(x => x.id === UI.detail);
 
 /* ================= Liquidación ================= */
 const vacAuto = (empId, fecha) => S.vacaciones.filter(v => v.empleadoId === empId && String(v.anio) === String(fecha).slice(0, 4)).reduce((s, v) => s + v.dias, 0);
+// Días de ausencia sin goce (licencia sin goce + suspensiones) del mes de egreso, hasta la fecha de egreso, según el legajo
+function ausAuto(empId, fecha) {
+  if (!fecha) return 0;
+  const ini = String(fecha).slice(0, 7) + '-01', fin = fecha;
+  const sol = (d, h) => { const a = d > ini ? d : ini, b = h < fin ? h : fin; return b >= a ? dias(pd(a), pd(b)) : 0; };
+  let n = 0;
+  S.licencias.filter(l => l.empleadoId === empId && l.tipo === 'Sin goce de sueldo').forEach(l => { n += sol(l.desde, l.hasta); });
+  S.sanciones.filter(x => x.empleadoId === empId && x.tipo === 'Suspensión' && +x.dias > 0 && x.fecha >= ini && x.fecha <= fin).forEach(x => { n += +x.dias; });
+  return n;
+}
+function nremLiqHtml(list, dis) {
+  return (list || []).map((n, i) => `<div class="nr-row" style="display:grid;grid-template-columns:1fr 130px auto;gap:8px;margin-top:8px;align-items:end">
+    <label class="fld"><span>Concepto</span><input type="text" class="nr-c" placeholder="Ej: premio, viáticos" value="${esc(n.concepto || '')}" ${dis}></label>
+    <label class="fld"><span>Monto</span><input type="number" class="nr-m" step="0.01" min="0" value="${+n.monto || 0}" ${dis}></label>
+    <button type="button" class="btn sm danger" data-act="delLiqNrem" data-i="${i}" ${dis}>Quitar</button></div>`).join('');
+}
 const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
 
 UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
@@ -1224,6 +1246,17 @@ function renderLiq() {
         <label class="fld"><span>Vacaciones gozadas este año (días)</span><input type="number" id="l-vg" step="0.01" min="0" value="${inp.vacGozadas ?? 0}" ${dis}></label>
         <label class="fld"><span>Vacaciones pendientes de años anteriores (días)</span><input type="number" id="l-vp" step="0.01" min="0" value="${inp.vacPend ?? 0}" ${dis}></label>
       </div>
+      <h3 style="margin:18px 0 4px">Ajustes de la liquidación</h3>
+      <div class="frm" style="margin-top:8px">
+        <label class="fld"><span>Ausencias a descontar (días)</span><input type="number" id="l-aus" step="0.5" min="0" value="${inp.ausDias ?? 0}" ${dis}></label>
+        <label class="fld"><span>Presentismo a descontar (1 = 1/10 del sueldo)</span><input type="number" id="l-pres" step="0.5" min="0" value="${inp.presDescontar ?? 0}" ${dis}></label>
+      </div>
+      <p class="muted" id="l-aus-hint" style="margin:6px 0 0"></p>
+      <div style="margin-top:12px"><strong>Sumas no remunerativas</strong>
+        <div id="l-nrem">${nremLiqHtml(inp.nremunExtra, dis)}</div>
+        <button type="button" class="btn sm" style="margin-top:8px" data-act="addLiqNrem" ${dis}>+ Agregar suma no remunerativa</button>
+        <p class="muted" style="margin:6px 0 0">Se suman al total sin ser remunerativas. Las del legajo para el mes de egreso se incluyen solas.</p>
+      </div>
     </div>
    </div>
    <div class="card recibo" id="liq-res"></div>
@@ -1255,7 +1288,9 @@ const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
            nremun: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'nremun' && n.mes === m).map(n => ({ concepto: n.concepto, monto: n.monto })) }; };
 function readLiqForm() {
   return { tipo: $('#l-tipo').value, fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
-    montoPactado: +$('#l-monto').value || 0, vacGozadas: +$('#l-vg').value || 0, vacPend: +$('#l-vp').value || 0 };
+    montoPactado: +$('#l-monto').value || 0, vacGozadas: +$('#l-vg').value || 0, vacPend: +$('#l-vp').value || 0,
+    ausDias: Math.max(0, +$('#l-aus').value || 0), presDescontar: Math.max(0, +$('#l-pres').value || 0),
+    nremunExtra: [...document.querySelectorAll('#l-nrem .nr-row')].map(r => ({ concepto: r.querySelector('.nr-c').value.trim(), monto: Math.max(0, +r.querySelector('.nr-m').value || 0) })) };
 }
 
 function updateLiq() {
@@ -1269,6 +1304,8 @@ function updateLiq() {
   $('#row-monto').hidden = inp.tipo !== 'mutuo_acuerdo';
   $('#row-prea').hidden = !preavisoAplica(inp.tipo, inp.fecha);
   $('#row-integ').hidden = !['despido_sin_causa', 'despido_indirecto'].includes(inp.tipo);
+  const hint = $('#l-aus-hint'), aa = ausAuto(emp.id, inp.fecha);
+  if (hint) hint.textContent = aa > 0 ? `Según el legajo, en el mes de egreso hay ${aa} ${aa === 1 ? 'día' : 'días'} de licencia sin goce o suspensión.` : '';
 
   let res;
   if (locked) res = liq.result;
@@ -1279,7 +1316,7 @@ function updateLiq() {
     if (!inp.fecha) { box.innerHTML = '<div class="msg">Elegí la fecha de egreso.</div>'; return; }
     if (pd(inp.fecha) < pd(emp.fechaIngreso)) { box.innerHTML = '<div class="msg">La fecha de egreso es anterior a la fecha de ingreso.</div>'; return; }
     res = calcularLiquidacion({ emp, rem: S.remuneraciones.filter(r => r.empleadoId === emp.id),
-      egreso: { tipo: inp.tipo, fecha: inp.fecha, pagarPreaviso: inp.pagarPreaviso, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ...novMes(emp.id, inp.fecha) },
+      egreso: { tipo: inp.tipo, fecha: inp.fecha, pagarPreaviso: inp.pagarPreaviso, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ausDias: inp.ausDias, presDescontar: inp.presDescontar, nremunExtra: inp.nremunExtra, ...novMes(emp.id, inp.fecha) },
       P: S.parametros });
     L.res = res;
   }
@@ -1288,7 +1325,7 @@ function updateLiq() {
   const vence = addHabiles(inp.fecha, 4);
   let simHtml = '';
   if (!locked && preavisoAplica(inp.tipo, inp.fecha)) {
-    const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ...novMes(emp.id, inp.fecha) };
+    const egresoBase = { tipo: inp.tipo, fecha: inp.fecha, pagarIntegracion: inp.pagarIntegracion, montoPactado: inp.montoPactado, vacGozadasAnio: inp.vacGozadas, vacPendientesAnt: inp.vacPend, ausDias: inp.ausDias, presDescontar: inp.presDescontar, nremunExtra: inp.nremunExtra, ...novMes(emp.id, inp.fecha) };
     const remEmp = S.remuneraciones.filter(r => r.empleadoId === emp.id);
     const sinP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: false }, P: S.parametros });
     const conP = calcularLiquidacion({ emp, rem: remEmp, egreso: { ...egresoBase, pagarPreaviso: true }, P: S.parametros });
@@ -2186,6 +2223,17 @@ function validarLegajo(d, prev) {
 }
 
 const ACT = {
+  addLiqNrem: () => {
+    const L = UI.liq; if (!L || !L.empId) { toast('Elegí un empleado primero.'); return; }
+    const inp = readLiqForm(); inp.nremunExtra.push({ concepto: '', monto: 0 }); L.inputs = inp;
+    $('#l-nrem').innerHTML = nremLiqHtml(inp.nremunExtra, ''); updateLiq();
+    const c = document.querySelectorAll('#l-nrem .nr-c'); if (c.length) c[c.length - 1].focus();
+  },
+  delLiqNrem: b => {
+    const L = UI.liq; if (!L) return;
+    const inp = readLiqForm(); inp.nremunExtra.splice(+b.dataset.i, 1); L.inputs = inp;
+    $('#l-nrem').innerHTML = nremLiqHtml(inp.nremunExtra, ''); updateLiq();
+  },
   tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
   clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; UI.vistaSel = ''; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },

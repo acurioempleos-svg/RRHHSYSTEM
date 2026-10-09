@@ -295,6 +295,15 @@ details.alert>summary h4{margin:0;flex:1}
 details.alert>summary::after{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
 details.alert[open]>summary::after{transform:rotate(45deg)}
 details.alert[open]>summary{margin-bottom:6px}
+details.cardsec{padding:0}
+details.cardsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 18px;user-select:none}
+details.cardsec>summary::-webkit-details-marker{display:none}
+details.cardsec>summary h2{margin:0;flex:1}
+details.cardsec>summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+details.cardsec[open]>summary::after{transform:rotate(45deg)}
+details.cardsec[open]>summary{border-bottom:1px solid var(--line)}
+.cardsec-body{padding:14px 18px 18px}
+details.cardsec.tablewrap .cardsec-body{padding:0}
 .st-borrador{background:#E6ECEA;color:#41565C}.st-aprobada{background:#F8E9CB;color:#8A5608}.st-pagada{background:#DDF0E4;color:#1F6B3F}.st-cerrada{background:#D3E8E3;color:#0A5343}
 .chip{white-space:nowrap}
 #ll-res .chip{padding:1px 7px;font-size:11.5px}
@@ -322,9 +331,6 @@ details.alert[open]>summary{margin-bottom:6px}
     <span id="sync" class="sync off"><span class="dot"></span><span id="sync-txt">Sin sincronización</span></span>
     <!-- Si el calendario está publicado en otra dirección, cambiá el href por esa URL completa. -->
     <a class="btn sm" href="calendario-cumpleanos.html" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">🎂 Cumpleaños</a>
-    <span id="respaldo"></span>
-    <button class="btn sm" data-act="export">Exportar respaldo</button>
-    <label class="btn sm" style="cursor:pointer">Importar<input type="file" id="imp" accept="application/json,.json" hidden></label>
   </div>
 </header>
 <main>
@@ -872,7 +878,7 @@ const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alt
 const PREFS_KEY = 'ciclo_ui_prefs_v1';
 const PREFS = (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {}; } catch (e) { return {}; } })();
 const prefsSave = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch (e) {} };
-const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '', secs: PREFS.secs || (PREFS.secs = {}), alOpen: PREFS.alOpen || (PREFS.alOpen = {}), llRes: !!PREFS.llRes };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '', estOpen: PREFS.estOpen || (PREFS.estOpen = {}), secs: PREFS.secs || (PREFS.secs = {}), alOpen: PREFS.alOpen || (PREFS.alOpen = {}), llRes: !!PREFS.llRes };
 const liqChip = e => `<span class="chip st-${e}">${esc(LIQ_ESTADOS[e] || e)}</span>`;
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
@@ -932,6 +938,7 @@ function renderIni() {
   const bor = S.liquidaciones.filter(l => l.estado === 'borrador'), apr = S.liquidaciones.filter(l => l.estado === 'aprobada');
   const totAp = r2(apr.reduce((s, l) => s + (totalDe(l.result) || 0), 0));
   const prueba = A.prueba.length, venc = A.vLibreta.length + A.vDni.length;
+  const ddResp = S.lastExport ? Math.floor((Date.now() - new Date(S.lastExport)) / DAY) : null;
   const kpi = (n, lbl, sub, tone, attrs) => `<button type="button" class="kpi ${tone}" data-act="iniGo" ${attrs}><strong>${n}</strong><span>${lbl}</span>${sub ? `<small>${sub}</small>` : ''}</button>`;
   const pl = {}; nom.forEach(e => { const k = alLocal(e); pl[k] = (pl[k] || 0) + 1; });
   const oml = new Map(ordenLocales().map((l, i) => [l, i]));
@@ -945,6 +952,7 @@ function renderIni() {
     ${kpi(apr.length, 'Aprobadas sin pagar', apr.length ? money(totAp) : '', apr.length ? 'warn' : 'ok', 'data-tab="liq" data-estado="aprobada"')}
     ${kpi(prueba, 'Fin de período de prueba', 'Próximos 15 días', prueba ? 'warn' : 'ok', 'data-tab="ale" data-cat="prueba"')}
     ${kpi(venc, 'Vencimientos de legajo', 'DNI y libreta, próximos 15 días', venc ? 'warn' : 'ok', 'data-tab="ale" data-cat="venc"')}
+    ${ddResp === null || ddResp > 7 ? kpi(ddResp === null ? 'Sin respaldo' : `${ddResp} días`, 'Último respaldo', 'Exportalo desde Parámetros', 'warn', 'data-tab="par"') : ''}
   </div>
   ${B.length ? `<div class="card" style="margin-bottom:16px"><h3>Alertas por tipo</h3><div class="achips">${B.map(b => `<button type="button" class="btn sm ${b.crit ? 'danger' : ''}" data-act="iniGo" data-tab="ale" data-cat="${b.key}">${esc(b.title)} · <b>${b.items.length}</b></button>`).join('')}</div></div>` : ''}
   <div class="card"><h3>Plantel en nómina por local</h3>${barras(plantel)}</div>`;
@@ -998,12 +1006,12 @@ function go(tab) {
   paintBadge();
   window.scrollTo(0, 0);
 }
-function paintRespaldo() {
-  const el = $('#respaldo');
-  if (!S.lastExport) { el.innerHTML = '<span class="warn">Sin respaldo todavía</span>'; return; }
+function respaldoHtml() {
+  if (!S.lastExport) return '<span class="warn">Sin respaldo todavía</span>';
   const dd = Math.floor((Date.now() - new Date(S.lastExport)) / DAY);
-  el.innerHTML = dd > 7 ? `<span class="warn">Último respaldo hace ${dd} días</span>` : `Respaldo: ${fdate(S.lastExport.slice(0, 10))}`;
+  return dd > 7 ? `<span class="warn">Último respaldo hace ${dd} días</span>` : `Último respaldo: ${fdate(S.lastExport.slice(0, 10))}`;
 }
+function paintRespaldo() { const el = $('#respaldo'); if (el) el.innerHTML = respaldoHtml(); }
 
 /* ================= Empleados ================= */
 function renderEmp() {
@@ -1468,7 +1476,7 @@ function updateLiq() {
   const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
   box.innerHTML = `
     <div class="rc-head"><h2>Liquidación final <span class="chip st-${est}" style="vertical-align:middle;margin-left:6px">${LIQ_ESTADOS[est]}</span></h2>
-      <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span><span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span></div></div>
+      <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span>${emp.fechaAlta ? `<span>Alta ${fdate(emp.fechaAlta)}</span>` : ''}<span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span></div></div>
     ${res.avisos.length ? `<div class="avisos">${res.avisos.map(a => `<p>${esc(a)}</p>`).join('')}</div>` : ''}
     <table class="ledger"><tbody>
       <tr class="sec"><td colspan="2">Haberes</td></tr>
@@ -1524,13 +1532,25 @@ function onLiqInput(t) {
 }
 
 /* ================= Historial y estadística ================= */
+function plegarEst() {
+  $$('#est-area > .card').forEach(c => {
+    const h = c.querySelector('h2'); if (!h) return;
+    const key = h.textContent.trim(), d = document.createElement('details');
+    d.className = c.className + ' cardsec'; d.dataset.est = key;
+    d.open = UI.estOpen[key] !== undefined ? UI.estOpen[key] : key === 'Cantidad de empleados';
+    const sm = document.createElement('summary'); sm.appendChild(h);
+    const body = document.createElement('div'); body.className = 'cardsec-body';
+    while (c.firstChild) body.appendChild(c.firstChild);
+    d.append(sm, body); c.replaceWith(d);
+  });
+}
 function renderEst() {
   const locales = [...new Set([...LOCALES, ...S.empleados.map(e => (e.local || '').trim()).filter(Boolean)])];
   const puestos = ordenPuestos();
   const emps = S.empleados.slice().sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''));
   $('#v-est').innerHTML = `
   <div class="stack" id="est-area">
-    <div class="bar no-print"><button class="btn" data-act="estPdf">Descargar PDF</button><button class="btn" data-act="estXlsx">Descargar Excel</button></div>
+    <div class="bar no-print"><button class="btn" data-act="estPdf">Descargar PDF</button><button class="btn" data-act="estXlsx">Descargar Excel</button><button class="btn" data-act="estAll" style="margin-left:auto">Contraer / expandir todo</button></div>
     <div class="card">
       <h2>Cantidad de empleados</h2>
       <div class="frm" style="max-width:640px">
@@ -1580,6 +1600,7 @@ function renderEst() {
       <div id="h-res"></div>
     </div>
   </div>`;
+  plegarEst();
   paintEst(); paintCostoNomina(); paintPeriodo(); paintRotacion(); paintAntig(); paintMotivos(); paintCosto(); paintAltasNS(); paintSolicitudes(); paintHist();
 }
 function paintSolicitudes() {
@@ -1705,6 +1726,11 @@ function renderPar() {
   const jbc = jbConfig() || {};
   const txt = (id, label, v, ph = '') => `<label class="fld"><span>${label}</span><input type="text" id="${id}" value="${esc(v || '')}" placeholder="${ph}"></label>`;
   $('#v-par').innerHTML = `<div class="stack" style="max-width:720px">
+  <div class="card">
+    <h2>Respaldo de datos</h2>
+    <p class="muted" style="margin-top:0">Exportá un respaldo seguido: guarda todos los datos de la app en un archivo. Importar reemplaza los datos actuales por los del archivo.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span id="respaldo">${respaldoHtml()}</span><span style="margin-left:auto;display:flex;gap:8px"><button class="btn" type="button" data-act="export">Exportar respaldo</button><label class="btn" style="cursor:pointer">Importar<input type="file" id="imp" accept="application/json,.json" hidden></label></span></div>
+  </div>
   <form class="card" onsubmit="return false">
     <h2>Parámetros de liquidación</h2>
     <p class="muted" style="margin-top:0">Cada liquidación guardada conserva una copia de los valores que se usaron.</p>
@@ -2362,9 +2388,9 @@ async function pdfLiq(f0, ov) {
     orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones${ov ? '-' + INF_ARCH[ov.tipo] : ''}-${today()}.pdf`,
     kpis: [{ l: 'Liquidaciones', v: f.length }, { l: 'Total liquidado', v: mp(tot) }, { l: 'Pagado en efectivo', v: mp(efe), c: P.ok, n: ov && ov.tipo !== 'pagada' ? 'reparto previsto' : 'pagado o previsto' }, { l: 'Por transferencia', v: mp(tra), c: P.blue, n: ov && ov.tipo !== 'pagada' ? 'reparto previsto' : 'pagado o previsto' }],
     secs: [
-      { t: 'Detalle de liquidaciones', locs: f.map(r => r.local), n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
-        body: f.map(r => [fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
-        foot: ['TOTAL', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [6, 7, 8], cols: { 0: { cellWidth: 66 } }, fs: 8, tone: { 5: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
+      { t: 'Detalle de liquidaciones', locs: f.map(r => r.local), n: `${f.length} registro${f.length === 1 ? '' : 's'}`, head: ['Ingreso', 'Alta', 'Egreso', 'Nombre', 'Local', 'Razón social', 'Tipo', 'Estado', 'Monto', 'Efectivo', 'Transf.'],
+        body: f.map(r => [r.e.fechaIngreso ? fdate(r.e.fechaIngreso) : '—', r.e.fechaAlta ? fdate(r.e.fechaAlta) : '—', fdate(r.l.inputs.fecha), r.nom, r.local, r.razon, TIPOS[r.l.inputs.tipo] || '', LIQ_ESTADOS[r.l.estado], mp(r.monto), r.efe ? mp(r.efe) : '—', r.tra ? mp(r.tra) : '—']),
+        foot: ['TOTAL', '', '', '', '', '', '', '', mp(tot), mp(efe), mp(tra)], num: [8, 9, 10], cols: { 0: { cellWidth: 56 }, 1: { cellWidth: 56 }, 2: { cellWidth: 56 } }, fs: 8, tone: { 7: { Borrador: P.gold, Aprobada: P.blue, Pagada: P.ok, Cerrada: P.mut } } },
       suma('local', 'Local'), suma('razon', 'Razón social'),
       { t: 'Total por mes de egreso', head: ['Mes', 'Total'], body: liqPorMes(f).map(([m, v]) => [fper(m), mp(v)]), foot: ['TOTAL', mp(tot)], num: [1] },
     ],
@@ -2462,6 +2488,7 @@ const ACT = {
     if (d.tab === 'liq') { UI.liq = null; UI.ll = { q: '', tipo: '', estado: d.estado || '', local: '', razon: '', desde: '', hasta: '' }; UI.llOpen = !!d.estado; }
     go(d.tab);
   },
+  estAll: () => { const ds = $$('#est-area details[data-est]'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.estOpen[x.dataset.est] = abrir; }); prefsSave(); },
   alAll: () => { const ds = $$('#al-res details[data-al]'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.alOpen[x.dataset.al] = abrir; }); prefsSave(); },
   liqNueva: () => { UI.liq = { nueva: true }; UI.liqFrom = null; renderLiq(); window.scrollTo(0, 0); },
   clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; UI.vistaSel = ''; renderEmp(); },
@@ -2757,7 +2784,7 @@ document.addEventListener('change', e => {
 document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) { UI.secs[d.dataset.sec] = d.open; prefsSave(); } }, true);
 document.addEventListener('click', e => {
   const sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (!d || !d.dataset) return;
-  setTimeout(() => { if (d.dataset.al) { UI.alOpen[d.dataset.al] = d.open; prefsSave(); } else if (d.dataset.pref === 'llRes') { UI.llRes = d.open; PREFS.llRes = d.open; prefsSave(); } }, 0);
+  setTimeout(() => { if (d.dataset.al) { UI.alOpen[d.dataset.al] = d.open; prefsSave(); } else if (d.dataset.pref === 'llRes') { UI.llRes = d.open; PREFS.llRes = d.open; prefsSave(); } else if (d.dataset.est) { UI.estOpen[d.dataset.est] = d.open; prefsSave(); } }, 0);
 });
 document.addEventListener('change', e => {
   const t = e.target;
@@ -2875,7 +2902,8 @@ document.addEventListener('change', e => {
   };
   rd.readAsArrayBuffer(file);
 });
-$('#imp').addEventListener('change', e => {
+document.addEventListener('change', e => {
+  if (!e.target || e.target.id !== 'imp') return;
   const file = e.target.files[0]; if (!file) return;
   const rd = new FileReader();
   rd.onload = () => {

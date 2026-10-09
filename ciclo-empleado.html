@@ -278,7 +278,32 @@ dialog label{line-height:1.3}
 #ll-res .bars{gap:4px;margin:4px 0}
 #ll-res .bars .brow{grid-template-columns:56px minmax(0,1fr) auto;font-size:12px;gap:8px}
 #ll-res .bars .btrack{height:8px}
-@media(max-width:860px){#ll-res .liqsum{grid-template-columns:1fr}}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:16px}
+.kpi{font:inherit;text-align:left;cursor:pointer;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:12px 14px;color:var(--ink);display:flex;flex-direction:column;gap:1px}
+.kpi:hover{border-color:var(--accent)}
+.kpi strong{font-size:28px;line-height:1.1;font-weight:700;color:var(--accent);letter-spacing:-.01em}
+.kpi span{font-size:13.5px;font-weight:600}
+.kpi small{font-size:12px;color:var(--muted)}
+.kpi.crit{border-left-color:var(--danger)}.kpi.crit strong{color:var(--danger)}
+.kpi.warn{border-left-color:var(--signal)}.kpi.warn strong{color:var(--signal)}
+.kpi.ok{border-left-color:var(--ok)}.kpi.ok strong{color:var(--ok)}
+.achips{display:flex;flex-wrap:wrap;gap:8px}
+details.alert>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none}
+details.alert>summary::-webkit-details-marker{display:none}
+details.alert>summary h4{margin:0;flex:1}
+details.alert>summary::after{content:'';width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+details.alert[open]>summary::after{transform:rotate(45deg)}
+details.alert[open]>summary{margin-bottom:6px}
+.st-borrador{background:#E6ECEA;color:#41565C}.st-aprobada{background:#F8E9CB;color:#8A5608}.st-pagada{background:#DDF0E4;color:#1F6B3F}.st-cerrada{background:#D3E8E3;color:#0A5343}
+.chip{white-space:nowrap}
+#ll-res .chip{padding:1px 7px;font-size:11.5px}
+#ll-res .liqtop{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.llres{margin-top:10px}
+.llres>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+.llres>summary::-webkit-details-marker{display:none}
+.llres>summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
+.llres[open]>summary::before{transform:rotate(90deg)}
 @media(max-width:760px){#ll-res .tablewrap{overflow-x:auto}#ll-res .llgrid{table-layout:auto}}
 </style>
 </head>
@@ -286,6 +311,7 @@ dialog label{line-height:1.3}
 <header>
   <h1>Ciclo del empleado</h1>
   <nav class="tabs" aria-label="Secciones">
+    <button data-act="tab" data-tab="ini">Inicio</button>
     <button data-act="tab" data-tab="emp">Empleados</button>
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
@@ -302,6 +328,7 @@ dialog label{line-height:1.3}
   </div>
 </header>
 <main>
+  <section class="view" id="v-ini"></section>
   <section class="view" id="v-emp"></section>
   <section class="view" id="v-ale" hidden></section>
   <section class="view" id="v-liq" hidden></section>
@@ -842,7 +869,11 @@ const enNomina = () => S.empleados.filter(e => ['activo', 'licencia'].includes(e
 const totalDe = r => r.total ?? r.bruto;
 const finPruebaDe = e => e.fechaIngreso ? finDePrueba(e.fechaIngreso, S.parametros.mesesPrueba) : '';
 const altaPill = e => e.alta ? `<span class="alta alta-${e.alta}" title="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}" aria-label="${e.alta === 'N' ? 'Alta normal' : 'Alta especial'}">${e.alta}</span>` : '';
-const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '', secs: {} };
+const PREFS_KEY = 'ciclo_ui_prefs_v1';
+const PREFS = (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+const prefsSave = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch (e) {} };
+const UI = { tab: 'emp', detail: null, q: '', fe: '', f: {}, liq: null, stLocal: '', stPuesto: '', stRotLocal: LOCALES[0], hEmp: '', costoLocal: '', costoPuesto: '', perDesde: today().slice(0, 7) + '-01', perHasta: today(), perLocal: '', solLocal: '', secs: PREFS.secs || (PREFS.secs = {}), alOpen: PREFS.alOpen || (PREFS.alOpen = {}), llRes: !!PREFS.llRes };
+const liqChip = e => `<span class="chip st-${e}">${esc(LIQ_ESTADOS[e] || e)}</span>`;
 const chip = e => `<span class="chip st-${e}">${esc(ESTADOS[e] || e)}</span>`;
 
 /* ================= Alertas del panel general ================= */
@@ -893,6 +924,31 @@ function alertasBloques() {
   add('liq', true, 'Liquidaciones con el plazo de pago vencido (art. 128 LCT)', [...liqIt(A.bands.d60, 60), ...liqIt(A.bands.d30, 30), ...liqIt(A.bands.d15, 15)]);
   return B.sort((a, b) => b.crit - a.crit);          // urgentes arriba
 }
+function renderIni() {
+  const A = calcAlertas(), B = alertasBloques();
+  const suma = arr => arr.reduce((s, b) => s + b.items.length, 0);
+  const urg = suma(B.filter(b => b.crit)), avi = suma(B.filter(b => !b.crit));
+  const nom = enNomina(), lic = nom.filter(e => e.estado === 'licencia').length;
+  const bor = S.liquidaciones.filter(l => l.estado === 'borrador'), apr = S.liquidaciones.filter(l => l.estado === 'aprobada');
+  const totAp = r2(apr.reduce((s, l) => s + (totalDe(l.result) || 0), 0));
+  const prueba = A.prueba.length, venc = A.vLibreta.length + A.vDni.length;
+  const kpi = (n, lbl, sub, tone, attrs) => `<button type="button" class="kpi ${tone}" data-act="iniGo" ${attrs}><strong>${n}</strong><span>${lbl}</span>${sub ? `<small>${sub}</small>` : ''}</button>`;
+  const pl = {}; nom.forEach(e => { const k = alLocal(e); pl[k] = (pl[k] || 0) + 1; });
+  const oml = new Map(ordenLocales().map((l, i) => [l, i]));
+  const plantel = Object.entries(pl).sort((a, b) => (oml.get(a[0]) ?? 999) - (oml.get(b[0]) ?? 999) || a[0].localeCompare(b[0])).map(([label, value]) => ({ label, value }));
+  $('#v-ini').innerHTML = `<h2>Inicio</h2>
+  <div class="kpis">
+    ${kpi(nom.length, 'Empleados en nómina', lic ? `${lic} en licencia` : '', 'info', 'data-tab="emp"')}
+    ${kpi(urg, 'Alertas urgentes', 'Vencidos y pagos atrasados', urg ? 'crit' : 'ok', 'data-tab="ale" data-prio="crit"')}
+    ${kpi(avi, 'Avisos próximos', 'Próximos 15 días y pendientes', avi ? 'warn' : 'ok', 'data-tab="ale" data-prio="aviso"')}
+    ${kpi(bor.length, 'Liquidaciones en borrador', 'Esperando aprobación', bor.length ? 'warn' : 'ok', 'data-tab="liq" data-estado="borrador"')}
+    ${kpi(apr.length, 'Aprobadas sin pagar', apr.length ? money(totAp) : '', apr.length ? 'warn' : 'ok', 'data-tab="liq" data-estado="aprobada"')}
+    ${kpi(prueba, 'Fin de período de prueba', 'Próximos 15 días', prueba ? 'warn' : 'ok', 'data-tab="ale" data-cat="prueba"')}
+    ${kpi(venc, 'Vencimientos de legajo', 'DNI y libreta, próximos 15 días', venc ? 'warn' : 'ok', 'data-tab="ale" data-cat="venc"')}
+  </div>
+  ${B.length ? `<div class="card" style="margin-bottom:16px"><h3>Alertas por tipo</h3><div class="achips">${B.map(b => `<button type="button" class="btn sm ${b.crit ? 'danger' : ''}" data-act="iniGo" data-tab="ale" data-cat="${b.key}">${esc(b.title)} · <b>${b.items.length}</b></button>`).join('')}</div></div>` : ''}
+  <div class="card"><h3>Plantel en nómina por local</h3>${barras(plantel)}</div>`;
+}
 function renderAle() {
   const B = alertasBloques(), F = UI.al;
   const nota = `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días y liquidaciones con el plazo de pago vencido.</p>`;
@@ -910,7 +966,7 @@ function renderAle() {
     <div class="ff"><span class="ff-l">Local</span><select id="al-local" aria-label="Filtrar por local"><option value="">Todos</option>${locs.map(l => `<option value="${esc(l)}" ${F.local === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
     <div class="ff" style="flex:0 0 auto;justify-content:flex-end"><button type="button" class="btn sm" data-act="alClear" style="height:28px">Limpiar</button></div>
   </div></div>
-  <p class="muted" id="al-cnt" style="margin:0 0 10px"></p>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px"><p class="muted" id="al-cnt" style="margin:0"></p><button type="button" class="btn sm" data-act="alAll">Contraer / expandir todo</button></div>
   <div id="al-res"></div>` + nota;
   paintAle();
 }
@@ -921,13 +977,14 @@ function paintAle() {
   const ok = it => (!F.local || alLocal(it.e) === F.local) && (!q || (it.e && stripAcc(`${it.e.apellido || ''} ${it.e.nombre || ''} ${it.e.legajo || ''} ${it.e.dni || ''}`).toLowerCase().includes(q)));
   const vis = B.filter(b => (!F.cat || b.key === F.cat) && (!F.prio || (F.prio === 'crit') === b.crit)).map(b => ({ ...b, items: b.items.filter(ok) })).filter(b => b.items.length);
   const n = vis.reduce((s, b) => s + b.items.length, 0);
+  const filtrando = !!(F.q || F.local || F.cat), alIsOpen = b => UI.alOpen[b.key] !== undefined ? UI.alOpen[b.key] : (b.crit || filtrando || vis.length === 1);
   box.innerHTML = vis.length ? `<div class="alerts">${vis.map(b => {
     let body;
     if (b.key === 'liq') {
       const g = (band, lbl) => { const a = b.items.filter(it => it.band === band); return a.length ? `<li><b>${lbl}:</b> ${a.map(it => it.html).join(', ')}</li>` : ''; };
       body = g(60, 'Más de 2 meses de atraso') + g(30, 'Más de 1 mes de atraso') + g(15, 'Más de 15 días de atraso');
     } else body = b.items.map(it => `<li>${it.html}</li>`).join('');
-    return `<div class="alert${b.crit ? ' crit' : ''}"><h4><span class="n">${b.items.length}</span>${esc(b.title)}</h4><ul>${body}</ul></div>`;
+    return `<details class="alert${b.crit ? ' crit' : ''}" data-al="${b.key}" ${alIsOpen(b) ? 'open' : ''}><summary><h4><span class="n">${b.items.length}</span>${esc(b.title)}</h4></summary><ul>${body}</ul></details>`;
   }).join('')}</div>` : `<div class="alerts"><div class="alert ok"><h4>Ninguna alerta coincide con los filtros</h4></div></div>`;
   const c = $('#al-cnt'); if (c) c.textContent = n === total ? `${total} alerta${total === 1 ? '' : 's'}` : `Mostrando ${n} de ${total} alertas`;
   [['prio', 'al-prio'], ['cat', 'al-cat'], ['local', 'al-local'], ['q', 'al-q']].forEach(([k, id]) => { const el = $('#' + id); if (el && el.closest) el.closest('.ff').classList.toggle('on', !!F[k]); });
@@ -937,7 +994,7 @@ function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  ({ emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -1079,7 +1136,7 @@ function renderDetail() {
   if (!e) { UI.detail = null; return renderEmp(); }
   const inp = (label, name, type = 'text', ex = '', cls = '') => `<label class="fld ${cls}"><span>${label}</span><input name="${name}" type="${type}" value="${esc(e[name] ?? '')}" ${ex}></label>`;
   const sel = (label, name, opts, cur = e[name]) => `<label class="fld"><span>${label}</span><select name="${name}">${Object.entries(opts).map(([k, v]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
-  const so = (id, t) => `<details class="sec" data-sec="${id}" ${UI.secs[id] === false ? '' : 'open'}><summary>${t}</summary><div class="sec-body">`;
+  const so = (id, t) => `<details class="sec" data-sec="${id}" ${(UI.secs[id] === undefined ? ['personales', 'laborales'].includes(id) : UI.secs[id]) ? 'open' : ''}><summary>${t}</summary><div class="sec-body">`;
   const sc = '</div></details>';
   const rem = S.remuneraciones.filter(r => r.empleadoId === e.id).sort((a, b) => b.periodo.localeCompare(a.periodo));
   const vac = S.vacaciones.filter(v => v.empleadoId === e.id).sort((a, b) => b.desde.localeCompare(a.desde));
@@ -1170,7 +1227,7 @@ function renderDetail() {
       <label class="fld full" style="margin-top:8px"><span>Motivo</span><input type="text" id="sa-motivo" placeholder="Descripción breve"></label>
       ${sanc.length ? `<table style="margin-top:10px"><tbody>${sanc.map(s => `<tr><td>${fdate(s.fecha)}</td><td>${esc(s.tipo)}${s.tipo === 'Suspensión' && s.dias ? ` (${s.dias} días)` : ''}<div class="muted">${esc(s.motivo || '')}</div></td><td class="num"><button class="btn sm danger" data-act="delSancion" data-id="${s.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin-bottom:0">Sin sanciones registradas.</p>'}
     </div>
-    ${liqs.length ? `<div class="card"><h3>Liquidaciones</h3><table><tbody>${liqs.map(l => `<tr><td>${fdate(l.inputs.fecha)}</td><td>${esc(TIPOS[l.inputs.tipo])}</td><td class="num">${money(totalDe(l.result))}</td><td>${LIQ_ESTADOS[l.estado]}</td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${liqs.length ? `<div class="card"><h3>Liquidaciones</h3><table><tbody>${liqs.map(l => `<tr><td>${fdate(l.inputs.fecha)}</td><td>${esc(TIPOS[l.inputs.tipo])}</td><td class="num">${money(totalDe(l.result))}</td><td>${liqChip(l.estado)}</td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>` : ''}
     <div class="card"><h3>Comentarios</h3>
       <div class="row"><label class="fld full"><span>Nuevo comentario</span><textarea id="co-texto" rows="2" placeholder="Escribí una observación sobre este colaborador"></textarea></label></div>
       <div style="margin-top:8px"><button class="btn" data-act="addComentario">Agregar comentario</button></div>
@@ -1262,12 +1319,12 @@ function paintLiqLista() {
   const f = liqFilas(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
   const sum = (k, cab) => `<table><thead><tr><th>${cab}</th><th class="num">Liq.</th><th class="num">Total</th><th class="num">Efectivo</th><th class="num">Transf.</th></tr></thead><tbody>${liqSumas(f, k).map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td><td class="num">${money(v.efe)}</td><td class="num">${money(v.tra)}</td></tr>`).join('')}</tbody></table>`;
   const pm = r => r.efe || r.tra ? ['', ''].map((_, i) => `<td class="num">${money(i ? r.tra : r.efe)}</td>`).join('') : '<td class="num">—</td><td class="num">—</td>';
-  box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid llgrid"><colgroup><col style="width:9%"><col style="width:15%"><col style="width:7%"><col style="width:10%"><col style="width:15%"><col style="width:7%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:6%" class="no-print"></colgroup><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${LIQ_ESTADOS[r.l.estado]}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
-    <div class="liqsum">
-      <div class="liqtot"><strong>${money(tot)}</strong><div><b>${f.length} liquidacion${f.length === 1 ? '' : 'es'}</b><br>Efectivo ${money(efe)} · Transferencia ${money(tra)}<small>Pagos registrados; en borradores y aprobadas se muestra el reparto previsto. Incluye borradores si no filtrás por estado.</small></div></div>
-      <div><h3>Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}</div>
-    </div>
-    <div class="cols"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>`
+  box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid llgrid"><colgroup><col style="width:9%"><col style="width:14%"><col style="width:7%"><col style="width:9%"><col style="width:14%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:7%" class="no-print"></colgroup><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${liqChip(r.l.estado)}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="liqtot liqtop"><strong>${money(tot)}</strong><div><b>${f.length} liquidacion${f.length === 1 ? '' : 'es'}</b><br>Efectivo ${money(efe)} · Transferencia ${money(tra)}<small>Pagos registrados; en borradores y aprobadas se muestra el reparto previsto. Incluye borradores si no filtrás por estado.</small></div></div>
+    <details class="llres" data-pref="llRes" ${UI.llRes ? 'open' : ''}><summary>Resumen por mes, local y razón social</summary>
+      <div style="margin-top:10px"><h3>Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}</div>
+      <div class="cols"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>
+    </details>`
     : '<p class="muted" style="margin:0">No hay liquidaciones que coincidan.</p>';
   const n = ['tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
 }
@@ -1283,10 +1340,10 @@ function renderLiq() {
   const dis = locked || !emp ? 'disabled' : '';
   const elegibles = S.empleados.filter(e => ['activo', 'licencia', 'egreso'].includes(e.estado) || (emp && e.id === emp.id));
 
-  const hayVolver = !!(UI.liqFrom || (Lc && Lc.empId));
+  const hayVolver = !!Lc;
   $('#v-liq').innerHTML = `
-  ${hayVolver ? `<div class="no-print" style="margin-bottom:12px"><button class="btn" data-act="liqBack">← Volver${UI.liqFrom ? ' al legajo' : ''}</button></div>` : ''}
-  <div class="cols liq">
+  ${hayVolver ? `<div class="no-print" style="margin-bottom:12px"><button class="btn" data-act="liqBack">${UI.liqFrom ? '← Volver al legajo' : '← Volver a la lista'}</button></div>` : ''}
+  ${Lc ? `<div class="cols liq">
    <div class="stack">
     <div class="card" id="liq-form">
       <h2>Egreso</h2>
@@ -1316,8 +1373,7 @@ function renderLiq() {
     </div>
    </div>
    <div class="card recibo" id="liq-res"></div>
-  </div>
-  <div id="liq-list"><h2 style="margin:20px 0 10px">Liquidaciones guardadas</h2>
+  </div>` : `<div id="liq-list"><div class="bar no-print" style="align-items:center;margin-bottom:10px"><h2 style="margin:0">Liquidaciones</h2><button class="btn primary" style="margin-left:auto" data-act="liqNueva">+ Nueva liquidación</button></div>
     <div class="bar no-print">
       <input type="search" id="ll-q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.ll.q)}" aria-label="Buscar empleado">
       <button class="btn" data-act="llXlsx">Descargar Excel</button>
@@ -1335,8 +1391,9 @@ function renderLiq() {
       </div>
     </details>
     <div class="card" id="ll-res"></div>
-  </div>`;
-  updateLiq(); paintLiqLista();
+  </div>`}`;
+  if (Lc) updateLiq();
+  paintLiqLista();
 }
 
 const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
@@ -1410,7 +1467,7 @@ function updateLiq() {
   }
   const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
   box.innerHTML = `
-    <div class="rc-head"><h2>Liquidación final <span class="chip" style="vertical-align:middle;margin-left:6px">${LIQ_ESTADOS[est]}</span></h2>
+    <div class="rc-head"><h2>Liquidación final <span class="chip st-${est}" style="vertical-align:middle;margin-left:6px">${LIQ_ESTADOS[est]}</span></h2>
       <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span><span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span></div></div>
     ${res.avisos.length ? `<div class="avisos">${res.avisos.map(a => `<p>${esc(a)}</p>`).join('')}</div>` : ''}
     <table class="ledger"><tbody>
@@ -1435,7 +1492,7 @@ function persistLiq(estado) {
   save(); renderLiq(); toast(estado === 'aprobada' ? 'Liquidación aprobada' : 'Borrador guardado');
 }
 function pickEmp(id) {
-  if (!id) { UI.liq = null; return renderLiq(); }
+  if (!id) { UI.liq = { nueva: true }; return renderLiq(); }
   const ultima = S.liquidaciones.filter(l => l.empleadoId === id).slice(-1)[0];
   UI.liq = ultima ? { id: ultima.id, empId: id } : { empId: id };
   renderLiq();
@@ -2398,7 +2455,15 @@ const ACT = {
     const inp = readLiqForm(); inp.nremunExtra.splice(+b.dataset.i, 1); L.inputs = inp;
     $('#l-nrem').innerHTML = nremLiqHtml(inp.nremunExtra, ''); updateLiq();
   },
-  tab: b => { UI.detail = null; UI.liqFrom = null; go(b.dataset.tab); },
+  tab: b => { UI.detail = null; UI.liqFrom = null; if (b.dataset.tab === 'liq') UI.liq = null; go(b.dataset.tab); },
+  iniGo: b => {
+    const d = b.dataset; UI.detail = null; UI.liqFrom = null;
+    if (d.tab === 'ale') UI.al = { q: '', prio: d.prio || '', cat: d.cat || '', local: '' };
+    if (d.tab === 'liq') { UI.liq = null; UI.ll = { q: '', tipo: '', estado: d.estado || '', local: '', razon: '', desde: '', hasta: '' }; UI.llOpen = !!d.estado; }
+    go(d.tab);
+  },
+  alAll: () => { const ds = $$('#al-res details[data-al]'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.alOpen[x.dataset.al] = abrir; }); prefsSave(); },
+  liqNueva: () => { UI.liq = { nueva: true }; UI.liqFrom = null; renderLiq(); window.scrollTo(0, 0); },
   clearFilters: (b, ev) => { if (ev) ev.preventDefault(); UI.q = ''; UI.fe = ''; UI.f = {}; UI.vistaSel = ''; renderEmp(); },
   puestoMove: b => { const ord = ordenPuestos(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenPuestos = ord; save(); paintOrdenPuestos(); },
   puestosReset: () => { if (!confirm('¿Volver al orden original de puestos?')) return; S.ordenPuestos = []; save(); paintOrdenPuestos(); toast('Orden restablecido'); },
@@ -2689,7 +2754,11 @@ document.addEventListener('change', e => {
   else return;
   renderCal();
 });
-document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) UI.secs[d.dataset.sec] = d.open; }, true);
+document.addEventListener('toggle', e => { const d = e.target; if (d.dataset && d.dataset.sec) { UI.secs[d.dataset.sec] = d.open; prefsSave(); } }, true);
+document.addEventListener('click', e => {
+  const sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (!d || !d.dataset) return;
+  setTimeout(() => { if (d.dataset.al) { UI.alOpen[d.dataset.al] = d.open; prefsSave(); } else if (d.dataset.pref === 'llRes') { UI.llRes = d.open; PREFS.llRes = d.open; prefsSave(); } }, 0);
+});
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.name === 'alta' && t.closest && t.closest('#emp-form')) {
@@ -2854,7 +2923,7 @@ function migrarDatos() {                                      // "E. Camarero" �
 }
 migrarDatos();
 paintRespaldo();
-go('emp');
+go('ini');
 jbInit();
 </script>
 </body>

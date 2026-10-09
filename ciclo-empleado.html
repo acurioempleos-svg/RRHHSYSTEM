@@ -941,7 +941,7 @@ function renderEmp() {
       <select id="vista-sel" aria-label="Vistas guardadas"><option value="">Vistas guardadas…</option>${(S.vistasEmp || []).map(v => `<option value="${v.id}" ${UI.vistaSel === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <button class="btn" data-act="vistaSave">Guardar vista</button>${(S.vistasEmp || []).length ? '<button class="btn danger" data-act="vistaDel">Borrar vista</button>' : ''}
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
-      <button class="btn" data-act="empPdf">Descargar PDF</button>
+      <button class="btn" data-act="empPdf" title="Elegí local, fechas y temas: suspensiones, apercibimientos, puestos, ingresos, licencias…">Descargar PDF</button>
       <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
@@ -1338,11 +1338,11 @@ function updateLiq() {
       </tbody></table></div>`;
   }
   const totRes = totalDe(res), repBase = locked ? (liq && liq.reparto) : (L.rep || (liq && liq.reparto));
-  const repE = repBase ? Math.min(Math.max(+repBase.efectivo || 0, 0), totRes) : 0, repT = r2(totRes - repE);
+  const repE = repBase ? Math.min(Math.max(+repBase.efectivo || 0, 0), totRes) : 0, repT0 = r2(totRes - repE), repTs = repBase && repBase.transferencia != null ? r2(+repBase.transferencia || 0) : repT0, repT = repTs >= repT0 - 0.01 && repTs < repT0 + 1000 ? repTs : repT0;   // la transferencia cargada se respeta aunque el efectivo se haya redondeado
   if (!locked) L.rep = { efectivo: repE, transferencia: repT };
   let acciones = '';
-  if (est === 'borrador') acciones = `<div class="actions"><label class="fld"><span>En efectivo</span><input type="number" id="rep-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="rep-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" style="flex-basis:100%;margin:0">Total a cobrar: ${money(totRes)}. Elegí cuánto va en efectivo y cuánto por transferencia: al cargar uno, el otro se completa solo. Se guarda con el borrador.</div><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
-  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>En efectivo</span><input type="number" id="pay-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="pay-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" id="pay-chk" style="flex-basis:100%;margin:0">Total a pagar: ${money(totalDe(res))}. Repartí el monto entre efectivo y transferencia: al cargar uno, el otro se completa solo.</div><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
+  if (est === 'borrador') acciones = `<div class="actions"><label class="fld"><span>En efectivo</span><input type="number" id="rep-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="rep-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" style="flex-basis:100%;margin:0">Total a cobrar: ${money(totRes)}. Elegí cuánto va en efectivo y cuánto por transferencia: al cargar uno, el otro se completa solo. Si cargás la transferencia, el efectivo (la resta) se redondea hacia arriba al millar.<span id="rep-red">${repNota(totRes, repE, repT)}</span> Se guarda con el borrador.</div><button class="btn" data-act="saveLiq">Guardar borrador</button><button class="btn primary" data-act="approveLiq">Aprobar liquidación</button><button class="btn no-print" data-act="print">Imprimir recibo</button>${liq ? '<button class="btn danger" data-act="discardLiq">Descartar</button>' : ''}</div>`;
+  else if (est === 'aprobada') acciones = `<div class="actions"><label class="fld"><span>Fecha de pago</span><input type="date" id="pay-fecha" value="${today()}"></label><label class="fld"><span>En efectivo</span><input type="number" id="pay-efe" step="0.01" min="0" value="${repE}"></label><label class="fld"><span>Por transferencia</span><input type="number" id="pay-tra" step="0.01" min="0" value="${repT}"></label><div class="muted" id="pay-chk" style="flex-basis:100%;margin:0">Total a pagar: ${money(totalDe(res))}. Repartí el monto entre efectivo y transferencia: al cargar uno, el otro se completa solo. Si cargás la transferencia, el efectivo (la resta) se redondea hacia arriba al millar.<span id="pay-red">${repNota(totRes, repE, repT)}</span></div><button class="btn primary" data-act="payLiq">Registrar pago</button><button class="btn" data-act="print">Imprimir recibo</button><button class="btn" data-act="reopenLiq">Volver a borrador</button></div>`;
   else {
     const c = liq.cierre || {}, ok = c.recibo && c.art80 && c.baja;
     acciones = `<div class="checks"><h3>Cierre del legajo</h3>
@@ -1384,21 +1384,24 @@ function pickEmp(id) {
   UI.liq = ultima ? { id: ultima.id, empId: id } : { empId: id };
   renderLiq();
 }
+const redMil = n => Math.ceil(r2(n) / 1000) * 1000;   // efectivo: la resta se redondea hacia arriba a unidades de mil
+const repNota = (tot, efe, tra) => { const d = r2(efe + tra - tot); return d > 0.01 ? ` Redondeo del efectivo al millar: ${money(d)} por encima del total.` : ''; };
+function repSplit(tot, t, idE, idT) {   // al tocar efectivo, la transferencia es el resto exacto; al tocar transferencia, el efectivo es la resta redondeada al millar
+  const esE = t.id === idE, otro = $('#' + (esE ? idT : idE)), v = Math.min(Math.max(+t.value || 0, 0), tot);
+  if ((+t.value || 0) > tot) t.value = tot;
+  const efe = esE ? v : (v > 0 ? redMil(tot - v) : tot), tra = esE ? r2(tot - v) : v;
+  otro.value = esE ? tra : efe;
+  return { efectivo: efe, transferencia: tra };
+}
 function onRepInput(t) {
   const L = UI.liq; if (!L || !L.res) return;
-  const tot = totalDe(L.res), esE = t.id === 'rep-efe', otro = $(esE ? '#rep-tra' : '#rep-efe');
-  const v = Math.min(Math.max(+t.value || 0, 0), tot);
-  if ((+t.value || 0) > tot) t.value = tot;
-  otro.value = r2(tot - v);
-  const efe = esE ? v : r2(tot - v);
-  L.rep = { efectivo: efe, transferencia: r2(tot - efe) };
+  const tot = totalDe(L.res); L.rep = repSplit(tot, t, 'rep-efe', 'rep-tra');
+  const n = $('#rep-red'); if (n) n.textContent = repNota(tot, L.rep.efectivo, L.rep.transferencia);
 }
 function onPayInput(t) {
   const l = S.liquidaciones.find(x => x.id === UI.liq.id); if (!l) return;
-  const tot = totalDe(l.result), otro = $(t.id === 'pay-efe' ? '#pay-tra' : '#pay-efe');
-  const v = Math.min(Math.max(+t.value || 0, 0), tot);
-  if ((+t.value || 0) > tot) t.value = tot;
-  otro.value = r2(tot - v);
+  const tot = totalDe(l.result), r = repSplit(tot, t, 'pay-efe', 'pay-tra');
+  const n = $('#pay-red'); if (n) n.textContent = repNota(tot, r.efectivo, r.transferencia);
 }
 function onLiqInput(t) {
   if (t.id === 'l-emp') { UI.liqFrom = null; return pickEmp(t.value); }
@@ -2073,6 +2076,111 @@ async function pdfEmpleados() {
   });
 }
 
+/* ---- Informe de empleados a medida: local, fechas y temas (botón "Descargar PDF" de Empleados) ---- */
+const EINF_TEMAS = [['puestos', 'Puestos', 'resumen y detalle por puesto'], ['ingresos', 'Fechas de ingreso', 'con antigüedad'], ['egresos', 'Egresos', 'fecha y motivo; siempre sobre quienes egresaron'], ['suspensiones', 'Suspensiones', 'con días'], ['apercibimientos', 'Apercibimientos', ''], ['otras', 'Otras sanciones', ''], ['licencias', 'Licencias', 'las que se superponen con el período'], ['vacaciones', 'Vacaciones', 'las que se superponen con el período'], ['venc', 'Vencimientos', 'DNI / precaria y libreta sanitaria']];
+function dlgEmpInforme() {
+  const old = $('#dlg-einf'); if (old) old.remove();
+  const locs = ordenLocales().slice(); if (S.empleados.some(e => !(e.local || '').trim())) locs.push('Sin local');
+  const d = document.createElement('dialog'); d.id = 'dlg-einf';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:580px;width:94%;max-height:92vh;overflow:auto;color:var(--ink)';
+  const row = 'display:flex;gap:8px;align-items:center';
+  d.innerHTML = `<h3 style="margin:0 0 12px">Descargar PDF de empleados</h3>
+    <div style="display:grid;gap:6px;margin-bottom:12px">
+      <label style="${row}"><input type="radio" name="einf-modo" id="einf-custom" checked> Informe a medida: elegir local, fechas y temas</label>
+      <label style="${row}"><input type="radio" name="einf-modo" id="einf-vista"> Vista actual de Empleados (con los filtros y columnas de pantalla)</label>
+    </div>
+    <div id="einf-cfg">
+      <div class="fld" style="margin-bottom:10px"><span>Locales</span>
+        <label style="${row};margin:4px 0"><input type="checkbox" id="einf-todos" checked> <strong>Todos los locales</strong></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px;max-height:130px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px">${locs.map(l => `<label style="${row}"><input type="checkbox" class="einf-loc" value="${esc(l)}" checked> ${esc(l)}</label>`).join('')}</div>
+      </div>
+      <label class="fld" style="margin-bottom:10px"><span>Personal incluido</span><select id="einf-pers"><option value="nomina">En nómina (activos y en licencia)</option><option value="todos">Todo el personal (incluye egresados)</option><option value="egresados">Solo egresados</option></select></label>
+      <div style="display:flex;gap:10px;margin-bottom:4px"><label class="fld" style="flex:1"><span>Desde</span><input type="date" id="einf-desde"></label><label class="fld" style="flex:1"><span>Hasta</span><input type="date" id="einf-hasta"></label></div>
+      <p class="muted" style="margin:0 0 10px">Las fechas son opcionales y se aplican a la fecha de cada tema (de la sanción, del ingreso, del egreso, de la licencia, del vencimiento…).</p>
+      <div class="fld" style="margin-bottom:12px"><span>Temas del informe</span>
+        <div style="display:grid;gap:5px;margin-top:4px">${EINF_TEMAS.map(t => `<label style="${row}"><input type="checkbox" class="einf-tema" value="${t[0]}"> ${t[1]}${t[2] ? ` <span class="muted">· ${t[2]}</span>` : ''}</label>`).join('')}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="einf-cancel">Cancelar</button><button type="button" class="btn primary" id="einf-ok">Descargar</button></div>`;
+  document.body.appendChild(d);
+  const cfg = d.querySelector('#einf-cfg'), custom = () => d.querySelector('#einf-custom').checked, todos = d.querySelector('#einf-todos'), cl = [...d.querySelectorAll('.einf-loc')];
+  d.querySelectorAll('input[name=einf-modo]').forEach(r => r.addEventListener('change', () => { cfg.style.display = custom() ? '' : 'none'; }));
+  todos.addEventListener('change', () => cl.forEach(c => { c.checked = todos.checked; }));
+  cl.forEach(c => c.addEventListener('change', () => { todos.checked = cl.every(x => x.checked); }));
+  const cerrar = () => { d.close(); d.remove(); };
+  d.querySelector('#einf-cancel').addEventListener('click', cerrar);
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.querySelector('#einf-ok').addEventListener('click', async () => {
+    if (!custom()) { cerrar(); await conPdf(() => pdfEmpleados())(); return; }
+    const sel = cl.filter(c => c.checked).map(c => c.value), temas = [...d.querySelectorAll('.einf-tema')].filter(c => c.checked).map(c => c.value), desde = d.querySelector('#einf-desde').value, hasta = d.querySelector('#einf-hasta').value;
+    if (!sel.length) { toast('Elegí al menos un local.'); return; }
+    if (!temas.length) { toast('Elegí al menos un tema.'); return; }
+    if (desde && hasta && desde > hasta) { toast('La fecha "desde" no puede ser posterior a "hasta".'); return; }
+    const o = { locs: sel, todosLocs: todos.checked, pers: d.querySelector('#einf-pers').value, desde, hasta, temas };
+    cerrar(); await conPdf(() => pdfEmpInforme(o))();
+  });
+  d.showModal();
+}
+async function pdfEmpInforme(c) {
+  const lc = e => (e.local || '').trim() || 'Sin local', nm = e => `${e.apellido || '—'}, ${e.nombre || ''}`.trim(), P = PDF_C, T = t => c.temas.includes(t), rango = !!(c.desde || c.hasta);
+  const oi = new Map(ordenLocales().map((l, i) => [l, i])), ord = l => oi.has(l) ? oi.get(l) : 999;
+  const ESTV = { nomina: ['activo', 'licencia'], todos: ['activo', 'licencia', 'egreso', 'liquidado', 'archivado'], egresados: ['egreso', 'liquidado', 'archivado'] };
+  const enLoc = e => c.locs.includes(lc(e)), base = S.empleados.filter(e => ESTV[c.pers].includes(e.estado) && enLoc(e)), byId = new Map(base.map(e => [e.id, e]));
+  if (!base.length && !T('egresos')) { toast('No hay empleados con esos locales y ese personal.'); return false; }
+  const dentro = f => !!f && (!c.desde || f >= c.desde) && (!c.hasta || f <= c.hasta), solapa = (a, b) => !!a && (!c.hasta || a <= c.hasta) && (!c.desde || (b || a) >= c.desde);
+  const dias = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5) + 1, cnt = a => `${a.length} registro${a.length === 1 ? '' : 's'}`;
+  const ordena = a => a.sort((x, y) => ord(lc(x.e)) - ord(lc(y.e)) || (x.f || '').localeCompare(y.f || '') || nm(x.e).localeCompare(nm(y.e), 'es')).map(x => x.r);
+  const antig = e => { if (!e.fechaIngreso) return '—'; const a = new Date(e.fechaIngreso + 'T00:00:00'), h = ESTV.egresados.includes(e.estado) && e.fechaEgreso ? new Date(e.fechaEgreso + 'T00:00:00') : new Date(); let m = (h.getFullYear() - a.getFullYear()) * 12 + h.getMonth() - a.getMonth(); if (h.getDate() < a.getDate()) m--; if (m < 0) return '—'; return m >= 12 ? `${Math.floor(m / 12)} a. ${m % 12} m.` : `${m} m.`; };
+  const secs = [], kp = [], pu = e => (e.puesto || '').trim() || 'Sin puesto', sanc = tipo => S.sanciones.filter(s => s.tipo === tipo && byId.has(s.empleadoId) && (!rango || dentro(s.fecha)));
+  if (T('puestos')) {
+    const m = {}; base.forEach(e => { const k = pu(e); (m[k] = m[k] || { n: 0, l: new Set() }).n++; m[k].l.add(lc(e)); });
+    const res = Object.entries(m).sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0], 'es')).map(([k, v]) => [k, v.n, [...v.l].sort((a, b) => ord(a) - ord(b)).join(', ')]);
+    secs.push({ t: 'Puestos · resumen', n: `${res.length} puesto${res.length === 1 ? '' : 's'}`, head: ['Puesto', 'Colaboradores', 'Locales'], body: res, foot: ['TOTAL', base.length, ''], ctr: [1], cols: { 1: { cellWidth: 90 } }, vacio: 'No hay colaboradores con esos filtros.' });
+    secs.push({ t: 'Puestos · detalle', n: cnt(base), head: ['Legajo', 'Empleado', 'Local', 'Puesto', 'Estado'], body: ordena(base.map(e => ({ e, f: pu(e), r: [e.legajo || '—', nm(e), lc(e), pu(e), ESTADOS[e.estado] || e.estado] }))), loc: 2, cols: { 0: { cellWidth: 46 } }, vacio: 'No hay colaboradores con esos filtros.' });
+    kp.push({ l: 'Puestos', v: res.length, n: 'distintos' });
+  }
+  if (T('ingresos')) {
+    const a = base.filter(e => !rango || dentro(e.fechaIngreso));
+    secs.push({ t: 'Fechas de ingreso', n: cnt(a), head: ['Legajo', 'Empleado', 'Local', 'Puesto', 'Ingreso', 'Antigüedad'], body: ordena(a.map(e => ({ e, f: e.fechaIngreso, r: [e.legajo || '—', nm(e), lc(e), e.puesto || '—', fdate(e.fechaIngreso), antig(e)] }))), loc: 2, ctr: [4, 5], cols: { 0: { cellWidth: 46 } }, vacio: 'No hay ingresos en ese período.' });
+    kp.push({ l: 'Ingresos', v: a.length, c: P.ok });
+  }
+  if (T('egresos')) {
+    const a = S.empleados.filter(e => ESTV.egresados.includes(e.estado) && enLoc(e) && (!rango || dentro(e.fechaEgreso)));
+    secs.push({ t: 'Egresos', n: cnt(a), head: ['Legajo', 'Empleado', 'Local', 'Puesto', 'Ingreso', 'Egreso', 'Motivo'], body: ordena(a.map(e => ({ e, f: e.fechaEgreso, r: [e.legajo || '—', nm(e), lc(e), e.puesto || '—', fdate(e.fechaIngreso), fdate(e.fechaEgreso), TIPOS[e.tipoEgreso] || '—'] }))), loc: 2, ctr: [4, 5], cols: { 0: { cellWidth: 46 } }, vacio: 'No hay egresos en ese período.' });
+    kp.push({ l: 'Egresos', v: a.length, c: P.bad });
+  }
+  if (T('suspensiones')) {
+    const a = sanc('Suspensión'), dd = a.reduce((x, s) => x + (+s.dias || 0), 0);
+    secs.push({ t: 'Suspensiones', n: `${cnt(a)} · ${dd} día${dd === 1 ? '' : 's'}`, head: ['Fecha', 'Empleado', 'Local', 'Puesto', 'Días', 'Motivo'], body: ordena(a.map(s => { const e = byId.get(s.empleadoId); return { e, f: s.fecha, r: [fdate(s.fecha), nm(e), lc(e), e.puesto || '—', +s.dias || '—', s.motivo || '—'] }; })), foot: ['TOTAL', '', '', '', dd, ''], loc: 2, ctr: [0, 4], cols: { 0: { cellWidth: 62 }, 4: { cellWidth: 40 } }, vacio: 'No hay suspensiones en ese período.' });
+    kp.push({ l: 'Suspensiones', v: a.length, c: P.gold, n: `${dd} día${dd === 1 ? '' : 's'}` });
+  }
+  [['apercibimientos', 'Apercibimientos', 'Apercibimiento'], ['otras', 'Otras sanciones', 'Otra']].forEach(([k, t, tipo]) => {
+    if (!T(k)) return; const a = sanc(tipo);
+    secs.push({ t, n: cnt(a), head: ['Fecha', 'Empleado', 'Local', 'Puesto', 'Motivo'], body: ordena(a.map(s => { const e = byId.get(s.empleadoId); return { e, f: s.fecha, r: [fdate(s.fecha), nm(e), lc(e), e.puesto || '—', s.motivo || '—'] }; })), loc: 2, ctr: [0], cols: { 0: { cellWidth: 62 } }, vacio: `No hay ${t.toLowerCase()} en ese período.` });
+    kp.push({ l: t, v: a.length, c: P.gold });
+  });
+  if (T('licencias')) {
+    const a = S.licencias.filter(l => byId.has(l.empleadoId) && (!rango || solapa(l.desde, l.hasta)));
+    secs.push({ t: 'Licencias', n: cnt(a), head: ['Desde', 'Hasta', 'Días', 'Tipo', 'Empleado', 'Local', 'Puesto'], body: ordena(a.map(l => { const e = byId.get(l.empleadoId); return { e, f: l.desde, r: [fdate(l.desde), fdate(l.hasta), l.hasta ? dias(l.desde, l.hasta) : '—', l.tipo || '—', nm(e), lc(e), e.puesto || '—'] }; })), loc: 5, ctr: [0, 1, 2], cols: { 0: { cellWidth: 62 }, 1: { cellWidth: 62 }, 2: { cellWidth: 36 } }, vacio: 'No hay licencias en ese período.' });
+    kp.push({ l: 'Licencias', v: a.length, c: P.blue });
+  }
+  if (T('vacaciones')) {
+    const a = S.vacaciones.filter(v => byId.has(v.empleadoId) && (!rango || solapa(v.desde, v.hasta)));
+    secs.push({ t: 'Vacaciones', n: cnt(a), head: ['Desde', 'Hasta', 'Días', 'Año', 'Empleado', 'Local', 'Puesto'], body: ordena(a.map(v => { const e = byId.get(v.empleadoId); return { e, f: v.desde, r: [fdate(v.desde), fdate(v.hasta), v.dias || '—', v.anio || '—', nm(e), lc(e), e.puesto || '—'] }; })), loc: 5, ctr: [0, 1, 2, 3], cols: { 0: { cellWidth: 62 }, 1: { cellWidth: 62 }, 2: { cellWidth: 36 }, 3: { cellWidth: 36 } }, vacio: 'No hay vacaciones en ese período.' });
+    kp.push({ l: 'Vacaciones', v: a.length, c: P.blue });
+  }
+  if (T('venc')) {
+    const hoy = today(), a = []; base.forEach(e => [['DNI / precaria', e.dniVenc], ['Libreta sanitaria', e.libretaSanitariaVenc]].forEach(([t, f]) => { if (f && (!rango || dentro(f))) a.push({ e, f, r: [fdate(f), t, nm(e), lc(e), e.puesto || '—', f < hoy ? 'Vencido' : 'Vigente'] }); }));
+    secs.push({ t: 'Vencimientos de documentación', n: cnt(a), head: ['Vence', 'Documento', 'Empleado', 'Local', 'Puesto', 'Situación'], body: ordena(a), loc: 3, ctr: [0, 5], tone: { 5: { Vencido: P.bad, Vigente: P.ok } }, cols: { 0: { cellWidth: 62 } }, vacio: 'No hay vencimientos en ese período.' });
+    kp.push({ l: 'Vencimientos', v: a.length, c: P.bad });
+  }
+  const loTxt = c.todosLocs ? 'Todos los locales' : c.locs.length <= 3 ? c.locs.join(', ') : `${c.locs.length} locales`, perTxt = rango ? `${c.desde ? fdate(c.desde) : '...'} a ${c.hasta ? fdate(c.hasta) : '...'}` : 'Sin límite de fechas';
+  return pdfInforme({
+    orient: 'l', titulo: 'Informe de empleados', sub: `${loTxt}  ·  ${perTxt}  ·  ${{ nomina: 'Personal en nómina', todos: 'Todo el personal', egresados: 'Personal egresado' }[c.pers]}`, archivo: `informe-empleados-${today()}.pdf`,
+    kpis: [{ l: 'Colaboradores', v: base.length, n: 'incluidos en el informe' }, ...kp.slice(0, 5)], secs,
+  });
+}
+
 /* ---- Estadística (toma los datos que muestra cada tarjeta del panel; sin historial de movimientos) ---- */
 function estSecs() {   // secciones (título, cabecera, filas) tomadas de las tarjetas del panel de Estadística, sin el historial
   const area = $('#est-area'); if (!area) return [];
@@ -2376,10 +2484,11 @@ const ACT = {
     if (!fp) { toast('Elegí la fecha de pago.'); return; }
     const tot = totalDe(l.result), efe = r2(+$('#pay-efe').value || 0), tra = r2(+$('#pay-tra').value || 0);
     if (efe < 0 || tra < 0) { toast('Los montos no pueden ser negativos.'); return; }
-    if (Math.abs(r2(efe + tra) - tot) > 0.01) { toast(`Efectivo + transferencia (${money(efe + tra)}) debe ser igual al total (${money(tot)}).`); return; }
+    const dif = r2(efe + tra - tot);
+    if (dif < -0.01 || dif >= 1000) { toast(`Efectivo + transferencia (${money(efe + tra)}) debe ser igual al total (${money(tot)}), o superarlo solo por el redondeo del efectivo al millar.`); return; }
     const medio = efe > 0 && tra > 0 ? 'Efectivo y transferencia' : efe > 0 ? 'Efectivo' : 'Transferencia';
-    l.pago = { fecha: fp, medio, efectivo: efe, transferencia: tra }; l.estado = 'pagada'; e.estado = 'liquidado';
-    log(e.id, `Liquidación pagada el ${fdate(fp)} (${medio.toLowerCase()}${efe > 0 && tra > 0 ? `: ${money(efe)} efectivo + ${money(tra)} transferencia` : ''}), total ${money(tot)}`); save(); renderLiq(); toast('Pago registrado');
+    l.pago = { fecha: fp, medio, efectivo: efe, transferencia: tra, redondeo: dif > 0.01 ? dif : 0 }; l.estado = 'pagada'; e.estado = 'liquidado';
+    log(e.id, `Liquidación pagada el ${fdate(fp)} (${medio.toLowerCase()}${efe > 0 && tra > 0 ? `: ${money(efe)} efectivo + ${money(tra)} transferencia` : ''}), total ${money(tot)}${dif > 0.01 ? ` (redondeo del efectivo ${money(dif)})` : ''}`); save(); renderLiq(); toast('Pago registrado');
   },
   archiveLiq: () => {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
@@ -2415,7 +2524,7 @@ const ACT = {
   llPrint: () => imprimirSolo('#liq-list'),
   llPdf: () => dlgInforme('pdf'),
   estPdf: conPdf(() => pdfEst()),
-  empPdf: conPdf(() => pdfEmpleados()),
+  empPdf: () => dlgEmpInforme(),
   empAltasPdf: conPdf(() => pdfAltas()),
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
   llXlsx: () => dlgInforme('xlsx'),

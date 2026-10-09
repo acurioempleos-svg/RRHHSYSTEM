@@ -383,7 +383,7 @@ const DEFAULT_P = {
   vacaciones: [{ hasta: 5, dias: 14 }, { hasta: 10, dias: 21 }, { hasta: 20, dias: 28 }, { hasta: 999, dias: 35 }],
   mesesPrueba: 6,
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
-  colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, estado: true, vencDni: true, vencLibreta: true },
+  colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, fechaAlta: true, estado: true, vencDni: true, vencLibreta: true },
   coloresLocal: {},                                                    // color de fondo (#RRGGBB) por local: pinta a sus colaboradores en Empleados y en la planilla de sueldos
   historialMesesNube: 12,                                              // a la nube (JSONBin) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
 };
@@ -396,6 +396,7 @@ const COLS_EMP = [                                                     // column
   { id: 'ingreso', label: 'Ingreso' },
   { id: 'finPrueba', label: 'Fin de prueba' },
   { id: 'alta', label: 'Alta (N/S)' },
+  { id: 'fechaAlta', label: 'Fecha de alta' },
   { id: 'estado', label: 'Estado' },
   { id: 'vencDni', label: 'Venc. DNI / precaria' },
   { id: 'vencLibreta', label: 'Venc. libreta sanitaria' },
@@ -1028,6 +1029,7 @@ function renderEmp() {
     local: { th: '<th>Local</th>' }, puesto: { th: '<th>Puesto</th>' }, ingreso: { th: '<th>Ingreso</th>' },
     finPrueba: { th: '<th>Fin de prueba</th>' },
     alta: { th: '<th title="N = alta normal, S = alta especial">Alta</th>' },
+    fechaAlta: { th: '<th>Fecha de alta</th>' },
     estado: { th: '<th>Estado</th>' },
     vencDni: { th: '<th>Venc. DNI / precaria</th>' }, vencLibreta: { th: '<th>Venc. libreta</th>' },
   };
@@ -1099,6 +1101,7 @@ function paintRows() {
     ingreso: e => `<td data-label="Ingreso">${fdate(e.fechaIngreso)}</td>`,
     finPrueba: e => `<td data-label="Fin de prueba">${(fp => fp ? `<span class="${fp < today() ? 'muted' : ''}">${fdate(fp)}</span>` : '—')(finPruebaDe(e))}</td>`,
     alta: e => `<td data-label="Alta">${altaPill(e)}</td>`,
+    fechaAlta: e => `<td data-label="Fecha de alta">${e.fechaAlta ? fdate(e.fechaAlta) : '—'}</td>`,
     estado: e => `<td data-label="Estado">${chip(e.estado)}</td>`,
     vencDni: e => `<td data-label="Venc. DNI / precaria">${vcell(e)(e.dniVenc)}</td>`,
     vencLibreta: e => `<td data-label="Venc. libreta">${vcell(e)(e.libretaSanitariaVenc)}</td>`,
@@ -2199,7 +2202,7 @@ async function pdfAltas() {
   });
 }
 
-const GEMP = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };   // columnas exportables de Empleados (Excel y PDF)
+const GEMP = { banco: ['Banco', e => e.banco], cbu: ['CBU / alias', e => e.cbu], razon: ['Razón social', e => e.razonSocial], local: ['Local', e => e.local], puesto: ['Puesto', e => e.puesto], ingreso: ['Ingreso', e => fdate(e.fechaIngreso)], finPrueba: ['Fin de prueba', e => fdate(finPruebaDe(e))], alta: ['Alta', e => e.alta], fechaAlta: ['Fecha de alta', e => e.fechaAlta ? fdate(e.fechaAlta) : ''], estado: ['Estado', e => ESTADOS[e.estado] || e.estado], vencDni: ['Venc. DNI / precaria', e => fdate(e.dniVenc)], vencLibreta: ['Venc. libreta', e => fdate(e.libretaSanitariaVenc)] };   // columnas exportables de Empleados (Excel y PDF)
 /* ---- Nómina de empleados (vista actual con filtros y columnas visibles) ---- */
 async function pdfEmpleados() {
   const rows = UI.rowsVis || []; if (!rows.length) { toast('No hay empleados para exportar.'); return false; }

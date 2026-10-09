@@ -32,6 +32,7 @@ h3{font-size:14px;margin:0 0 10px;font-weight:600}
 .bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .bar input[type=search]{flex:1;min-width:220px}
 input,select,textarea{font:inherit;color:inherit;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+input[type=checkbox],input[type=radio]{width:auto;flex:none;margin:0;accent-color:var(--accent)}
 input:focus-visible,select:focus-visible,button:focus-visible,tr:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 input:disabled,select:disabled{background:#F1F4F3;color:var(--muted)}
 .btn{font:inherit;font-weight:500;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:6px;cursor:pointer;white-space:nowrap}
@@ -252,6 +253,33 @@ details.sec>.sec-body{padding:2px 0 14px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{body.print-only{-webkit-print-color-adjust:exact;print-color-adjust:exact}body.print-only header,body.print-only .view[hidden]{display:none!important}body.print-only .view>*:not(.print-target){display:none!important}body.print-only #liq-list.print-target,body.print-only #ficha.print-target{display:block!important}}
 .llbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:10px 0}.llbar .fld{margin:0}
+
+dialog label{line-height:1.3}
+.bars .bfill{display:block}
+.alfilt{padding:0;margin-bottom:10px}
+.alfilt .fg-f{align-items:flex-end}
+.alfilt .ff.on input,.alfilt .ff.on select{border-color:var(--accent);background:#F1F8F6}
+#ll-res .tablewrap{overflow:visible}
+#ll-res .llgrid{table-layout:fixed;font-size:12.5px}
+#ll-res .llgrid th{white-space:normal;padding:6px 8px;font-size:12px}
+#ll-res .llgrid td{padding:6px 8px;overflow-wrap:anywhere;line-height:1.3}
+#ll-res .llgrid td:first-child{white-space:nowrap}
+#ll-res .llgrid td.num{white-space:nowrap;overflow-wrap:normal}
+#ll-res .llgrid .btn.sm{padding:3px 8px;font-size:12px}
+#ll-res .liqsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 28px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+#ll-res .liqtot{display:flex;align-items:center;gap:12px}
+#ll-res .liqtot strong{font-size:24px;line-height:1.1;color:var(--accent);font-weight:700;white-space:nowrap;letter-spacing:-.01em}
+#ll-res .liqtot div{font-size:12.5px;line-height:1.4}
+#ll-res .liqtot small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+#ll-res h3{font-size:12.5px;margin:0 0 6px;color:var(--muted)}
+#ll-res .cols{gap:12px 28px;margin-top:12px;align-items:start}
+#ll-res .cols table th,#ll-res .cols table td{padding:4px 8px;font-size:12px}
+#ll-res .cols table td.num,#ll-res .cols table th.num{white-space:nowrap}
+#ll-res .bars{gap:4px;margin:4px 0}
+#ll-res .bars .brow{grid-template-columns:56px minmax(0,1fr) auto;font-size:12px;gap:8px}
+#ll-res .bars .btrack{height:8px}
+@media(max-width:860px){#ll-res .liqsum{grid-template-columns:1fr}}
+@media(max-width:760px){#ll-res .tablewrap{overflow-x:auto}#ll-res .llgrid{table-layout:auto}}
 </style>
 </head>
 <body>
@@ -260,7 +288,6 @@ details.sec>.sec-body{padding:2px 0 14px}
   <nav class="tabs" aria-label="Secciones">
     <button data-act="tab" data-tab="emp">Empleados</button>
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
-    <button data-act="tab" data-tab="cal">Calendario</button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
     <button data-act="tab" data-tab="est">Historial y estadística</button>
     <button data-act="tab" data-tab="par">Parámetros</button>
@@ -277,7 +304,6 @@ details.sec>.sec-body{padding:2px 0 14px}
 <main>
   <section class="view" id="v-emp"></section>
   <section class="view" id="v-ale" hidden></section>
-  <section class="view" id="v-cal" hidden></section>
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
   <section class="view" id="v-par" hidden></section>
@@ -846,44 +872,72 @@ function calcAlertas() {
 }
 const alertasTotal = A => A.licFin.length + A.vacFin.length + A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
 function paintBadge() { const b = $('#ale-n'); if (!b) return; const n = alertasTotal(calcAlertas()); b.textContent = n; b.hidden = !n; }
-function renderAle() {
-  const h = renderAlertas();
-  $('#v-ale').innerHTML = `<h2>Alertas</h2>` +
-    (h || `<div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>`) +
-    `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días y liquidaciones con el plazo de pago vencido.</p>`;
-}
-function renderAlertas() {
-  const A = calcAlertas();
-  const liqCount = A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
-  if (!alertasTotal(A)) return '';
+UI.al = { q: '', prio: '', cat: '', local: '' };
+const alLocal = e => ((e && e.local) || '').trim() || 'Sin local';
+function alertasBloques() {
+  const A = calcAlertas(), hoy = today();
   const empLink = e => `<span class="lnk" data-act="openEmp" data-id="${e.id}">${esc(e.apellido)}, ${esc(e.nombre)}</span>`;
   const liqLink = (l, txt) => `<span class="lnk" data-act="openLiq" data-id="${l.id}">${esc(txt)}</span>`;
-  const blocks = [];
-  if (A.prueba.length) blocks.push(`<div class="alert"><h4><span class="n">${A.prueba.length}</span>Fin de período de prueba en los próximos 15 días</h4><ul>${A.prueba.map(e => `<li>${empLink(e)} — vence ${fdate(finPruebaDe(e))}</li>`).join('')}</ul></div>`);
-  if (A.solAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAlta.length}</span>Solicitudes de alta pendientes</h4><ul>${A.solAlta.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
-  if (A.solAumento.length) blocks.push(`<div class="alert"><h4><span class="n">${A.solAumento.length}</span>Solicitudes de aumento pendientes</h4><ul>${A.solAumento.map(e => `<li>${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}</li>`).join('')}</ul></div>`);
-  if (A.licFin.length) blocks.push(`<div class="alert"><h4><span class="n">${A.licFin.length}</span>Licencias que terminan en los próximos 15 días</h4><ul>${A.licFin.map(({ e, x }) => `<li>${empLink(e)} — ${esc(x.tipo)}, termina ${fdate(x.hasta)}</li>`).join('')}</ul></div>`);
-  if (A.vacFin.length) blocks.push(`<div class="alert"><h4><span class="n">${A.vacFin.length}</span>Vacaciones que terminan en los próximos 15 días</h4><ul>${A.vacFin.map(({ e, x }) => `<li>${empLink(e)} — ${fdate(x.desde)} al ${fdate(x.hasta)}</li>`).join('')}</ul></div>`);
-  if (A.sinAlta.length) blocks.push(`<div class="alert"><h4><span class="n">${A.sinAlta.length}</span>Empleados en nómina sin alta cargada</h4><ul>${A.sinAlta.map(e => `<li>${empLink(e)}</li>`).join('')}</ul></div>`);
+  const B = [];
+  const add = (key, crit, title, items) => { if (items.length) B.push({ key, crit, title, items }); };
+  add('prueba', false, 'Fin de período de prueba en los próximos 15 días', A.prueba.map(e => ({ e, html: `${empLink(e)} — vence ${fdate(finPruebaDe(e))}` })));
+  add('solAlta', false, 'Solicitudes de alta pendientes', A.solAlta.map(e => ({ e, html: `${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}` })));
+  add('solAumento', false, 'Solicitudes de aumento pendientes', A.solAumento.map(e => ({ e, html: `${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}` })));
+  add('licFin', false, 'Licencias que terminan en los próximos 15 días', A.licFin.map(({ e, x }) => ({ e, html: `${empLink(e)} — ${esc(x.tipo)}, termina ${fdate(x.hasta)}` })));
+  add('vacFin', false, 'Vacaciones que terminan en los próximos 15 días', A.vacFin.map(({ e, x }) => ({ e, html: `${empLink(e)} — ${fdate(x.desde)} al ${fdate(x.hasta)}` })));
+  add('sinAlta', false, 'Empleados en nómina sin alta cargada', A.sinAlta.map(e => ({ e, html: empLink(e) })));
   const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vDni.map(e => ({ e, tipo: 'DNI / precaria', f: e.dniVenc }))];
-  if (venc.length) blocks.push(`<div class="alert"><h4><span class="n">${venc.length}</span>Vencimientos de legajo en los próximos 15 días</h4><ul>${venc.map(v => `<li>${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}</li>`).join('')}</ul></div>`);
-  if (A.vencidos.length) blocks.push(`<div class="alert crit"><h4><span class="n">${A.vencidos.length}</span>Vencimientos de legajo ya vencidos</h4><ul>${A.vencidos.map(e => `<li>${empLink(e)}${e.libretaSanitariaVenc && e.libretaSanitariaVenc < today() ? ` — Libreta sanitaria venció ${fdate(e.libretaSanitariaVenc)}` : ''}${e.dniVenc && e.dniVenc < today() ? ` — DNI / precaria venció ${fdate(e.dniVenc)}` : ''}</li>`).join('')}</ul></div>`);
-  if (liqCount) {
-    const grp = arr => arr.map(it => liqLink(it.l, `${it.emp ? it.emp.apellido + ', ' + it.emp.nombre : '—'} (${it.atraso} días)`)).join(', ');
-    blocks.push(`<div class="alert crit"><h4><span class="n">${liqCount}</span>Liquidaciones con el plazo de pago vencido (art. 128 LCT)</h4><ul>
-      ${A.bands.d60.length ? `<li><b>Más de 2 meses de atraso:</b> ${grp(A.bands.d60)}</li>` : ''}
-      ${A.bands.d30.length ? `<li><b>Más de 1 mes de atraso:</b> ${grp(A.bands.d30)}</li>` : ''}
-      ${A.bands.d15.length ? `<li><b>Más de 15 días de atraso:</b> ${grp(A.bands.d15)}</li>` : ''}
-    </ul></div>`);
-  }
-  return `<div class="alerts">${blocks.join('')}</div>`;
+  add('venc', false, 'Vencimientos de legajo en los próximos 15 días', venc.map(v => ({ e: v.e, html: `${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}` })));
+  add('vencidos', true, 'Vencimientos de legajo ya vencidos', A.vencidos.map(e => ({ e, html: `${empLink(e)}${e.libretaSanitariaVenc && e.libretaSanitariaVenc < hoy ? ` — Libreta sanitaria venció ${fdate(e.libretaSanitariaVenc)}` : ''}${e.dniVenc && e.dniVenc < hoy ? ` — DNI / precaria venció ${fdate(e.dniVenc)}` : ''}` })));
+  const liqIt = (arr, band) => arr.map(it => ({ e: it.emp, band, html: liqLink(it.l, `${it.emp ? it.emp.apellido + ', ' + it.emp.nombre : '—'} (${it.atraso} días)`) }));
+  add('liq', true, 'Liquidaciones con el plazo de pago vencido (art. 128 LCT)', [...liqIt(A.bands.d60, 60), ...liqIt(A.bands.d30, 30), ...liqIt(A.bands.d15, 15)]);
+  return B.sort((a, b) => b.crit - a.crit);          // urgentes arriba
+}
+function renderAle() {
+  const B = alertasBloques(), F = UI.al;
+  const nota = `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días y liquidaciones con el plazo de pago vencido.</p>`;
+  if (!B.length) { $('#v-ale').innerHTML = `<h2>Alertas</h2><div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>` + nota; return; }
+  const locs = [...new Set(B.flatMap(b => b.items.map(it => alLocal(it.e))))];
+  const oml = new Map(ordenLocales().map((l, i) => [l, i]));
+  locs.sort((a, b) => (oml.get(a) ?? 999) - (oml.get(b) ?? 999) || a.localeCompare(b));
+  if (F.cat && !B.some(b => b.key === F.cat)) F.cat = '';
+  if (F.local && !locs.includes(F.local)) F.local = '';
+  $('#v-ale').innerHTML = `<h2>Alertas</h2>
+  <div class="card alfilt no-print"><div class="fg-f">
+    <div class="ff" style="flex:1 1 200px"><span class="ff-l">Buscar</span><input type="search" id="al-q" placeholder="Nombre, apellido, DNI o legajo" value="${esc(F.q)}" aria-label="Buscar en alertas"></div>
+    <div class="ff"><span class="ff-l">Prioridad</span><select id="al-prio" aria-label="Filtrar por prioridad"><option value="">Todas</option><option value="crit" ${F.prio === 'crit' ? 'selected' : ''}>Urgentes (vencidas)</option><option value="aviso" ${F.prio === 'aviso' ? 'selected' : ''}>Avisos (próximas)</option></select></div>
+    <div class="ff" style="flex:1 1 280px"><span class="ff-l">Tipo de alerta</span><select id="al-cat" aria-label="Filtrar por tipo de alerta"><option value="">Todas</option>${B.map(b => `<option value="${b.key}" ${F.cat === b.key ? 'selected' : ''}>${esc(b.title)} (${b.items.length})</option>`).join('')}</select></div>
+    <div class="ff"><span class="ff-l">Local</span><select id="al-local" aria-label="Filtrar por local"><option value="">Todos</option>${locs.map(l => `<option value="${esc(l)}" ${F.local === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+    <div class="ff" style="flex:0 0 auto;justify-content:flex-end"><button type="button" class="btn sm" data-act="alClear" style="height:28px">Limpiar</button></div>
+  </div></div>
+  <p class="muted" id="al-cnt" style="margin:0 0 10px"></p>
+  <div id="al-res"></div>` + nota;
+  paintAle();
+}
+function paintAle() {
+  const box = $('#al-res'); if (!box) return;
+  const F = UI.al, q = stripAcc(F.q || '').toLowerCase(), B = alertasBloques();
+  const total = B.reduce((s, b) => s + b.items.length, 0);
+  const ok = it => (!F.local || alLocal(it.e) === F.local) && (!q || (it.e && stripAcc(`${it.e.apellido || ''} ${it.e.nombre || ''} ${it.e.legajo || ''} ${it.e.dni || ''}`).toLowerCase().includes(q)));
+  const vis = B.filter(b => (!F.cat || b.key === F.cat) && (!F.prio || (F.prio === 'crit') === b.crit)).map(b => ({ ...b, items: b.items.filter(ok) })).filter(b => b.items.length);
+  const n = vis.reduce((s, b) => s + b.items.length, 0);
+  box.innerHTML = vis.length ? `<div class="alerts">${vis.map(b => {
+    let body;
+    if (b.key === 'liq') {
+      const g = (band, lbl) => { const a = b.items.filter(it => it.band === band); return a.length ? `<li><b>${lbl}:</b> ${a.map(it => it.html).join(', ')}</li>` : ''; };
+      body = g(60, 'Más de 2 meses de atraso') + g(30, 'Más de 1 mes de atraso') + g(15, 'Más de 15 días de atraso');
+    } else body = b.items.map(it => `<li>${it.html}</li>`).join('');
+    return `<div class="alert${b.crit ? ' crit' : ''}"><h4><span class="n">${b.items.length}</span>${esc(b.title)}</h4><ul>${body}</ul></div>`;
+  }).join('')}</div>` : `<div class="alerts"><div class="alert ok"><h4>Ninguna alerta coincide con los filtros</h4></div></div>`;
+  const c = $('#al-cnt'); if (c) c.textContent = n === total ? `${total} alerta${total === 1 ? '' : 's'}` : `Mostrando ${n} de ${total} alertas`;
+  [['prio', 'al-prio'], ['cat', 'al-cat'], ['local', 'al-local'], ['q', 'al-q']].forEach(([k, id]) => { const el = $('#' + id); if (el && el.closest) el.closest('.ff').classList.toggle('on', !!F[k]); });
 }
 
 function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  ({ emp: renderEmp, ale: renderAle, cal: renderCal, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  ({ emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -1208,10 +1262,12 @@ function paintLiqLista() {
   const f = liqFilas(), sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra');
   const sum = (k, cab) => `<table><thead><tr><th>${cab}</th><th class="num">Liq.</th><th class="num">Total</th><th class="num">Efectivo</th><th class="num">Transf.</th></tr></thead><tbody>${liqSumas(f, k).map(([n, v]) => `<tr><td>${esc(n)}</td><td class="num">${v.n}</td><td class="num">${money(v.t)}</td><td class="num">${money(v.efe)}</td><td class="num">${money(v.tra)}</td></tr>`).join('')}</tbody></table>`;
   const pm = r => r.efe || r.tra ? ['', ''].map((_, i) => `<td class="num">${money(i ? r.tra : r.efe)}</td>`).join('') : '<td class="num">—</td><td class="num">—</td>';
-  box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid"><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${LIQ_ESTADOS[r.l.estado]}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
-    <div class="cols" style="margin-top:16px"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>
-    <h3 style="margin-top:16px">Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}
-    <div class="stat" style="margin-top:14px"><strong>${money(tot)}</strong><span>Total de ${f.length} liquidacion${f.length === 1 ? '' : 'es'} · pagado en efectivo ${money(efe)} · por transferencia ${money(tra)} (pagos registrados; en borradores y aprobadas se muestra el reparto previsto). Incluye borradores si no filtrás por estado.</span></div>`
+  box.innerHTML = f.length ? `<div class="tablewrap"><table class="grid llgrid"><colgroup><col style="width:9%"><col style="width:15%"><col style="width:7%"><col style="width:10%"><col style="width:15%"><col style="width:7%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:6%" class="no-print"></colgroup><thead><tr><th>Egreso</th><th>Nombre</th><th>Local</th><th>Razón social</th><th>Tipo</th><th>Estado</th><th class="num">Monto</th><th class="num">Efectivo</th><th class="num">Transf.</th><th class="no-print"></th></tr></thead><tbody>${f.map(r => `<tr><td>${fdate(r.l.inputs.fecha)}</td><td>${esc(r.nom)}</td><td>${esc(r.local)}</td><td>${esc(r.razon)}</td><td>${esc(TIPOS[r.l.inputs.tipo] || '')}</td><td>${LIQ_ESTADOS[r.l.estado]}</td><td class="num">${money(r.monto)}</td>${pm(r)}<td class="no-print"><button class="btn sm" data-act="openLiq" data-id="${r.l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="liqsum">
+      <div class="liqtot"><strong>${money(tot)}</strong><div><b>${f.length} liquidacion${f.length === 1 ? '' : 'es'}</b><br>Efectivo ${money(efe)} · Transferencia ${money(tra)}<small>Pagos registrados; en borradores y aprobadas se muestra el reparto previsto. Incluye borradores si no filtrás por estado.</small></div></div>
+      <div><h3>Total por mes de egreso</h3>${barras(liqPorMes(f).map(([m, v]) => ({ label: fper(m), value: v })), { money: true })}</div>
+    </div>
+    <div class="cols"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>`
     : '<p class="muted" style="margin:0">No hay liquidaciones que coincidan.</p>';
   const n = ['tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
 }
@@ -2098,7 +2154,7 @@ function dlgEmpInforme() {
       <div style="display:flex;gap:10px;margin-bottom:4px"><label class="fld" style="flex:1"><span>Desde</span><input type="date" id="einf-desde"></label><label class="fld" style="flex:1"><span>Hasta</span><input type="date" id="einf-hasta"></label></div>
       <p class="muted" style="margin:0 0 10px">Las fechas son opcionales y se aplican a la fecha de cada tema (de la sanción, del ingreso, del egreso, de la licencia, del vencimiento…).</p>
       <div class="fld" style="margin-bottom:12px"><span>Temas del informe</span>
-        <div style="display:grid;gap:5px;margin-top:4px">${EINF_TEMAS.map(t => `<label style="${row}"><input type="checkbox" class="einf-tema" value="${t[0]}"> ${t[1]}${t[2] ? ` <span class="muted">· ${t[2]}</span>` : ''}</label>`).join('')}</div>
+        <div style="display:grid;gap:5px;margin-top:4px">${EINF_TEMAS.map(t => `<label style="${row}"><input type="checkbox" class="einf-tema" value="${t[0]}"><span>${t[1]}${t[2] ? ` <span class="muted">· ${t[2]}</span>` : ''}</span></label>`).join('')}</div>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="einf-cancel">Cancelar</button><button type="button" class="btn primary" id="einf-ok">Descargar</button></div>`;
@@ -2526,6 +2582,7 @@ const ACT = {
   estPdf: conPdf(() => pdfEst()),
   empPdf: () => dlgEmpInforme(),
   empAltasPdf: conPdf(() => pdfAltas()),
+  alClear: () => { UI.al = { q: '', prio: '', cat: '', local: '' }; renderAle(); },
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
   llXlsx: () => dlgInforme('xlsx'),
   llXlsxGo: async (f, ov) => {
@@ -2653,6 +2710,7 @@ document.addEventListener('input', e => {
   else if (t.id === 'fe') { UI.fe = t.value; paintRows(); }
   else if (t.dataset && t.dataset.f !== undefined) { UI.f[t.dataset.f] = t.value; paintRows(); }
   else if (t.id === 'vista-sel') { const v = (S.vistasEmp || []).find(x => x.id === t.value); UI.vistaSel = t.value; if (v) { UI.q = v.q; UI.fe = v.fe; UI.f = clone(v.f); } renderEmp(); }
+  else if (t.id && t.id.startsWith('al-')) { UI.al[t.id.slice(3)] = t.value; paintAle(); }
   else if (t.id && t.id.startsWith('ll-')) { UI.ll[t.id.slice(3)] = t.value; paintLiqLista(); }
   else if (t.id === 'st-local') { UI.stLocal = t.value; paintEst(); }
   else if (t.id === 'st-puesto') { UI.stPuesto = t.value; paintEst(); }

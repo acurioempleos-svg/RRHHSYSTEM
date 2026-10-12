@@ -2103,15 +2103,18 @@ async function pdfInforme(o) {
   doc.setFont('helvetica', 'bold'); T([242, 196, 107]); tx('CONFIDENCIAL', W - M, 70, 'right');
   let y = 116;
   // Tarjetas de indicadores
-  const K = o.kpis || [], gap = 10, kw = (W - 2 * M - gap * (K.length - 1)) / (K.length || 1);
+  const K = o.kpis || [], gap = 10, kw = (W - 2 * M - gap * (K.length - 1)) / (K.length || 1), kh = 68, tw = kw - 22;
+  // ajusta el tamaño de letra para que el texto entre en el ancho disponible
+  const fit = (s, sz, mn) => { doc.setFontSize(sz); while (sz > mn && doc.getTextWidth(String(s)) > tw) { sz -= .25; doc.setFontSize(sz); } return sz; };
   K.forEach((k, i) => {
-    const x = M + i * (kw + gap), c = k.c || C.acc;
-    F([255, 255, 255]); D(C.line); doc.setLineWidth(.6); doc.roundedRect(x, y, kw, 58, 5, 5, 'FD'); F(c); doc.rect(x, y + 6, 4, 46, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(String(k.v).length > 11 ? 14 : 21); T(c); tx(k.v, x + 14, y + 29);
-    doc.setFontSize(7.5); T(C.ink); tx(String(k.l).toUpperCase(), x + 14, y + 42);
-    if (k.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); T(C.mut); tx(k.n, x + 14, y + 52); }
+    const x = M + i * (kw + gap), c = k.c || C.acc, xt = x + 14;
+    F([255, 255, 255]); D(C.line); doc.setLineWidth(.6); doc.roundedRect(x, y, kw, kh, 5, 5, 'FD'); F(c); doc.rect(x, y + 6, 4, kh - 12, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(String(k.v).length > 11 ? 14 : 21); T(c); tx(k.v, xt, y + 30);
+    if (k.p) { const wv = doc.getTextWidth(String(k.v)); doc.setFontSize(11); tx(k.p, xt + wv + 6, y + 30); }   // porcentaje junto al número
+    T(C.ink); fit(String(k.l).toUpperCase(), 7.5, 5.5); tx(String(k.l).toUpperCase(), xt, y + 44);
+    if (k.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7); T(C.mut); doc.splitTextToSize(String(k.n), tw).slice(0, 2).forEach((ln, j) => tx(ln, xt, y + 54 + j * 8)); }
   });
-  if (K.length) y += 78;
+  if (K.length) y += kh + 20;
   if (o.barra) {
     const b = o.barra, w = W - 2 * M;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); T(C.ink); tx(b.l, M, y + 8); T(C.acc); tx(b.v + '%', W - M, y + 8, 'right');
@@ -2191,7 +2194,7 @@ async function pdfAltas() {
   const cnt = a => `${a.length} colaborador${a.length === 1 ? '' : 'es'}`;
   return pdfInforme({
     titulo: 'Informe de altas', sub: 'Situación de altas del personal en nómina y solicitudes pendientes', archivo: `informe-altas-${today()}.pdf`,
-    kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Sin alta con RIFL', v: sinR.length, c: P.blue, n: `${pctR}% de los sin alta · régimen 710` }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
+    kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Sin alta con RIFL', v: sinR.length, p: pctR + '%', c: P.blue, n: 'de los sin alta · régimen 710' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
     barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
     tortas: [{ t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: sin.length, c: P.bad }] }, { t: 'Sin alta por local', d: resumen.map(r => ({ l: r[0], v: r[4], c: pcLocal(r[0]) })) }],
     secs: [

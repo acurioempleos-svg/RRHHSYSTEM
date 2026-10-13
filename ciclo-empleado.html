@@ -444,6 +444,17 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   if (presU > 0) C.push({ codigo: 'PRES', desc: `Presentismo a descontar (${presU}/10 del sueldo)`, monto: -r2(sueldo * presU / 10), remunerativo: true });
   (egreso.nremunExtra || []).forEach(n => add('NREM_X', n.concepto || 'Suma no remunerativa', +n.monto || 0, false));
 
+  // Vacaciones proporcionales del año en curso (días del año trabajados hasta el egreso) + vacaciones pendientes de años anteriores
+  const addVacaciones = () => {
+    const antig31 = (new Date(f.getFullYear(), 11, 31) - ing) / (365.25 * DAY);
+    const tramo = P.vacaciones.find(x => antig31 <= x.hasta) || P.vacaciones[P.vacaciones.length - 1];
+    const iniAnio = new Date(f.getFullYear(), 0, 1);
+    const diasAnio = dias(ing > iniAnio ? ing : iniAnio, f);
+    const diasVac = tramo.dias * diasAnio / 365 + (+egreso.vacPendientesAnt || 0);   // proporcional del año en curso (se gozaría el año siguiente): no se le descuentan las vacaciones tomadas este año, que corresponden al período anterior
+    add('VAC', `Vacaciones no gozadas (${diasVac.toFixed(2)} días)`, diasVac * v25);
+    add('SAC_VAC', 'SAC s/ vacaciones', diasVac * v25 / 12);
+  };
+
   // Renuncia / desvinculación con pago de días trabajados: se paga únicamente el período trabajado
   if (t === 'renuncia_dias' || t === 'desvinculacion_dias') {
     avisos.push('Liquidación de solo días trabajados: se paga únicamente el período trabajado del mes. No incluye SAC, vacaciones, preaviso, integración, indemnizaciones, feriados ni los agregados del legajo (sí las ausencias, el presentismo y las sumas no remunerativas que cargues acá).');
@@ -460,13 +471,7 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
   add('SAC', 'SAC proporcional', mejorSem / 2 * dias(ing > iniSem ? ing : iniSem, f) / dias(iniSem, finSem));
 
   // 3. Vacaciones no gozadas
-  const antig31 = (new Date(f.getFullYear(), 11, 31) - ing) / (365.25 * DAY);
-  const tramo = P.vacaciones.find(x => antig31 <= x.hasta) || P.vacaciones[P.vacaciones.length - 1];
-  const iniAnio = new Date(f.getFullYear(), 0, 1);
-  const diasAnio = dias(ing > iniAnio ? ing : iniAnio, f);
-  const diasVac = Math.max(0, tramo.dias * diasAnio / 365 - (+egreso.vacGozadasAnio || 0)) + (+egreso.vacPendientesAnt || 0);
-  add('VAC', `Vacaciones no gozadas (${diasVac.toFixed(2)} días)`, diasVac * v25);
-  add('SAC_VAC', 'SAC s/ vacaciones', diasVac * v25 / 12);
+  addVacaciones();
 
   // 4. Preaviso (apagado por defecto: se activa a mano)
   const enPrueba = f <= pd(finDePrueba(emp.fechaIngreso, P.mesesPrueba));
@@ -906,9 +911,16 @@ function calcAlertas() {
   const nomE = id => S.empleados.find(x => x.id === id), enNom = id => nomE(id) && ['activo', 'licencia'].includes(nomE(id).estado);
   const finPronto = arr => arr.filter(x => x.hasta >= hoy && x.hasta <= lim && enNom(x.empleadoId)).sort((a, b) => a.hasta.localeCompare(b.hasta)).map(x => ({ e: nomE(x.empleadoId), x }));
   const licFin = finPronto(S.licencias), vacFin = finPronto(S.vacaciones);
-  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands, solAlta, solAumento, licFin, vacFin };
+  // Cumpleaños de los próximos 15 días (hoy incluido); el 29/02 cae el 28/02 en años no bisiestos
+  const y0 = +hoy.slice(0, 4), cumples = [];
+  activos.forEach(e => {
+    const nac = String(e.fechaNac || ''); if (!/^\d{4}-\d{2}-\d{2}/.test(nac)) return;
+    [y0, y0 + 1].forEach(y => { const md = calBdMd(e, y), f = y + '-' + md; if (md && f >= hoy && f <= lim) cumples.push({ e, f, edad: y - +nac.slice(0, 4), dias: Math.round((pd(f) - pd(hoy)) / DAY) }); });
+  });
+  cumples.sort((a, b) => a.f.localeCompare(b.f) || (a.e.apellido || '').localeCompare(b.e.apellido || ''));
+  return { prueba, sinAlta, vLibreta, vDni, vencidos, bands, solAlta, solAumento, licFin, vacFin, cumples };
 }
-const alertasTotal = A => A.licFin.length + A.vacFin.length + A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
+const alertasTotal = A => A.cumples.length + A.licFin.length + A.vacFin.length + A.solAlta.length + A.solAumento.length + A.prueba.length + A.sinAlta.length + A.vLibreta.length + A.vDni.length + A.vencidos.length + A.bands.d60.length + A.bands.d30.length + A.bands.d15.length;
 function paintBadge() { const b = $('#ale-n'); if (!b) return; const n = alertasTotal(calcAlertas()); b.textContent = n; b.hidden = !n; }
 UI.al = { q: '', prio: '', cat: '', local: '' };
 const alLocal = e => ((e && e.local) || '').trim() || 'Sin local';
@@ -923,6 +935,7 @@ function alertasBloques() {
   add('solAumento', false, 'Solicitudes de aumento pendientes', A.solAumento.map(e => ({ e, html: `${empLink(e)}${e.local ? ' — ' + esc(e.local) : ''}${e.puesto ? ' (' + esc(e.puesto) + ')' : ''}` })));
   add('licFin', false, 'Licencias que terminan en los próximos 15 días', A.licFin.map(({ e, x }) => ({ e, html: `${empLink(e)} — ${esc(x.tipo)}, termina ${fdate(x.hasta)}` })));
   add('vacFin', false, 'Vacaciones que terminan en los próximos 15 días', A.vacFin.map(({ e, x }) => ({ e, html: `${empLink(e)} — ${fdate(x.desde)} al ${fdate(x.hasta)}` })));
+  add('cumples', false, 'Cumpleaños en los próximos 15 días', A.cumples.map(({ e, f, edad, dias: d }) => ({ e, html: `${empLink(e)} — 🎂 ${fdate(f)} (cumple ${edad})${d === 0 ? ' · <b>hoy</b>' : d === 1 ? ' · mañana' : ' · en ' + d + ' días'}` })));
   add('sinAlta', false, 'Empleados en nómina sin alta cargada', A.sinAlta.map(e => ({ e, html: empLink(e) })));
   const venc = [...A.vLibreta.map(e => ({ e, tipo: 'Libreta sanitaria', f: e.libretaSanitariaVenc })), ...A.vDni.map(e => ({ e, tipo: 'DNI / precaria', f: e.dniVenc }))];
   add('venc', false, 'Vencimientos de legajo en los próximos 15 días', venc.map(v => ({ e: v.e, html: `${empLink(v.e)} — ${v.tipo}, vence ${fdate(v.f)}` })));
@@ -960,7 +973,7 @@ function renderIni() {
 }
 function renderAle() {
   const B = alertasBloques(), F = UI.al;
-  const nota = `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días y liquidaciones con el plazo de pago vencido.</p>`;
+  const nota = `<p class="muted">Se revisan los empleados activos y en licencia: fin de período de prueba y vencimientos de DNI / precaria y libreta sanitaria (próximos 15 días), altas sin cargar, solicitudes de alta y de aumento tildadas en el legajo, licencias y vacaciones que terminan en los próximos 15 días, cumpleaños de los próximos 15 días (según la fecha de nacimiento del legajo) y liquidaciones con el plazo de pago vencido.</p>`;
   if (!B.length) { $('#v-ale').innerHTML = `<h2>Alertas</h2><div class="alerts"><div class="alert ok"><h4>No hay alertas pendientes</h4></div></div>` + nota; return; }
   const locs = [...new Set(B.flatMap(b => b.items.map(it => alLocal(it.e))))];
   const oml = new Map(ordenLocales().map((l, i) => [l, i]));
@@ -1367,7 +1380,6 @@ function renderLiq() {
       <label class="sw" id="row-prea"><input type="checkbox" id="l-prea" ${inp.pagarPreaviso ? 'checked' : ''} ${dis}><span class="knob"></span>Pagar preaviso</label>
       <label class="sw" id="row-integ"><input type="checkbox" id="l-integ" ${inp.pagarIntegracion ? 'checked' : ''} ${dis}><span class="knob"></span>Pagar integración del mes (art. 233)</label>
       <div class="frm" style="margin-top:12px">
-        <label class="fld"><span>Vacaciones gozadas este año (días)</span><input type="number" id="l-vg" step="0.01" min="0" value="${inp.vacGozadas ?? 0}" ${dis}></label>
         <label class="fld"><span>Vacaciones pendientes de años anteriores (días)</span><input type="number" id="l-vp" step="0.01" min="0" value="${inp.vacPend ?? 0}" ${dis}></label>
       </div>
       <h3 style="margin:18px 0 4px">Ajustes de la liquidación</h3>
@@ -1412,7 +1424,7 @@ const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
            nremun: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'nremun' && n.mes === m).map(n => ({ concepto: n.concepto, monto: n.monto })) }; };
 function readLiqForm() {
   return { tipo: $('#l-tipo').value, fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
-    montoPactado: +$('#l-monto').value || 0, vacGozadas: +$('#l-vg').value || 0, vacPend: +$('#l-vp').value || 0,
+    montoPactado: +$('#l-monto').value || 0, vacGozadas: 0, vacPend: +$('#l-vp').value || 0,
     ausDias: Math.max(0, +$('#l-aus').value || 0), presDescontar: Math.max(0, +$('#l-pres').value || 0),
     nremunExtra: [...document.querySelectorAll('#l-nrem .nr-row')].map(r => ({ concepto: r.querySelector('.nr-c').value.trim(), monto: Math.max(0, +r.querySelector('.nr-m').value || 0) })) };
 }
@@ -1530,7 +1542,7 @@ function onPayInput(t) {
 function onLiqInput(t) {
   if (t.id === 'l-emp') { UI.liqFrom = null; return pickEmp(t.value); }
   if (t.id === 'l-tipo') { $('#l-prea').checked = false; $('#l-integ').checked = false; }
-  if (t.id === 'l-fecha' && UI.liq && UI.liq.empId) $('#l-vg').value = vacAuto(UI.liq.empId, t.value);
+  
   updateLiq();
 }
 

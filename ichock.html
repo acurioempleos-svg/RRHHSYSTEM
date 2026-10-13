@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
   <title>iCheck — Reconocimiento Facial</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <!-- face-api.js para reconocimiento facial en el navegador -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
@@ -65,6 +65,38 @@
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center overflow-x-hidden">
 
 <div id="toast-container"></div>
+<div id="net-banner" class="hidden fixed top-0 inset-x-0 z-[9700] bg-rose-700 text-white text-xs text-center py-1.5">Sin conexión a internet: no se pueden registrar fichajes hasta que vuelva.</div>
+
+<!-- Diálogo propio (reemplaza prompt/confirm, que los navegadores pueden bloquear) -->
+<div id="ask-modal" class="hidden fixed inset-0 bg-slate-900/95 z-[9600] flex items-center justify-center p-4">
+  <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-xs p-5 space-y-3">
+    <p id="ask-title" class="text-sm text-slate-200 whitespace-pre-line"></p>
+    <input id="ask-input" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base text-white focus:outline-none focus:border-indigo-500">
+    <div class="flex gap-2"><button id="ask-ok" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Aceptar</button>
+    <button id="ask-cancel" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- Corrección de fichajes -->
+<div id="log-modal" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4">
+  <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm p-5 space-y-3">
+    <h3 id="log-modal-title" class="font-bold text-indigo-300 text-sm"></h3>
+    <div><label class="block text-[10px] text-slate-400 uppercase mb-1">Colaborador</label><select id="log-staff" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="block text-[10px] text-slate-400 uppercase mb-1">Acción</label><select id="log-type" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option>ENTRADA</option><option>SALIDA</option></select></div>
+      <div><label class="block text-[10px] text-slate-400 uppercase mb-1">Fecha y hora</label><input type="datetime-local" id="log-when" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+    </div>
+    <div><label class="block text-[10px] text-slate-400 uppercase mb-1">Motivo (obligatorio, queda en la auditoría)</label><textarea id="log-reason" rows="2" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500" placeholder="Ej. Olvidó fichar la salida, avisó por WhatsApp"></textarea></div>
+    <div class="flex gap-2"><button onclick="saveLog()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Guardar</button>
+    <button onclick="document.getElementById('log-modal').classList.add('hidden')" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer">Cancelar</button></div>
+  </div>
+</div>
+<div id="audit-modal" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-lg p-5 max-h-[85vh] overflow-y-auto">
+    <div class="flex justify-between mb-3"><h3 class="font-bold text-indigo-300 text-sm"><i class="fa-solid fa-clipboard-list mr-2"></i>Auditoría de correcciones</h3><button onclick="document.getElementById('audit-modal').classList.add('hidden')" class="text-slate-400 cursor-pointer"><i class="fa-solid fa-xmark"></i></button></div>
+    <div id="audit-body" class="space-y-2 text-xs"></div>
+  </div>
+</div>
 
 <!-- ═══ OVERLAY FICHAJE CONFIRMADO ══════════════════════════════════════ -->
 <div id="punch-confirm" class="hidden">
@@ -76,7 +108,7 @@
   <div id="pc-name" class="text-xl text-slate-300"></div>
   <div id="pc-venue" class="text-sm text-indigo-300 mt-1 font-medium"></div>
   <div id="pc-time" class="text-2xl font-mono text-indigo-300 mt-1"></div>
-  <p class="text-slate-600 text-xs mt-3">Tocá para cerrar</p>
+  <p class="text-slate-400 text-xs mt-3">Tocá para cerrar</p>
 </div>
 
 <!-- ═══ OVERLAY ESCÁNER FACIAL (MODO KIOSKO) ════════════════════════════ -->
@@ -114,7 +146,8 @@
     </button>
   </div>
 
-  <div class="flex gap-3 mt-1">
+  <div class="flex gap-3 mt-1 flex-wrap justify-center">
+    <button id="face-retry-btn" onclick="retryCamera('face')" class="hidden bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm cursor-pointer"><i class="fa-solid fa-rotate mr-2"></i>Reintentar cámara</button>
     <button onclick="closeFaceOverlay()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-5 py-2 rounded-lg text-sm cursor-pointer transition-colors">
       <i class="fa-solid fa-xmark mr-2"></i>Cancelar
     </button>
@@ -150,7 +183,8 @@
   <p id="reg-status" class="text-slate-400 text-xs text-center max-w-[300px] min-h-[1.5rem]">Centrá tu cara en el óvalo</p>
   <p id="reg-angle-hint" class="text-emerald-400 text-sm font-semibold text-center min-h-[1.5rem]"></p>
 
-  <div class="flex gap-3">
+  <div class="flex gap-3 flex-wrap justify-center">
+    <button id="reg-retry-btn" onclick="retryCamera('reg')" class="hidden bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm cursor-pointer"><i class="fa-solid fa-rotate mr-2"></i>Reintentar cámara</button>
     <button id="reg-capture-btn" onclick="captureDescriptor()" disabled
       class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-sm font-bold cursor-pointer transition-all">
       <i class="fa-solid fa-camera mr-2"></i><span id="reg-capture-label">Tomar foto 1/3</span>
@@ -162,7 +196,8 @@
 </div>
 
 <!-- ═══ ACCESO RRHH ═══════════════════════════════════════════════════════ -->
-<div class="w-full max-w-2xl flex justify-end pt-3 pr-3">
+<div class="w-full max-w-2xl flex justify-end items-center gap-4 pt-3 pr-3">
+  <button onclick="toggleFullscreen()" class="text-slate-400 hover:text-indigo-400 text-sm cursor-pointer" title="Pantalla completa"><i class="fa-solid fa-expand"></i></button>
   <button onclick="requestAdminAccess()" class="text-slate-500 hover:text-indigo-400 transition-colors text-sm flex items-center gap-2 cursor-pointer">
     <i class="fa-solid fa-user-shield"></i> Acceso RRHH
   </button>
@@ -199,7 +234,7 @@
     <div id="recent-punches" class="space-y-2">
       <p class="text-xs text-slate-500 uppercase tracking-widest">Últimos fichajes</p>
       <div id="recent-list" class="space-y-1.5 max-h-48 overflow-y-auto">
-        <p class="text-slate-600 text-xs">Sin fichajes aún hoy.</p>
+        <p class="text-slate-400 text-xs">Sin fichajes aún hoy.</p>
       </div>
     </div>
 
@@ -274,6 +309,8 @@
         <input type="text" id="venue-name-input" placeholder="Ej. Local Palermo" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
       <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Dirección</label>
         <input type="text" id="venue-address-input" placeholder="Ej. Av. Santa Fe 3000" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+      <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Código del local en Ciclo (opcional)</label>
+        <input type="text" id="venue-ciclo-input" placeholder="Ej. BCP" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
     </div>
     <div class="flex gap-2 mb-5">
       <button onclick="saveVenue()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
@@ -288,45 +325,11 @@
 
   <!-- TAB: COLABORADORES -->
   <div id="tab-staff" class="tab-content">
-    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3">Planilla de Colaboradores</h3>
+    <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest mb-3">Colaboradores</h3>
 
-    <div class="bg-slate-900/60 border border-slate-700 rounded-lg p-4 mb-5">
-      <p class="text-[11px] text-slate-400 mb-3"><i class="fa-solid fa-circle-info mr-1.5 text-indigo-400"></i>
-        La nómina se lee directamente de un Google Sheet. Abrí la hoja → botón <span class="text-slate-300 font-mono">Compartir</span> →
-        acceso general <span class="text-slate-300 font-mono">"Cualquier persona con el enlace"</span> → Lector, y pegá esa URL acá
-        (no uses "Publicar en la web", falla por CORS). Columnas esperadas: <span class="text-slate-300 font-mono">DNI</span>,
-        <span class="text-slate-300 font-mono">Nombre</span>, <span class="text-slate-300 font-mono">Local</span>.</p>
-      <div class="flex flex-col sm:flex-row gap-2 mb-2">
-        <input type="text" id="nomina-csv-url" placeholder="https://docs.google.com/spreadsheets/d/XXXXXXXXXXXX/edit#gid=0"
-          class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-        <button onclick="saveNominaConfig()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
-          <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y sincronizar</button>
-        <button onclick="syncNomina(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
-          <i class="fa-solid fa-rotate mr-2"></i>Sincronizar ahora</button>
-      </div>
-      <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
-        <span id="nomina-sync-status">Todavía no se sincronizó.</span>
-        <label class="flex items-center gap-1.5 cursor-pointer select-none">
-          <input type="checkbox" id="staff-show-inactive" onchange="renderStaffTable()" class="cursor-pointer">
-          Mostrar inactivos (dados de baja de la planilla)
-        </label>
-      </div>
-
-      <div id="nomina-mapping-panel" class="hidden mt-3 pt-3 border-t border-slate-700">
-        <p class="text-[11px] text-amber-400 mb-2"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
-          No reconocí las columnas automáticamente. Elegí manualmente cuál es cuál (se guarda y no hay que repetirlo):</p>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el DNI</label>
-            <select id="map-col-dni" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
-          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el Nombre</label>
-            <select id="map-col-nombre" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
-          <div><label class="block text-[10px] text-slate-500 uppercase mb-1">Columna con el Local (opcional)</label>
-            <select id="map-col-local" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></select></div>
-        </div>
-        <button onclick="saveColumnMapping()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
-          <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar mapeo y sincronizar</button>
-      </div>
-    </div>
+    <p class="text-[11px] text-slate-400 mb-2"><i class="fa-solid fa-circle-info mr-1.5 text-indigo-400"></i>La nómina (nombre, DNI, local, salón/cocina, sous chef, supervisión y bajas) se toma automáticamente de <b>Ciclo de empleado</b>. Desde acá solo se registra y aprueba la cara de cada colaborador.</p>
+    <div class="flex items-center gap-2 mb-4"><p id="ciclo-status" class="text-[11px] text-slate-500 flex-1"></p>
+      <button onclick="refreshCiclo()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-[11px] cursor-pointer whitespace-nowrap"><i class="fa-solid fa-rotate mr-1.5"></i>Actualizar desde Ciclo</button></div>
 
     <div class="flex flex-col sm:flex-row gap-2 mb-3">
       <input type="text" id="staff-search" placeholder="Buscar por nombre, DNI o local..."
@@ -335,10 +338,20 @@
       <select id="staff-filter-status" onchange="renderStaffTable()"
         class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
         <option value="">Todos los estados</option>
-        <option value="pending">Pendientes de revisión</option>
+        <option value="pending">Caras pendientes de aprobar</option>
         <option value="noface">Sin cara registrada</option>
         <option value="novenue">Sin local asignado</option>
       </select>
+      <select id="staff-filter-rol" onchange="renderStaffTable()"
+        class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <option value="">Todos los roles</option>
+        <option value="sous">Sous chef</option>
+        <option value="supervision">Supervisión</option>
+        <option value="staff">Resto del equipo</option>
+        <option value="salon">Solo Salón</option>
+        <option value="cocina">Solo Cocina</option>
+      </select>
+      <label class="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer select-none whitespace-nowrap"><input type="checkbox" id="staff-show-inactive" onchange="renderStaffTable()">Ver inactivos</label>
     </div>
     <p id="staff-count" class="text-xs text-slate-500 mb-2"></p>
     <div class="overflow-x-auto rounded-lg border border-slate-700">
@@ -348,9 +361,8 @@
             <th class="px-4 py-3">Colaborador</th>
             <th class="px-4 py-3">DNI</th>
             <th class="px-4 py-3">Local</th>
-            <th class="px-4 py-3">Sector</th>
+            <th class="px-4 py-3">Sector / Rol</th>
             <th class="px-4 py-3">Cara</th>
-            <th class="px-4 py-3 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody id="staff-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
@@ -361,8 +373,10 @@
   <!-- TAB: REGISTROS -->
   <div id="tab-logs" class="tab-content">
     <div class="flex flex-wrap gap-2 mb-4">
-      <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
+      <button onclick="exportLogsXLSX()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
         <i class="fa-solid fa-file-excel mr-2"></i>Descargar Excel</button>
+      <button onclick="openLogModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer"><i class="fa-solid fa-plus mr-2"></i>Agregar fichaje</button>
+      <button onclick="openAudit()" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs cursor-pointer"><i class="fa-solid fa-clipboard-list mr-2"></i>Auditoría</button>
       <button onclick="clearRecords()" class="bg-rose-950/50 text-rose-400 px-4 py-2 rounded-lg text-xs border border-rose-500/30 cursor-pointer">
         <i class="fa-solid fa-trash mr-2"></i>Limpiar historial</button>
     </div>
@@ -385,6 +399,7 @@
             <th class="px-4 py-3">Método</th>
             <th class="px-4 py-3">Acción</th>
             <th class="px-4 py-3">Fecha y Hora</th>
+            <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody id="admin-table-body" class="divide-y divide-slate-700/50 bg-slate-800/50"></tbody>
@@ -407,7 +422,7 @@
     <div class="flex gap-2 mb-4">
       <button onclick="loadHours()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-medium cursor-pointer">
         <i class="fa-solid fa-calculator mr-2"></i>Calcular</button>
-      <button onclick="exportHoursCSV()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs cursor-pointer">
+      <button onclick="exportHoursXLSX()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs cursor-pointer">
         <i class="fa-solid fa-file-excel mr-2"></i>Exportar</button>
     </div>
     <div class="grid grid-cols-3 gap-3 mb-4">
@@ -434,6 +449,7 @@
         </tbody>
       </table>
     </div>
+    <p class="text-[11px] text-slate-400 mt-2">Estado: <i class="fa-solid fa-circle-check text-emerald-400"></i> completo · <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> falta entrada o salida · <i class="fa-solid fa-clock text-amber-400"></i> menos de 1 h</p>
   </div>
 
   <!-- TAB: TURNOS -->
@@ -517,23 +533,35 @@
 
   <!-- TAB: VISOR DE PRESENTISMO -->
   <div id="tab-visor" class="tab-content">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-      <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div>
         <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest"><i class="fa-solid fa-eye mr-2"></i>Quién está en el local</h3>
-        <span id="visor-updated" class="text-[10px] text-slate-500"></span>
+        <span id="visor-updated" class="text-[11px] text-slate-400"></span>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-3 text-[10px] text-slate-400">
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>Presente</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-600 inline-block"></span>Ausente</span>
-        </div>
-        <button onclick="loadVisorData()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
-          <i class="fa-solid fa-rotate mr-1.5"></i>Actualizar</button>
-      </div>
+      <button onclick="loadVisorData(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap"><i class="fa-solid fa-rotate mr-1.5"></i>Actualizar</button>
     </div>
-    <div id="visor-summary" class="flex flex-wrap gap-3 mb-4"></div>
-    <div id="visor-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <p class="text-slate-500 text-xs">Cargando...</p>
+    <div id="visor-summary" class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3"></div>
+    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+      <input type="text" id="visor-search" placeholder="Buscar colaborador..." oninput="setVisorSearch(this.value)" class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+      <select id="visor-venue" onchange="setVisorVenue(this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option value="">Todos los locales</option></select>
+    </div>
+    <div id="visor-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><p class="text-slate-400 text-xs">Cargando...</p></div>
+    <details class="mt-5 bg-slate-900/60 border border-slate-700 rounded-lg p-3">
+      <summary class="text-xs font-semibold text-indigo-300 cursor-pointer"><i class="fa-solid fa-bell mr-2"></i>Alertas por mail</summary>
+      <div class="mt-3 space-y-2 text-xs">
+        <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="alert-enabled" class="accent-indigo-500">Activar alertas (el kiosco tiene que quedar abierto)</label>
+        <input id="alert-recipients" placeholder="mails separados por coma" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
+        <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400">
+          <div>Tarde desde (min)<input type="number" id="alert-late" min="1" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+          <div>Ausente desde (min)<input type="number" id="alert-absent" min="1" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+          <div>Salida olvidada (min tras fin)<input type="number" id="alert-forgot" min="1" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"></div>
+        </div>
+        <div class="flex gap-2"><button onclick="saveAlertCfg()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs cursor-pointer">Guardar</button><button onclick="sendTestAlert()" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs cursor-pointer">Enviar prueba</button></div>
+        <p class="text-[11px] text-slate-400">Cada alerta se manda una sola vez por día, agrupada en un mail. Se envía escribiendo en la colección <span class="font-mono">mail</span> de Firestore: necesita la extensión "Trigger Email from Firestore" instalada y configurada.</p>
+      </div>
+    </details>
+    <div id="visor-detail" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4" onclick="if(event.target===this)closeVisorDetail()">
+      <div id="visor-detail-body" class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm p-5 space-y-3 max-h-[85vh] overflow-y-auto"></div>
     </div>
   </div>
 </main>
@@ -542,7 +570,7 @@
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit,
-         getDocs, where, deleteDoc, writeBatch }
+         getDocs, where, deleteDoc, writeBatch, runTransaction, onSnapshot }
                             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────
@@ -557,10 +585,10 @@ const firebaseConfig = {
 // Colecciones Firestore:
 // venues/{venueId}         → { name, address, qrToken }
 // staff/{dni}              → { name, dni, venueId, venueName, faceDescriptor: Float32Array serializado,
-//                               source: 'sheet', activo: bool, pendingVenueMatch: bool, syncedAt, sector: 'cocina'|'salon' }
+//                               activo: bool, faceApproved: bool, sector: 'cocina'|'salon', rol: 'sous'|'supervision'|'', puesto }
+//                               ← nombre/DNI/local/sector/rol/activo se sincronizan desde Ciclo de empleado (JSONBin); icheck solo agrega la cara
 // attendance_logs/{autoId} → { name, dni, venueId, venueName, type, timestamp, method: 'face'|'manual_dni' }
 // config/admin             → { pinHash }
-// config/nomina            → { csvUrl, lastSync, lastCount }
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
@@ -585,30 +613,47 @@ let shiftModalKey = '';
 let lastShiftDays  = [];   // últimas fechas (YYYY-MM-DD) renderizadas en la grilla de turnos
 let lastShiftStaff = [];   // últimos colaboradores renderizados en la grilla de turnos
 let copySourceDate = '';   // fecha origen al copiar un día
-let nominaCsvUrl   = '';   // URL publicada del Google Sheet (CSV)
-let nominaSyncing  = false;
-let nominaColumnMap = null; // { dni, nombre, local } — mapeo manual de columnas, si hizo falta
-let nominaLastCsvText = ''; // último CSV crudo recibido, para poder re-mapear sin refetch
-const NOMINA_AUTOSYNC_MS = 5 * 60 * 1000; // resincroniza cada 5 minutos
 let visorAutoTimer  = null; // interval de auto-refresh del Visor de presentismo
-let visorPresenceMap = {};  // dni -> { present: bool, lastType, lastTs }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function escHtml(str) {
   return (str || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+const TZ = 'America/Argentina/Buenos_Aires';
+function localDateStr(d = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d); }
+function dayRangeISO(ds) { const f = new Date(ds + 'T03:00:00.000Z'); return [f.toISOString(), new Date(f.getTime() + 86400000 - 1).toISOString()]; }
+function getShift(k) { const d = shiftDirty[k]; if (d) return d.deleted ? null : d; return shiftData[k] || null; }
+let recogTimer = null, regFromKiosk = false, regCapturing = false, regCooldownUntil = 0, visorShiftMap = {};
+
+// Valida la secuencia ENTRADA/SALIDA (permite turno cortado: E-S-E-S)
+async function checkPunch(dni, type, now) {
+  try {
+    const since = new Date(now.getTime() - 24 * 3600e3).toISOString();
+    const snap = await getDocs(query(collection(db, "attendance_logs"), where("timestamp", ">=", since)));
+    const mine = snap.docs.map(d => d.data()).filter(l => l.dni === dni && l.timestamp).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    const last = mine[0];
+    const t = l => new Date(l.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    if (type === 'ENTRADA' && last?.type === 'ENTRADA' && (now - new Date(last.timestamp)) < 16 * 3600e3)
+      return { ok: false, msg: `Ya tenés una ENTRADA abierta (${t(last)}). Fichá SALIDA o pedile a RRHH que lo corrija.` };
+    if (type === 'SALIDA' && (!last || last.type !== 'ENTRADA'))
+      return { ok: false, msg: 'No hay una ENTRADA previa para cerrar. Pedile a RRHH que cargue la entrada.' };
+    return { ok: true };
+  } catch (e) { console.warn('checkPunch', e); return { ok: true, unknown: true }; }
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   startClock();
+  const modelsP = loadModels(); // los modelos arrancan en paralelo, sin esperar la nómina
   await loadVenues();
-  await loadNominaConfig();
   await loadStaff();
-  if (nominaCsvUrl) await syncNomina(false); // sincroniza en silencio al abrir
-  await loadModels();
-  await loadKnownFaces();
+  await Promise.all([modelsP, loadKnownFaces()]);
   showRecentPunches();
-  setInterval(() => { if (nominaCsvUrl) syncNomina(false); }, NOMINA_AUTOSYNC_MS);
+  keepAwake(); netBanner(); await loadAlertCfg();
+  setInterval(runAlertCheck, 300000); setTimeout(runAlertCheck, 20000);
+  // La nómina la actualiza otro sistema: se refresca cada 5 min
+  setInterval(async () => { await loadStaff(); await loadKnownFaces(); }, 300000);
 });
 
 // ── RELOJ ─────────────────────────────────────────────────────────────────
@@ -653,7 +698,7 @@ async function loadKnownFaces() {
     knownFaces = [];
     snap.docs.forEach(d => {
       const s = d.data();
-      if (s.activo === false) return; // dado de baja de la planilla — no debe poder fichar
+      if (s.activo === false || s.faceApproved === false) return; // baja de planilla o cara pendiente de aprobar
       let descriptors = [];
       if (s.faceDescriptors && Array.isArray(s.faceDescriptors) && s.faceDescriptors.length > 0) {
         descriptors = s.faceDescriptors
@@ -699,6 +744,7 @@ window.openFaceOverlay = async function() {
   document.getElementById('face-punch-buttons').classList.add('hidden');
   document.getElementById('face-result-overlay').classList.add('hidden');
   document.getElementById('face-status').textContent = 'Iniciando cámara...';
+  document.getElementById('face-retry-btn').classList.add('hidden');
   document.getElementById('face-overlay').classList.remove('hidden');
   // Refresh knownFaces when opening — skip if already loaded in the last 30s to avoid
   // a redundant read when openFaceOverlay is called right after the init sequence.
@@ -711,12 +757,13 @@ window.openFaceOverlay = async function() {
   faceRefreshTimer = setInterval(async () => {
     if (!faceStream) return;
     await loadKnownFaces();
-  }, 60000);
+  }, 300000);
 };
 
 window.closeFaceOverlay = function() {
   // Fix #10: clear the refresh timer on close
   if (faceRefreshTimer) { clearInterval(faceRefreshTimer); faceRefreshTimer = null; }
+  clearTimeout(recogTimer);
   stopFaceCamera();
   document.getElementById('face-overlay').classList.add('hidden');
   recognizedEmployee = null;
@@ -726,9 +773,7 @@ window.closeFaceOverlay = function() {
 
 async function startFaceCamera() {
   try {
-    faceStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-    });
+    faceStream = await getCam(); watchTrack(faceStream, 'face');
     const video = document.getElementById('face-video');
     video.srcObject = faceStream;
     await video.play();
@@ -737,12 +782,12 @@ async function startFaceCamera() {
       : 'Buscando cara...';
     tickFaceScan();
   } catch (e) {
-    document.getElementById('face-status').textContent = 'Sin acceso a la cámara. Revisá permisos.';
+    showCamError('face', e);
   }
 }
 
 function stopFaceCamera() {
-  if (faceAnimId) { cancelAnimationFrame(faceAnimId); faceAnimId = null; }
+  if (faceAnimId) { clearTimeout(faceAnimId); faceAnimId = null; }
   if (faceStream) { faceStream.getTracks().forEach(t => t.stop()); faceStream = null; }
 }
 
@@ -761,7 +806,7 @@ async function tickFaceScan() {
   const video  = document.getElementById('face-video');
   const canvas = document.getElementById('face-canvas');
   if (!video || !canvas) return;
-  if (video.readyState < 2) { faceAnimId = requestAnimationFrame(tickFaceScan); return; }
+  if (video.readyState < 2) { faceAnimId = setTimeout(tickFaceScan, 180); return; }
 
   // Fix #1: wrap entire detection in try/catch so a single bad frame can't kill the loop
   try {
@@ -815,7 +860,7 @@ async function tickFaceScan() {
             if (!emp) {
               faceVoteBuffer = [];
               document.getElementById('face-status').textContent = 'Colaborador no encontrado. Recargá la página.';
-              faceAnimId = requestAnimationFrame(tickFaceScan);
+              faceAnimId = setTimeout(tickFaceScan, 180);
               return;
             }
 
@@ -850,7 +895,7 @@ async function tickFaceScan() {
     console.warn('tickFaceScan error (frame skipped):', e);
   }
 
-  faceAnimId = requestAnimationFrame(tickFaceScan);
+  faceAnimId = setTimeout(tickFaceScan, 180);
 }
 
 function showRecognized(emp, confidence) {
@@ -867,13 +912,23 @@ function showRecognized(emp, confidence) {
   const btnOut = document.getElementById('face-btn-salida');
   btnIn.disabled  = false;
   btnOut.disabled = false;
+  btnIn.style.opacity = btnOut.style.opacity = '';
   document.getElementById('face-punch-buttons').classList.remove('hidden');
+  // Atenúa la acción que no corresponde según su último fichaje
+  checkPunch(emp.dni, 'SALIDA', new Date()).then(c => {
+    if (c.unknown || recognizedEmployee !== emp) return;
+    const off = c.ok ? btnIn : btnOut; off.disabled = true; off.style.opacity = '.3';
+  });
+  // Si la persona se va sin elegir, se libera la pantalla
+  clearTimeout(recogTimer);
+  recogTimer = setTimeout(() => { if (recognizedEmployee === emp) rejectRecognition(); }, 12000);
 }
 
 // Fix #12: lets the kiosk recover when the wrong person was matched or someone new steps up,
 // without closing the whole overlay/camera. Resumes the detection loop instead of staying stuck
 // showing the previous person indefinitely.
 window.rejectRecognition = function() {
+  clearTimeout(recogTimer);
   recognizedEmployee = null;
   faceDetectCooldown = false;
   faceVoteBuffer = [];
@@ -886,6 +941,7 @@ window.rejectRecognition = function() {
 // ── FICHAR CON CARA RECONOCIDA ────────────────────────────────────────────
 window.submitFacePunch = async function(type) {
   if (!recognizedEmployee) return;
+  if (!navigator.onLine) { showToast('Sin conexión a internet. No se puede registrar el fichaje.', 'error', 6000); return; }
   const btnIn  = document.getElementById('face-btn-entrada');
   const btnOut = document.getElementById('face-btn-salida');
   btnIn.disabled  = true;
@@ -893,27 +949,8 @@ window.submitFacePunch = async function(type) {
   try {
     const emp = recognizedEmployee;
     const now = new Date();
-    // Check for duplicate: same employee, same type, same day
-    // Fix #14: removed orderBy("timestamp") from the Firestore query — combined with the two
-    // where() filters it required a composite index that wasn't created, which is what threw
-    // on every Entrada/Salida click. Now we just fetch matches and sort in JS.
-    const today = now.toISOString().slice(0, 10);
-    const dupQ = query(collection(db, "attendance_logs"),
-      where("dni", "==", emp.dni),
-      where("type", "==", type));
-    const dupSnap = await getDocs(dupQ);
-    if (!dupSnap.empty) {
-      const last = dupSnap.docs
-        .map(d => d.data())
-        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))[0];
-      if ((last.timestamp || '').startsWith(today)) {
-        const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
-        btnIn.disabled  = false;
-        btnOut.disabled = false;
-        return;
-      }
-    }
+    const chk = await checkPunch(emp.dni, type, now);
+    if (!chk.ok) { showToast(chk.msg, "warning", 6000); btnIn.disabled = false; btnOut.disabled = false; return; }
     await addDoc(collection(db, "attendance_logs"), {
       name:      emp.name,
       dni:       emp.dni,
@@ -976,6 +1013,7 @@ async function lookupFallbackDNI(dni) {
     const snap = await getDoc(doc(db, "staff", dni));
     if (!snap.exists()) { showToast("DNI no encontrado. Contactá a RRHH.", "error"); return; }
     const s = snap.data();
+    if (s.activo === false) { showToast('Ese colaborador figura como inactivo. Consultá con RRHH.', 'warning', 5000); return; }
     fallbackEmployee = s;
     document.getElementById('fallback-name').textContent  = s.name;
     document.getElementById('fallback-venue').textContent = `Local: ${s.venueName || '—'}`;
@@ -990,26 +1028,12 @@ async function lookupFallbackDNI(dni) {
 
 window.submitDNIFallback = async function(type) {
   if (!fallbackEmployee) return;
+  if (!navigator.onLine) { showToast('Sin conexión a internet. No se puede registrar el fichaje.', 'error', 6000); return; }
   try {
     const emp = fallbackEmployee;
     const now = new Date();
-    // Check for duplicate: same employee, same type, same day
-    // Fix #14: same composite-index fix as submitFacePunch — sort in JS instead of orderBy()
-    const today = now.toISOString().slice(0, 10);
-    const dupQ = query(collection(db, "attendance_logs"),
-      where("dni", "==", emp.dni),
-      where("type", "==", type));
-    const dupSnap = await getDocs(dupQ);
-    if (!dupSnap.empty) {
-      const last = dupSnap.docs
-        .map(d => d.data())
-        .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))[0];
-      if ((last.timestamp || '').startsWith(today)) {
-        const lastTime = new Date(last.timestamp).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        showToast(`Ya registraste ${type} hoy a las ${lastTime}.`, "warning", 5000);
-        return;
-      }
-    }
+    const chk = await checkPunch(emp.dni, type, now);
+    if (!chk.ok) { showToast(chk.msg, "warning", 6000); return; }
     await addDoc(collection(db, "attendance_logs"), {
       name:      emp.name,
       dni:       emp.dni,
@@ -1056,13 +1080,13 @@ function showPunchConfirm(type, name, venueName, date, isManual = false, emp = n
 // ── ÚLTIMOS FICHAJES ──────────────────────────────────────────────────────
 async function showRecentPunches() {
   try {
-    const today = new Date().toISOString().slice(0,10);
+    const today = localDateStr();
     const q = query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"), limit(50));
     const snap = await getDocs(q);
     const list = document.getElementById('recent-list');
-    const logs = snap.docs.map(d => d.data()).filter(l => l.timestamp?.startsWith(today));
+    const logs = snap.docs.map(d => d.data()).filter(l => l.timestamp && localDateStr(new Date(l.timestamp)) === today);
     if (!logs.length) {
-      list.innerHTML = '<p class="text-slate-600 text-xs">Sin fichajes aún hoy.</p>';
+      list.innerHTML = '<p class="text-slate-400 text-xs">Sin fichajes aún hoy.</p>';
       return;
     }
     list.innerHTML = logs.map(l => {
@@ -1083,7 +1107,7 @@ async function showRecentPunches() {
     // Fix #6: show error instead of silencing
     console.error('showRecentPunches error:', e);
     const list = document.getElementById('recent-list');
-    if (list) list.innerHTML = '<p class="text-slate-600 text-xs">Error al cargar fichajes recientes.</p>';
+    if (list) list.innerHTML = '<p class="text-slate-400 text-xs">Error al cargar fichajes recientes.</p>';
   }
 }
 
@@ -1117,13 +1141,15 @@ function updateRegUI() {
   oval.className = `w-48 h-56 border-2 border-dashed ${colorClass} rounded-full transition-all duration-500`;
 }
 
-window.openRegisterFace = async function(dni, name) {
+window.openRegisterFace = async function(dni, name, fromKiosk = false) {
   if (!modelsLoaded) { showToast("Modelos aún cargando.", "warning"); return; }
   regTargetDni  = dni;
   regTargetName = name;
+  regFromKiosk  = fromKiosk;
   regCapturedDescriptors = [];
   document.getElementById('reg-name-label').textContent = `Registrando cara de: ${name}`;
   document.getElementById('reg-status').textContent = 'Centrá tu cara en el óvalo';
+  document.getElementById('reg-retry-btn').classList.add('hidden');
   document.getElementById('reg-capture-btn').disabled = true;
   document.getElementById('register-face-overlay').classList.remove('hidden');
   updateRegUI();
@@ -1133,34 +1159,29 @@ window.openRegisterFace = async function(dni, name) {
 window.closeRegisterFaceOverlay = function() {
   stopRegCamera();
   document.getElementById('register-face-overlay').classList.add('hidden');
-  regTargetDni = null; regTargetName = null; regCapturedDescriptors = [];
+  regTargetDni = null; regTargetName = null; regCapturedDescriptors = []; regCapturing = false; regCooldownUntil = 0;
 };
 
 // ── REGISTRO RÁPIDO DESDE EL KIOSKO ──────────────────────────────────────
 window.openKioskRegister = async function() {
   // Pedir DNI y nombre mediante prompts simples (kiosko sin teclado virtual elegante)
-  const dni = (prompt('Ingresá tu DNI (solo números):') || '').trim().replace(/\D/g,'');
+  const dni = ((await askInput({ title: 'Ingresá tu DNI (solo números)', inputmode: 'numeric', maxlength: 10 })) || '').trim().replace(/\D/g,'');
   if (!dni) return;
   // Verificar si ya existe en staff
   try {
-    const snap = await getDocs(collection(db, 'staff'));
-    const existing = snap.docs.find(d => d.data().dni === dni);
-    if (existing) {
-      const s = existing.data();
+    const snap = await getDoc(doc(db, 'staff', dni));
+    if (snap.exists()) {
+      const s = snap.data();
+      if (s.activo === false) { showToast('Ese colaborador figura como inactivo. Consultá con RRHH.', 'warning', 5000); return; }
       if (s.faceDescriptors && s.faceDescriptors.length > 0) {
         showToast(`${s.name} ya tiene cara registrada. Si tenés problemas, pedile a RRHH que la actualice.`, 'warning', 5000);
         return;
       }
       // Tiene perfil pero sin cara → registrar directo
-      openRegisterFace(s.dni, s.name);
+      openRegisterFace(s.dni, s.name, true);
       return;
     }
-    // No existe → pedir nombre y crear perfil mínimo
-    const name = (prompt('Tu nombre completo:') || '').trim();
-    if (!name) return;
-    showToast('Creando perfil… luego completá tus datos con RRHH.', 'info', 4000);
-    await setDoc(doc(db, 'staff', dni), { dni, name, venueName: '', venueId: '', pendingReview: true }, { merge: true });
-    openRegisterFace(dni, name);
+    showToast('Ese DNI no figura en la nómina. Avisale a RRHH para que te cargue.', 'warning', 6000);
   } catch (e) {
     console.error('openKioskRegister error:', e);
     showToast('Error al acceder a los datos. Revisá la conexión.', 'error');
@@ -1169,20 +1190,18 @@ window.openKioskRegister = async function() {
 
 async function startRegCamera() {
   try {
-    regStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-    });
+    regStream = await getCam(); watchTrack(regStream, 'reg');
     const video = document.getElementById('reg-video');
     video.srcObject = regStream;
     await video.play();
     tickRegDetect();
   } catch (e) {
-    document.getElementById('reg-status').textContent = 'Sin acceso a la cámara.';
+    showCamError('reg', e);
   }
 }
 
 function stopRegCamera() {
-  if (regAnimId)  { cancelAnimationFrame(regAnimId); regAnimId = null; }
+  if (regAnimId)  { clearTimeout(regAnimId); regAnimId = null; }
   if (regStream)  { regStream.getTracks().forEach(t => t.stop()); regStream = null; }
 }
 
@@ -1191,7 +1210,7 @@ let regAutoCapturePending = false; // guard para captura automática
 async function tickRegDetect() {
   const video = document.getElementById('reg-video');
   const canvas = document.getElementById('reg-canvas');
-  if (!regStream || video.readyState < 2) { regAnimId = requestAnimationFrame(tickRegDetect); return; }
+  if (!regStream || video.readyState < 2) { regAnimId = setTimeout(tickRegDetect, 150); return; }
 
   try {
     // Fix #5: only resize when dimensions actually changed
@@ -1218,14 +1237,14 @@ async function tickRegDetect() {
       window._lastRegDescriptor = detection.descriptor;
       document.getElementById('reg-capture-btn').disabled = false;
 
-      if (!regAutoCapturePending) {
+      if (!regAutoCapturePending && !regCapturing && Date.now() >= regCooldownUntil) {
         // Captura automática tras 1.2 s con cara estable
         regAutoCapturePending = true;
         const countdownMsgs = ['📸 Capturando en 3…', '📸 Capturando en 2…', '📸 Capturando en 1…'];
         const statusEl = document.getElementById('reg-status');
         let c = 0;
         const tick = setInterval(() => {
-          if (!regStream || regCapturedDescriptors.length !== step) { clearInterval(tick); regAutoCapturePending = false; return; }
+          if (!regStream || regCapturedDescriptors.length !== step || !window._lastRegDescriptor) { clearInterval(tick); regAutoCapturePending = false; return; }
           statusEl.textContent = countdownMsgs[c] || '';
           c++;
           if (c >= countdownMsgs.length) {
@@ -1236,7 +1255,7 @@ async function tickRegDetect() {
         }, 400);
       }
     } else {
-      document.getElementById('reg-status').textContent = 'No se detecta cara. Centrá tu rostro.';
+      if (Date.now() >= regCooldownUntil) document.getElementById('reg-status').textContent = 'No se detecta cara. Centrá tu rostro.';
       document.getElementById('reg-capture-btn').disabled = true;
       window._lastRegDescriptor = null;
       regAutoCapturePending = false;
@@ -1246,11 +1265,12 @@ async function tickRegDetect() {
     console.error('tickRegDetect error:', e);
   }
 
-  regAnimId = requestAnimationFrame(tickRegDetect);
+  regAnimId = setTimeout(tickRegDetect, 150);
 }
 
 window.captureDescriptor = async function() {
-  if (!window._lastRegDescriptor || !regTargetDni) return;
+  if (!window._lastRegDescriptor || !regTargetDni || regCapturing) return;
+  regCapturing = true;
   regAutoCapturePending = false; // resetear para la próxima toma
   const btn    = document.getElementById('reg-capture-btn');
   const status = document.getElementById('reg-status');
@@ -1260,7 +1280,7 @@ window.captureDescriptor = async function() {
   const descriptorAtClick = window._lastRegDescriptor.slice(); // copy the Float32Array
 
   // Fix #4: pause the detection loop during sampling to prevent _lastRegDescriptor from being overwritten
-  if (regAnimId) { cancelAnimationFrame(regAnimId); regAnimId = null; }
+  if (regAnimId) { clearTimeout(regAnimId); regAnimId = null; }
 
   // Flash visual de captura
   const flash = document.getElementById('reg-flash');
@@ -1284,6 +1304,7 @@ window.captureDescriptor = async function() {
   if (samples.length < 2) {
     status.textContent = 'No se detectó cara durante el muestreo. Intentá de nuevo.';
     btn.disabled = false;
+    regCapturing = false;
     // Resume detection loop
     if (regStream) tickRegDetect();
     return;
@@ -1304,10 +1325,12 @@ window.captureDescriptor = async function() {
     // Todavía faltan ángulos
     status.textContent = `✅ Foto ${regCapturedDescriptors.length} guardada. Ahora ${REG_ANGLES[regCapturedDescriptors.length].hint.toLowerCase()}`;
     btn.disabled = true; // se reactiva cuando detecte cara de nuevo
+    regCooldownUntil = Date.now() + 3000; // tiempo para girar antes de la próxima toma
+    regCapturing = false;
     return;
   }
 
-  // Las 4 tomas completadas → guardar en Firestore
+  // Las 3 tomas completadas → guardar en Firestore
   status.textContent = 'Guardando...';
   try {
     const serialized = regCapturedDescriptors.map(desc =>
@@ -1315,16 +1338,19 @@ window.captureDescriptor = async function() {
     );
     await setDoc(doc(db, "staff", regTargetDni), {
       faceDescriptors: serialized,
-      faceDescriptor:  null   // limpiar campo legacy si existía
+      faceDescriptor:  null,  // limpiar campo legacy si existía
+      faceApproved:    !regFromKiosk // altas por kiosco quedan pendientes de aprobación de RRHH
     }, { merge: true });
     stopRegCamera();
     document.getElementById('register-face-overlay').classList.add('hidden');
-    showToast(`Cara de ${regTargetName} registrada con 3 ángulos. 🎉`, "success");
+    regCapturing = false;
+    showToast(regFromKiosk ? 'Cara registrada. Podrás fichar con la cara cuando RRHH la apruebe; mientras tanto usá el DNI.' : `Cara de ${regTargetName} registrada con 3 ángulos. 🎉`, "success", regFromKiosk ? 7000 : 3500);
     regCapturedDescriptors = [];
     await loadKnownFaces();
     await loadStaff();
   } catch (e) {
-    showToast("Error al guardar la cara. Revisá tu conexión.", "error");
+    showToast("Error al guardar la cara. Revisá tu conexión y repetí las 3 fotos.", "error");
+    regCapturedDescriptors = []; updateRegUI(); regCapturing = false;
     btn.disabled = false;
   }
 };
@@ -1361,7 +1387,7 @@ function renderVenuesList() {
     <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex items-center justify-between">
       <div>
         <p class="font-semibold text-slate-200 text-sm">${escHtml(v.name)}</p>
-        <p class="text-xs text-slate-500">${escHtml(v.address)}</p>
+        <p class="text-xs text-slate-500">${escHtml(v.address)}${v.cicloLocal ? ` · Ciclo: <span class="text-indigo-300">${escHtml(v.cicloLocal)}</span>` : ''}</p>
       </div>
       <div class="flex gap-2">
         <button onclick="editVenue('${v.id}')" class="text-indigo-400 hover:text-indigo-300 text-xs cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1373,11 +1399,12 @@ function renderVenuesList() {
 window.saveVenue = async function() {
   const name    = document.getElementById('venue-name-input').value.trim();
   const address = document.getElementById('venue-address-input').value.trim();
+  const cicloLocal = document.getElementById('venue-ciclo-input').value.trim();
   const editId  = document.getElementById('venue-edit-id').value;
   if (!name) { showToast("Ingresá el nombre del local.", "error"); return; }
   try {
     const venueRef = editId ? doc(db, "venues", editId) : doc(collection(db, "venues"));
-    await setDoc(venueRef, { name, address }, { merge: true });
+    await setDoc(venueRef, { name, address, cicloLocal }, { merge: true });
     showToast(`Local "${name}" guardado.`, "success");
     clearVenueForm();
     await loadVenues();
@@ -1389,420 +1416,202 @@ window.editVenue = function(id) {
   if (!v) return;
   document.getElementById('venue-name-input').value    = v.name    || '';
   document.getElementById('venue-address-input').value = v.address || '';
+  document.getElementById('venue-ciclo-input').value   = v.cicloLocal || '';
   document.getElementById('venue-edit-id').value       = id;
 };
 window.deleteVenue = async function(id) {
   const v = allVenues.find(x => x.id === id);
-  if (!confirm(`¿Eliminar "${v?.name}"?`)) return;
+  if (!(await askConfirm({ title: `¿Eliminar "${v?.name}"?` }))) return;
   try { await deleteDoc(doc(db, "venues", id)); await loadVenues(); } catch (e) { showToast("Error.", "error"); }
 };
 window.clearVenueForm = function() {
-  ['venue-name-input','venue-address-input'].forEach(id => document.getElementById(id).value = '');
+  ['venue-name-input','venue-address-input','venue-ciclo-input'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('venue-edit-id').value = '';
 };
 
-// ── COLABORADORES (nómina desde Google Sheets) ──────────────────────────────
-async function loadNominaConfig() {
-  try {
-    const snap = await getDoc(doc(db, "config", "nomina"));
-    if (snap.exists()) {
-      const cfg = snap.data();
-      nominaCsvUrl = cfg.csvUrl || '';
-      nominaColumnMap = cfg.columnMap || null;
-      document.getElementById('nomina-csv-url').value = cfg.rawUrl || nominaCsvUrl;
-      updateNominaSyncStatus(cfg.lastSync, cfg.lastCount, cfg.lastError);
-    }
-  } catch (e) { console.error('loadNominaConfig error:', e); }
-}
-
-function updateNominaSyncStatus(lastSync, lastCount, lastError) {
-  const el = document.getElementById('nomina-sync-status');
-  if (!el) return;
-  if (lastError) {
-    el.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${escHtml(lastError)}</span>`;
-    return;
-  }
-  if (!lastSync) { el.textContent = 'Todavía no se sincronizó.'; return; }
-  const d = new Date(lastSync);
-  el.textContent = `Última sincronización: ${d.toLocaleDateString('es-AR')} ${d.toLocaleTimeString('es-AR')} · ${lastCount ?? 0} colaborador(es) en la planilla.`;
-}
-
-window.saveNominaConfig = async function() {
-  const rawInput = document.getElementById('nomina-csv-url').value.trim();
-  if (!rawInput) { showToast("Pegá el link para compartir de la hoja.", "error"); return; }
-
-  if (/\/spreadsheets\/d\/e\//.test(rawInput)) {
-    showToast('Ese es el link de "Publicar en la web" — Google lo redirige a un dominio que bloquea la lectura automática (CORS) y por eso falla. Usá el link normal de "Compartir" en su lugar: abrí la hoja → Compartir → "Cualquier persona con el enlace" → Lector → copiá esa URL (empieza con docs.google.com/spreadsheets/d/... sin la "e/" después de "d/").', "error", 12000);
-    return;
-  }
-
-  const idMatch  = rawInput.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  const gidMatch = rawInput.match(/[#&?]gid=([0-9]+)/);
-  const sheetId  = idMatch ? idMatch[1] : rawInput.replace(/[^a-zA-Z0-9-_]/g, '');
-  if (!sheetId) { showToast("No pude identificar la hoja en ese link.", "error"); return; }
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv${gidMatch ? '&gid=' + gidMatch[1] : ''}`;
-
-  try {
-    const urlChanged = csvUrl !== nominaCsvUrl;
-    await setDoc(doc(db, "config", "nomina"), { rawUrl: rawInput, csvUrl, columnMap: urlChanged ? null : (nominaColumnMap || null) }, { merge: true });
-    nominaCsvUrl = csvUrl;
-    if (urlChanged) { nominaColumnMap = null; hideColumnMappingPanel(); }
-    showToast("URL guardada. Sincronizando...", "info");
-    await syncNomina(true);
-  } catch (e) { console.error(e); showToast("Error al guardar la URL.", "error"); }
-};
-
-// Normaliza texto para poder comparar encabezados de columnas y nombres de locales
-// sin que espacios, mayúsculas o tildes generen falsos negativos.
 function normalizeKey(str) {
-  return (str || '').toString().trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return (str || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-// Igual que normalizeKey pero además ignora numeración inicial tipo "2. Tanta" o "4) BCB",
-// porque en la planilla los locales suelen venir numerados y en iCheck no.
-function normalizeVenueName(str) {
-  return normalizeKey(str).replace(/^\d+\s*[.)-]\s*/, '');
+// ── CICLO DE EMPLEADO: fuente única de la nómina ─────────────────────────
+// Lee (solo lectura) el mismo bin cifrado de JSONBin que usa la app "ciclo-empleado".
+const CICLO_JB = { apiKey: '$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n', clave: 'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit', binId: '6ab67ab9ac6210605af45cd2' };
+const CICLO_ESTADOS_ACTIVOS = ['activo', 'licencia', 'egreso'];   // el resto (candidato, preingreso, liquidado, archivado) queda inactivo
+const CICLO_SALON  = ['recepcion','caja','supervision','jefe de barra','barra','camarero','camarero jr','corredor','volante','valet parking'];
+const CICLO_COCINA = ['chef','sous chef','cocina','pasteleria','produccion','bacha','almacen'];
+let cicloCache = null, cicloCacheAt = 0, cicloInfo = { ok: false, msg: 'Sin conectar', total: 0, sinDni: 0, unmatched: [], at: 0 };
+
+async function fetchCiclo() {
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(CICLO_JB.binId)}/latest`, { headers: { 'X-Master-Key': CICLO_JB.apiKey, 'X-Bin-Meta': 'false' }, cache: 'no-store' });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.message || ('HTTP ' + r.status)); }
+  const env = await r.json();
+  if (!crypto?.subtle) throw new Error('el navegador no permite descifrar (abrí icheck desde https)');
+  const un = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(CICLO_JB.clave), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: un(env.salt), iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un(env.iv) }, key, un(env.data)));
+  const txt = (env.v >= 2)
+    ? new TextDecoder().decode(await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer())
+    : new TextDecoder().decode(pt);
+  const data = JSON.parse(txt);
+  if (!Array.isArray(data.empleados)) throw new Error('los datos de Ciclo no tienen el formato esperado');
+  return data.empleados;
 }
 
-function showColumnMappingPanel(headers) {
-  const panel = document.getElementById('nomina-mapping-panel');
-  if (!panel || !headers?.length) return;
-  const opts = '<option value="">-- Elegí una columna --</option>' +
-    headers.map(h => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join('');
-  document.getElementById('map-col-dni').innerHTML    = opts;
-  document.getElementById('map-col-nombre').innerHTML = opts;
-  document.getElementById('map-col-local').innerHTML  = '<option value="">-- (ninguna) --</option>' +
-    headers.map(h => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join('');
-  if (nominaColumnMap?.dni)    document.getElementById('map-col-dni').value    = nominaColumnMap.dni;
-  if (nominaColumnMap?.nombre) document.getElementById('map-col-nombre').value = nominaColumnMap.nombre;
-  if (nominaColumnMap?.local)  document.getElementById('map-col-local').value  = nominaColumnMap.local;
-  panel.classList.remove('hidden');
+function cicloSector(puesto) {
+  const p = normalizeKey(puesto);
+  if (CICLO_SALON.includes(p)) return 'salon';
+  if (CICLO_COCINA.includes(p)) return 'cocina';
+  if (/cocin|chef|pastel|bacha/.test(p)) return 'cocina';
+  if (/salon|barra|camarer|mozo|caja|recepci/.test(p)) return 'salon';
+  return '';
+}
+function cicloRol(puesto) {
+  const p = normalizeKey(puesto);
+  if (/sous/.test(p)) return 'sous';
+  if (/supervis/.test(p)) return 'supervision';
+  return '';
+}
+function matchVenue(local) {
+  const k = normalizeKey(local); if (!k) return null;
+  return allVenues.find(v => normalizeKey(v.cicloLocal) === k)
+      || allVenues.find(v => normalizeKey(v.name) === k)
+      || allVenues.find(v => { const n = normalizeKey(v.name); return n && (n.includes(k) || k.includes(n)); })
+      || null;
+}
+function rolBadge(s) {
+  if (s.rol === 'sous') return '<div class="mt-1"><span class="px-2 py-0.5 bg-amber-950/50 text-amber-300 rounded text-[10px] font-medium">Sous chef</span></div>';
+  if (s.rol === 'supervision') return '<div class="mt-1"><span class="px-2 py-0.5 bg-sky-950/50 text-sky-300 rounded text-[10px] font-medium">Supervisión</span></div>';
+  return '';
+}
+function cicloToStaff(e) {
+  const dni = String(e.dni || '').replace(/\D/g, ''); if (!dni) return null;
+  const v = matchVenue(e.local);
+  return {
+    dni, name: `${(e.nombre || '').trim()} ${(e.apellido || '').trim()}`.trim() || dni,
+    venueName: (e.local || '').trim(), venueId: v ? v.id : '',
+    puesto: (e.puesto || '').trim(), sector: cicloSector(e.puesto), rol: cicloRol(e.puesto),
+    activo: CICLO_ESTADOS_ACTIVOS.includes(e.estado), cicloId: e.id || '', _venueOk: !!v
+  };
 }
 
-function hideColumnMappingPanel() {
-  document.getElementById('nomina-mapping-panel')?.classList.add('hidden');
-}
-
-window.saveColumnMapping = async function() {
-  const dniCol    = document.getElementById('map-col-dni').value;
-  const nombreCol = document.getElementById('map-col-nombre').value;
-  const localCol  = document.getElementById('map-col-local').value;
-  if (!dniCol || !nombreCol) { showToast("Elegí al menos la columna de DNI y la de Nombre.", "error"); return; }
-  nominaColumnMap = { dni: dniCol, nombre: nombreCol, local: localCol || null };
-  try {
-    await setDoc(doc(db, "config", "nomina"), { columnMap: nominaColumnMap }, { merge: true });
-    showToast("Mapeo guardado. Sincronizando...", "info");
-    await syncNomina(true);
-  } catch (e) { console.error(e); showToast("Error al guardar el mapeo.", "error"); }
-};
-
-window.syncNomina = async function(manual) {
-  if (nominaSyncing) return;
-  if (!nominaCsvUrl) {
-    if (manual) showToast("Primero guardá la URL del Google Sheet.", "error");
-    return;
+async function syncCicloToFirestore(list, fireMap) {
+  const ops = [];
+  const FIELDS = ['name', 'dni', 'venueName', 'venueId', 'puesto', 'sector', 'rol', 'activo', 'cicloId'];
+  const ciclo = new Set(list.map(x => x.dni));
+  for (const s of list) {
+    const f = fireMap.get(s.dni);
+    const upd = {}; FIELDS.forEach(k => upd[k] = s[k]);
+    if (!s._venueOk && f?.venueId) { delete upd.venueId; }          // local sin vincular: se conserva el vínculo anterior
+    if (!f || FIELDS.some(k => k in upd && (f[k] ?? '') !== (upd[k] ?? ''))) ops.push([s.dni, { ...upd, sinCiclo: false }]);
   }
-  nominaSyncing = true;
-  if (manual) showToast("Sincronizando nómina...", "info");
-  try {
-    let res;
-    try {
-      res = await fetch(nominaCsvUrl, { cache: 'no-store' });
-    } catch (fetchErr) {
-      // El fetch en sí fue bloqueado (CORS, sin conexión, origen file://, etc.)
-      throw new Error('BLOQUEADO_RED: el navegador impidió la conexión (revisá tu conexión a internet o si estás abriendo el archivo con file:// en vez de subido a un hosting).');
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}: la hoja respondió con un error. Si es 404, revisá el link; si es 403, revisá los permisos de acceso.`);
-    const csvText = await res.text();
-    nominaLastCsvText = csvText; // guardado para reusar si hace falta mapear columnas a mano
-
-    // Si Google devuelve una página de login/HTML en vez de CSV, la hoja no es pública
-    const looksLikeHtml = /^\s*<(!doctype|html)/i.test(csvText);
-    if (looksLikeHtml) {
-      throw new Error('NO_PUBLICA: recibiste una página web en vez de datos. La hoja no está compartida como "Cualquier persona con el enlace → Lector" (o el link/gid está mal). Abrí la hoja → Compartir → Acceso general → Cualquier persona con el enlace → Lector.');
-    }
-
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    if (parsed.errors?.length) console.warn('CSV parse warnings:', parsed.errors);
-    const headers = parsed.meta?.fields || Object.keys(parsed.data[0] || {});
-
-    let rows;
-    if (nominaColumnMap?.dni && nominaColumnMap?.nombre) {
-      // Usa el mapeo manual guardado por el usuario
-      rows = parsed.data.map(row => ({
-        dni: (row[nominaColumnMap.dni] || '').toString().replace(/\D/g, ''),
-        name: (row[nominaColumnMap.nombre] || '').toString().trim(),
-        venueText: nominaColumnMap.local ? (row[nominaColumnMap.local] || '').toString().trim() : ''
-      })).filter(r => r.dni && r.name);
-    } else {
-      // Intenta detectar automáticamente por nombre de columna habitual (match flexible: contiene la palabra clave)
-      const findCol = (keys, needles) => keys.find(k => needles.some(n => k.includes(n)));
-      const normKeys = headers.map(h => ({ original: h, norm: normalizeKey(h) }));
-      const dniKey    = findCol(normKeys.map(k => k.norm), ['dni']);
-      const nombreKey = findCol(normKeys.map(k => k.norm), ['nombre', 'colaborador']);
-      const localKey  = findCol(normKeys.map(k => k.norm), ['local', 'sucursal']);
-      const dniOriginal    = normKeys.find(k => k.norm === dniKey)?.original;
-      const nombreOriginal = normKeys.find(k => k.norm === nombreKey)?.original;
-      const localOriginal  = normKeys.find(k => k.norm === localKey)?.original;
-      rows = parsed.data.map(row => ({
-        dni: dniOriginal ? (row[dniOriginal] || '').toString().replace(/\D/g, '') : '',
-        name: nombreOriginal ? (row[nombreOriginal] || '').toString().trim() : '',
-        venueText: localOriginal ? (row[localOriginal] || '').toString().trim() : ''
-      })).filter(r => r.dni && r.name);
-    }
-
-    if (!rows.length) {
-      showColumnMappingPanel(headers);
-      throw new Error(`SIN_FILAS: no reconocí automáticamente las columnas DNI/Nombre. Elegilas manualmente abajo. Encabezados detectados: ${headers.join(', ') || '(ninguno)'}`);
-    }
-    hideColumnMappingPanel();
-
-
-    if (!allVenues.length) await loadVenues();
-    let unmatchedVenues = 0;
-    const nowISO = new Date().toISOString();
-    const sheetDnis = new Set();
-
-    for (const r of rows) {
-      sheetDnis.add(r.dni);
-      const venue = allVenues.find(v => normalizeVenueName(v.name) === normalizeVenueName(r.venueText));
-      const pendingVenueMatch = !!r.venueText && !venue;
-      if (pendingVenueMatch) unmatchedVenues++;
-      await setDoc(doc(db, "staff", r.dni), {
-        name: r.name,
-        dni: r.dni,
-        venueId: venue?.id || '',
-        venueName: venue?.name || r.venueText || '',
-        pendingVenueMatch,
-        source: 'sheet',
-        activo: true,
-        syncedAt: nowISO
-      }, { merge: true });
-    }
-
-    // Da de baja (sin borrar historial ni la cara registrada) a quienes salieron de la planilla
-    let deactivated = 0;
-    for (const s of allStaff) {
-      if (s.source === 'sheet' && s.activo !== false && !sheetDnis.has(s.dni)) {
-        await setDoc(doc(db, "staff", s.dni), { activo: false }, { merge: true });
-        deactivated++;
-      }
-    }
-
-    await setDoc(doc(db, "config", "nomina"), { csvUrl: nominaCsvUrl, lastSync: nowISO, lastCount: rows.length, lastError: null }, { merge: true });
-    updateNominaSyncStatus(nowISO, rows.length, null);
-    await loadStaff();
-    await loadKnownFaces();
-
-    let msg = `Nómina sincronizada: ${rows.length} colaborador(es).`;
-    if (deactivated) msg += ` ${deactivated} dado(s) de baja.`;
-    if (unmatchedVenues) msg += ` ⚠️ ${unmatchedVenues} sin local coincidente.`;
-    showToast(msg, unmatchedVenues ? "warning" : "success", 6000);
-  } catch (e) {
-    console.error('syncNomina error:', e);
-    const errMsg = e.message || 'Error desconocido';
-    showToast("Error al sincronizar: " + errMsg, "error", 10000);
-    try { await setDoc(doc(db, "config", "nomina"), { lastError: errMsg, lastErrorAt: new Date().toISOString() }, { merge: true }); } catch {}
-    updateNominaSyncStatus(null, null, errMsg);
-  } finally {
-    nominaSyncing = false;
+  if (list.length) for (const [dni, f] of fireMap) if (!ciclo.has(dni) && f.activo !== false) ops.push([dni, { activo: false, sinCiclo: true }]);
+  for (let i = 0; i < ops.length; i += 400) {
+    const b = writeBatch(db);
+    ops.slice(i, i + 400).forEach(([dni, data]) => b.set(doc(db, 'staff', dni), data, { merge: true }));
+    await b.commit();
   }
-};
+  return ops.length;
+}
+
+function updateCicloStatus() {
+  const el = document.getElementById('ciclo-status'); if (!el) return;
+  if (!cicloInfo.ok) { el.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>No se pudo leer Ciclo (${escHtml(cicloInfo.msg)}). Se muestra la última nómina guardada.</span>`; return; }
+  const hora = new Date(cicloInfo.at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  el.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-link mr-1"></i>Sincronizado con Ciclo a las ${hora}</span> · ${cicloInfo.total} colaborador(es)`
+    + (cicloInfo.sinDni ? ` · <span class="text-amber-400">${cicloInfo.sinDni} sin DNI en Ciclo</span>` : '')
+    + (cicloInfo.unmatched.length ? ` · <span class="text-amber-400">Locales de Ciclo sin vincular: ${cicloInfo.unmatched.map(escHtml).join(', ')} (cargá el código en Locales)</span>` : '');
+}
+
+window.refreshCiclo = async function() { cicloCacheAt = 0; showToast('Actualizando desde Ciclo...', 'info'); await loadStaff(); await loadKnownFaces(); };
 
 async function loadStaff() {
   try {
-    const snap = await getDocs(query(collection(db, "staff"), orderBy("name")));
-    allStaff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await getDocs(collection(db, "staff"));
+    const fire = new Map(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
+    let emps = null;
+    try {
+      if (cicloCache && Date.now() - cicloCacheAt < 15 * 60 * 1000) emps = cicloCache;
+      else { emps = await fetchCiclo(); cicloCache = emps; cicloCacheAt = Date.now(); }
+    } catch (e) { console.warn('Ciclo:', e); cicloInfo = { ...cicloInfo, ok: false, msg: e.message || 'sin conexión' }; }
+
+    if (emps) {
+      const byDni = new Map(); let sinDni = 0;
+      emps.forEach(e => { const m = cicloToStaff(e); if (m) byDni.set(m.dni, m); else sinDni++; });
+      const list = [...byDni.values()];
+      try { await syncCicloToFirestore(list, fire); } catch (e) { console.error('sync ciclo', e); showToast('No se pudo guardar la nómina de Ciclo en la base.', 'error'); }
+      const merged = list.map(m => { const { _venueOk, ...rest } = m; const f = fire.get(m.dni) || {}; return { ...f, ...rest, venueId: (m._venueOk ? m.venueId : f.venueId) || '', id: m.dni, sinCiclo: false }; });
+      fire.forEach((f, dni) => { if (!byDni.has(dni)) merged.push({ ...f, activo: false, sinCiclo: true }); });
+      allStaff = merged;
+      cicloInfo = { ok: true, msg: '', total: list.filter(x => x.activo).length, sinDni, unmatched: [...new Set(list.filter(x => x.activo && !x._venueOk && x.venueName).map(x => x.venueName))], at: Date.now() };
+    } else {
+      allStaff = [...fire.values()];
+    }
+    allStaff.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es'));
     initStaffTableEvents();
     renderStaffTable();
-  } catch (e) { showToast("Error al cargar colaboradores.", "error"); }
+    updateCicloStatus();
+  } catch (e) { console.error(e); showToast("Error al cargar colaboradores.", "error"); }
 }
 
+function faceCount(s) { return s.faceDescriptors?.length || (s.faceDescriptor ? 1 : 0); }
 function renderStaffTable() {
-  const tbody = document.getElementById('staff-table-body');
-  const countEl = document.getElementById('staff-count');
+  const tbody = document.getElementById('staff-table-body'), countEl = document.getElementById('staff-count');
   const showInactive = document.getElementById('staff-show-inactive')?.checked;
-  const searchRaw = document.getElementById('staff-search')?.value || '';
-  const search = normalizeKey(searchRaw);
+  const searchRaw = document.getElementById('staff-search')?.value || '', search = normalizeKey(searchRaw);
   const statusFilter = document.getElementById('staff-filter-status')?.value || '';
-
-  let visibleStaff = allStaff.filter(s => showInactive || s.activo !== false);
-
-  if (search) {
-    const searchDigits = searchRaw.replace(/\D/g, '');
-    visibleStaff = visibleStaff.filter(s =>
-      normalizeKey(s.name).includes(search) ||
-      normalizeKey(s.venueName).includes(search) ||
-      (searchDigits && (s.dni || '').includes(searchDigits))
-    );
-  }
-  if (statusFilter === 'pending') {
-    visibleStaff = visibleStaff.filter(s => s.pendingReview || s.pendingVenueMatch);
-  } else if (statusFilter === 'noface') {
-    visibleStaff = visibleStaff.filter(s => !(s.faceDescriptors?.length || s.faceDescriptor));
-  } else if (statusFilter === 'novenue') {
-    visibleStaff = visibleStaff.filter(s => !s.venueId);
-  }
-
-  // Contador de estado general (sobre el total de activos, no sobre el filtrado)
-  const activeStaff = allStaff.filter(s => s.activo !== false);
-  const pendingCount = activeStaff.filter(s => s.pendingReview || s.pendingVenueMatch).length;
-  const noFaceCount  = activeStaff.filter(s => !(s.faceDescriptors?.length || s.faceDescriptor)).length;
-  if (countEl) {
-    countEl.textContent = `Mostrando ${visibleStaff.length} de ${allStaff.length} colaborador(es)` +
-      (pendingCount ? ` · ⚠️ ${pendingCount} pendiente(s) de revisión` : '') +
-      (noFaceCount ? ` · 📷 ${noFaceCount} sin cara registrada` : '');
-  }
-
-  if (!visibleStaff.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">${allStaff.length ? 'Ningún colaborador coincide con el filtro.' : 'Sin colaboradores. Sincronizá la planilla arriba.'}</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = visibleStaff.map(s => {
-    const hasFace = !!(s.faceDescriptors?.length || s.faceDescriptor);
-    const faceCount = s.faceDescriptors?.length || (s.faceDescriptor ? 1 : 0);
-    const faceBadge = hasFace
-      ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium">
-           <i class="fa-solid fa-face-smile"></i>Registrada${faceCount > 1 ? ` (${faceCount} ángulos)` : ''}
-         </span>
-         <button data-action="register-face" data-dni="${escHtml(s.dni)}"
-           class="ml-1 text-[10px] text-amber-400/60 hover:text-amber-400 cursor-pointer" title="Actualizar cara">
-           <i class="fa-solid fa-rotate"></i>
-         </button>`
-      : `<button data-action="register-face" data-dni="${escHtml(s.dni)}"
-           class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px] cursor-pointer hover:bg-indigo-900/50 transition-colors">
-           <i class="fa-solid fa-camera"></i>Registrar cara
-         </button>`;
-    const inactiveBadge = s.activo === false
-      ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]"><i class="fa-solid fa-user-slash mr-1"></i>Inactivo</span>` : '';
-    const pendingBadge = s.pendingReview
-      ? `<span class="ml-1.5 px-2 py-1 bg-amber-950/50 text-amber-400 rounded text-[10px]" title="Se registró desde el kiosko y todavía falta completar sus datos">
-           <i class="fa-solid fa-clock mr-1"></i>Pendiente
-         </span>` : '';
-
-    // Selector de local: reemplaza el badge estático para poder asignar/corregir
-    // el local manualmente, tanto para altas por kiosko como para desajustes
-    // de nombre entre la planilla de Sheets y los locales cargados en el sistema.
-    const venueOptions = allVenues.map(v =>
-      `<option value="${v.id}" ${s.venueId === v.id ? 'selected' : ''}>${escHtml(v.name)}</option>`).join('');
-    const venueSelectClasses = s.pendingVenueMatch || !s.venueId
-      ? 'bg-amber-950/40 border-amber-700/60 text-amber-300'
-      : 'bg-slate-900 border-slate-700 text-slate-300';
-    const venueSelect = `
-      <select data-action="set-venue" data-dni="${escHtml(s.dni)}"
-        class="${venueSelectClasses} border rounded-lg px-2 py-1.5 text-[10px] cursor-pointer focus:outline-none focus:border-indigo-500 max-w-[140px]"
-        title="${s.pendingVenueMatch ? 'El local de la planilla (\u201c' + escHtml(s.venueName || '') + '\u201d) no coincide con ninguno cargado. Asignalo manualmente.' : ''}">
-        <option value="" ${!s.venueId ? 'selected' : ''}>${s.pendingVenueMatch ? '⚠️ ' + escHtml(s.venueName || 'Sin local') : '— Sin local —'}</option>
-        ${venueOptions}
-      </select>`;
-
-    const sectorSelect = `
-      <select data-action="set-sector" data-dni="${escHtml(s.dni)}" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2 py-1.5 text-[10px] cursor-pointer focus:outline-none focus:border-indigo-500">
-        <option value="" ${!s.sector ? 'selected' : ''}>— Sin asignar —</option>
-        <option value="cocina" ${s.sector === 'cocina' ? 'selected' : ''}>🍳 Cocina</option>
-        <option value="salon" ${s.sector === 'salon' ? 'selected' : ''}>🍽️ Salón</option>
-      </select>`;
-    return `
-    <tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
-      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${inactiveBadge}${pendingBadge}</td>
-      <td class="px-4 py-3 text-slate-400 font-mono text-xs">${escHtml(s.dni)}</td>
-      <td class="px-4 py-3">${venueSelect}</td>
-      <td class="px-4 py-3">${sectorSelect}</td>
-      <td class="px-4 py-3">${faceBadge}</td>
-      <td class="px-4 py-3 text-right flex justify-end gap-2">
-        <button data-action="delete-staff" data-dni="${escHtml(s.dni)}" class="text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer ml-2" title="Eliminar definitivamente (incluye historial)"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    </tr>`;
+  let list = allStaff.filter(s => showInactive || s.activo !== false);
+  if (search) { const dg = searchRaw.replace(/\D/g, ''); list = list.filter(s => normalizeKey(s.name).includes(search) || normalizeKey(venueLabel(s)).includes(search) || (dg && (s.dni || '').includes(dg))); }
+  if (statusFilter === 'pending') list = list.filter(s => s.faceApproved === false);
+  else if (statusFilter === 'noface') list = list.filter(s => !faceCount(s));
+  else if (statusFilter === 'novenue') list = list.filter(s => !venueLabel(s));
+  const rolFilter = document.getElementById('staff-filter-rol')?.value || '';
+  if (rolFilter === 'sous' || rolFilter === 'supervision') list = list.filter(s => s.rol === rolFilter);
+  else if (rolFilter === 'staff') list = list.filter(s => !s.rol);
+  else if (rolFilter) list = list.filter(s => s.sector === rolFilter);
+  const act = allStaff.filter(s => s.activo !== false);
+  const pend = act.filter(s => s.faceApproved === false).length, nof = act.filter(s => !faceCount(s)).length;
+  countEl.textContent = `Mostrando ${list.length} de ${allStaff.length} colaborador(es)` + (pend ? ` · ⚠️ ${pend} cara(s) por aprobar` : '') + (nof ? ` · 📷 ${nof} sin cara` : '');
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-slate-500">${allStaff.length ? 'Ningún colaborador coincide con el filtro.' : 'Todavía no hay colaboradores cargados desde RRHH.'}</td></tr>`; return; }
+  const SECT = { cocina: '🍳 Cocina', salon: '🍽️ Salón' };
+  tbody.innerHTML = list.map(s => {
+    const n = faceCount(s), d = escHtml(s.dni);
+    const face = n
+      ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-950/50 text-emerald-400 rounded text-[10px] font-medium"><i class="fa-solid fa-face-smile"></i>Registrada${n > 1 ? ` (${n} ángulos)` : ''}</span>
+         <button data-action="register-face" data-dni="${d}" class="ml-1 px-2 py-1.5 text-xs text-amber-400/70 hover:text-amber-400 cursor-pointer" title="Actualizar cara"><i class="fa-solid fa-rotate"></i></button>`
+      : `<button data-action="register-face" data-dni="${d}" class="inline-flex items-center gap-1 px-2 py-1.5 bg-indigo-950/50 text-indigo-300 rounded text-[10px] cursor-pointer hover:bg-indigo-900/50"><i class="fa-solid fa-camera"></i>Registrar cara</button>`;
+    const appr = s.faceApproved === false
+      ? `<div class="mt-1 flex items-center gap-1"><span class="text-[10px] text-amber-400">Pendiente de aprobar</span>
+         <button data-action="approve-face" data-dni="${d}" class="px-2 py-1 bg-emerald-900/50 text-emerald-300 rounded text-[10px] cursor-pointer">Aprobar</button>
+         <button data-action="reject-face" data-dni="${d}" class="px-2 py-1 bg-rose-950/50 text-rose-300 rounded text-[10px] cursor-pointer">Rechazar</button></div>` : '';
+    return `<tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
+      <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${s.activo === false ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]">${s.sinCiclo ? 'Fuera de Ciclo' : 'Inactivo'}</span>` : ''}</td>
+      <td class="px-4 py-3 text-slate-400 font-mono text-xs">${d}</td>
+      <td class="px-4 py-3 text-xs">${venueLabel(s) ? escHtml(venueLabel(s)) : '<span class="text-amber-400">Sin local</span>'}</td>
+      <td class="px-4 py-3 text-xs">${SECT[s.sector] || '<span class="text-slate-500">—</span>'}${rolBadge(s)}${s.puesto ? `<div class="text-[10px] text-slate-500 mt-0.5">${escHtml(s.puesto)}</div>` : ''}</td>
+      <td class="px-4 py-3">${face}${appr}</td></tr>`;
   }).join('');
 }
 
-// Delegación de eventos para la tabla de colaboradores: se engancha una sola vez
-// sobre el tbody (persiste aunque se reemplace su innerHTML en cada render) y
-// busca los datos siempre desde `allStaff` por DNI, evitando tener que inyectar
-// nombres con comillas/backslashes dentro de atributos onclick (lo cual podía
-// romper el HTML si venían caracteres especiales desde la planilla de Sheets).
 function initStaffTableEvents() {
   const tbody = document.getElementById('staff-table-body');
   if (!tbody || tbody.dataset.eventsBound) return;
   tbody.dataset.eventsBound = '1';
-
   tbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const dni = btn.dataset.dni;
-    const s = allStaff.find(x => x.dni === dni);
-    if (!s) return;
-    if (btn.dataset.action === 'register-face') {
-      e.stopPropagation();
-      openRegisterFace(s.dni, s.name);
-    } else if (btn.dataset.action === 'delete-staff') {
-      deleteStaff(s.id, s.name);
-    }
-  });
-
-  tbody.addEventListener('change', (e) => {
-    const el = e.target.closest('[data-action]');
-    if (!el) return;
-    const dni = el.dataset.dni;
-    if (el.dataset.action === 'set-sector') {
-      setStaffSector(dni, el.value);
-    } else if (el.dataset.action === 'set-venue') {
-      setStaffVenue(dni, el.value);
-    }
+    const btn = e.target.closest('[data-action]'); if (!btn) return;
+    const s = allStaff.find(x => x.dni === btn.dataset.dni); if (!s) return;
+    if (btn.dataset.action === 'register-face') openRegisterFace(s.dni, s.name);
+    else if (btn.dataset.action === 'approve-face') approveFace(s.dni, true);
+    else if (btn.dataset.action === 'reject-face') approveFace(s.dni, false);
   });
 }
 
-window.setStaffVenue = async function(dni, venueId) {
-  const venue = allVenues.find(v => v.id === venueId);
+window.approveFace = async function(dni, ok) {
   try {
-    await setDoc(doc(db, "staff", dni), {
-      venueId: venue?.id || '',
-      venueName: venue?.name || '',
-      pendingVenueMatch: false
-    }, { merge: true });
-    const s = allStaff.find(x => x.dni === dni);
-    if (s) { s.venueId = venue?.id || ''; s.venueName = venue?.name || ''; s.pendingVenueMatch = false; }
-    showToast(venue ? `Local asignado: ${venue.name}.` : 'Local quitado.', 'success', 2500);
-    renderStaffTable();
-  } catch (e) { showToast("Error al asignar el local.", "error"); console.error(e); }
-};
-
-window.setStaffSector = async function(dni, sector) {
-  try {
-    await setDoc(doc(db, "staff", dni), { sector: sector || '' }, { merge: true });
-    const s = allStaff.find(x => x.dni === dni);
-    if (s) s.sector = sector || '';
-    showToast(sector ? `Sector actualizado: ${sector === 'cocina' ? 'Cocina' : 'Salón'}.` : 'Sector quitado.', 'success', 2500);
-  } catch (e) { showToast("Error al guardar el sector.", "error"); console.error(e); }
-};
-
-window.deleteStaff = async function(id, name) {
-  if (!confirm(`¿Eliminar a ${name} definitivamente? También se eliminarán sus turnos y registros de asistencia.\n\nSi la persona sigue en la planilla de Google Sheets, va a volver a aparecer en la próxima sincronización (sin su cara registrada). Para dar de baja de forma permanente, quitala de la planilla.`)) return;
-  try {
-    // Find the DNI — id === dni in this system but be explicit
-    const staffSnap = await getDoc(doc(db, "staff", id));
-    const dni = staffSnap.exists() ? (staffSnap.data().dni || id) : id;
-
-    // Collect all related docs: shifts and attendance_logs for this DNI
-    const [shiftsSnap, logsSnap] = await Promise.all([
-      getDocs(query(collection(db, "shifts"), where("dni", "==", dni))),
-      getDocs(query(collection(db, "attendance_logs"), where("dni", "==", dni)))
-    ]);
-    const allDocs = [staffSnap.ref, ...shiftsSnap.docs.map(d => d.ref), ...logsSnap.docs.map(d => d.ref)];
-
-    // Delete in batches of 500 (Firestore limit)
-    const BATCH_SIZE = 500;
-    for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
-      const batch = writeBatch(db);
-      allDocs.slice(i, i + BATCH_SIZE).forEach(ref => batch.delete(ref));
-      await batch.commit();
-    }
-    await loadStaff();
-    await loadKnownFaces();
-    showToast(`${name} eliminado junto a sus registros.`, "success");
-  } catch (e) { console.error(e); showToast("Error al eliminar colaborador.", "error"); }
+    await setDoc(doc(db, "staff", dni), ok ? { faceApproved: true } : { faceApproved: true, faceDescriptors: null, faceDescriptor: null }, { merge: true });
+    await loadStaff(); await loadKnownFaces();
+    showToast(ok ? 'Cara aprobada.' : 'Cara rechazada y eliminada.', 'success');
+  } catch (e) { console.error(e); showToast('Error al actualizar la cara.', 'error'); }
 };
 
 // ── ADMIN AUTH ────────────────────────────────────────────────────────────
@@ -1825,7 +1634,7 @@ async function hashPin(pin) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 window.requestAdminAccess = async function() {
-  const pin = prompt("PIN de Recursos Humanos:");
+  const pin = await askInput({ title: 'PIN de Recursos Humanos', type: 'password', inputmode: 'numeric', maxlength: 12 });
   if (pin === null) return;
   try {
     const cfgSnap = await getDoc(doc(db, "config", "admin"));
@@ -1858,7 +1667,7 @@ async function loadAdminLogs() {
   const tbody = document.getElementById('admin-table-body');
   tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</td></tr>`;
   try {
-    const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp", "desc")));
+    const snap = await getDocs(query(collection(db, "attendance_logs"), orderBy("timestamp", "desc"), limit(3000)));
     allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     applyFilters();
   } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-rose-400">Error.</td></tr>`; }
@@ -1869,7 +1678,7 @@ window.applyFilters = function() {
   const nameVal  = document.getElementById('filter-name').value.toLowerCase().trim();
   const venueVal = document.getElementById('filter-venue').value;
   let filtered = allLogs;
-  if (dateVal)  filtered = filtered.filter(l => l.timestamp?.startsWith(dateVal));
+  if (dateVal)  filtered = filtered.filter(l => l.timestamp && localDateStr(new Date(l.timestamp)) === dateVal);
   if (nameVal)  filtered = filtered.filter(l => l.name?.toLowerCase().includes(nameVal));
   if (venueVal) filtered = filtered.filter(l => l.venueId === venueVal);
   renderAdminTable(filtered);
@@ -1888,7 +1697,7 @@ function renderAdminTable(logs) {
   tbody.innerHTML = logs.map(l => {
     const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
     const isManual = l.method === 'manual_dni';
-    const methodBadge = isManual
+    const methodBadge = l.method === 'manual_rrhh' ? '<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">RRHH</span>' : isManual
       ? `<span class="px-2 py-1 rounded text-[10px] font-bold badge-manual"><i class="fa-solid fa-triangle-exclamation mr-1"></i>DNI Manual</span>`
       : `<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-face-smile mr-1"></i>Facial</span>`;
     return `
@@ -1898,12 +1707,13 @@ function renderAdminTable(logs) {
         <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(l.venueName)}</span></td>
         <td class="px-4 py-3">${methodBadge}</td>
         <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase font-bold ${l.type==='ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">${escHtml(l.type)}</span></td>
-        <td class="px-4 py-3 text-slate-400 text-xs">${ts}</td>
+        <td class="px-4 py-3 text-slate-400 text-xs">${ts}${l.edited ? ` <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-950/50 text-amber-400" title="${escHtml(l.editReason)}">editado</span>` : ''}</td>
+        <td class="px-2 py-3 whitespace-nowrap"><button onclick="openLogModal('${l.id}')" class="px-2 py-1.5 text-indigo-400 cursor-pointer" title="Corregir"><i class="fa-solid fa-pen"></i></button><button onclick="deleteLog('${l.id}')" class="px-2 py-1.5 text-rose-400/80 cursor-pointer" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
       </tr>`;
   }).join('');
 }
 
-window.exportToCSV = function() {
+window.exportLogsXLSX = function() {
   if (!allLogs.length) { showToast("Sin datos.", "info"); return; }
   const rows = allLogs.map(l => ({
     "Colaborador": l.name, "DNI": l.dni || '', "Local": l.venueName || '',
@@ -1913,10 +1723,10 @@ window.exportToCSV = function() {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
-  XLSX.writeFile(wb, `andino_asistencia_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `icheck_asistencia_${localDateStr()}.xlsx`);
 };
 window.clearRecords = async function() {
-  if (!confirm("¿Eliminar TODOS los registros? No se puede deshacer.")) return;
+  if ((await askInput({ title: 'Se van a eliminar TODOS los registros. Descargá antes el Excel de respaldo.\nEscribí BORRAR para confirmar.' })) !== 'BORRAR') return;
   try {
     const snap = await getDocs(collection(db, "attendance_logs"));
     // Fix #1: chunk into batches of 500 (Firestore limit)
@@ -1946,135 +1756,157 @@ window.switchTab = function(tabId) {
   if (tabId === 'tab-logs')   loadAdminLogs();
   if (tabId === 'tab-hours')  initHoursTab();
   if (tabId === 'tab-shifts') initShiftsTab();
-  if (tabId === 'tab-visor')  { loadVisorData(); visorAutoTimer = setInterval(loadVisorData, 30000); }
+  if (tabId === 'tab-visor')  { loadVisorData(true); visorAutoTimer = setInterval(() => loadVisorData(false), 30000); }
 };
 
 // ── TAB VISOR DE PRESENTISMO ────────────────────────────────────────────────
-function initials(name) {
-  return (name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+let visorLogs = {}, visorDayStart = '', visorFilter = '', visorSearch = '', visorVenue = '';
+const KIND = {
+  present:  { label: 'Presentes',        cls: 'bg-emerald-600/20 border-emerald-500 text-emerald-300', dot: 'bg-emerald-500', txt: 'text-emerald-400', ring: 'border-emerald-600/50' },
+  late:     { label: 'Sin fichar',       cls: 'bg-amber-600/20 border-amber-500 text-amber-300',       dot: 'bg-amber-500',   txt: 'text-amber-400',   ring: 'border-amber-600/50' },
+  upcoming: { label: 'Por llegar',       cls: 'bg-sky-600/10 border-sky-600 text-sky-300',             dot: 'bg-sky-500',     txt: 'text-sky-400',     ring: 'border-sky-600/50' },
+  left:     { label: 'Ya se fueron',     cls: 'bg-slate-700/30 border-slate-600 text-slate-400',       dot: 'bg-slate-500',   txt: 'text-slate-400',   ring: 'border-slate-600' },
+  free:     { label: 'Franco',           cls: 'bg-violet-600/10 border-violet-600 text-violet-300',    dot: 'bg-violet-500',  txt: 'text-violet-400',  ring: 'border-violet-600/50' },
+  none:     { label: 'Sin turno',        cls: 'bg-slate-700/20 border-slate-700 text-slate-500',       dot: 'bg-slate-600',   txt: 'text-slate-400',   ring: 'border-slate-700' }
+};
+function initials(name) { return (name || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'; }
+function venueKey(s) { return s.venueId || (s.venueName ? 'n:' + normalizeKey(s.venueName) : ''); }
+function venueLabel(s) { return allVenues.find(v => v.id === s.venueId)?.name || s.venueName || ''; }
+const toMin = hm => { if (!hm) return null; const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+const fmtHM = ts => new Date(ts).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' });
+const fmtDur = m => { m = Math.max(0, Math.round(m)); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; };
+const nowMinLocal = () => toMin(new Date().toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }));
+function shiftText(sh) { return sh && !sh.free && sh.in ? `${sh.in}–${sh.out}${sh.split && sh.in2 ? ' + ' + sh.in2 + '–' + sh.out2 : ''}` : ''; }
+function expectedNow(sh, nowM) {
+  if (!sh || sh.free || !sh.in) return false;
+  const segs = [[sh.in, sh.out]]; if (sh.split && sh.in2) segs.push([sh.in2, sh.out2]);
+  return segs.some(([i, o]) => { const a = toMin(i), b = toMin(o); if (a == null || b == null) return false; return b > a ? nowM >= a && nowM < b : (nowM >= a || nowM < b); });
 }
 
-window.loadVisorData = async function() {
-  const gridEl = document.getElementById('visor-grid');
-  const updatedEl = document.getElementById('visor-updated');
-  try {
+async function fetchVisorData(forceStaff) {
     if (!allVenues.length) await loadVenues();
-    await loadStaff();
-
-    // Rango del día de hoy en horario de Buenos Aires (UTC-3)
-    const now = new Date();
-    const today = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const fromTs = today + 'T03:00:00.000Z';
-    const toTs = new Date(new Date(fromTs).getTime() + 86400000 - 1).toISOString();
-    const snap = await getDocs(query(
-      collection(db, "attendance_logs"),
-      where("timestamp", ">=", fromTs),
-      where("timestamp", "<=", toTs),
-      orderBy("timestamp", "asc")
-    ));
-    const logs = snap.docs.map(d => d.data());
-
-    // Última marca del día por DNI → determina presente/ausente
-    visorPresenceMap = {};
-    logs.forEach(l => {
-      visorPresenceMap[l.dni] = { present: l.type === 'ENTRADA', lastType: l.type, lastTs: l.timestamp };
-    });
-
+    if (forceStaff || !allStaff.length) await loadStaff();
+    const now = new Date(), today = localDateStr(now);
+    const [dayStart, toTs] = dayRangeISO(today);
+    visorDayStart = dayStart;
+    const fromTs = new Date(new Date(dayStart).getTime() - 12 * 3600e3).toISOString(); // incluye turnos nocturnos iniciados ayer
+    const [snap, shSnap] = await Promise.all([
+      getDocs(query(collection(db, "attendance_logs"), where("timestamp", ">=", fromTs), where("timestamp", "<=", toTs), orderBy("timestamp", "asc"))),
+      getDocs(query(collection(db, "shifts"), where("date", "==", today)))
+    ]);
+    visorLogs = {}; snap.docs.forEach(d => { const l = d.data(); (visorLogs[l.dni] = visorLogs[l.dni] || []).push(l); });
+    visorShiftMap = {}; shSnap.docs.forEach(d => { const sh = d.data(); visorShiftMap[sh.dni] = sh; });
+    return now;
+}
+window.loadVisorData = async function(forceStaff) {
+  const gridEl = document.getElementById('visor-grid');
+  try {
+    const now = await fetchVisorData(forceStaff);
+    document.getElementById('visor-updated').textContent = `Actualizado ${now.toLocaleTimeString('es-AR', { hour12: false })} · se refresca cada 30 s`;
     renderVisorGrid();
-    updatedEl.textContent = `Actualizado ${now.toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
-  } catch (e) {
-    console.error('loadVisorData error:', e);
-    gridEl.innerHTML = '<p class="text-rose-400 text-xs">Error al cargar el visor.</p>';
-  }
+  } catch (e) { console.error('loadVisorData error:', e); gridEl.innerHTML = '<p class="text-rose-400 text-xs">Error al cargar el visor.</p>'; }
 };
 
-function visorCircle(s) {
-  const p = visorPresenceMap[s.dni];
-  const present = !!p?.present;
-  const cls = present
-    ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
-    : 'bg-slate-700/30 border-slate-600 text-slate-500';
-  const timeStr = p?.lastTs ? new Date(p.lastTs).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' }) : null;
-  const statusTxt = present ? `Presente · entró ${timeStr}` : (timeStr ? `Ausente · salió ${timeStr}` : 'Ausente · sin marcas hoy');
-  return `
-    <div class="flex flex-col items-center gap-1 w-14" title="${escHtml(s.name)} — ${statusTxt}">
-      <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center text-[11px] font-bold ${cls} relative">
-        ${initials(s.name)}
-        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-800 ${present ? 'bg-emerald-500' : 'bg-slate-600'}"></span>
-      </div>
-      <span class="text-[9px] text-slate-400 text-center leading-tight truncate w-full">${escHtml(s.name.split(' ')[0])}</span>
-    </div>`;
+function personState(s, nowM, nowMs) {
+  const logs = visorLogs[s.dni] || [], today = logs.filter(l => l.timestamp >= visorDayStart);
+  const last = logs[logs.length - 1], sh = visorShiftMap[s.dni];
+  const open = !!last && last.type === 'ENTRADA' && (nowMs - new Date(last.timestamp)) < 16 * 3600e3;
+  let worked = 0, o = null;
+  logs.forEach(l => { if (l.type === 'ENTRADA') o = l; else if (l.type === 'SALIDA' && o) { worked += (new Date(l.timestamp) - new Date(o.timestamp)) / 60000; o = null; } });
+  if (o && open) worked += (nowMs - new Date(o.timestamp)) / 60000;
+  const st = { s, sh, last, logs: today, worked, manual: today.some(l => l.method === 'manual_dni'), flag: '' };
+  if (open) {
+    st.kind = 'present'; st.mins = Math.round((nowMs - new Date(last.timestamp)) / 60000);
+    if (st.mins > 12 * 60) st.flag = 'Posible salida olvidada';
+    else if (!sh) st.flag = 'Sin turno cargado';
+    else if (!sh.free && sh.out && !sh.split) { const a = toMin(sh.in), b = toMin(sh.out); if (b > a && nowM > b + 30) st.flag = `Pasó ${fmtDur(nowM - b)} del fin de turno`; }
+  } else if (sh?.free && !today.length) st.kind = 'free';
+  else if (today.length && last.type === 'SALIDA') {
+    st.kind = 'left';
+    if (sh?.split && sh.in2 && nowM < toMin(sh.in2)) st.brk = true;
+  } else if (sh?.in) { const start = toMin(sh.in); st.kind = nowM >= start + 10 ? 'late' : 'upcoming'; st.mins = nowM - start; }
+  else st.kind = 'none';
+  return st;
 }
-
-function visorSectorBlock(label, icon, staffList) {
-  if (!staffList.length) return '';
-  const presentCount = staffList.filter(s => visorPresenceMap[s.dni]?.present).length;
-  return `
-    <div class="flex-1 min-w-[140px]">
-      <p class="text-[10px] text-slate-400 uppercase font-semibold mb-2 flex items-center gap-1.5">
-        <i class="fa-solid ${icon}"></i>${label}
-        <span class="text-slate-600 font-normal normal-case">(${presentCount}/${staffList.length})</span>
-      </p>
-      <div class="flex flex-wrap gap-2.5">${staffList.map(visorCircle).join('')}</div>
-    </div>`;
+function statusLine(st) {
+  const { sh } = st;
+  if (st.kind === 'present') return `Desde ${fmtHM(st.last.timestamp)} · ${fmtDur(st.mins)}${st.flag ? ' · ⚠ ' + st.flag : ''}`;
+  if (st.kind === 'late') return `Sin fichar · turno ${sh.in} (${fmtDur(st.mins)} tarde)`;
+  if (st.kind === 'upcoming') return `Entra a las ${sh.in}`;
+  if (st.kind === 'left') return st.brk ? `En corte · vuelve ${sh.in2}` : `Salió ${fmtHM(st.last.timestamp)} · trabajó ${fmtDur(st.worked)}`;
+  if (st.kind === 'free') return 'Franco';
+  return 'Sin turno ni marcas hoy';
 }
+function visorRow(st) {
+  const k = KIND[st.kind], s = st.s;
+  const warn = st.flag ? 'border-red-500/60 ' : '';
+  return `<div data-dni="${escHtml(s.dni)}" class="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-700/40 cursor-pointer">
+    <div class="relative w-9 h-9 shrink-0 rounded-full border-2 ${warn}flex items-center justify-center text-[11px] font-bold ${k.cls}">${initials(s.name)}<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-800 ${k.dot}"></span></div>
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-medium text-slate-200 truncate">${escHtml(s.name)}${st.manual ? ' <i class="fa-solid fa-triangle-exclamation text-amber-400 text-[10px]" title="Fichó por DNI"></i>' : ''}</p>
+      <p class="text-[11px] ${st.flag ? 'text-red-400' : k.txt} truncate">${escHtml(statusLine(st))}</p>
+    </div>
+    <span class="shrink-0 text-[10px] text-slate-400 font-mono">${escHtml(shiftText(st.sh))}</span></div>`;
+}
+window.setVisorFilter = k => { visorFilter = visorFilter === k ? '' : k; renderVisorGrid(); };
+window.setVisorSearch = v => { visorSearch = normalizeKey(v); renderVisorGrid(); };
+window.setVisorVenue = v => { visorVenue = v; renderVisorGrid(); };
+window.closeVisorDetail = () => document.getElementById('visor-detail').classList.add('hidden');
+window.openVisorDetail = function(dni) {
+  const s = allStaff.find(x => x.dni === dni); if (!s) return;
+  const st = personState(s, nowMinLocal(), Date.now()), k = KIND[st.kind];
+  const marks = st.logs.length ? st.logs.map(l => `<div class="flex items-center justify-between text-xs"><span class="${l.type === 'ENTRADA' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${escHtml(l.type)}</span><span class="text-slate-400">${l.method === 'manual_dni' ? '⚠ DNI · ' : ''}<span class="font-mono text-slate-200">${fmtHM(l.timestamp)}</span></span></div>`).join('') : '<p class="text-xs text-slate-400">Sin marcas hoy.</p>';
+  document.getElementById('visor-detail-body').innerHTML = `
+    <div class="flex items-start justify-between gap-2"><div><p class="font-bold text-slate-100">${escHtml(s.name)}</p><p class="text-xs text-slate-400">${escHtml(venueLabel(s) || 'Sin local')} · ${{ cocina: 'Cocina', salon: 'Salón' }[s.sector] || 'Sin sector'}${s.rol === 'sous' ? ' · Sous chef' : s.rol === 'supervision' ? ' · Supervisión' : ''} · DNI ${escHtml(s.dni)}</p></div>
+      <button onclick="closeVisorDetail()" class="text-slate-400 hover:text-slate-200 cursor-pointer"><i class="fa-solid fa-xmark"></i></button></div>
+    <p class="text-sm font-semibold ${st.flag ? 'text-red-400' : k.txt}">${escHtml(statusLine(st))}</p>
+    <div class="bg-slate-900 rounded-xl p-3 space-y-1.5"><p class="text-[10px] text-slate-400 uppercase">Turno de hoy</p><p class="text-xs text-slate-200 font-mono">${escHtml(shiftText(st.sh)) || (st.sh?.free ? 'Franco' : 'Sin turno cargado')}</p>${st.sh?.note ? `<p class="text-[11px] text-slate-400">${escHtml(st.sh.note)}</p>` : ''}</div>
+    <div class="bg-slate-900 rounded-xl p-3 space-y-1.5"><p class="text-[10px] text-slate-400 uppercase">Marcas de hoy · ${fmtDur(st.worked)} trabajadas</p>${marks}</div>`;
+  document.getElementById('visor-detail').classList.remove('hidden');
+};
 
 function renderVisorGrid() {
-  const gridEl = document.getElementById('visor-grid');
-  const summaryEl = document.getElementById('visor-summary');
-  const activeStaff = allStaff.filter(s => s.activo !== false);
+  const gridEl = document.getElementById('visor-grid'), sumEl = document.getElementById('visor-summary');
+  if (!gridEl.dataset.bound) { gridEl.dataset.bound = '1'; gridEl.addEventListener('click', e => { const r = e.target.closest('[data-dni]'); if (r) openVisorDetail(r.dataset.dni); }); }
+  const vsel = document.getElementById('visor-venue'), keep = visorVenue;
+  const seen = new Map(); allStaff.filter(s => s.activo !== false).forEach(s => { const key = venueKey(s) || '__none__'; if (!seen.has(key)) seen.set(key, venueLabel(s) || 'Sin local asignado'); });
+  vsel.innerHTML = '<option value="">Todos los locales</option>' + [...seen].map(([k, n]) => `<option value="${escHtml(k)}">${escHtml(n)}</option>`).join('');
+  vsel.value = seen.has(keep) ? keep : ''; if (!seen.has(keep)) visorVenue = '';
 
-  // Tarjeta por local (solo locales con colaboradores asignados) + bloque "Sin local"
-  const cards = [];
-  allVenues.forEach(v => {
-    const staffAtVenue = activeStaff.filter(s => s.venueId === v.id);
-    if (!staffAtVenue.length) return;
-    cards.push({ id: v.id, name: v.name, staff: staffAtVenue });
-  });
-  const sinLocal = activeStaff.filter(s => !s.venueId || !allVenues.some(v => v.id === s.venueId));
-  if (sinLocal.length) cards.push({ id: '__sin_local__', name: 'Sin local asignado', staff: sinLocal });
+  const nowM = nowMinLocal(), nowMs = Date.now();
+  let people = allStaff.filter(s => s.activo !== false && (!visorVenue || (venueKey(s) || '__none__') === visorVenue)).map(s => personState(s, nowM, nowMs));
+  if (!people.length) { gridEl.innerHTML = '<p class="text-slate-400 text-xs">No hay colaboradores activos cargados desde RRHH.</p>'; sumEl.innerHTML = ''; return; }
 
-  if (!cards.length) {
-    gridEl.innerHTML = '<p class="text-slate-500 text-xs">No hay colaboradores activos cargados.</p>';
-    summaryEl.innerHTML = '';
-    return;
-  }
+  const counts = {}; Object.keys(KIND).forEach(k => counts[k] = 0); people.forEach(p => counts[p.kind]++);
+  const expected = people.filter(p => expectedNow(p.sh, nowM)).length;
+  sumEl.innerHTML = Object.entries(KIND).map(([k, m]) => `<button onclick="setVisorFilter('${k}')" class="rounded-lg border ${visorFilter === k ? 'ring-2 ring-indigo-500 ' : ''}${m.ring} bg-slate-900/60 px-2 py-2 text-center cursor-pointer"><p class="text-xl font-bold ${m.txt}">${counts[k]}</p><p class="text-[10px] text-slate-400 leading-tight">${m.label}</p></button>`).join('')
+    + `<p class="col-span-3 sm:col-span-6 text-[11px] text-slate-400">Esperados ahora según turnos: <b class="text-slate-200">${expected}</b> · Presentes: <b class="text-emerald-400">${counts.present}</b>${counts.late ? ` · <b class="text-amber-400">${counts.late} sin fichar</b>` : ''}${people.some(p => p.flag) ? ` · <b class="text-red-400">${people.filter(p => p.flag).length} con alertas</b>` : ''}</p>`;
 
-  const totalPresent = activeStaff.filter(s => visorPresenceMap[s.dni]?.present).length;
-  summaryEl.innerHTML = `
-    <div class="bg-slate-800/60 border border-slate-700 rounded-lg px-4 py-2 text-xs">
-      <span class="text-emerald-400 font-bold">${totalPresent}</span>
-      <span class="text-slate-400"> presentes de </span>
-      <span class="text-slate-300 font-bold">${activeStaff.length}</span>
-      <span class="text-slate-400"> colaboradores activos</span>
-    </div>`;
-
-  gridEl.innerHTML = cards.map(c => {
-    const cocina = c.staff.filter(s => s.sector === 'cocina');
-    const salon  = c.staff.filter(s => s.sector === 'salon');
-    const sinSector = c.staff.filter(s => s.sector !== 'cocina' && s.sector !== 'salon');
-    const presentAtVenue = c.staff.filter(s => visorPresenceMap[s.dni]?.present).length;
-    return `
-    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-      <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/70">
-        <h4 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-store text-indigo-400 mr-2"></i>${escHtml(c.name)}</h4>
-        <span class="text-[10px] text-slate-400">${presentAtVenue}/${c.staff.length} presentes</span>
-      </div>
-      <div class="flex flex-wrap gap-4">
-        ${visorSectorBlock('Cocina', 'fa-kitchen-set', cocina)}
-        ${visorSectorBlock('Salón', 'fa-utensils', salon)}
-        ${visorSectorBlock('Sin sector', 'fa-circle-question', sinSector)}
-      </div>
-    </div>`;
+  let shown = people;
+  if (visorFilter) shown = shown.filter(p => p.kind === visorFilter);
+  if (visorSearch) shown = shown.filter(p => normalizeKey(p.s.name).includes(visorSearch));
+  const order = { late: 0, present: 1, upcoming: 2, left: 3, free: 4, none: 5 };
+  const groups = new Map();
+  shown.forEach(p => { const key = venueKey(p.s) || '__none__'; if (!groups.has(key)) groups.set(key, { name: venueLabel(p.s) || 'Sin local asignado', all: people.filter(x => (venueKey(x.s) || '__none__') === key), list: [] }); groups.get(key).list.push(p); });
+  if (!groups.size) { gridEl.innerHTML = '<p class="text-slate-400 text-xs">Nadie coincide con el filtro.</p>'; return; }
+  gridEl.innerHTML = [...groups.values()].map(g => {
+    const pres = g.all.filter(p => p.kind === 'present').length, exp = g.all.filter(p => expectedNow(p.sh, nowM)).length;
+    const pct = Math.min(100, Math.round(pres / Math.max(exp, pres, 1) * 100));
+    const sect = (label, icon, key) => { const l = g.list.filter(p => (key ? p.s.sector === key : p.s.sector !== 'cocina' && p.s.sector !== 'salon')).sort((a, b) => order[a.kind] - order[b.kind] || a.s.name.localeCompare(b.s.name));
+      if (!l.length) return ''; const tot = g.all.filter(p => key ? p.s.sector === key : p.s.sector !== 'cocina' && p.s.sector !== 'salon');
+      return `<div><p class="text-[10px] text-slate-400 uppercase font-semibold mb-1 flex items-center gap-1.5"><i class="fa-solid ${icon}"></i>${label}<span class="font-normal normal-case">(${tot.filter(p => p.kind === 'present').length}/${tot.length} presentes)</span></p><div class="space-y-0.5">${l.map(visorRow).join('')}</div></div>`; };
+    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+      <div class="flex items-center justify-between mb-1"><h4 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-store text-indigo-400 mr-2"></i>${escHtml(g.name)}</h4><span class="text-[11px] text-slate-400">${pres} presentes${exp ? ` · ${exp} esperados` : ''}</span></div>
+      <div class="h-1.5 rounded-full bg-slate-700 mb-3 overflow-hidden"><div class="h-full ${pres >= exp ? 'bg-emerald-500' : 'bg-amber-500'}" style="width:${pct}%"></div></div>
+      <div class="space-y-3">${sect('Cocina', 'fa-kitchen-set', 'cocina')}${sect('Salón', 'fa-utensils', 'salon')}${sect('Sin sector', 'fa-circle-question', '')}</div></div>`;
   }).join('');
 }
 
 // ── TAB HORAS ─────────────────────────────────────────────────────────────
 async function initHoursTab() {
-  const today = new Date();
-  const mon   = new Date(today); mon.setDate(today.getDate() - today.getDay() + 1);
+  const mon   = getMondayOf(localDateStr());
   const sun   = new Date(mon);   sun.setDate(mon.getDate() + 6);
-  const fmt   = d => d.toISOString().slice(0,10);
+  const fmt   = fmtDate;
   if (!document.getElementById('hours-date-from').value) document.getElementById('hours-date-from').value = fmt(mon);
   if (!document.getElementById('hours-date-to').value)   document.getElementById('hours-date-to').value   = fmt(sun);
   if (!allStaff.length)  await loadStaff();
@@ -2113,81 +1945,51 @@ window.loadHours = async function() {
   const tbody = document.getElementById('hours-table-body');
   tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-6 text-center text-slate-500"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Calculando...</td></tr>`;
   try {
-    // Fix #2: filter by date range in Firestore — avoids downloading entire history
-    // Offset UTC-3 (BsAs): medianoche local = 03:00Z; fin del día local = +1 día 02:59:59Z
-    const fromTs = from + 'T03:00:00.000Z';
-    const toTs   = new Date(new Date(to + 'T03:00:00.000Z').getTime() + 86400000 - 1).toISOString();
-    const snap = await getDocs(query(
-      collection(db, "attendance_logs"),
-      where("timestamp", ">=", fromTs),
-      where("timestamp", "<=", toTs),
-      orderBy("timestamp", "asc")
-    ));
-    const allL = snap.docs.map(d => d.data());
-    const filtered = allL.filter(l => {
-      if (staff && l.dni !== staff) return false;
-      if (venue && l.venueId !== venue) return false;
-      return true;
-    });
-    // Build per-(dni,date) buckets — handled below in the hoursData mapping
-    // Calcular horas — soporta múltiples entradas/salidas en el mismo día
-    // Estrategia: para cada SALIDA, buscar la ENTRADA más reciente previa no usada
+    // Se trae 1 día antes y 2 después para poder emparejar turnos nocturnos
+    const fromTs = new Date(new Date(from + 'T03:00:00.000Z').getTime() - 86400000).toISOString();
+    const toTs   = new Date(new Date(to + 'T03:00:00.000Z').getTime() + 2 * 86400000 - 1).toISOString();
+    const snap = await getDocs(query(collection(db, "attendance_logs"),
+      where("timestamp", ">=", fromTs), where("timestamp", "<=", toTs), orderBy("timestamp", "asc")));
+    const filtered = snap.docs.map(d => d.data()).filter(l => l.timestamp && (!staff || l.dni === staff) && (!venue || l.venueId === venue));
     const shiftsSnap = await getDocs(query(collection(db, "shifts"), where("date", ">=", from), where("date", "<=", to)));
     const shiftsMap = {};
-    shiftsSnap.docs.forEach(d => { const s = d.data(); shiftsMap[`${s.dni}__${s.date}`] = s; });
+    shiftsSnap.docs.forEach(d => { const sh = d.data(); shiftsMap[`${sh.dni}__${sh.date}`] = sh; });
 
-    // Build per-(dni,date) buckets of sorted entries & exits
-    const buckets = {};
-    filtered.forEach(l => {
-      const date = l.timestamp.slice(0, 10);
-      const key  = `${l.dni}__${date}`;
-      if (!buckets[key]) buckets[key] = { name: l.name, dni: l.dni, venueName: l.venueName, date, entries: [], exits: [] };
-      if (l.type === 'ENTRADA') buckets[key].entries.push(l.timestamp);
-      else if (l.type === 'SALIDA') buckets[key].exits.push(l.timestamp);
-    });
-
-    hoursData = Object.values(buckets).filter(r => r.date >= from && r.date <= to).map(r => {
-      // Sort chronologically
-      r.entries.sort(); r.exits.sort();
-      // Greedily pair each exit with the most recent unpaired entry before it
-      const usedEntries = new Set();
-      let totalMins = 0;
-      const pairs = [];
-      r.exits.forEach(exit => {
-        // Find latest entry before this exit that hasn't been used
-        const candidates = r.entries.filter((e, i) => e < exit && !usedEntries.has(i));
-        if (!candidates.length) return;
-        const bestIdx = r.entries.reduce((bestI, e, i) => {
-          if (e < exit && !usedEntries.has(i) && (bestI === -1 || e > r.entries[bestI])) return i;
-          return bestI;
-        }, -1);
-        if (bestIdx === -1) return;
-        usedEntries.add(bestIdx);
-        const mins = Math.round((new Date(exit) - new Date(r.entries[bestIdx])) / 60000);
-        totalMins += mins;
-        pairs.push({ entry: r.entries[bestIdx], exit });
+    // Empareja ENTRADA→SALIDA por persona en orden cronológico; la jornada es el día (local) de la entrada
+    const byDni = {}, buckets = {};
+    filtered.forEach(l => { (byDni[l.dni] = byDni[l.dni] || []).push(l); });
+    const bk = l => { const date = localDateStr(new Date(l.timestamp)); const k = `${l.dni}__${date}`;
+      return buckets[k] = buckets[k] || { name: l.name, dni: l.dni, venueName: l.venueName, date, pairs: [], oe: [], ox: [] }; };
+    Object.values(byDni).forEach(list => {
+      list.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      let open = null;
+      list.forEach(l => {
+        if (l.type === 'ENTRADA') { if (open) bk(open).oe.push(open.timestamp); open = l; }
+        else if (l.type === 'SALIDA') {
+          if (open && new Date(l.timestamp) - new Date(open.timestamp) < 20 * 3600e3) { bk(open).pairs.push({ entry: open.timestamp, exit: l.timestamp }); open = null; }
+          else bk(l).ox.push(l.timestamp);
+        }
       });
-      // Display: first entry and last exit for readability
-      const firstEntry = r.entries[0] || null;
-      const lastExit   = r.exits.length ? r.exits[r.exits.length - 1] : null;
-      const entrada = firstEntry ? new Date(firstEntry).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—';
-      const salida  = lastExit   ? new Date(lastExit).toLocaleTimeString('es-AR',  { hour: '2-digit', minute: '2-digit' }) : '—';
-      const paresExtra = pairs.length > 1 ? ` (${pairs.length} turnos)` : '';
+      if (open) bk(open).oe.push(open.timestamp);
+    });
+    const hm = ts => new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const segM = (i, o) => { if (!i || !o) return 0; const a = new Date(`2000-01-01T${i}`); const b = new Date(`2000-01-01T${o}`); if (b <= a) b.setDate(b.getDate() + 1); return Math.round((b - a) / 60000); };
+    hoursData = Object.values(buckets).filter(r => r.date >= from && r.date <= to).map(r => {
+      r.pairs.sort((a, b) => a.entry.localeCompare(b.entry));
+      const totalMins = r.pairs.reduce((t, p) => t + Math.round((new Date(p.exit) - new Date(p.entry)) / 60000), 0);
+      const firstEntry = r.pairs[0]?.entry || r.oe[0] || null;
+      const lastExit = r.pairs.length ? r.pairs[r.pairs.length - 1].exit : (r.ox[r.ox.length - 1] || null);
       const shift = shiftsMap[`${r.dni}__${r.date}`];
       let shiftMins = 0, diffMins = null;
       if (shift && !shift.free && shift.in && shift.out) {
-        let outD = new Date(`2000-01-01T${shift.out}`), inD = new Date(`2000-01-01T${shift.in}`);
-        if (outD <= inD) outD.setDate(outD.getDate() + 1);
-        shiftMins = Math.round((outD - inD) / 60000);
-        if (shift.split && shift.in2 && shift.out2) {
-          let out2D = new Date(`2000-01-01T${shift.out2}`), in2D = new Date(`2000-01-01T${shift.in2}`);
-          if (out2D <= in2D) out2D.setDate(out2D.getDate() + 1);
-          shiftMins += Math.round((out2D - in2D) / 60000);
-        }
+        shiftMins = segM(shift.in, shift.out) + (shift.split ? segM(shift.in2, shift.out2) : 0);
         if (totalMins > 0) diffMins = totalMins - shiftMins;
       }
-      const status = !firstEntry ? 'sin_entrada' : !lastExit ? 'sin_salida' : totalMins < 60 ? 'alerta' : 'ok';
-      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date, entrada: entrada + paresExtra, salida, mins: totalMins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, shiftSplit: shift?.split||false, shiftIn2: shift?.in2, shiftOut2: shift?.out2, status };
+      const status = r.oe.length ? 'sin_salida' : (!r.pairs.length && r.ox.length) ? 'sin_entrada' : totalMins < 60 ? 'alerta' : 'ok';
+      return { name: r.name, dni: r.dni, venueName: r.venueName, date: r.date,
+        entrada: (firstEntry ? hm(firstEntry) : '—') + (r.pairs.length > 1 ? ` (${r.pairs.length} turnos)` : ''),
+        salida: lastExit ? hm(lastExit) + (localDateStr(new Date(lastExit)) > r.date ? ' (día sig.)' : '') : '—',
+        mins: totalMins, shiftMins, diffMins, shiftIn: shift?.in, shiftOut: shift?.out, shiftSplit: shift?.split || false, shiftIn2: shift?.in2, shiftOut2: shift?.out2, status };
     });
     const totalMins  = hoursData.reduce((s,r) => s + r.mins, 0);
     const totalDays  = hoursData.filter(r => r.mins > 0).length;
@@ -2205,13 +2007,13 @@ function renderHoursTable() {
   if (!hoursData.length) { tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-500">Sin datos en el rango seleccionado.</td></tr>`; return; }
   const fmtMins = m => m > 0 ? `${Math.floor(m/60)}h ${Math.round(m%60)}m` : '—';
   const diffCell = dm => {
-    if (dm === null || dm === undefined) return `<td class="px-4 py-2 text-[11px] text-slate-600">—</td>`;
+    if (dm === null || dm === undefined) return `<td class="px-4 py-2 text-[11px] text-slate-400">—</td>`;
     const sign = dm > 0 ? '+' : '-'; const color = dm > 0 ? 'text-emerald-400' : 'text-rose-400';
     const abs = Math.abs(dm); const str = abs >= 60 ? `${Math.floor(abs/60)}h ${Math.round(abs%60)}m` : `${Math.round(abs)}m`;
     return `<td class="px-4 py-2 text-[11px] font-semibold ${color}">${dm===0?'=0m':sign+str}</td>`;
   };
   const shiftCell = r => {
-    if (!r.shiftIn) return `<td class="px-4 py-2 text-[11px] text-slate-600">—</td>`;
+    if (!r.shiftIn) return `<td class="px-4 py-2 text-[11px] text-slate-400">—</td>`;
     const tramo2 = r.shiftSplit && r.shiftIn2 && r.shiftOut2 ? ` <span class="text-slate-500">+</span> <span class="font-mono text-indigo-300/70">${r.shiftIn2}</span>–<span class="font-mono text-indigo-300/70">${r.shiftOut2}</span>` : '';
     return `<td class="px-4 py-2 text-[11px]"><span class="font-mono text-indigo-300">${r.shiftIn}</span>–<span class="font-mono text-indigo-300">${r.shiftOut}</span>${tramo2}</td>`;
   };
@@ -2259,7 +2061,7 @@ function renderHoursTable() {
   }
 }
 
-window.exportHoursCSV = function() {
+window.exportHoursXLSX = function() {
   if (!hoursData.length) { showToast("Calculá primero.", "info"); return; }
   const fmtM = m => m > 0 ? `${Math.floor(m/60)}:${String(Math.round(m%60)).padStart(2,'0')}` : '0:00';
   const fmtDiff = dm => {
@@ -2284,12 +2086,12 @@ window.exportHoursCSV = function() {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Horas");
-  XLSX.writeFile(wb, `andino_horas_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `icheck_horas_${localDateStr()}.xlsx`);
 };
 
 // ── TAB TURNOS ────────────────────────────────────────────────────────────
 function initShiftsTab() {
-  if (!document.getElementById('shift-date').value) document.getElementById('shift-date').value = new Date().toISOString().slice(0,10);
+  if (!document.getElementById('shift-date').value) document.getElementById('shift-date').value = localDateStr();
   const sel = document.getElementById('shift-filter-venue');
   sel.innerHTML = '<option value="">Todos los locales</option>';
   allVenues.forEach(v => sel.innerHTML += `<option value="${v.id}">${v.name}</option>`);
@@ -2297,7 +2099,7 @@ function initShiftsTab() {
 }
 
 function getMondayOf(ds) { const d = new Date(ds+'T12:00:00'), day = d.getDay()||7; d.setDate(d.getDate()-day+1); return d; }
-function fmtDate(d) { return d.toISOString().slice(0,10); }
+function fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function fmtDayLabel(d) { return d.toLocaleDateString('es-AR',{weekday:'short',day:'2-digit',month:'2-digit'}); }
 
 // Wrapper seguro: awaita renderShiftGrid y captura errores visibles
@@ -2339,7 +2141,7 @@ window.renderShiftGrid = async function() {
   const colW = mode==='week' ? 'min-w-[100px]' : 'min-w-[200px]';
   let html = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-900 text-slate-400 uppercase text-[10px] sticky top-0 z-10"><tr><th class="px-3 py-3 text-left sticky left-0 bg-slate-900 z-20 min-w-[130px]">Colaborador</th>`;
   days.forEach(d => {
-    const isToday = fmtDate(d)===new Date().toISOString().slice(0,10);
+    const isToday = fmtDate(d)===localDateStr();
     const copyBtn = mode==='week' ? `<i class="fa-solid fa-copy ml-1.5 text-slate-500 hover:text-indigo-400 cursor-pointer" title="Copiar este día a otro" onclick="event.stopPropagation();openCopyDayModal('${fmtDate(d)}')"></i>` : '';
     html+=`<th class="px-2 py-3 text-center ${colW} ${isToday?'text-indigo-400':''}">${fmtDayLabel(d)}${copyBtn}</th>`;
   });
@@ -2348,10 +2150,10 @@ window.renderShiftGrid = async function() {
     html+=`<tr class="hover:bg-slate-800/30"><td class="px-3 py-2.5 sticky left-0 bg-slate-800 font-medium text-slate-200 text-xs border-r border-slate-700"><div>${s.name}</div><div class="text-[10px] text-indigo-400/70">${s.venueName||'—'}</div></td>`;
     dayKeys.forEach(dk => {
       const key = `${s.dni}__${dk}`;
-      const shift = shiftData[key] || shiftDirty[key];
+      const shift = getShift(key);
       const isDirty = !!shiftDirty[key];
       let cellHtml;
-      if (!shift) cellHtml=`<span class="text-slate-600">—</span>`;
+      if (!shift) cellHtml=`<span class="text-slate-400">—</span>`;
       else if (shift.free) cellHtml=`<span class="px-1.5 py-0.5 bg-slate-700/60 text-slate-400 rounded text-[9px]">Franco</span>`;
       else {
         const segMins = (i,o) => { if(!i||!o) return 0; let od=new Date(`2000-01-01T${o}`),id=new Date(`2000-01-01T${i}`); if(od<=id)od.setDate(od.getDate()+1); return Math.round((od-id)/60000); };
@@ -2372,7 +2174,7 @@ window.renderShiftGrid = async function() {
 
 window.openShiftModal = function(dni, name, date) {
   shiftModalKey = `${dni}__${date}`;
-  const shift = shiftDirty[shiftModalKey] || shiftData[shiftModalKey];
+  const shift = getShift(shiftModalKey);
   document.getElementById('shift-modal-info').textContent = `${name} — ${new Date(date+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'})}`;
   document.getElementById('shift-modal-in').value   = shift?.in   || '';
   document.getElementById('shift-modal-out').value  = shift?.out  || '';
@@ -2423,13 +2225,14 @@ window.applyShiftModal = function() {
   closeShiftModal(); safeRenderShiftGrid();
   showToast("Turno actualizado (pendiente guardar).", "info");
 };
-window.clearShiftCell = function() { delete shiftDirty[shiftModalKey]; delete shiftData[shiftModalKey]; closeShiftModal(); safeRenderShiftGrid(); };
+window.clearShiftCell = function() { shiftDirty[shiftModalKey] = { deleted: true }; closeShiftModal(); safeRenderShiftGrid(); };
 window.saveAllShifts = async function() {
   const pending = Object.entries(shiftDirty).filter(([,v]) => v!==null);
   if (!pending.length) { showToast("Sin cambios pendientes.", "info"); return; }
   try {
     const batch = writeBatch(db);
     pending.forEach(([key, shift]) => {
+      if (shift.deleted) { batch.delete(doc(db, "shifts", key)); delete shiftData[key]; return; }
       const [dni, date] = key.split('__');
       const sr = allStaff.find(s => s.dni===dni);
       batch.set(doc(db, "shifts", key), { dni, date, name: sr?.name||'', venueId: sr?.venueId||'', venueName: sr?.venueName||'', in: shift.in||'', out: shift.out||'', split: shift.split||false, in2: shift.in2||'', out2: shift.out2||'', note: shift.note||'', free: shift.free||false, updatedAt: new Date().toISOString() });
@@ -2465,7 +2268,7 @@ window.applyCopyDay = function() {
   let copied = 0;
   lastShiftStaff.forEach(s => {
     const sourceKey = `${s.dni}__${copySourceDate}`;
-    const sourceShift = shiftDirty[sourceKey] || shiftData[sourceKey];
+    const sourceShift = getShift(sourceKey);
     if (!sourceShift) return;
     targets.forEach(dk => {
       const targetKey = `${s.dni}__${dk}`;
@@ -2494,7 +2297,7 @@ window.exportShiftsPDF = function() {
   staff.forEach((s,idx)=>{
     let totalMins=0, cells='';
     dayKeys.forEach(dk=>{
-      const shift=shiftDirty[`${s.dni}__${dk}`]||shiftData[`${s.dni}__${dk}`];
+      const shift=getShift(`${s.dni}__${dk}`);
       let cell='';
       if (!shift) cell='<span style="color:#94a3b8">—</span>';
       else if (shift.free) cell='<span style="color:#64748b;font-size:10px">Franco</span>';
@@ -2514,6 +2317,199 @@ window.exportShiftsPDF = function() {
   if (!win) { showToast("El navegador bloqueó el popup. Permitilo para exportar el PDF.", "warning", 5000); return; }
   win.document.write(html); win.document.close();
 };
+
+// ── DIÁLOGOS PROPIOS ──────────────────────────────────────────────────────
+window.askInput = function({ title, type = 'text', inputmode = 'text', maxlength = 80, noInput = false }) {
+  return new Promise(res => {
+    const m = document.getElementById('ask-modal'), inp = document.getElementById('ask-input');
+    const ok = document.getElementById('ask-ok'), cancel = document.getElementById('ask-cancel');
+    document.getElementById('ask-title').textContent = title;
+    inp.type = type; inp.inputMode = inputmode; inp.maxLength = maxlength; inp.value = '';
+    inp.classList.toggle('hidden', noInput);
+    m.classList.remove('hidden'); if (!noInput) setTimeout(() => inp.focus(), 50);
+    const done = v => { m.classList.add('hidden'); ok.onclick = cancel.onclick = inp.onkeydown = null; res(v); };
+    ok.onclick = () => done(noInput ? '' : inp.value); cancel.onclick = () => done(null);
+    inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); else if (e.key === 'Escape') done(null); };
+  });
+};
+window.askConfirm = async o => (await askInput({ ...o, noInput: true })) !== null;
+
+// ── CÁMARA, KIOSCO Y RED ──────────────────────────────────────────────────
+async function getCam() {
+  if (!navigator.mediaDevices?.getUserMedia) throw { name: 'InsecureContext' };
+  try { return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }); }
+  catch (e) { if (e.name === 'OverconstrainedError' || e.name === 'NotFoundError') return await navigator.mediaDevices.getUserMedia({ video: true }); throw e; }
+}
+function showCamError(which, e) {
+  const n = e?.name;
+  const msg = (n === 'NotAllowedError' || n === 'SecurityError') ? 'Permiso de cámara denegado. Tocá el candado de la barra del navegador → Cámara → Permitir, y reintentá.'
+    : n === 'NotFoundError' ? 'No se encontró ninguna cámara conectada.'
+    : (n === 'NotReadableError' || n === 'AbortError') ? 'La cámara se cortó o la está usando otra app o pestaña. Cerrala y reintentá.'
+    : n === 'InsecureContext' ? 'La cámara solo funciona con HTTPS. Abrí la página desde su dirección https://.'
+    : 'No se pudo iniciar la cámara. Reintentá.';
+  document.getElementById(which === 'face' ? 'face-status' : 'reg-status').textContent = msg;
+  document.getElementById(which + '-retry-btn')?.classList.remove('hidden');
+}
+window.retryCamera = async function(which) {
+  document.getElementById(which + '-retry-btn').classList.add('hidden');
+  document.getElementById(which === 'face' ? 'face-status' : 'reg-status').textContent = 'Iniciando cámara...';
+  await (which === 'face' ? startFaceCamera() : startRegCamera());
+};
+function watchTrack(stream, which) { // cámara desconectada o permiso revocado en caliente
+  const t = stream.getVideoTracks()[0]; if (!t) return;
+  t.onended = () => {
+    if (document.getElementById(which === 'face' ? 'face-overlay' : 'register-face-overlay').classList.contains('hidden')) return;
+    (which === 'face' ? stopFaceCamera : stopRegCamera)(); showCamError(which, { name: 'NotReadableError' });
+  };
+}
+navigator.permissions?.query({ name: 'camera' }).then(p => { p.onchange = () => {
+  if (p.state !== 'granted') return;
+  if (!document.getElementById('face-overlay').classList.contains('hidden') && !faceStream) retryCamera('face');
+  if (!document.getElementById('register-face-overlay').classList.contains('hidden') && !regStream) retryCamera('reg');
+}; }).catch(() => {});
+let wakeLock = null;
+async function keepAwake() { try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.onrelease = () => { wakeLock = null; }; } } catch (e) {} }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  keepAwake();
+  [['face', 'face-overlay', faceStream], ['reg', 'register-face-overlay', regStream]].forEach(([w, o, st]) => {
+    const dead = !st || st.getVideoTracks().every(t => t.readyState === 'ended');
+    if (!document.getElementById(o).classList.contains('hidden') && dead) retryCamera(w);
+  });
+});
+window.toggleFullscreen = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => showToast('Este navegador no permite pantalla completa. Probá instalar la página en la pantalla de inicio.', 'info', 5000)); };
+// Autorrecuperación sin que nadie toque el kiosco (cámara congelada, USB reconectado, permiso otorgado después)
+setInterval(() => [['face', 'face-overlay', () => faceStream], ['reg', 'register-face-overlay', () => regStream]].forEach(([w, o, g]) => {
+  const st = g(); if (document.getElementById(o).classList.contains('hidden') || document.visibilityState !== 'visible') return;
+  if (!st || st.getVideoTracks().every(t => t.readyState === 'ended')) retryCamera(w);
+}), 15000);
+navigator.mediaDevices?.addEventListener?.('devicechange', () => { if (!faceStream && !document.getElementById('face-overlay').classList.contains('hidden')) retryCamera('face'); });
+let wantFs = false; const _tfs = window.toggleFullscreen;
+window.toggleFullscreen = () => { wantFs = !document.fullscreenElement; _tfs(); };
+document.addEventListener('fullscreenchange', () => { // el navegador exige un gesto para volver a pantalla completa
+  if (document.fullscreenElement || !wantFs) return;
+  showToast('Salió de pantalla completa. Tocá la pantalla para volver.', 'info', 6000);
+  document.addEventListener('pointerdown', () => document.documentElement.requestFullscreen?.().catch(() => {}), { once: true });
+});
+function netBanner() { document.getElementById('net-banner').classList.toggle('hidden', navigator.onLine); }
+window.addEventListener('online', netBanner); window.addEventListener('offline', netBanner);
+
+// ── CORRECCIÓN DE FICHAJES (con motivo y auditoría) ───────────────────────
+let logModalId = null;
+const fmtDT = ts => new Date(ts).toLocaleString('es-AR', { timeZone: TZ });
+const toLocalInput = ts => { const d = new Date(ts); return localDateStr(d) + 'T' + d.toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }); };
+window.openLogModal = async function(id) {
+  if (!allStaff.length) await loadStaff();
+  logModalId = id || null;
+  const l = id ? allLogs.find(x => x.id === id) : null;
+  document.getElementById('log-modal-title').textContent = l ? 'Corregir fichaje' : 'Agregar fichaje olvidado';
+  const sel = document.getElementById('log-staff');
+  sel.innerHTML = allStaff.filter(x => x.activo !== false || x.dni === l?.dni).map(x => `<option value="${escHtml(x.dni)}">${escHtml(x.name)}</option>`).join('');
+  if (l) sel.value = l.dni; sel.disabled = !!l;
+  document.getElementById('log-type').value = l?.type || 'ENTRADA';
+  document.getElementById('log-when').value = toLocalInput(l ? l.timestamp : new Date().toISOString());
+  document.getElementById('log-reason').value = '';
+  document.getElementById('log-modal').classList.remove('hidden');
+};
+window.saveLog = async function() {
+  const dni = document.getElementById('log-staff').value, type = document.getElementById('log-type').value;
+  const whenV = document.getElementById('log-when').value, reason = document.getElementById('log-reason').value.trim();
+  const ts = new Date(whenV + ':00-03:00'), at = new Date().toISOString();
+  if (!whenV || isNaN(ts)) { showToast('Elegí fecha y hora.', 'warning'); return; }
+  if (ts.getTime() > Date.now() + 60000) { showToast('El fichaje no puede estar en el futuro.', 'warning'); return; }
+  if (reason.length < 3) { showToast('El motivo es obligatorio.', 'warning'); return; }
+  try {
+    if (logModalId) {
+      const b = allLogs.find(x => x.id === logModalId);
+      if (b.type === type && toLocalInput(b.timestamp) === whenV) { showToast('No hay cambios para guardar.', 'warning'); return; }
+      const bt = writeBatch(db); bt.set(doc(db, 'attendance_logs', logModalId), { type, timestamp: ts.toISOString(), edited: true, editReason: reason, editedAt: at, originalTimestamp: b.originalTimestamp || b.timestamp }, { merge: true });
+      bt.set(doc(collection(db, 'attendance_audit')), { action: 'edit', logId: logModalId, dni: b.dni, name: b.name, before: { type: b.type, timestamp: b.timestamp }, after: { type, timestamp: ts.toISOString() }, reason, at });
+      await bt.commit();
+    } else {
+      const st = allStaff.find(x => x.dni === dni);
+      const rec = { name: st.name, dni: st.dni, venueId: st.venueId || '', venueName: venueLabel(st), type, timestamp: ts.toISOString(), method: 'manual_rrhh', reason, createdAt: at };
+      const bt = writeBatch(db), lr = doc(collection(db, 'attendance_logs')); bt.set(lr, rec);
+      bt.set(doc(collection(db, 'attendance_audit')), { action: 'add', logId: lr.id, dni: st.dni, name: st.name, after: { type, timestamp: rec.timestamp }, reason, at });
+      await bt.commit();
+    }
+    document.getElementById('log-modal').classList.add('hidden');
+    showToast('Fichaje guardado y registrado en la auditoría.', 'success');
+    await loadAdminLogs();
+  } catch (e) { console.error(e); showToast('Error al guardar el fichaje.', 'error'); }
+};
+window.deleteLog = async function(id) {
+  const b = allLogs.find(x => x.id === id); if (!b) return;
+  const reason = ((await askInput({ title: `Eliminar ${b.type} de ${b.name} (${fmtDT(b.timestamp)}).\nEscribí el motivo (obligatorio):` })) || '').trim();
+  if (reason.length < 3) { if (reason) showToast('El motivo es obligatorio.', 'warning'); return; }
+  try {
+    const bt = writeBatch(db); bt.set(doc(collection(db, 'attendance_audit')), { action: 'delete', logId: id, dni: b.dni, name: b.name, before: { type: b.type, timestamp: b.timestamp, method: b.method || '' }, reason, at: new Date().toISOString() });
+    bt.delete(doc(db, 'attendance_logs', id)); await bt.commit();
+    allLogs = allLogs.filter(x => x.id !== id); applyFilters();
+    showToast('Fichaje eliminado y registrado en la auditoría.', 'success');
+  } catch (e) { console.error(e); showToast('Error al eliminar.', 'error'); }
+};
+window.openAudit = async function() {
+  const body = document.getElementById('audit-body'); body.innerHTML = '<p class="text-slate-400">Cargando...</p>';
+  document.getElementById('audit-modal').classList.remove('hidden');
+  try {
+    const snap = await getDocs(query(collection(db, 'attendance_audit'), orderBy('at', 'desc'), limit(100)));
+    const A = { add: ['Agregó', 'text-emerald-400'], edit: ['Corrigió', 'text-amber-400'], delete: ['Eliminó', 'text-rose-400'] };
+    const d = x => x ? `${escHtml(x.type)} ${fmtDT(x.timestamp)}` : '';
+    body.innerHTML = snap.docs.length ? snap.docs.map(x => { const a = x.data(), t = A[a.action] || ['', '']; return `<div class="bg-slate-900 rounded-lg p-3"><p><b class="${t[1]}">${t[0]}</b> · ${escHtml(a.name)} <span class="text-slate-500">· ${fmtDT(a.at)}</span></p><p class="text-slate-400 mt-1">${a.before ? d(a.before) : ''}${a.before && a.after ? ' → ' : ''}${a.after ? d(a.after) : ''}</p><p class="text-slate-300 mt-1">Motivo: ${escHtml(a.reason)}</p></div>`; }).join('') : '<p class="text-slate-400">Todavía no hay correcciones.</p>';
+  } catch (e) { body.innerHTML = '<p class="text-rose-400">Error al cargar la auditoría.</p>'; }
+};
+
+// ── ALERTAS POR MAIL ──────────────────────────────────────────────────────
+let alertCfg = { enabled: false, recipients: [], lateMin: 15, absentMin: 90, forgotMin: 60 };
+function fillAlertForm() {
+  document.getElementById('alert-enabled').checked = !!alertCfg.enabled;
+  document.getElementById('alert-recipients').value = (alertCfg.recipients || []).join(', ');
+  document.getElementById('alert-late').value = alertCfg.lateMin; document.getElementById('alert-absent').value = alertCfg.absentMin; document.getElementById('alert-forgot').value = alertCfg.forgotMin;
+}
+async function loadAlertCfg() { try { const sn = await getDoc(doc(db, 'config', 'alerts')); if (sn.exists()) alertCfg = { ...alertCfg, ...sn.data() }; } catch (e) { console.warn(e); } fillAlertForm(); }
+window.saveAlertCfg = async function() {
+  const rec = document.getElementById('alert-recipients').value.split(/[,;\s]+/).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  const num = (id, d) => Math.max(1, parseInt(document.getElementById(id).value) || d);
+  const cfg = { enabled: document.getElementById('alert-enabled').checked, recipients: rec, lateMin: num('alert-late', 15), absentMin: num('alert-absent', 90), forgotMin: num('alert-forgot', 60) };
+  if (cfg.enabled && !rec.length) { showToast('Cargá al menos un mail válido.', 'error'); return; }
+  try { await setDoc(doc(db, 'config', 'alerts'), cfg, { merge: true }); alertCfg = cfg; showToast('Alertas guardadas.', 'success'); } catch (e) { showToast('Error al guardar.', 'error'); }
+};
+async function sendMail(subject, html) {
+  if (!alertCfg.recipients.length) { showToast('Primero guardá al menos un mail.', 'warning'); return false; }
+  return await addDoc(collection(db, 'mail'), { to: alertCfg.recipients, message: { subject, html } });
+}
+window.sendTestAlert = async function() { try { const ref = await sendMail('Prueba de alertas iCheck', '<p>Si recibís este mail, las alertas funcionan.</p>'); if (!ref) return;
+  showToast('Prueba en cola, verificando entrega...', 'info');
+  const un = onSnapshot(ref, sn => { const d = sn.data()?.delivery; if (d?.state === 'SUCCESS') { showToast('Mail entregado.', 'success'); un(); } else if (d?.state === 'ERROR') { showToast('Falló el envío: ' + (d.error || 'revisá la extensión Trigger Email'), 'error', 9000); un(); } });
+  setTimeout(un, 60000); } catch (e) { showToast('No se pudo enviar.', 'error'); } };
+async function runAlertCheck() {
+  if (!alertCfg.enabled || !alertCfg.recipients.length || !navigator.onLine) return;
+  try {
+    await fetchVisorData(false);
+    const nowM = nowMinLocal(), nowMs = Date.now(), today = localDateStr(), items = [];
+    allStaff.filter(x => x.activo !== false).forEach(x => {
+      const p = personState(x, nowM, nowMs), sh = p.sh; if (!sh || sh.free || !sh.in) return;
+      const a = toMin(sh.in), first = p.logs.find(l => l.type === 'ENTRADA');
+      const add = (kind, txt) => items.push({ key: `${today}__${x.dni}__${kind}`, s: x, kind, txt });
+      if (!first) {
+        if (nowM >= a + alertCfg.absentMin) add('absent', `No fichó (turno ${sh.in}), ${fmtDur(nowM - a)} de demora`);
+        else if (nowM >= a + alertCfg.lateMin) add('late', `Sin fichar, turno ${sh.in} (${fmtDur(nowM - a)} tarde)`);
+      } else {
+        const d = toMin(new Date(first.timestamp).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })) - a;
+        if (d >= alertCfg.lateMin) add('late', `Llegó ${fmtDur(d)} tarde (turno ${sh.in}, fichó ${fmtHM(first.timestamp)})`);
+      }
+      if (p.kind === 'present') { const b = toMin(sh.out); if (p.mins > 12 * 60 || (b > a && nowM >= b + alertCfg.forgotMin)) add('forgot', `Sigue con la entrada abierta desde ${fmtHM(p.last.timestamp)} (turno hasta ${sh.out})`); }
+    });
+    const fresh = []; // una sola vez por persona, tipo y día
+    await Promise.all(items.map(async it => { const r = doc(db, 'alerts_sent', it.key); // reserva atómica: varios kioscos no duplican
+      if (await runTransaction(db, async t => { if ((await t.get(r)).exists()) return false; t.set(r, { at: new Date().toISOString(), kind: it.kind, dni: it.s.dni }); return true; })) fresh.push(it); }));
+    if (!fresh.length) return;
+    const T = { late: '🕒 Llegadas tarde', absent: '🚫 Posibles ausencias', forgot: '⚠️ Salidas olvidadas' };
+    const html = Object.keys(T).map(k => { const r = fresh.filter(x => x.kind === k); return r.length ? `<h3>${T[k]}</h3><ul>${r.map(x => `<li><b>${escHtml(x.s.name)}</b> (${escHtml(venueLabel(x.s) || 'sin local')}): ${escHtml(x.txt)}</li>`).join('')}</ul>` : ''; }).join('');
+    try { await sendMail(`iCheck · ${fresh.length} alerta(s) del ${today}`, html); }
+    catch (e) { await Promise.all(fresh.map(it => deleteDoc(doc(db, 'alerts_sent', it.key)))); throw e; } // si falla, se reintenta en el próximo ciclo
+  } catch (e) { console.error('runAlertCheck', e); }
+}
 
 // ── TOASTS ────────────────────────────────────────────────────────────────
 window.showToast = function(msg, type='info', duration=3500) {

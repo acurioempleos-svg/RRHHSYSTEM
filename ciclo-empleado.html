@@ -1130,7 +1130,7 @@ function paintRows() {
     const cab = (idx === 0 || (rows[idx - 1].local || '').trim() !== (e.local || '').trim()) ? filaGrupo((e.local || '').trim()) : '';
     const bg = filaBg(e), fg = filaFg(bg), st = bg ? ` style="background:${bg}${fg ? ';color:' + fg : ''}"` : '';
     const dot = e.color && colorDe(e.color) ? `<span class="dot" style="background:${colorDe(e.color).dot}" title="Color: ${esc(colorDe(e.color).nombre)}"></span>` : '';
-    return cab + `<tr class="${bg ? 'tint' : ''}" data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
+    return cab + `<tr class="${bg ? 'tint' : ''}" data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl && !e.alta ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
   }).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
@@ -1212,7 +1212,7 @@ function renderDetail() {
       ${inp('Categoría CCT', 'categoriaCCT')}${sel('Modalidad', 'modalidad', { indeterminado: 'Tiempo indeterminado', plazo_fijo: 'Plazo fijo', eventual: 'Eventual', temporada: 'Temporada' })}
       ${inp('Fecha de ingreso', 'fechaIngreso', 'date')}<label class="fld"><span>Fin del período de prueba</span><input id="fin-prueba" readonly tabindex="-1" value="${esc(fdate(finPruebaDe(e)))}"></label>${inp('Sueldo mensual normal y habitual', 'sueldoActual', 'number', 'step="0.01" min="0"')}<label class="fld"><span>Alta</span><select name="alta"><option value="">Sin alta</option><option value="N" ${e.alta === 'N' ? 'selected' : ''}>Normal (N)</option><option value="S" ${e.alta === 'S' ? 'selected' : ''}>Especial (S)</option></select></label><label class="fld" id="fecha-alta-fld" ${e.alta === 'N' || e.alta === 'S' ? '' : 'hidden'}><span>Fecha de alta</span><input name="fechaAlta" type="date" value="${esc(e.fechaAlta ?? '')}"></label>
     </div>
-    <div class="docs" style="margin-top:12px"><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
+    <div class="docs" id="rifl-fld" style="margin-top:12px" ${e.alta ? 'hidden' : ''}><label><input type="checkbox" name="rifl" ${e.rifl ? 'checked' : ''}> Aplica régimen 710 (RIFL – Ley 27.802)</label><span class="muted" style="font-size:13px;margin-left:26px">Código de modalidad de contratación 710 en ARCA: incentivo a la formalización laboral.</span></div>
     <label class="sw"><input type="checkbox" name="destacado" ${e.destacado ? 'checked' : ''}><span class="knob"></span>Destacar en la nómina (resaltado brillante en la tabla de Empleados)</label>
     <datalist id="locales">${LOCALES.map(l => `<option value="${l}">`).join('')}</datalist>
     ${sc}${so('solicitudes', 'Solicitudes')}
@@ -2175,6 +2175,28 @@ async function pdfInforme(o) {
     });
     y += ch + 22;
   }
+  // Barras por local: colaboradores con RIFL sobre los que no tienen alta
+  if (o.barrasLoc) {
+    const b = o.barrasLoc, d = b.d, rh = 22, w = W - 2 * M, ch = 52 + Math.max(1, d.length) * rh, BAJ = [232, 190, 184];
+    if (y + ch > H - 50) { doc.addPage(); y = 56; }
+    F([255, 255, 255]); D(C.line); doc.setLineWidth(.6); doc.roundedRect(M, y, w, ch, 5, 5, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); T(C.ink); tx(b.t, M + 14, y + 20);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    const lgR = W - M - 14; F(C.blue); doc.rect(lgR - 118, y + 13, 7, 7, 'F'); T(C.ink); tx('Con RIFL', lgR - 107, y + 20); F(BAJ); doc.rect(lgR - 50, y + 13, 7, 7, 'F'); tx('Sin alta', lgR - 39, y + 20);
+    if (!d.length) { doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); T(C.mut); tx('No hay colaboradores sin alta.', M + 14, y + 44); }
+    else {
+      const lw = 112, vw = 92, bx = M + 14 + lw, bw = w - 28 - lw - vw, mx = Math.max(1, ...d.map(z => z.a));
+      d.forEach((z, k) => {
+        const ly = y + 38 + k * rh;
+        F(z.c || C.acc); D(C.line); doc.setLineWidth(.4); doc.rect(M + 14, ly - 6, 7, 7, 'FD');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); T(C.ink); let t = z.l; while (doc.getTextWidth(t) > lw - 14 && t.length > 4) t = t.slice(0, -1); if (t !== z.l) t += '..'; tx(t, M + 25, ly);
+        F(BAJ); doc.roundedRect(bx, ly - 8, Math.max(3, bw * z.a / mx), 10, 2, 2, 'F');
+        if (z.r > 0) { F(C.blue); doc.roundedRect(bx, ly - 8, Math.max(3, bw * z.r / mx), 10, 2, 2, 'F'); }
+        doc.setFont('helvetica', 'bold'); T(C.ink); tx(`${z.r} de ${z.a} · ${z.a ? Math.round(z.r * 100 / z.a) : 0}%`, W - M - 14, ly, 'right');
+      });
+    }
+    y += ch + 22;
+  }
   // Secciones
   (o.secs || []).forEach(s => {
     if (y > H - 120) { doc.addPage(); y = 56; }
@@ -2218,13 +2240,14 @@ async function pdfAltas() {
   const resumen = locs.map(l => { const a = nom.filter(e => lc(e) === l), c = a.filter(e => e.alta).length; return [l, a.length, a.filter(e => e.alta === 'N').length, a.filter(e => e.alta === 'S').length, a.length - c, a.filter(e => !e.alta && e.rifl).length, sol.filter(e => lc(e) === l).length, sol.filter(e => lc(e) === l && e.rifl).length, (a.length ? Math.round(c * 100 / a.length) : 0) + '%']; });
   const P = PDF_C, tone = { 6: { 'N · Normal': P.ok, 'S · Especial': P.gold, 'Sin alta': P.bad }, 7: { 'Sí · 710': P.blue } };
   const HEAD = ['Legajo', 'Empleado', 'Local', 'Puesto', 'Estado', 'Ingreso', 'Alta', 'RIFL'], cols = { 0: { cellWidth: 46 }, 5: { cellWidth: 62 }, 6: { cellWidth: 72 }, 7: { cellWidth: 52 } };
-  const fila = e => [e.legajo || '—', nm(e), lc(e), e.puesto || '—', ESTADOS[e.estado] || e.estado, fdate(e.fechaIngreso), AL(e), e.rifl ? 'Sí · 710' : '—'];
+  const fila = e => [e.legajo || '—', nm(e), lc(e), e.puesto || '—', ESTADOS[e.estado] || e.estado, fdate(e.fechaIngreso), AL(e), e.rifl && !e.alta ? 'Sí · 710' : '—'];
   const cnt = a => `${a.length} colaborador${a.length === 1 ? '' : 'es'}`;
   return pdfInforme({
     titulo: 'Informe de altas', sub: 'Situación de altas del personal en nómina y solicitudes pendientes', archivo: `informe-altas-${today()}.pdf`,
     kpis: [{ l: 'En nómina', v: nom.length, n: 'activos y en licencia' }, { l: 'Con alta', v: con.length, c: P.ok, n: `${nN} normal · ${nS} especial` }, { l: 'Sin alta', v: sin.length, c: P.bad, n: 'pendientes de cargar' }, { l: 'Sin alta con RIFL', v: sinR.length, p: pctR + '%', c: P.blue, n: 'de los sin alta (régimen 710)' }, { l: 'Solicitaron alta', v: sol.length, c: P.gold, n: 'en trámite' }, { l: 'Solicitaron alta con RIFL', v: solR.length, p: pctSR + '%', c: P.blue, n: 'de los que solicitaron (710)' }, { l: 'Cobertura', v: pct + '%', n: 'nómina con alta' }],
     barra: { l: 'Cobertura de altas sobre la nómina', v: pct },
     tortas: [{ t: 'Estado de altas', d: [{ l: 'Alta normal (N)', v: nN, c: P.ok }, { l: 'Alta especial (S)', v: nS, c: P.gold }, { l: 'Sin alta', v: sin.length, c: P.bad }] }, { t: 'Sin alta por local', d: resumen.map(r => ({ l: r[0], v: r[4], c: pcLocal(r[0]) })) }],
+    barrasLoc: { t: 'Con RIFL sobre sin alta, por local', d: resumen.filter(r => r[4] > 0).map(r => ({ l: r[0], a: r[4], r: r[5], c: pcLocal(r[0]) })) },
     secs: [
       { t: 'Resumen por local', head: ['Local', 'En nómina', 'Alta N', 'Alta S', 'Sin alta', 'Sin alta c/ RIFL', 'Solicitan alta', 'Solicitan c/ RIFL', 'Cobertura'], body: resumen, foot: ['TOTAL', nom.length, nN, nS, sin.length, sinR.length, sol.length, solR.length, pct + '%'], loc: 0, ctr: [1, 2, 3, 4, 5, 6, 7, 8], cols: { 0: { cellWidth: 110 } } },
       { t: 'Solicitudes de alta pendientes', n: `${cnt(sol)} · ${solR.length} con RIFL (${pctSR}%)`, head: HEAD, body: sol.map(fila), tone, cols, loc: 2, vacio: 'No hay solicitudes de alta pendientes.' },
@@ -2916,6 +2939,7 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.name === 'alta' && t.closest && t.closest('#emp-form')) {
     const fld = $('#fecha-alta-fld'); if (fld) fld.hidden = !(t.value === 'N' || t.value === 'S');
+    const rf = $('#rifl-fld'); if (rf) rf.hidden = !!t.value;
     UI.dirty = true; paintDirty();
   }
 });

@@ -60,6 +60,7 @@
 
     /* Badge manual_dni en tabla de registros */
     .badge-manual { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
+  body.phone #kiosk-view, body.phone #admin-view, body.phone #acceso-rrhh { display: none !important; }
   .pop{animation:pop .6s ease}@keyframes pop{0%{transform:scale(.9)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
   </style>
 </head>
@@ -216,7 +217,7 @@
 </div>
 
 <!-- ═══ ACCESO RRHH ═══════════════════════════════════════════════════════ -->
-<div class="w-full max-w-2xl flex justify-end items-center gap-4 pt-3 pr-3">
+<div id="acceso-rrhh" class="w-full max-w-2xl flex justify-end items-center gap-4 pt-3 pr-3">
   <button onclick="toggleFullscreen()" class="text-slate-400 hover:text-indigo-400 text-sm cursor-pointer" title="Pantalla completa"><i class="fa-solid fa-expand"></i></button>
   <button onclick="requestAdminAccess()" class="text-slate-500 hover:text-indigo-400 transition-colors text-sm flex items-center gap-2 cursor-pointer">
     <i class="fa-solid fa-user-shield"></i> Acceso RRHH
@@ -224,6 +225,27 @@
 </div>
 
 <!-- ═══ VISTA KIOSKO (TABLET GERENCIA) ══════════════════════════════════ -->
+<main id="colab-view" class="hidden max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 mx-3 my-4 p-5 space-y-4">
+  <p class="text-center text-indigo-300 font-bold text-lg"><i class="fa-solid fa-mobile-screen mr-2"></i>iCheck · Fichar con el celular</p>
+  <div id="colab-activate" class="hidden space-y-3">
+    <p class="text-xs text-slate-400">Primera vez: vinculá este celular a tu cuenta con tu DNI y tu PIN. Después queda bloqueado a tu nombre y no se puede usar con otra cuenta.</p>
+    <input type="text" id="colab-dni" inputmode="numeric" maxlength="10" placeholder="DNI" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base text-white focus:outline-none focus:border-indigo-500">
+    <input type="password" id="colab-pin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="PIN (6 dígitos)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base tracking-[0.4em] text-white focus:outline-none focus:border-indigo-500">
+    <button id="colab-act-btn" onclick="colabActivate()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm cursor-pointer">Vincular este celular</button>
+  </div>
+  <div id="colab-punch" class="hidden space-y-3">
+    <div class="rounded-xl bg-slate-900 p-3 text-center"><p class="text-[10px] text-slate-400 uppercase">Cuenta vinculada a este celular</p><p id="colab-name" class="text-lg font-bold text-slate-100"></p></div>
+    <p id="colab-net" class="text-xs text-center text-slate-400">Verificando red...</p>
+    <input type="text" id="colab-code" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="Código del local" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-4 text-2xl text-center font-mono tracking-[0.3em] text-white focus:outline-none focus:border-sky-500">
+    <p class="text-[11px] text-slate-400 text-center">El código está en la pantalla del kiosco y cambia cada minuto.</p>
+    <div class="grid grid-cols-2 gap-3">
+      <button data-colab-btn onclick="colabPunch('ENTRADA')" class="bg-emerald-700 text-white py-5 rounded-2xl font-bold text-sm cursor-pointer disabled:opacity-40"><i class="fa-solid fa-right-to-bracket text-xl block mb-1"></i>Entrada</button>
+      <button data-colab-btn onclick="colabPunch('SALIDA')" class="bg-rose-700 text-white py-5 rounded-2xl font-bold text-sm cursor-pointer disabled:opacity-40"><i class="fa-solid fa-right-from-bracket text-xl block mb-1"></i>Salida</button>
+    </div>
+    <p class="text-[10px] text-slate-500 text-center">Para cambiar de celular, RRHH tiene que desvincular este.</p>
+  </div>
+  <div id="colab-msg" class="hidden text-sm rounded-xl px-3 py-2"></div>
+</main>
 <main id="kiosk-view" class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden mx-3 mb-4">
   <!-- Header: reloj -->
   <header class="px-5 pt-5 pb-3 text-center">
@@ -249,6 +271,14 @@
       <span class="font-bold text-xl">Reconocimiento Facial</span>
       <span class="text-xs text-indigo-300">Tocá para iniciar</span>
     </button>
+
+    <!-- Código para fichar con el celular -->
+    <div id="code-card" class="hidden rounded-2xl border border-sky-700/40 bg-sky-950/30 p-4 text-center space-y-1.5">
+      <p class="text-[11px] text-sky-300 uppercase tracking-widest"><i class="fa-solid fa-mobile-screen mr-1"></i>Fichar con el celular</p>
+      <p id="code-value" class="text-4xl font-mono font-black tracking-[0.25em] text-white">------</p>
+      <div class="h-1 rounded-full bg-slate-700 overflow-hidden"><div id="code-bar" class="h-full bg-sky-500" style="width:100%"></div></div>
+      <p class="text-[11px] text-slate-400">Conectate al WiFi del local y abrí <b id="code-url" class="text-slate-300 break-all"></b></p>
+    </div>
 
     <!-- Últimos fichajes del día -->
     <div id="recent-punches" class="space-y-2">
@@ -601,7 +631,7 @@
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, getDoc, setDoc, addDoc, query, orderBy, limit,
-         getDocs, where, deleteDoc, writeBatch, runTransaction, onSnapshot }
+         getDocs, where, deleteDoc, writeBatch, runTransaction, onSnapshot, serverTimestamp }
                             from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────
@@ -716,13 +746,14 @@ async function createPinFlow(dni, name) {
 
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  if (PHONE_MODE) { initPhone(); return; } // celular del colaborador: no carga caras, nómina ni panel
   startClock();
   const modelsP = loadModels(); // los modelos arrancan en paralelo, sin esperar la nómina
   await loadVenues();
   await loadStaff();
   await Promise.all([modelsP, loadKnownFaces()]);
   showRecentPunches();
-  keepAwake(); netBanner(); await loadAlertCfg(); await loadSecCfg();
+  keepAwake(); netBanner(); await loadAlertCfg(); await loadSecCfg(); startCodeKiosk();
   setInterval(runAlertCheck, 300000); setTimeout(runAlertCheck, 20000);
   // La nómina la actualiza otro sistema: se refresca cada 5 min
   setInterval(async () => { await loadStaff(); await loadKnownFaces(); }, 300000);
@@ -872,7 +903,7 @@ const DOUBT_DIST      = 0.36;   // por encima de esta distancia media el fichaje
 const noMatch = l => l === 'unknown' || l === 'ambiguous';
 
 // Configuración de seguridad (config/security): se puede ajustar desde Firestore sin tocar el código
-let secCfg = { liveness: true, requirePin: false, pinMaxFails: 5, pinLockMin: 15, avalEvery: 5, tolMin: 15, reportMin: 60 };
+let secCfg = { liveness: true, requirePin: false, pinMaxFails: 5, pinLockMin: 15, avalEvery: 5, tolMin: 15, reportMin: 60, codeEnabled: true, codeRotateSec: 60, codeGraceSec: 20, requireSameIp: true };
 async function loadSecCfg() { try { const sn = await getDoc(doc(db, 'config', 'security')); if (sn.exists()) secCfg = { ...secCfg, ...sn.data() }; } catch (e) { console.warn('secCfg', e); } }
 
 // Distancia media a los descriptores de cada persona (igual criterio que FaceMatcher) + 2º mejor
@@ -1250,7 +1281,7 @@ async function showRecentPunches() {
       return `<div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-700/40 text-xs">
         <span class="font-medium text-slate-300">${safeName}</span>
         <div class="flex items-center gap-2">
-          ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : l.method === 'pin' ? '<span class="text-sky-400 text-[10px]"><i class="fa-solid fa-key"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
+          ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : l.method === 'codigo' ? '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-mobile-screen"></i></span>' : l.method === 'pin' ? '<span class="text-sky-400 text-[10px]"><i class="fa-solid fa-key"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
           <span class="${l.type==='ENTRADA' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${l.type}</span>
           <span class="text-slate-500 font-mono">${ts}</span>
         </div>
@@ -1746,12 +1777,13 @@ function renderStaffTable() {
          <button data-action="clear-pin" data-dni="${d}" class="px-2 py-1 text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer" title="Quitar PIN"><i class="fa-solid fa-trash"></i></button>
          ${locked ? `<span class="text-[10px] text-rose-400">Bloqueado</span><button data-action="unlock-pin" data-dni="${d}" class="px-2 py-1 bg-amber-900/50 text-amber-300 rounded text-[10px] cursor-pointer">Desbloquear</button>` : ''}</div>`
       : `<div class="mt-1"><button data-action="set-pin" data-dni="${d}" class="inline-flex items-center gap-1 px-2 py-1.5 bg-slate-700/50 text-slate-300 rounded text-[10px] cursor-pointer hover:bg-slate-600/50"><i class="fa-solid fa-key"></i>Crear PIN</button></div>`;
+    const devUi = s.deviceId ? `<div class="mt-1 flex items-center gap-1"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]"><i class="fa-solid fa-mobile-screen mr-1"></i>Celular vinculado</span><button data-action="unlink-device" data-dni="${d}" class="px-2 py-1 bg-amber-900/50 text-amber-300 rounded text-[10px] cursor-pointer">Desvincular</button></div>` : '';
     return `<tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
       <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${s.activo === false ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]">${s.sinCiclo ? 'Fuera de Ciclo' : 'Inactivo'}</span>` : ''}</td>
       <td class="px-4 py-3 text-slate-400 font-mono text-xs">${d}</td>
       <td class="px-4 py-3 text-xs">${venueLabel(s) ? escHtml(venueLabel(s)) : '<span class="text-amber-400">Sin local</span>'}</td>
       <td class="px-4 py-3 text-xs">${SECT[s.sector] || '<span class="text-slate-500">—</span>'}${rolBadge(s)}${s.puesto ? `<div class="text-[10px] text-slate-500 mt-0.5">${escHtml(s.puesto)}</div>` : ''}</td>
-      <td class="px-4 py-3">${face}${appr}${pinUi}</td></tr>`;
+      <td class="px-4 py-3">${face}${appr}${pinUi}${devUi}</td></tr>`;
   }).join('');
 }
 
@@ -1768,9 +1800,18 @@ function initStaffTableEvents() {
     else if (btn.dataset.action === 'set-pin') createPinFlow(s.dni, s.name).then(ok => ok && loadStaff()).catch(e => { console.error(e); showToast('Error al guardar el PIN.', 'error'); });
     else if (btn.dataset.action === 'clear-pin') clearPin(s, false);
     else if (btn.dataset.action === 'unlock-pin') clearPin(s, true);
+    else if (btn.dataset.action === 'unlink-device') unlinkDevice(s);
   });
 }
 
+async function unlinkDevice(s) {
+  try {
+    if (!(await askConfirm({ title: `Desvincular el celular de ${s.name}? Va a poder vincular otro con su DNI y PIN.` }))) return;
+    await setDoc(doc(db, 'staff', s.dni), { deviceId: null, deviceAt: null, deviceName: null }, { merge: true });
+    await auditAdd('device_unlink', { dni: s.dni, name: s.name, reason: 'Celular desvinculado por RRHH' });
+    await loadStaff(); showToast('Celular desvinculado.', 'success');
+  } catch (e) { console.error(e); showToast('Error al desvincular.', 'error'); }
+}
 async function clearPin(s, onlyUnlock) {
   try {
     if (!onlyUnlock && !(await askConfirm({ title: `Quitar el PIN de ${s.name}? Va a poder fichar solo con la cara o por DNI (queda para revisión).` }))) return;
@@ -1872,7 +1913,7 @@ function renderAdminTable(logs) {
   tbody.innerHTML = logs.map(l => {
     const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
     const isManual = l.method === 'manual_dni';
-    const methodBadge = l.method === 'manual_rrhh' ? '<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">RRHH</span>' : l.method === 'pin' ? '<span class="px-2 py-1 rounded text-[10px] bg-sky-950/50 text-sky-300"><i class="fa-solid fa-key mr-1"></i>PIN</span>' : isManual
+    const methodBadge = l.method === 'manual_rrhh' ? '<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">RRHH</span>' : l.method === 'codigo' ? '<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-mobile-screen mr-1"></i>Celular</span>' : l.method === 'pin' ? '<span class="px-2 py-1 rounded text-[10px] bg-sky-950/50 text-sky-300"><i class="fa-solid fa-key mr-1"></i>PIN</span>' : isManual
       ? `<span class="px-2 py-1 rounded text-[10px] font-bold badge-manual"><i class="fa-solid fa-triangle-exclamation mr-1"></i>DNI Manual</span>`
       : `<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-face-smile mr-1"></i>Facial</span>`;
     return `
@@ -1892,7 +1933,7 @@ window.exportLogsXLSX = function() {
   if (!allLogs.length) { showToast("Sin datos.", "info"); return; }
   const rows = allLogs.map(l => ({
     "Colaborador": l.name, "DNI": l.dni || '', "Local": l.venueName || '',
-    "Método": l.method === 'manual_dni' ? 'DNI Manual ⚠️' : l.method === 'pin' ? 'PIN' : l.method === 'manual_rrhh' ? 'RRHH' : 'Facial', "Estado": l.estado === 'pendiente' ? 'Pendiente' : 'OK', "Score": l.score ?? '',
+    "Método": l.method === 'manual_dni' ? 'DNI Manual ⚠️' : l.method === 'pin' ? 'PIN' : l.method === 'codigo' ? 'Celular' : l.method === 'manual_rrhh' ? 'RRHH' : 'Facial', "Estado": l.estado === 'pendiente' ? 'Pendiente' : 'OK', "Score": l.score ?? '',
     "Acción": l.type, "Fecha y Hora": l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : ''
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -2640,10 +2681,146 @@ window.openAudit = async function() {
   document.getElementById('audit-modal').classList.remove('hidden');
   try {
     const snap = await getDocs(query(collection(db, 'attendance_audit'), orderBy('at', 'desc'), limit(100)));
-    const A = { add: ['Agregó', 'text-emerald-400'], edit: ['Corrigió', 'text-amber-400'], delete: ['Eliminó', 'text-rose-400'], review: ['Confirmó', 'text-sky-400'], pin_set: ['PIN creado', 'text-sky-400'], pin_clear: ['PIN quitado', 'text-rose-400'], pin_unlock: ['PIN desbloqueado', 'text-amber-400'], pin_lock: ['PIN bloqueado', 'text-rose-400'] };
+    const A = { add: ['Agregó', 'text-emerald-400'], edit: ['Corrigió', 'text-amber-400'], delete: ['Eliminó', 'text-rose-400'], review: ['Confirmó', 'text-sky-400'], pin_set: ['PIN creado', 'text-sky-400'], pin_clear: ['PIN quitado', 'text-rose-400'], pin_unlock: ['PIN desbloqueado', 'text-amber-400'], pin_lock: ['PIN bloqueado', 'text-rose-400'], device_bind: ['Celular vinculado', 'text-sky-400'], device_unlink: ['Celular desvinculado', 'text-amber-400'] };
     const d = x => x ? `${escHtml(x.type)} ${fmtDT(x.timestamp)}` : '';
     body.innerHTML = snap.docs.length ? snap.docs.map(x => { const a = x.data(), t = A[a.action] || ['', '']; return `<div class="bg-slate-900 rounded-lg p-3"><p><b class="${t[1]}">${t[0]}</b> · ${escHtml(a.name)} <span class="text-slate-500">· ${fmtDT(a.at)}</span></p><p class="text-slate-400 mt-1">${a.before ? d(a.before) : ''}${a.before && a.after ? ' → ' : ''}${a.after ? d(a.after) : ''}</p><p class="text-slate-300 mt-1">Motivo: ${escHtml(a.reason)}</p></div>`; }).join('') : '<p class="text-slate-400">Todavía no hay correcciones.</p>';
   } catch (e) { body.innerHTML = '<p class="text-rose-400">Error al cargar la auditoría.</p>'; }
+};
+
+// ── FICHAR CON CELULAR: código del kiosco + misma red + cuenta vinculada ───
+// El código vive solo en la memoria del kiosco (rota cada minuto). El celular manda un pedido y el KIOSCO lo valida.
+const PHONE_MODE = /fichar/i.test(location.hash + location.search);
+const gid = id => document.getElementById(id);
+const LS = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
+async function getPublicIp() { // endpoints IPv4: el celular y el kiosco en el mismo WiFi comparten la misma IP pública
+  for (const u of ['https://api.ipify.org?format=json', 'https://ipv4.icanhazip.com']) {
+    try {
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
+      const txt = (await (await fetch(u, { cache: 'no-store', signal: ac.signal })).text()).trim(); clearTimeout(t);
+      const ip = u.includes('json') ? JSON.parse(txt).ip : txt; if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return ip;
+    } catch (e) { /* prueba el siguiente */ }
+  }
+  return null;
+}
+
+// ── Kiosco
+let kioskIp = null, kioskCode = null, kioskPrev = null, kioskCodeAt = 0, kioskPrevUntil = 0;
+const badTries = new Map(); // deviceId -> [timestamps] de códigos incorrectos
+let kioskId = LS.get('ichock_kiosk'); if (!kioskId) { kioskId = b2h(crypto.getRandomValues(new Uint8Array(6))); LS.set('ichock_kiosk', kioskId); }
+function rotateCode() { kioskPrev = kioskCode; kioskPrevUntil = Date.now() + secCfg.codeGraceSec * 1000; kioskCode = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0'); kioskCodeAt = Date.now(); }
+function tickCode() {
+  const card = gid('code-card'); if (!card) return;
+  if (!secCfg.codeEnabled || (secCfg.requireSameIp && !kioskIp)) { card.classList.add('hidden'); return; }
+  if (!kioskCode || Date.now() - kioskCodeAt >= secCfg.codeRotateSec * 1000) rotateCode();
+  card.classList.remove('hidden');
+  gid('code-value').textContent = kioskCode.slice(0, 3) + ' ' + kioskCode.slice(3);
+  gid('code-bar').style.width = Math.max(0, 100 - (Date.now() - kioskCodeAt) / (secCfg.codeRotateSec * 10)) + '%';
+}
+function startCodeKiosk() {
+  if (PHONE_MODE) return;
+  const refresh = async () => { const ip = await getPublicIp(); if (!ip) return; kioskIp = ip; setDoc(doc(db, 'kiosks', kioskId), { id: kioskId, ip, at: new Date().toISOString() }, { merge: true }).catch(() => {}); };
+  refresh(); setInterval(refresh, 300000); setInterval(tickCode, 1000);
+  gid('code-url').textContent = location.href.split('#')[0].split('?')[0] + '#fichar';
+  onSnapshot(query(collection(db, 'punch_requests'), where('estado', '==', 'nuevo')), sn => sn.docChanges().forEach(ch => { if (ch.type === 'added') handleCodeRequest(ch.doc); }), e => console.warn('punch_requests', e));
+}
+async function rejectReq(ref, motivo, msg) {
+  try { await runTransaction(db, async t => { const x = await t.get(ref); if (!x.exists() || x.data().estado !== 'nuevo') return; t.set(ref, { estado: 'rechazado', motivo, msg, at: new Date().toISOString() }, { merge: true }); }); } catch (e) { console.warn('rejectReq', e); }
+}
+async function handleCodeRequest(d) {
+  const r = d.data(), ref = d.ref;
+  if (!secCfg.codeEnabled || !kioskCode || r.estado !== 'nuevo') return;
+  const created = r.createdAt?.toMillis?.() ?? Date.now();
+  if (Date.now() - created > 120000) return;                                   // pedido viejo
+  if (secCfg.requireSameIp && r.ip !== kioskIp) return;                        // otra red: este kiosco no lo atiende
+  const tries = (badTries.get(r.deviceId) || []).filter(t => Date.now() - t < 600000); badTries.set(r.deviceId, tries);
+  const match = r.code === kioskCode || (kioskPrev && r.code === kioskPrev && Date.now() <= kioskPrevUntil);
+  if (!match) { tries.push(Date.now()); setTimeout(() => rejectReq(ref, 'codigo', 'Código incorrecto o vencido. Mirá el código actual en la pantalla del local.'), 3000); return; }
+  if (tries.length >= 5) return rejectReq(ref, 'bloqueado', 'Demasiados códigos incorrectos. Esperá 10 minutos.');
+  try {
+    if (!['ENTRADA', 'SALIDA'].includes(r.type) || !/^\d{7,10}$/.test(r.dni || '')) return rejectReq(ref, 'pedido', 'Pedido inválido.');
+    const s = (await getDoc(doc(db, 'staff', r.dni))).data();
+    if (!s || s.activo === false) return rejectReq(ref, 'cuenta', 'La cuenta no existe o está inactiva.');
+    if (!s.deviceId || s.deviceId !== r.deviceId) return rejectReq(ref, 'dispositivo', 'Este celular no está vinculado a tu cuenta.');
+    const now = new Date(), chk = await checkPunch(r.dni, r.type, now);
+    if (!chk.ok) return rejectReq(ref, 'secuencia', chk.msg);
+    const logRef = doc(collection(db, 'attendance_logs'));
+    const done = await runTransaction(db, async t => { // atómico: un pedido = un fichaje aunque haya varios kioscos
+      const x = await t.get(ref); if (!x.exists() || x.data().estado !== 'nuevo') return false;
+      t.set(logRef, { name: s.name, dni: s.dni, venueId: s.venueId || '', venueName: s.venueName || '', type: r.type, timestamp: now.toISOString(), method: 'codigo', estado: 'ok', ip: r.ip || '', kioskId });
+      t.set(ref, { estado: 'ok', logId: logRef.id, at: now.toISOString() }, { merge: true }); return true;
+    });
+    if (done) { showPunchConfirm(r.type, s.name, s.venueName || '', now, false, s); showRecentPunches(); }
+  } catch (e) { console.error('handleCodeRequest', e); }
+}
+
+// ── Celular del colaborador
+const colabBinding = () => { try { return JSON.parse(LS.get('ichock_bind') || 'null'); } catch (e) { return null; } };
+function setColabMsg(txt, kind) {
+  const m = gid('colab-msg'); m.textContent = txt; m.classList.toggle('hidden', !txt);
+  m.className = 'text-sm rounded-xl px-3 py-2 ' + ({ ok: 'bg-emerald-950/60 text-emerald-300', error: 'bg-rose-950/60 text-rose-300', warn: 'bg-amber-950/60 text-amber-300', info: 'bg-slate-900 text-slate-300' }[kind] || 'bg-slate-900 text-slate-300') + (txt ? '' : ' hidden');
+}
+const colabBtns = off => document.querySelectorAll('[data-colab-btn]').forEach(b => b.disabled = off);
+async function initPhone() {
+  document.body.classList.add('phone'); gid('colab-view').classList.remove('hidden');
+  await loadSecCfg();
+  const b = colabBinding(); if (!b) return showColabActivate('');
+  try {
+    const s = (await getDoc(doc(db, 'staff', b.dni))).data();
+    if (!s || s.activo === false || s.deviceId !== b.deviceId) { LS.del('ichock_bind'); return showColabActivate('El vínculo de este celular ya no está vigente (RRHH lo desvinculó o la cuenta está inactiva). Volvé a vincularlo.'); }
+  } catch (e) { console.warn('initPhone', e); }
+  showColabPunch(b);
+}
+function showColabActivate(msg) { gid('colab-punch').classList.add('hidden'); gid('colab-activate').classList.remove('hidden'); setColabMsg(msg, 'warn'); }
+async function showColabPunch(b) {
+  gid('colab-activate').classList.add('hidden'); gid('colab-punch').classList.remove('hidden'); gid('colab-name').textContent = b.name; setColabMsg('', '');
+  const net = gid('colab-net'); net.textContent = 'Verificando red...'; colabBtns(true);
+  const ip = await getPublicIp();
+  if (!ip) { net.textContent = '⚠️ No se pudo verificar tu red. Revisá la conexión.'; colabBtns(false); return; }
+  let inNet = !secCfg.requireSameIp;
+  if (secCfg.requireSameIp) { try { const sn = await getDocs(query(collection(db, 'kiosks'), where('ip', '==', ip))); inNet = sn.docs.some(k => Date.now() - new Date(k.data().at).getTime() < 15 * 60000); } catch (e) { inNet = true; } }
+  net.innerHTML = inNet ? '<span class="text-emerald-400">✓ Estás en la red del local</span>' : '<span class="text-rose-400">✗ No estás en el WiFi del local. Conectate a ese WiFi (no uses datos móviles).</span>';
+  colabBtns(false);
+}
+window.colabActivate = async function() {
+  const dni = (gid('colab-dni').value || '').replace(/\D/g, ''), pinEl = gid('colab-pin'), pin = pinEl.value.trim(), btn = gid('colab-act-btn');
+  if (!/^\d{7,10}$/.test(dni) || !/^\d{6}$/.test(pin)) { setColabMsg('Ingresá tu DNI y tu PIN de 6 dígitos.', 'warn'); return; }
+  btn.disabled = true;
+  try {
+    const ref = doc(db, 'staff', dni), sn = await getDoc(ref), s = sn.data();
+    if (!s || s.activo === false) { setColabMsg('DNI no encontrado o cuenta inactiva. Consultá con RRHH.', 'error'); return; }
+    if (!s.pinHash) { setColabMsg('Todavía no tenés PIN. Pedile a RRHH que te lo cree.', 'error'); return; }
+    if (s.deviceId) { setColabMsg('Esta cuenta ya tiene un celular vinculado. Pedile a RRHH que lo desvincule.', 'error'); return; }
+    const v = await verifyPin(dni, pin); pinEl.value = '';
+    if (!v.ok) { setColabMsg(pinMsg(v), 'error'); return; }
+    const deviceId = b2h(crypto.getRandomValues(new Uint8Array(16)));
+    const ok = await runTransaction(db, async t => { const x = (await t.get(ref)).data() || {}; if (x.deviceId) return false; t.set(ref, { deviceId, deviceAt: new Date().toISOString(), deviceName: (navigator.userAgent || '').slice(0, 80) }, { merge: true }); return true; });
+    if (!ok) { setColabMsg('Esta cuenta ya tiene un celular vinculado. Pedile a RRHH que lo desvincule.', 'error'); return; }
+    LS.set('ichock_bind', JSON.stringify({ dni, name: s.name, deviceId }));
+    auditAdd('device_bind', { dni, name: s.name, reason: 'Celular vinculado por el colaborador' });
+    showColabPunch({ dni, name: s.name, deviceId });
+  } catch (e) { console.error('colabActivate', e); setColabMsg('Error de conexión. Reintentá.', 'error'); }
+  finally { btn.disabled = false; }
+};
+let colabBusy = false;
+window.colabPunch = async function(type) {
+  const b = colabBinding(); if (!b || colabBusy) return;
+  const code = gid('colab-code').value.replace(/\D/g, '');
+  if (code.length !== 6) { setColabMsg('Ingresá el código de 6 dígitos que figura en la pantalla del local.', 'warn'); return; }
+  colabBusy = true; colabBtns(true);
+  try {
+    setColabMsg('Verificando tu red...', 'info');
+    const ip = await getPublicIp(); if (!ip) { setColabMsg('No se pudo verificar tu red. Revisá la conexión.', 'error'); return; }
+    const ref = await addDoc(collection(db, 'punch_requests'), { dni: b.dni, deviceId: b.deviceId, type, code, ip, createdAt: serverTimestamp(), estado: 'nuevo' });
+    setColabMsg('Validando con el kiosco...', 'info');
+    const res = await new Promise(resolve => {
+      const un = onSnapshot(ref, sn => { const x = sn.data(); if (x && x.estado && x.estado !== 'nuevo') { un(); clearTimeout(t); resolve(x); } });
+      const t = setTimeout(() => { un(); resolve(null); }, 25000);
+    });
+    if (!res) setColabMsg('No se pudo validar. Revisá que estés en el WiFi del local, que el código esté vigente y que el kiosco esté encendido.', 'error');
+    else if (res.estado === 'ok') { setColabMsg(`✅ ${type} registrada a las ${new Date(res.at).toLocaleTimeString('es-AR', { hour12: false, hour: '2-digit', minute: '2-digit' })}`, 'ok'); gid('colab-code').value = ''; }
+    else setColabMsg(res.msg || 'El kiosco rechazó el fichaje.', 'error');
+  } catch (e) { console.error('colabPunch', e); setColabMsg('Error de conexión. Reintentá.', 'error'); }
+  finally { colabBusy = false; setTimeout(() => colabBtns(false), 3000); }
 };
 
 // ── AVAL ALEATORIO · TURNOS · REPORTE DE PRESENTES ────────────────────────

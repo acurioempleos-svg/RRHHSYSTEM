@@ -60,6 +60,7 @@
 
     /* Badge manual_dni en tabla de registros */
     .badge-manual { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
+  .pop{animation:pop .6s ease}@keyframes pop{0%{transform:scale(.9)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center overflow-x-hidden">
@@ -89,6 +90,25 @@
     <div><label class="block text-[10px] text-slate-400 uppercase mb-1">Motivo (obligatorio, queda en la auditoría)</label><textarea id="log-reason" rows="2" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500" placeholder="Ej. Olvidó fichar la salida, avisó por WhatsApp"></textarea></div>
     <div class="flex gap-2"><button onclick="saveLog()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-medium cursor-pointer">Guardar</button>
     <button onclick="document.getElementById('log-modal').classList.add('hidden')" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer">Cancelar</button></div>
+  </div>
+</div>
+<div id="aval-modal" class="hidden fixed inset-0 bg-slate-900/95 z-[9500] flex items-center justify-center p-4">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 w-full max-w-sm space-y-3">
+    <p class="text-amber-300 font-bold text-sm"><i class="fa-solid fa-user-check mr-2"></i>Confirmación de encargado</p>
+    <p class="text-slate-300 text-sm">¿Está presente <b id="aval-name"></b>?</p>
+    <select id="aval-enc" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm"></select>
+    <input type="password" id="aval-pin" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="PIN del encargado" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base tracking-[0.4em] text-white focus:outline-none focus:border-amber-500">
+    <div class="grid grid-cols-2 gap-2">
+      <button onclick="avalAnswer(true)" class="bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold cursor-pointer">Sí, está</button>
+      <button onclick="avalAnswer(false)" class="bg-rose-700 text-white py-3 rounded-xl text-sm font-bold cursor-pointer">No está</button>
+    </div>
+    <button onclick="avalAnswer(null)" class="w-full text-slate-400 text-xs py-2 cursor-pointer">Omitir (el fichaje queda pendiente de revisión)</button>
+  </div>
+</div>
+<div id="rep-modal" class="hidden fixed inset-0 bg-slate-900/95 z-[9400] flex items-center justify-center p-4">
+  <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto space-y-3">
+    <div class="flex justify-between items-center"><p class="text-sky-300 font-bold text-sm"><i class="fa-solid fa-clipboard-check mr-2"></i>Reporte de presentes</p><button onclick="closeReport()" class="text-slate-400 cursor-pointer"><i class="fa-solid fa-xmark"></i></button></div>
+    <div id="rep-body" class="space-y-3 text-sm"></div>
   </div>
 </div>
 <div id="audit-modal" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
@@ -244,6 +264,11 @@
       <i class="fa-solid fa-user-plus text-emerald-400"></i>
       <span>¿Primera vez? Registrá tu cara</span>
     </button>
+    <button onclick="openReport()"
+      class="w-full bg-slate-700 active:bg-slate-600 border border-slate-600 text-slate-300 py-3 rounded-xl flex items-center justify-center gap-2 text-sm transition-all cursor-pointer select-none">
+      <i class="fa-solid fa-clipboard-check text-sky-400"></i>
+      <span>Reporte de presentes (encargados)</span>
+    </button>
   </section>
 
   <!-- Pantalla de DNI fallback -->
@@ -252,14 +277,19 @@
       <button onclick="backToKiosk()" class="text-slate-500 hover:text-slate-300 cursor-pointer">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
-      <p class="text-amber-300 text-sm font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Ingreso por DNI — requiere revisión</p>
+      <p class="text-amber-300 text-sm font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Ingreso por PIN / DNI</p>
     </div>
-    <p class="text-xs text-slate-400">El reconocimiento facial no funcionó. Ingresá tu DNI para fichar, pero este registro quedará marcado para revisión de RRHH.</p>
+    <p class="text-xs text-slate-400">El reconocimiento facial no funcionó. Ingresá tu DNI y tu PIN personal de 6 dígitos. Si todavía no tenés PIN, el fichaje por DNI queda marcado para revisión de RRHH.</p>
     <div>
       <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">DNI</label>
       <input type="text" id="fallback-dni" placeholder="Ej. 30123456" maxlength="10" inputmode="numeric"
         oninput="onFallbackDniInput()"
         class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-amber-500 text-white">
+    </div>
+    <div id="fallback-pin-wrap" class="hidden">
+      <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">PIN (6 dígitos)</label>
+      <input type="password" id="fallback-pin" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off"
+        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base tracking-[0.5em] focus:outline-none focus:border-amber-500 text-white">
     </div>
     <div id="fallback-result" class="hidden p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-sm">
       <p class="text-amber-300 font-medium" id="fallback-name"></p>
@@ -545,7 +575,8 @@
       <input type="text" id="visor-search" placeholder="Buscar colaborador..." oninput="setVisorSearch(this.value)" class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
       <select id="visor-venue" onchange="setVisorVenue(this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option value="">Todos los locales</option></select>
     </div>
-    <div id="visor-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><p class="text-slate-400 text-xs">Cargando...</p></div>
+    <div id="visor-turnos" class="space-y-3 mb-4"></div>
+     <div id="visor-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><p class="text-slate-400 text-xs">Cargando...</p></div>
     <details class="mt-5 bg-slate-900/60 border border-slate-700 rounded-lg p-3">
       <summary class="text-xs font-semibold text-indigo-300 cursor-pointer"><i class="fa-solid fa-bell mr-2"></i>Alertas por mail</summary>
       <div class="mt-3 space-y-2 text-xs">
@@ -642,6 +673,47 @@ async function checkPunch(dni, type, now) {
   } catch (e) { console.warn('checkPunch', e); return { ok: true, unknown: true }; }
 }
 
+// ── PIN personal (alternativa a la cara) ─────────────────────────────────
+const PIN_ITER = 120000;
+const b2h = u => Array.from(u).map(b => b.toString(16).padStart(2, '0')).join('');
+const h2b = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
+async function pbkdf2(pin, saltHex, iter = PIN_ITER) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+  return b2h(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: h2b(saltHex), iterations: iter }, key, 256)));
+}
+async function makePinRecord(pin) {
+  const salt = b2h(crypto.getRandomValues(new Uint8Array(16)));
+  return { pinHash: await pbkdf2(pin, salt), pinSalt: salt, pinIter: PIN_ITER, pinFails: 0, pinLockedUntil: null, pinSetAt: new Date().toISOString() };
+}
+async function auditAdd(action, extra) { try { await addDoc(collection(db, 'attendance_audit'), { action, at: new Date().toISOString(), ...extra }); } catch (e) { console.warn('audit', e); } }
+function notifyPinLock(s) {
+  auditAdd('pin_lock', { dni: s.dni, name: s.name, reason: `${secCfg.pinMaxFails} intentos de PIN fallidos: bloqueado ${secCfg.pinLockMin} min` });
+  if (alertCfg.enabled && alertCfg.recipients.length) sendMail(`iCheck · PIN bloqueado: ${s.name}`, `<p><b>${escHtml(s.name)}</b> (${escHtml(s.venueName || 'sin local')}) superó ${secCfg.pinMaxFails} intentos fallidos de PIN en el kiosco. Quedó bloqueado ${secCfg.pinLockMin} min.</p>`).catch(() => {});
+}
+async function verifyPin(dni, pin) {
+  const ref = doc(db, 'staff', dni), s = (await getDoc(ref)).data(), now = Date.now();
+  if (!s?.pinHash) return { ok: false, reason: 'nopin' };
+  if (s.pinLockedUntil && new Date(s.pinLockedUntil).getTime() > now) return { ok: false, reason: 'locked', until: s.pinLockedUntil };
+  if (await pbkdf2(pin, s.pinSalt, s.pinIter || PIN_ITER) === s.pinHash) { if (s.pinFails) await setDoc(ref, { pinFails: 0 }, { merge: true }); return { ok: true }; }
+  let locked = false, fails = 0;
+  await runTransaction(db, async t => { // transacción: varios kioscos no se pisan el contador
+    const x = (await t.get(ref)).data() || {}; fails = (x.pinFails || 0) + 1; locked = fails >= secCfg.pinMaxFails;
+    t.set(ref, locked ? { pinFails: 0, pinLockedUntil: new Date(now + secCfg.pinLockMin * 60000).toISOString() } : { pinFails: fails }, { merge: true });
+  });
+  if (locked) notifyPinLock(s);
+  return { ok: false, reason: locked ? 'locked-now' : 'bad', left: Math.max(0, secCfg.pinMaxFails - fails) };
+}
+async function createPinFlow(dni, name) {
+  const ask = t => askInput({ title: t, type: 'password', inputmode: 'numeric', maxlength: 6 }).then(v => (v || '').trim());
+  const pin = await ask(`${name}: elegí un PIN personal de 6 dígitos`); if (!pin) return false;
+  if (!/^\d{6}$/.test(pin)) { showToast('El PIN tiene que ser de 6 dígitos.', 'warning'); return false; }
+  if (/^(\d)\1{5}$/.test(pin) || '01234567890123'.includes(pin) || '98765432109876'.includes(pin) || dni.endsWith(pin)) { showToast('PIN muy fácil de adivinar. Elegí otro.', 'warning', 5000); return false; }
+  if ((await ask('Repetí el PIN para confirmar')) !== pin) { showToast('Los PIN no coinciden.', 'warning'); return false; }
+  await setDoc(doc(db, 'staff', dni), await makePinRecord(pin), { merge: true });
+  await auditAdd('pin_set', { dni, name, reason: 'PIN creado o cambiado' });
+  showToast('PIN guardado.', 'success'); return true;
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   startClock();
@@ -650,7 +722,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadStaff();
   await Promise.all([modelsP, loadKnownFaces()]);
   showRecentPunches();
-  keepAwake(); netBanner(); await loadAlertCfg();
+  keepAwake(); netBanner(); await loadAlertCfg(); await loadSecCfg();
   setInterval(runAlertCheck, 300000); setTimeout(runAlertCheck, 20000);
   // La nómina la actualiza otro sistema: se refresca cada 5 min
   setInterval(async () => { await loadStaff(); await loadKnownFaces(); }, 300000);
@@ -768,7 +840,7 @@ window.closeFaceOverlay = function() {
   document.getElementById('face-overlay').classList.add('hidden');
   recognizedEmployee = null;
   faceDetectCooldown = false;
-  faceVoteBuffer = [];
+  faceVoteBuffer = []; resetLiveness();
 };
 
 async function startFaceCamera() {
@@ -795,9 +867,50 @@ function stopFaceCamera() {
 const VOTE_FRAMES   = 6;
 const VOTE_MIN_WINS = 4;
 const MATCH_THRESHOLD = 0.42;
+const MATCH_MARGIN    = 0.05;   // distancia mínima entre el mejor y el 2º candidato (evita confundir personas parecidas)
+const DOUBT_DIST      = 0.36;   // por encima de esta distancia media el fichaje queda 'pendiente' de revisión
+const noMatch = l => l === 'unknown' || l === 'ambiguous';
+
+// Configuración de seguridad (config/security): se puede ajustar desde Firestore sin tocar el código
+let secCfg = { liveness: true, requirePin: false, pinMaxFails: 5, pinLockMin: 15, avalEvery: 5, tolMin: 15, reportMin: 60 };
+async function loadSecCfg() { try { const sn = await getDoc(doc(db, 'config', 'security')); if (sn.exists()) secCfg = { ...secCfg, ...sn.data() }; } catch (e) { console.warn('secCfg', e); } }
+
+// Distancia media a los descriptores de cada persona (igual criterio que FaceMatcher) + 2º mejor
+function matchFrame(desc) {
+  let best = null, second = Infinity;
+  for (const f of knownFaces) {
+    let sum = 0; for (const r of f.descriptors) sum += faceapi.euclideanDistance(desc, r);
+    const d = sum / f.descriptors.length;
+    if (!best || d < best.d) { if (best) second = best.d; best = { f, d }; }
+    else if (d < second) second = d;
+  }
+  if (!best || best.d > MATCH_THRESHOLD) return { label: 'unknown', distance: best ? best.d : 1 };
+  if (second - best.d < MATCH_MARGIN) return { label: 'ambiguous', distance: best.d };
+  return { label: best.f.dni, distance: best.d };
+}
+
+// Vivacidad: parpadeo (EAR) o giro de cabeza. No es infalible: por eso existen los pendientes y la revisión humana.
+let live = { ears: [], blinked: false, yawMin: Infinity, yawMax: -Infinity, ok: false };
+function resetLiveness() { live = { ears: [], blinked: false, yawMin: Infinity, yawMax: -Infinity, ok: false }; }
+function updateLiveness(det) {
+  try {
+    const lm = det.landmarks, L = lm.getLeftEye(), R = lm.getRightEye(), N = lm.getNose();
+    const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const ear = e => (d(e[1], e[5]) + d(e[2], e[4])) / (2 * d(e[0], e[3]));
+    const e = (ear(L) + ear(R)) / 2;
+    live.ears.push(e); if (live.ears.length > 14) live.ears.shift();
+    const mx = Math.max(...live.ears);
+    if (mx > 0.18 && e < mx * 0.72) live.blinked = true;
+    const cL = { x: (L[0].x + L[3].x) / 2, y: (L[0].y + L[3].y) / 2 }, cR = { x: (R[0].x + R[3].x) / 2, y: (R[0].y + R[3].y) / 2 };
+    const iod = d(cL, cR) || 1, yaw = (N[3].x - (cL.x + cR.x) / 2) / iod;
+    live.yawMin = Math.min(live.yawMin, yaw); live.yawMax = Math.max(live.yawMax, yaw);
+    if (live.blinked || (live.yawMax - live.yawMin) > 0.15) live.ok = true;
+  } catch (e) { live.ok = true; } // si no hay landmarks no bloqueamos el kiosco
+}
 
 let faceDetectCooldown = false;
 let faceVoteBuffer     = [];
+let recognizedScore    = null; // { dist, conf } del último reconocimiento (se guarda en el fichaje)
 
 async function tickFaceScan() {
   // Fix #7: bail immediately if overlay was closed while a prior await was in flight
@@ -835,9 +948,9 @@ async function tickFaceScan() {
       const resized = faceapi.resizeResults(detections, { width: canvas.width, height: canvas.height });
       faceapi.draw.drawDetections(canvas, resized);
 
-      // Fix #2: use cached FaceMatcher instead of rebuilding every frame
-      if (cachedFaceMatcher) {
-        const bestMatch = cachedFaceMatcher.findBestMatch(detections[0].descriptor);
+      updateLiveness(detections[0]);
+      if (knownFaces.length) {
+        const bestMatch = matchFrame(detections[0].descriptor);
 
         faceVoteBuffer.push({ label: bestMatch.label, distance: bestMatch.distance });
         if (faceVoteBuffer.length > VOTE_FRAMES) faceVoteBuffer.shift();
@@ -847,7 +960,11 @@ async function tickFaceScan() {
           faceVoteBuffer.forEach(({ label }) => { votes[label] = (votes[label] || 0) + 1; });
           const topLabel = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
 
-          if (topLabel[0] !== 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
+          if (!noMatch(topLabel[0]) && topLabel[1] >= VOTE_MIN_WINS) {
+            if (secCfg.liveness && !live.ok) {
+              document.getElementById('face-status').textContent = '👀 Parpadeá o girá levemente la cabeza para confirmar';
+              faceAnimId = setTimeout(tickFaceScan, 180); return;
+            }
             const winnerDni  = topLabel[0];
             const avgDistance = faceVoteBuffer
               .filter(v => v.label === winnerDni)
@@ -867,12 +984,16 @@ async function tickFaceScan() {
             faceDetectCooldown = true;
             faceVoteBuffer = [];
             recognizedEmployee = emp;
+            recognizedScore = { dist: Math.round(avgDistance * 1000) / 1000, conf };
             showRecognized(emp, conf);
             return;
 
-          } else if (topLabel[0] === 'unknown' && topLabel[1] >= VOTE_MIN_WINS) {
-            faceVoteBuffer = [];
-            document.getElementById('face-status').textContent = 'Cara no reconocida. Usá el botón DNI si es tu primera vez.';
+          } else if (noMatch(topLabel[0]) && topLabel[1] >= VOTE_MIN_WINS) {
+            const amb = topLabel[0] === 'ambiguous';
+            faceVoteBuffer = []; resetLiveness();
+            document.getElementById('face-status').textContent = amb
+              ? 'No se pudo distinguir con claridad. Acercate a la cámara o usá el PIN.'
+              : 'Cara no reconocida. Usá el PIN/DNI si es tu primera vez.';
           } else {
             const filled = faceVoteBuffer.filter(v => v.label !== 'unknown').length;
             document.getElementById('face-status').textContent =
@@ -887,7 +1008,7 @@ async function tickFaceScan() {
         document.getElementById('face-status').textContent = 'Cara detectada. Sin colaboradores registrados aún.';
       }
     } else {
-      faceVoteBuffer = [];
+      faceVoteBuffer = []; resetLiveness();
       document.getElementById('face-status').textContent = 'Buscando cara...';
     }
   } catch (e) {
@@ -931,7 +1052,7 @@ window.rejectRecognition = function() {
   clearTimeout(recogTimer);
   recognizedEmployee = null;
   faceDetectCooldown = false;
-  faceVoteBuffer = [];
+  faceVoteBuffer = []; resetLiveness();
   document.getElementById('face-result-overlay').classList.add('hidden');
   document.getElementById('face-punch-buttons').classList.add('hidden');
   document.getElementById('face-status').textContent = 'Buscando cara...';
@@ -958,7 +1079,9 @@ window.submitFacePunch = async function(type) {
       venueName: emp.venueName || '',
       type,
       timestamp: now.toISOString(),
-      method:    'face'
+      method:    'face',
+      score:     recognizedScore ? recognizedScore.dist : null,
+      estado:    recognizedScore && recognizedScore.dist > DOUBT_DIST ? 'pendiente' : 'ok'
     });
     // Éxito: cerrar overlay (resetea todo internamente) y mostrar confirmación
     closeFaceOverlay();
@@ -987,6 +1110,8 @@ window.fallbackToDNI = function() {
   document.getElementById('view-kiosk-ready').classList.add('hidden');
   document.getElementById('view-dni-fallback').classList.remove('hidden');
   document.getElementById('fallback-dni').value = '';
+  document.getElementById('fallback-pin').value = '';
+  document.getElementById('fallback-pin-wrap').classList.add('hidden');
   document.getElementById('fallback-result').classList.add('hidden');
   document.getElementById('fallback-punch-buttons').classList.add('hidden');
   fallbackEmployee = null;
@@ -1000,6 +1125,7 @@ window.backToKiosk = function() {
 let fallbackTimer = null;
 window.onFallbackDniInput = function() {
   const dni = document.getElementById('fallback-dni').value.trim();
+  document.getElementById('fallback-pin-wrap').classList.add('hidden');
   document.getElementById('fallback-result').classList.add('hidden');
   document.getElementById('fallback-punch-buttons').classList.add('hidden');
   fallbackEmployee = null;
@@ -1014,11 +1140,15 @@ async function lookupFallbackDNI(dni) {
     if (!snap.exists()) { showToast("DNI no encontrado. Contactá a RRHH.", "error"); return; }
     const s = snap.data();
     if (s.activo === false) { showToast('Ese colaborador figura como inactivo. Consultá con RRHH.', 'warning', 5000); return; }
+    if (!s.pinHash && secCfg.requirePin) { showToast('Todavía no tenés PIN. Pedile a RRHH que te lo cree.', 'warning', 6000); return; }
+    if (s.pinLockedUntil && new Date(s.pinLockedUntil).getTime() > Date.now()) { showToast(`PIN bloqueado hasta las ${fmtHM(s.pinLockedUntil)}. Pedile a RRHH que lo desbloquee.`, 'warning', 6000); return; }
     fallbackEmployee = s;
     document.getElementById('fallback-name').textContent  = s.name;
-    document.getElementById('fallback-venue').textContent = `Local: ${s.venueName || '—'}`;
+    document.getElementById('fallback-venue').textContent = `Local: ${s.venueName || '—'}${s.pinHash ? '' : ' · sin PIN: el fichaje queda para revisión'}`;
+    document.getElementById('fallback-pin-wrap').classList.toggle('hidden', !s.pinHash);
     document.getElementById('fallback-result').classList.remove('hidden');
     document.getElementById('fallback-punch-buttons').classList.remove('hidden');
+    if (s.pinHash) setTimeout(() => document.getElementById('fallback-pin').focus(), 50);
     // Si no tiene cara registrada, mostrar opción de registrar
     if (!s.faceDescriptor && !s.faceDescriptors?.length) {
       showToast(`${s.name} no tiene cara registrada. Podés registrarla desde el panel de colaboradores.`, "info", 5000);
@@ -1029,28 +1159,51 @@ async function lookupFallbackDNI(dni) {
 window.submitDNIFallback = async function(type) {
   if (!fallbackEmployee) return;
   if (!navigator.onLine) { showToast('Sin conexión a internet. No se puede registrar el fichaje.', 'error', 6000); return; }
+  const btns = [...document.querySelectorAll('#fallback-punch-buttons button')];
+  btns.forEach(b => b.disabled = true);
   try {
     const emp = fallbackEmployee;
+    let method = 'manual_dni', estado = 'pendiente';
+    if (emp.pinHash) {
+      const pinEl = document.getElementById('fallback-pin'), pin = pinEl.value.trim();
+      if (!/^\d{6}$/.test(pin)) { showToast('Ingresá tu PIN de 6 dígitos.', 'warning'); return; }
+      const v = await verifyPin(emp.dni, pin); pinEl.value = '';
+      if (!v.ok) {
+        showToast(v.reason === 'locked' ? `PIN bloqueado hasta las ${fmtHM(v.until)}. Pedile a RRHH que lo desbloquee.`
+          : v.reason === 'locked-now' ? `Demasiados intentos: PIN bloqueado ${secCfg.pinLockMin} min. Se avisó a RRHH.`
+          : v.reason === 'bad' ? `PIN incorrecto. Te quedan ${v.left} intento(s).` : 'No tenés PIN. Pedile a RRHH.', 'error', 6000);
+        return;
+      }
+      method = 'pin'; estado = 'ok';
+    } else if (secCfg.requirePin) { showToast('Todavía no tenés PIN. Pedile a RRHH que te lo cree.', 'warning', 6000); return; }
     const now = new Date();
     const chk = await checkPunch(emp.dni, type, now);
     if (!chk.ok) { showToast(chk.msg, "warning", 6000); return; }
-    await addDoc(collection(db, "attendance_logs"), {
+    // Aval aleatorio: 1 de cada N fichajes por PIN lo confirma un encargado presente del mismo local
+    let encs = [];
+    if (method === 'pin' && secCfg.avalEvery > 0 && Math.random() < 1 / secCfg.avalEvery) {
+      try { await fetchVisorData(false); encs = avalCandidates(emp); } catch (e) { console.warn('aval', e); }
+      if (encs.length) estado = 'pendiente';
+    }
+    const logRef = await addDoc(collection(db, "attendance_logs"), {
       name:      emp.name,
       dni:       emp.dni,
       venueId:   emp.venueId   || '',
       venueName: emp.venueName || '',
       type,
       timestamp: now.toISOString(),
-      method:    'manual_dni'  // marcado para revisión RRHH
+      method,            // 'pin' (verificado) | 'manual_dni' (sin PIN: marcado para revisión RRHH)
+      estado,
+      ...(encs.length ? { aval: { estado: 'requerido' } } : {})
     });
+    if (encs.length) await resolveAval(logRef.id, emp, encs);
     backToKiosk();
-    showPunchConfirm(type, emp.name, emp.venueName || '', now, true, emp);
+    showPunchConfirm(type, emp.name, emp.venueName || '', now, method === 'manual_dni', emp);
     showRecentPunches();
   } catch (e) {
-    // Fix #13: log the real error for diagnosis
     console.error('submitDNIFallback error:', e);
     showToast("Error al registrar fichaje.", "error");
-  }
+  } finally { btns.forEach(b => b.disabled = false); }
 };
 
 // ── OVERLAY CONFIRMACIÓN ──────────────────────────────────────────────────
@@ -1097,7 +1250,7 @@ async function showRecentPunches() {
       return `<div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-700/40 text-xs">
         <span class="font-medium text-slate-300">${safeName}</span>
         <div class="flex items-center gap-2">
-          ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
+          ${isManual ? '<span class="text-amber-400 text-[10px]"><i class="fa-solid fa-triangle-exclamation"></i></span>' : l.method === 'pin' ? '<span class="text-sky-400 text-[10px]"><i class="fa-solid fa-key"></i></span>' : '<span class="text-indigo-400 text-[10px]"><i class="fa-solid fa-face-smile"></i></span>'}
           <span class="${l.type==='ENTRADA' ? 'text-emerald-400' : 'text-rose-400'} font-bold">${l.type}</span>
           <span class="text-slate-500 font-mono">${ts}</span>
         </div>
@@ -1332,6 +1485,7 @@ window.captureDescriptor = async function() {
 
   // Las 3 tomas completadas → guardar en Firestore
   status.textContent = 'Guardando...';
+  const dniSaved = regTargetDni, nameSaved = regTargetName;
   try {
     const serialized = regCapturedDescriptors.map(desc =>
       Object.fromEntries([...desc].map((v, i) => [i, v]))
@@ -1344,10 +1498,11 @@ window.captureDescriptor = async function() {
     stopRegCamera();
     document.getElementById('register-face-overlay').classList.add('hidden');
     regCapturing = false;
-    showToast(regFromKiosk ? 'Cara registrada. Podrás fichar con la cara cuando RRHH la apruebe; mientras tanto usá el DNI.' : `Cara de ${regTargetName} registrada con 3 ángulos. 🎉`, "success", regFromKiosk ? 7000 : 3500);
+    showToast(regFromKiosk ? 'Cara registrada. Podrás fichar con la cara cuando RRHH la apruebe; mientras tanto usá el PIN.' : `Cara de ${regTargetName} registrada con 3 ángulos. 🎉`, "success", regFromKiosk ? 7000 : 3500);
     regCapturedDescriptors = [];
     await loadKnownFaces();
     await loadStaff();
+    if (regFromKiosk) { try { await createPinFlow(dniSaved, nameSaved); } catch (e) { console.error('createPinFlow', e); showToast('No se pudo guardar el PIN. Pedile a RRHH que lo cree.', 'warning', 6000); } }
   } catch (e) {
     showToast("Error al guardar la cara. Revisá tu conexión y repetí las 3 fotos.", "error");
     regCapturedDescriptors = []; updateRegUI(); regCapturing = false;
@@ -1584,12 +1739,19 @@ function renderStaffTable() {
       ? `<div class="mt-1 flex items-center gap-1"><span class="text-[10px] text-amber-400">Pendiente de aprobar</span>
          <button data-action="approve-face" data-dni="${d}" class="px-2 py-1 bg-emerald-900/50 text-emerald-300 rounded text-[10px] cursor-pointer">Aprobar</button>
          <button data-action="reject-face" data-dni="${d}" class="px-2 py-1 bg-rose-950/50 text-rose-300 rounded text-[10px] cursor-pointer">Rechazar</button></div>` : '';
+    const locked = s.pinLockedUntil && new Date(s.pinLockedUntil).getTime() > Date.now();
+    const pinUi = s.pinHash
+      ? `<div class="mt-1 flex items-center gap-1"><span class="px-2 py-1 bg-sky-950/50 text-sky-300 rounded text-[10px]"><i class="fa-solid fa-key mr-1"></i>PIN activo</span>
+         <button data-action="set-pin" data-dni="${d}" class="px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer" title="Cambiar PIN"><i class="fa-solid fa-rotate"></i></button>
+         <button data-action="clear-pin" data-dni="${d}" class="px-2 py-1 text-[10px] text-rose-400/70 hover:text-rose-400 cursor-pointer" title="Quitar PIN"><i class="fa-solid fa-trash"></i></button>
+         ${locked ? `<span class="text-[10px] text-rose-400">Bloqueado</span><button data-action="unlock-pin" data-dni="${d}" class="px-2 py-1 bg-amber-900/50 text-amber-300 rounded text-[10px] cursor-pointer">Desbloquear</button>` : ''}</div>`
+      : `<div class="mt-1"><button data-action="set-pin" data-dni="${d}" class="inline-flex items-center gap-1 px-2 py-1.5 bg-slate-700/50 text-slate-300 rounded text-[10px] cursor-pointer hover:bg-slate-600/50"><i class="fa-solid fa-key"></i>Crear PIN</button></div>`;
     return `<tr class="collab-row transition-colors ${s.activo === false ? 'opacity-50' : ''}">
       <td class="px-4 py-3 font-medium text-slate-200">${escHtml(s.name)}${s.activo === false ? `<span class="ml-1.5 px-2 py-1 bg-slate-700/60 text-slate-400 rounded text-[10px]">${s.sinCiclo ? 'Fuera de Ciclo' : 'Inactivo'}</span>` : ''}</td>
       <td class="px-4 py-3 text-slate-400 font-mono text-xs">${d}</td>
       <td class="px-4 py-3 text-xs">${venueLabel(s) ? escHtml(venueLabel(s)) : '<span class="text-amber-400">Sin local</span>'}</td>
       <td class="px-4 py-3 text-xs">${SECT[s.sector] || '<span class="text-slate-500">—</span>'}${rolBadge(s)}${s.puesto ? `<div class="text-[10px] text-slate-500 mt-0.5">${escHtml(s.puesto)}</div>` : ''}</td>
-      <td class="px-4 py-3">${face}${appr}</td></tr>`;
+      <td class="px-4 py-3">${face}${appr}${pinUi}</td></tr>`;
   }).join('');
 }
 
@@ -1603,9 +1765,20 @@ function initStaffTableEvents() {
     if (btn.dataset.action === 'register-face') openRegisterFace(s.dni, s.name);
     else if (btn.dataset.action === 'approve-face') approveFace(s.dni, true);
     else if (btn.dataset.action === 'reject-face') approveFace(s.dni, false);
+    else if (btn.dataset.action === 'set-pin') createPinFlow(s.dni, s.name).then(ok => ok && loadStaff()).catch(e => { console.error(e); showToast('Error al guardar el PIN.', 'error'); });
+    else if (btn.dataset.action === 'clear-pin') clearPin(s, false);
+    else if (btn.dataset.action === 'unlock-pin') clearPin(s, true);
   });
 }
 
+async function clearPin(s, onlyUnlock) {
+  try {
+    if (!onlyUnlock && !(await askConfirm({ title: `Quitar el PIN de ${s.name}? Va a poder fichar solo con la cara o por DNI (queda para revisión).` }))) return;
+    await setDoc(doc(db, 'staff', s.dni), onlyUnlock ? { pinFails: 0, pinLockedUntil: null } : { pinHash: null, pinSalt: null, pinFails: 0, pinLockedUntil: null }, { merge: true });
+    await auditAdd(onlyUnlock ? 'pin_unlock' : 'pin_clear', { dni: s.dni, name: s.name, reason: onlyUnlock ? 'PIN desbloqueado por RRHH' : 'PIN eliminado por RRHH' });
+    await loadStaff(); showToast(onlyUnlock ? 'PIN desbloqueado.' : 'PIN eliminado.', 'success');
+  } catch (e) { console.error(e); showToast('Error al actualizar el PIN.', 'error'); }
+}
 window.approveFace = async function(dni, ok) {
   try {
     await setDoc(doc(db, "staff", dni), ok ? { faceApproved: true } : { faceApproved: true, faceDescriptors: null, faceDescriptor: null }, { merge: true });
@@ -1654,7 +1827,7 @@ window.requestAdminAccess = async function() {
 };
 window.closeAdmin = function() {
   clearAdminSessionTimer();
-  if (visorAutoTimer) { clearInterval(visorAutoTimer); visorAutoTimer = null; }
+  if (visorAutoTimer) { clearInterval(visorAutoTimer); visorAutoTimer = null; } if (visorClockTimer) { clearInterval(visorClockTimer); visorClockTimer = null; }
   const adminEl = document.getElementById('admin-view');
   adminEl.removeEventListener('click',   startAdminSessionTimer);
   adminEl.removeEventListener('keydown', startAdminSessionTimer);
@@ -1684,6 +1857,8 @@ window.applyFilters = function() {
   renderAdminTable(filtered);
   document.getElementById('filter-count').textContent = filtered.length < allLogs.length
     ? `Mostrando ${filtered.length} de ${allLogs.length} registros` : `${allLogs.length} registros en total`;
+  const pend = allLogs.filter(l => l.estado === 'pendiente').length;
+  if (pend) document.getElementById('filter-count').textContent += ` · ⚠️ ${pend} pendiente(s) de revisión`;
 };
 window.clearFilters = function() {
   ['filter-date','filter-name'].forEach(id => document.getElementById(id).value = '');
@@ -1697,7 +1872,7 @@ function renderAdminTable(logs) {
   tbody.innerHTML = logs.map(l => {
     const ts = l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : '—';
     const isManual = l.method === 'manual_dni';
-    const methodBadge = l.method === 'manual_rrhh' ? '<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">RRHH</span>' : isManual
+    const methodBadge = l.method === 'manual_rrhh' ? '<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">RRHH</span>' : l.method === 'pin' ? '<span class="px-2 py-1 rounded text-[10px] bg-sky-950/50 text-sky-300"><i class="fa-solid fa-key mr-1"></i>PIN</span>' : isManual
       ? `<span class="px-2 py-1 rounded text-[10px] font-bold badge-manual"><i class="fa-solid fa-triangle-exclamation mr-1"></i>DNI Manual</span>`
       : `<span class="px-2 py-1 rounded text-[10px] bg-indigo-950/50 text-indigo-300"><i class="fa-solid fa-face-smile mr-1"></i>Facial</span>`;
     return `
@@ -1707,8 +1882,8 @@ function renderAdminTable(logs) {
         <td class="px-4 py-3"><span class="px-2 py-1 bg-indigo-950/50 text-indigo-300 rounded text-[10px]">${escHtml(l.venueName)}</span></td>
         <td class="px-4 py-3">${methodBadge}</td>
         <td class="px-4 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase font-bold ${l.type==='ENTRADA' ? 'bg-emerald-950/50 text-emerald-400' : 'bg-rose-950/50 text-rose-400'}">${escHtml(l.type)}</span></td>
-        <td class="px-4 py-3 text-slate-400 text-xs">${ts}${l.edited ? ` <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-950/50 text-amber-400" title="${escHtml(l.editReason)}">editado</span>` : ''}</td>
-        <td class="px-2 py-3 whitespace-nowrap"><button onclick="openLogModal('${l.id}')" class="px-2 py-1.5 text-indigo-400 cursor-pointer" title="Corregir"><i class="fa-solid fa-pen"></i></button><button onclick="deleteLog('${l.id}')" class="px-2 py-1.5 text-rose-400/80 cursor-pointer" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
+        <td class="px-4 py-3 text-slate-400 text-xs">${ts}${l.edited ? ` <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-950/50 text-amber-400" title="${escHtml(l.editReason)}">editado</span>` : ''}${l.estado === 'pendiente' ? ` <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-rose-950/60 text-rose-300" title="${pendReason(l)}${l.score != null ? ' · distancia ' + l.score : ''}">pendiente</span>` : ''}</td>
+        <td class="px-2 py-3 whitespace-nowrap">${l.estado === 'pendiente' ? `<button onclick="reviewLog('${l.id}')" class="px-2 py-1.5 text-emerald-400 cursor-pointer" title="Confirmar como válido"><i class="fa-solid fa-circle-check"></i></button>` : ''}<button onclick="openLogModal('${l.id}')" class="px-2 py-1.5 text-indigo-400 cursor-pointer" title="Corregir"><i class="fa-solid fa-pen"></i></button><button onclick="deleteLog('${l.id}')" class="px-2 py-1.5 text-rose-400/80 cursor-pointer" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td>
       </tr>`;
   }).join('');
 }
@@ -1717,7 +1892,7 @@ window.exportLogsXLSX = function() {
   if (!allLogs.length) { showToast("Sin datos.", "info"); return; }
   const rows = allLogs.map(l => ({
     "Colaborador": l.name, "DNI": l.dni || '', "Local": l.venueName || '',
-    "Método": l.method === 'manual_dni' ? 'DNI Manual ⚠️' : 'Facial',
+    "Método": l.method === 'manual_dni' ? 'DNI Manual ⚠️' : l.method === 'pin' ? 'PIN' : l.method === 'manual_rrhh' ? 'RRHH' : 'Facial', "Estado": l.estado === 'pendiente' ? 'Pendiente' : 'OK', "Score": l.score ?? '',
     "Acción": l.type, "Fecha y Hora": l.timestamp ? new Date(l.timestamp).toLocaleString('es-AR') : ''
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -1751,12 +1926,12 @@ window.switchTab = function(tabId) {
   const map = { 'tab-venues':'tabbtn-venues','tab-staff':'tabbtn-staff','tab-logs':'tabbtn-logs','tab-hours':'tabbtn-hours','tab-shifts':'tabbtn-shifts','tab-visor':'tabbtn-visor' };
   document.getElementById(map[tabId])?.classList.add('active');
   // El visor se auto-refresca cada 30s mientras está abierto; se apaga al salir de la pestaña
-  if (visorAutoTimer) { clearInterval(visorAutoTimer); visorAutoTimer = null; }
+  if (visorAutoTimer) { clearInterval(visorAutoTimer); visorAutoTimer = null; } if (visorClockTimer) { clearInterval(visorClockTimer); visorClockTimer = null; }
   if (tabId === 'tab-staff')  loadStaff();
   if (tabId === 'tab-logs')   loadAdminLogs();
   if (tabId === 'tab-hours')  initHoursTab();
   if (tabId === 'tab-shifts') initShiftsTab();
-  if (tabId === 'tab-visor')  { loadVisorData(true); visorAutoTimer = setInterval(() => loadVisorData(false), 30000); }
+  if (tabId === 'tab-visor')  { loadVisorData(true); visorAutoTimer = setInterval(() => loadVisorData(false), 30000); visorClockTimer = setInterval(renderTurnos, 1000); }
 };
 
 // ── TAB VISOR DE PRESENTISMO ────────────────────────────────────────────────
@@ -1790,10 +1965,12 @@ async function fetchVisorData(forceStaff) {
     const [dayStart, toTs] = dayRangeISO(today);
     visorDayStart = dayStart;
     const fromTs = new Date(new Date(dayStart).getTime() - 12 * 3600e3).toISOString(); // incluye turnos nocturnos iniciados ayer
-    const [snap, shSnap] = await Promise.all([
+    const [snap, shSnap, repSnap] = await Promise.all([
       getDocs(query(collection(db, "attendance_logs"), where("timestamp", ">=", fromTs), where("timestamp", "<=", toTs), orderBy("timestamp", "asc"))),
-      getDocs(query(collection(db, "shifts"), where("date", "==", today)))
+      getDocs(query(collection(db, "shifts"), where("date", "==", today))),
+      getDocs(query(collection(db, "turno_reportes"), where("date", "==", today))).catch(() => ({ docs: [] }))
     ]);
+    visorShiftList = shSnap.docs.map(d => d.data()); visorReportes = repSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     visorLogs = {}; snap.docs.forEach(d => { const l = d.data(); (visorLogs[l.dni] = visorLogs[l.dni] || []).push(l); });
     visorShiftMap = {}; shSnap.docs.forEach(d => { const sh = d.data(); visorShiftMap[sh.dni] = sh; });
     return now;
@@ -1803,7 +1980,7 @@ window.loadVisorData = async function(forceStaff) {
   try {
     const now = await fetchVisorData(forceStaff);
     document.getElementById('visor-updated').textContent = `Actualizado ${now.toLocaleTimeString('es-AR', { hour12: false })} · se refresca cada 30 s`;
-    renderVisorGrid();
+    renderVisorGrid(); renderTurnos();
   } catch (e) { console.error('loadVisorData error:', e); gridEl.innerHTML = '<p class="text-rose-400 text-xs">Error al cargar el visor.</p>'; }
 };
 
@@ -2398,6 +2575,16 @@ window.addEventListener('online', netBanner); window.addEventListener('offline',
 let logModalId = null;
 const fmtDT = ts => new Date(ts).toLocaleString('es-AR', { timeZone: TZ });
 const toLocalInput = ts => { const d = new Date(ts); return localDateStr(d) + 'T' + d.toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }); };
+window.reviewLog = async function(id) {
+  const b = allLogs.find(x => x.id === id); if (!b) return;
+  if (!(await askConfirm({ title: `Confirmar ${b.type} de ${b.name} (${fmtDT(b.timestamp)}) como válido? Si no lo es, usá el tacho para eliminarlo con motivo.` }))) return;
+  try {
+    const at = new Date().toISOString(), bt = writeBatch(db);
+    bt.set(doc(db, 'attendance_logs', id), { estado: 'ok', reviewedAt: at }, { merge: true });
+    bt.set(doc(collection(db, 'attendance_audit')), { action: 'review', logId: id, dni: b.dni, name: b.name, after: { type: b.type, timestamp: b.timestamp }, reason: 'Revisado y confirmado por RRHH', at });
+    await bt.commit(); b.estado = 'ok'; applyFilters(); showToast('Fichaje confirmado.', 'success');
+  } catch (e) { console.error(e); showToast('Error al confirmar el fichaje.', 'error'); }
+};
 window.openLogModal = async function(id) {
   if (!allStaff.length) await loadStaff();
   logModalId = id || null;
@@ -2453,10 +2640,207 @@ window.openAudit = async function() {
   document.getElementById('audit-modal').classList.remove('hidden');
   try {
     const snap = await getDocs(query(collection(db, 'attendance_audit'), orderBy('at', 'desc'), limit(100)));
-    const A = { add: ['Agregó', 'text-emerald-400'], edit: ['Corrigió', 'text-amber-400'], delete: ['Eliminó', 'text-rose-400'] };
+    const A = { add: ['Agregó', 'text-emerald-400'], edit: ['Corrigió', 'text-amber-400'], delete: ['Eliminó', 'text-rose-400'], review: ['Confirmó', 'text-sky-400'], pin_set: ['PIN creado', 'text-sky-400'], pin_clear: ['PIN quitado', 'text-rose-400'], pin_unlock: ['PIN desbloqueado', 'text-amber-400'], pin_lock: ['PIN bloqueado', 'text-rose-400'] };
     const d = x => x ? `${escHtml(x.type)} ${fmtDT(x.timestamp)}` : '';
     body.innerHTML = snap.docs.length ? snap.docs.map(x => { const a = x.data(), t = A[a.action] || ['', '']; return `<div class="bg-slate-900 rounded-lg p-3"><p><b class="${t[1]}">${t[0]}</b> · ${escHtml(a.name)} <span class="text-slate-500">· ${fmtDT(a.at)}</span></p><p class="text-slate-400 mt-1">${a.before ? d(a.before) : ''}${a.before && a.after ? ' → ' : ''}${a.after ? d(a.after) : ''}</p><p class="text-slate-300 mt-1">Motivo: ${escHtml(a.reason)}</p></div>`; }).join('') : '<p class="text-slate-400">Todavía no hay correcciones.</p>';
   } catch (e) { body.innerHTML = '<p class="text-rose-400">Error al cargar la auditoría.</p>'; }
+};
+
+// ── AVAL ALEATORIO · TURNOS · REPORTE DE PRESENTES ────────────────────────
+let visorShiftList = [], visorReportes = [], visorClockTimer = null;
+const slug = x => String(x).replace(/[^\w-]/g, '-');
+const pendReason = l => l.method === 'face' ? 'Cara con coincidencia dudosa' : l.aval ? (l.aval.estado === 'rechazado' ? 'Aval del encargado rechazado' : 'Sin aval del encargado') : 'DNI sin PIN';
+const isEnc = x => x.activo !== false && (x.rol === 'sous' || x.rol === 'supervision');
+function pinMsg(v) {
+  return v.reason === 'locked' ? `PIN bloqueado hasta las ${fmtHM(v.until)}. Pedile a RRHH que lo desbloquee.`
+    : v.reason === 'locked-now' ? `Demasiados intentos: PIN bloqueado ${secCfg.pinLockMin} min. Se avisó a RRHH.`
+    : v.reason === 'bad' ? `PIN incorrecto. Quedan ${v.left} intento(s).` : 'Esa persona no tiene PIN.';
+}
+
+// Aval: un encargado presente del mismo local confirma "¿está presente X?" con su PIN
+function avalCandidates(emp) {
+  const vk = venueKey(emp), nowM = nowMinLocal(), nowMs = Date.now();
+  return allStaff.filter(x => isEnc(x) && x.pinHash && x.dni !== emp.dni && venueKey(x) === vk && personState(x, nowM, nowMs).kind === 'present');
+}
+let avalCtx = null;
+function askAval(emp, encs) {
+  return new Promise(resolve => {
+    const m = document.getElementById('aval-modal'), sel = document.getElementById('aval-enc'), pin = document.getElementById('aval-pin');
+    document.getElementById('aval-name').textContent = emp.name;
+    sel.innerHTML = encs.map(e => `<option value="${escHtml(e.dni)}">${escHtml(e.name)}</option>`).join(''); pin.value = '';
+    m.classList.remove('hidden'); setTimeout(() => pin.focus(), 50);
+    const timer = setTimeout(() => done(null), 90000);
+    const done = r => { clearTimeout(timer); m.classList.add('hidden'); avalCtx = null; resolve(r); };
+    avalCtx = { done, sel, pin, encs };
+  });
+}
+window.avalAnswer = async function(ans) {
+  const c = avalCtx; if (!c) return;
+  if (ans === null) return c.done(null);
+  const enc = c.encs.find(e => e.dni === c.sel.value), p = c.pin.value.trim();
+  if (!/^\d{6}$/.test(p)) { showToast('El encargado tiene que ingresar su PIN de 6 dígitos.', 'warning'); return; }
+  const v = await verifyPin(enc.dni, p); c.pin.value = '';
+  if (!v.ok) { showToast(pinMsg(v), 'error', 6000); return; }
+  c.done({ ans, enc });
+};
+async function resolveAval(logId, emp, encs) {
+  const r = await askAval(emp, encs), at = new Date().toISOString();
+  const resultado = r ? (r.ans ? 'confirmado' : 'rechazado') : 'sin_respuesta';
+  try {
+    const bt = writeBatch(db);
+    bt.set(doc(db, 'attendance_logs', logId), { aval: { estado: resultado, at, ...(r ? { por: r.enc.name, porDni: r.enc.dni } : {}) }, estado: resultado === 'confirmado' ? 'ok' : 'pendiente' }, { merge: true });
+    bt.set(doc(collection(db, 'attendance_avales')), { logId, dni: emp.dni, name: emp.name, encargadoDni: r ? r.enc.dni : '', encargadoName: r ? r.enc.name : '', resultado, at });
+    await bt.commit();
+  } catch (e) { console.error('aval', e); }
+  return resultado;
+}
+
+// Turnos: se arman con las grillas de turnos del día (local + hora de inicio)
+function buildTurnos(nowMs = Date.now()) {
+  const today = localDateStr(), staffBy = new Map(allStaff.map(x => [x.dni, x])), groups = new Map();
+  visorShiftList.forEach(sh => {
+    const st = staffBy.get(sh.dni); if (!st || st.activo === false || sh.free) return;
+    const ref = { venueId: sh.venueId || st.venueId, venueName: sh.venueName || st.venueName }, vk = venueKey(ref) || '__none__';
+    [sh.in, sh.split ? sh.in2 : ''].filter(Boolean).forEach(hm => {
+      const id = slug(`${vk}_${hm}`); let g = groups.get(id);
+      if (!g) { g = { id, venue: vk, venueName: venueLabel(ref) || 'Sin local', start: hm, startMs: new Date(`${today}T${hm}:00-03:00`).getTime(), people: [], reports: [] }; groups.set(id, g); }
+      if (!g.people.some(p => p.dni === sh.dni)) g.people.push({ dni: sh.dni, name: st.name });
+    });
+  });
+  const assigned = new Map();
+  groups.forEach(g => { if (!assigned.has(g.venue)) assigned.set(g.venue, new Set()); g.people.forEach(p => assigned.get(g.venue).add(p.dni)); });
+  groups.forEach(g => {
+    const from = g.startMs - 2 * 3600e3;
+    g.tolEnd = g.startMs + secCfg.tolMin * 60000; g.repEnd = g.startMs + secCfg.reportMin * 60000;
+    g.window = nowMs < g.startMs ? 'antes' : nowMs <= g.repEnd ? 'abierto' : 'cerrado';
+    g.people.forEach(p => {
+      const e = (visorLogs[p.dni] || []).find(l => l.type === 'ENTRADA' && new Date(l.timestamp).getTime() >= from);
+      p.entry = e || null; p.pend = !!e && e.estado === 'pendiente';
+      p.state = !e ? (nowMs <= g.tolEnd ? 'espera' : 'falta') : new Date(e.timestamp).getTime() <= g.tolEnd ? 'puntual' : 'tarde';
+    });
+    g.reports = visorReportes.filter(r => r.turnoId === g.id);
+  });
+  const extras = [];
+  Object.entries(visorLogs).forEach(([dni, logs]) => {
+    const e = logs.find(l => l.type === 'ENTRADA' && l.timestamp >= visorDayStart); if (!e) return;
+    const vk = venueKey(e) || venueKey(staffBy.get(dni) || {}) || '__none__';
+    if (assigned.has(vk) && !assigned.get(vk).has(dni)) extras.push({ dni, name: e.name || dni, at: e.timestamp, vk });
+  });
+  return { turnos: [...groups.values()].sort((a, b) => a.startMs - b.startMs), extras };
+}
+// Estado del reporte: ok | sinfichar | discrepancia | sinreporte (cerrado sin reporte) | pendiente_envio
+function evalReports(g) {
+  const rs = g.reports.slice().sort((a, b) => a.at.localeCompare(b.at));
+  if (!rs.length) return { st: g.window === 'cerrado' ? 'sinreporte' : 'pendiente_envio', rs };
+  const from = new Date(g.startMs - 2 * 3600e3).toISOString();
+  const missingAt = at => g.people.filter(p => !(visorLogs[p.dni] || []).some(l => l.type === 'ENTRADA' && l.timestamp >= from && l.timestamp <= at)).map(p => p.dni);
+  let bad = false; // los ausentes reportados deben ser exactamente los asignados sin fichaje al momento del reporte
+  rs.forEach(r => { const exp = missingAt(r.at).filter(d => !(r.sinFichar || []).some(x => x.dni === d)).sort().join(','); if (exp !== [...(r.ausentes || [])].sort().join(',')) bad = true; });
+  const aus = new Set(rs.flatMap(r => r.ausentes || [])), sf = new Set(rs.flatMap(r => (r.sinFichar || []).map(x => x.dni)));
+  if ([...aus].some(d => sf.has(d))) bad = true; // un encargado dice ausente y otro presente sin fichar
+  return { st: bad ? 'discrepancia' : sf.size ? 'sinfichar' : 'ok', rs };
+}
+
+// Visor: rondas con cuenta regresiva y semáforo (reloj compartido, no destaca a nadie)
+const fmtClock = ms => { ms = Math.max(0, ms); const m = Math.floor(ms / 60000), x = Math.floor(ms % 60000 / 1000); return `${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}`; };
+const semaforo = (rem, total) => rem <= Math.max(120000, total * 0.1) ? 'rojo' : rem <= total / 3 ? 'amarillo' : 'verde';
+const SEM = { verde: 'bg-emerald-600/20 border-emerald-500 text-emerald-300', amarillo: 'bg-amber-600/20 border-amber-500 text-amber-300', rojo: 'bg-rose-600/20 border-rose-500 text-rose-300 animate-pulse', gris: 'bg-slate-700/30 border-slate-600 text-slate-400', ok: 'bg-emerald-600/30 border-emerald-400 text-emerald-200 pop' };
+const pill = (label, cls, txt) => `<div class="flex-1 min-w-[140px] rounded-lg border px-3 py-2 ${SEM[cls]}"><p class="text-[10px] uppercase opacity-80">${label}</p><p class="text-sm font-bold font-mono">${txt}</p></div>`;
+function renderTurnos() {
+  const el = document.getElementById('visor-turnos'); if (!el) return;
+  const nowMs = Date.now(), { turnos, extras } = buildTurnos(nowMs);
+  const act = turnos.filter(g => nowMs >= g.startMs - 3600e3 && nowMs <= g.repEnd + 3 * 3600e3 && (!visorVenue || g.venue === visorVenue));
+  if (!act.length) { el.innerHTML = ''; return; }
+  const tolMs = secCfg.tolMin * 60000, repMs = secCfg.reportMin * 60000, shown = new Set();
+  const CH = { puntual: 'bg-emerald-950/50 text-emerald-300', tarde: 'bg-amber-950/50 text-amber-300', falta: 'bg-rose-950/50 text-rose-300', espera: 'bg-slate-700/50 text-slate-300' };
+  el.innerHTML = '<p class="text-[11px] text-slate-400 uppercase font-semibold"><i class="fa-solid fa-stopwatch mr-1.5"></i>Turnos en curso</p>' + act.map(g => {
+    const e = evalReports(g), faltan = g.people.filter(p => !p.entry).length, punt = g.people.filter(p => p.state === 'puntual').length, tarde = g.people.filter(p => p.state === 'tarde').length;
+    let r1, r2;
+    if (nowMs < g.startMs) r1 = pill('Ronda 1 · tolerancia', 'gris', `Empieza en ${fmtClock(g.startMs - nowMs)}`);
+    else if (!faltan) r1 = pill('Ronda 1 · tolerancia', 'ok', '✓ Todos llegaron');
+    else if (nowMs <= g.tolEnd) r1 = pill(`Ronda 1 · faltan ${faltan}`, semaforo(g.tolEnd - nowMs, tolMs), fmtClock(g.tolEnd - nowMs));
+    else r1 = pill('Ronda 1 · cerrada', 'gris', `${faltan} sin fichar`);
+    if (e.rs.length) r2 = pill('Ronda 2 · reporte', e.st === 'ok' ? 'ok' : 'amarillo', e.st === 'ok' ? '✓ Reporte enviado' : e.st === 'discrepancia' ? '⚠ Discrepancia' : '⚠ Revisar');
+    else if (nowMs < g.startMs) r2 = pill('Ronda 2 · reporte', 'gris', 'Se habilita al inicio');
+    else if (nowMs <= g.repEnd) r2 = pill('Ronda 2 · falta el reporte', semaforo(g.repEnd - nowMs, repMs), fmtClock(g.repEnd - nowMs));
+    else r2 = pill('Ronda 2 · reporte', 'rojo', '⛔ Sin reporte');
+    const chips = g.people.slice().sort((a, b) => a.name.localeCompare(b.name)).map(p => `<span class="px-2 py-1 rounded text-[10px] ${CH[p.state]}">${escHtml(p.name)}${p.entry ? ' · ' + fmtHM(p.entry.timestamp) : ''}${p.pend ? ' ⚠' : ''}</span>`).join('');
+    const ex = shown.has(g.venue) ? '' : extras.filter(x => x.vk === g.venue).map(x => `<span class="px-2 py-1 rounded text-[10px] bg-violet-950/50 text-violet-300">${escHtml(x.name)} · no programado ${fmtHM(x.at)}</span>`).join(''); shown.add(g.venue);
+    const rl = e.rs.map(r => `<p class="text-[11px] text-slate-400">📋 ${escHtml(r.encName)} ${fmtHM(r.at)}: ${r.tipo === 'todos_presentes' ? 'todos presentes' : (r.ausentes || []).length + ' ausente(s)'}${(r.sinFichar || []).length ? ` · presente sin fichar: ${r.sinFichar.map(x => escHtml(x.name) + ' (' + escHtml(x.motivo) + ')').join(', ')}` : ''}</p>`).join('');
+    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-3 space-y-2">
+      <div class="flex items-center justify-between"><h4 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-store text-indigo-400 mr-2"></i>${escHtml(g.venueName)} · Turno ${g.start}</h4><span class="text-[11px] text-slate-400">${g.people.length - faltan}/${g.people.length} presentes · ${punt} puntuales · ${tarde} tarde</span></div>
+      <div class="flex flex-wrap gap-2">${r1}${r2}</div>${rl}
+      <div class="flex flex-wrap gap-1.5">${chips}${ex}</div></div>`;
+  }).join('');
+}
+
+// Kiosco: reporte de presentes (solo un encargado presente, con su PIN)
+let repSt = null;
+window.closeReport = () => { document.getElementById('rep-modal').classList.add('hidden'); repSt = null; };
+window.openReport = async function() {
+  const body = document.getElementById('rep-body'); document.getElementById('rep-modal').classList.remove('hidden');
+  body.innerHTML = '<p class="text-slate-400"><i class="fa-solid fa-spinner animate-spin mr-2"></i>Cargando...</p>';
+  try { await fetchVisorData(false); } catch (e) { console.error(e); body.innerHTML = '<p class="text-rose-400">No se pudo cargar. Revisá la conexión.</p>'; return; }
+  const nowM = nowMinLocal(), nowMs = Date.now(), encs = allStaff.filter(x => isEnc(x) && personState(x, nowM, nowMs).kind === 'present'), ok = encs.filter(x => x.pinHash);
+  repSt = { encs: ok };
+  if (!ok.length) { body.innerHTML = `<p class="text-slate-300">${encs.length ? 'Los encargados presentes todavía no tienen PIN. Pedile a RRHH que lo cree.' : 'No hay encargados presentes. Un encargado tiene que fichar su entrada primero.'}</p>`; return; }
+  body.innerHTML = `<p class="text-slate-400 text-xs">Solo un encargado que ya fichó y sigue en el local puede enviarlo.</p>
+    <select id="rep-enc" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-sm">${ok.map(x => `<option value="${escHtml(x.dni)}">${escHtml(x.name)} · ${escHtml(venueLabel(x) || 'sin local')}</option>`).join('')}</select>
+    <input type="password" id="rep-pin" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="Tu PIN" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-base tracking-[0.4em] text-white focus:outline-none focus:border-sky-500">
+    <button onclick="repLogin()" class="w-full bg-sky-700 text-white py-3 rounded-xl text-sm font-bold cursor-pointer">Continuar</button>`;
+};
+window.repLogin = async function() {
+  if (!repSt) return;
+  const enc = repSt.encs.find(x => x.dni === document.getElementById('rep-enc').value), pinEl = document.getElementById('rep-pin'), p = pinEl.value.trim();
+  if (!/^\d{6}$/.test(p)) { showToast('Ingresá tu PIN de 6 dígitos.', 'warning'); return; }
+  const v = await verifyPin(enc.dni, p); pinEl.value = '';
+  if (!v.ok) { showToast(pinMsg(v), 'error', 6000); return; }
+  repSt.enc = enc; await repTurnos();
+};
+async function repTurnos() {
+  const body = document.getElementById('rep-body'); await fetchVisorData(false);
+  const nowMs = Date.now(), vk = venueKey(repSt.enc) || '__none__';
+  const open = buildTurnos(nowMs).turnos.filter(g => g.venue === vk && nowMs >= g.startMs && nowMs <= g.repEnd);
+  if (!open.length) { body.innerHTML = `<p class="text-slate-300">No hay un turno abierto para reportar en tu local. El reporte se habilita al inicio del turno y dura ${secCfg.reportMin} min.</p>`; return; }
+  if (open.length === 1) return repShow(open[0].id);
+  body.innerHTML = '<p class="text-slate-400 text-xs">Elegí el turno:</p>' + open.map(g => `<button onclick="repShow('${g.id}')" class="w-full bg-slate-700 text-slate-200 py-3 rounded-xl text-sm cursor-pointer">Turno ${g.start} · ${g.people.length} asignados</button>`).join('');
+}
+window.repShow = function(id) { repSt.turnoId = id; repSt.marks = {}; repRender(); };
+function repRender() {
+  const body = document.getElementById('rep-body'), g = buildTurnos().turnos.find(x => x.id === repSt.turnoId);
+  if (!g) { body.innerHTML = '<p class="text-slate-300">El turno ya no está disponible.</p>'; return; }
+  const falt = g.people.filter(p => !p.entry), rem = g.repEnd - Date.now();
+  const rows = falt.map(p => { const m = repSt.marks[p.dni]?.status === 'sinfichar';
+    return `<div class="bg-slate-900 rounded-lg p-2.5 space-y-1.5"><p class="text-slate-200 text-sm font-medium">${escHtml(p.name)}</p>
+      <div class="grid grid-cols-2 gap-2"><button onclick="repMark('${p.dni}','ausente')" class="py-2 rounded-lg text-xs font-bold cursor-pointer ${m ? 'bg-slate-700 text-slate-400' : 'bg-rose-700 text-white'}">Ausente</button>
+      <button onclick="repMark('${p.dni}','sinfichar')" class="py-2 rounded-lg text-xs font-bold cursor-pointer ${m ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'}">Presente sin fichar</button></div>
+      ${m ? `<p class="text-[11px] text-amber-300">Motivo: ${escHtml(repSt.marks[p.dni].motivo)} · queda pendiente de revisión</p>` : ''}</div>`; }).join('');
+  body.innerHTML = `<p class="text-slate-300 text-xs">Turno <b>${g.start}</b> · ${escHtml(g.venueName)} · quedan ${fmtClock(rem)} para reportar · ${g.people.length - falt.length}/${g.people.length} fichados</p>
+    ${falt.length ? `<p class="text-slate-400 text-xs">Faltan fichar (solo aparecen personas asignadas a este turno):</p>${rows}
+      <button onclick="repSend()" class="w-full bg-sky-700 text-white py-3 rounded-xl text-sm font-bold cursor-pointer">Enviar reporte</button>`
+    : `<p class="text-emerald-300 text-sm">Todos los asignados ya ficharon.</p><button onclick="repSend()" class="w-full bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold cursor-pointer">✅ Todos presentes</button>`}`;
+}
+window.repMark = async function(dni, status) {
+  if (!repSt) return;
+  if (status === 'sinfichar') {
+    const motivo = ((await askInput({ title: 'Motivo por el que no pudo fichar (obligatorio):' })) || '').trim();
+    if (motivo.length < 3) { if (motivo) showToast('El motivo es obligatorio.', 'warning'); return; }
+    repSt.marks[dni] = { status, motivo };
+  } else delete repSt.marks[dni];
+  repRender();
+};
+window.repSend = async function() {
+  if (!repSt) return;
+  try {
+    await fetchVisorData(false);
+    const g = buildTurnos().turnos.find(x => x.id === repSt.turnoId); if (!g) return;
+    const falt = g.people.filter(p => !p.entry), sinFichar = [], ausentes = [];
+    falt.forEach(p => { const m = repSt.marks[p.dni]; if (m?.status === 'sinfichar') sinFichar.push({ dni: p.dni, name: p.name, motivo: m.motivo }); else ausentes.push(p.dni); });
+    const at = new Date().toISOString(), date = localDateStr();
+    await setDoc(doc(db, 'turno_reportes', `${date}_${g.id}_${repSt.enc.dni}`), { turnoId: g.id, date, venueKey: g.venue, venueName: g.venueName, start: g.start, encDni: repSt.enc.dni, encName: repSt.enc.name, at, tipo: falt.length ? 'con_ausentes' : 'todos_presentes', faltantes: falt.map(p => p.dni), ausentes, sinFichar, estado: sinFichar.length ? 'pendiente' : 'ok' });
+    showToast(falt.length ? `Reporte enviado: ${ausentes.length} ausente(s)${sinFichar.length ? `, ${sinFichar.length} presente(s) sin fichar` : ''}.` : 'Reporte enviado: todos presentes.', 'success', 5000);
+    closeReport();
+  } catch (e) { console.error('repSend', e); showToast('No se pudo enviar el reporte. Reintentá.', 'error'); }
 };
 
 // ── ALERTAS POR MAIL ──────────────────────────────────────────────────────
@@ -2500,11 +2884,20 @@ async function runAlertCheck() {
       }
       if (p.kind === 'present') { const b = toMin(sh.out); if (p.mins > 12 * 60 || (b > a && nowM >= b + alertCfg.forgotMin)) add('forgot', `Sigue con la entrada abierta desde ${fmtHM(p.last.timestamp)} (turno hasta ${sh.out})`); }
     });
+    Object.values(visorLogs).flat().filter(l => l.estado === 'pendiente').forEach(l => { const x = allStaff.find(s => s.dni === l.dni); if (!x) return;
+      items.push({ key: `${today}__${l.dni}__pending__${new Date(l.timestamp).getTime()}`, s: x, kind: 'pending', txt: `${l.type} ${fmtHM(l.timestamp)} (${pendReason(l)}): revisar en Registros` }); });
+    const { turnos, extras } = buildTurnos(nowMs);
+    turnos.forEach(g => { const e = evalReports(g), ps = { dni: 'T-' + g.id, name: `Turno ${g.start}`, venueId: '', venueName: g.venueName };
+      const add = (k, txt) => items.push({ key: `${today}__T-${g.id}__${k}`, s: ps, kind: 'turnrep', txt });
+      if (e.st === 'sinreporte') add('noreport', `Pasaron ${secCfg.reportMin} min y ningún encargado envió el reporte de presentes`);
+      else if (e.st === 'discrepancia') add('discrep', 'El reporte de presentes no coincide con los fichajes o entre encargados');
+      else if (e.st === 'sinfichar') add('sinfichar', 'Hay personas marcadas "presente sin fichar": revisar el motivo'); });
+    extras.forEach(x => { const st = allStaff.find(y => y.dni === x.dni); if (st) items.push({ key: `${today}__${x.dni}__extra`, s: st, kind: 'extra', txt: `Fichó sin estar programado (${fmtHM(x.at)})` }); });
     const fresh = []; // una sola vez por persona, tipo y día
     await Promise.all(items.map(async it => { const r = doc(db, 'alerts_sent', it.key); // reserva atómica: varios kioscos no duplican
       if (await runTransaction(db, async t => { if ((await t.get(r)).exists()) return false; t.set(r, { at: new Date().toISOString(), kind: it.kind, dni: it.s.dni }); return true; })) fresh.push(it); }));
     if (!fresh.length) return;
-    const T = { late: '🕒 Llegadas tarde', absent: '🚫 Posibles ausencias', forgot: '⚠️ Salidas olvidadas' };
+    const T = { late: '🕒 Llegadas tarde', absent: '🚫 Posibles ausencias', forgot: '⚠️ Salidas olvidadas', pending: '🔎 Fichajes pendientes de revisión', turnrep: '📋 Reporte de presentes', extra: '➕ Personas no programadas que ficharon' };
     const html = Object.keys(T).map(k => { const r = fresh.filter(x => x.kind === k); return r.length ? `<h3>${T[k]}</h3><ul>${r.map(x => `<li><b>${escHtml(x.s.name)}</b> (${escHtml(venueLabel(x.s) || 'sin local')}): ${escHtml(x.txt)}</li>`).join('')}</ul>` : ''; }).join('');
     try { await sendMail(`iCheck · ${fresh.length} alerta(s) del ${today}`, html); }
     catch (e) { await Promise.all(fresh.map(it => deleteDoc(doc(db, 'alerts_sent', it.key)))); throw e; } // si falla, se reintenta en el próximo ciclo

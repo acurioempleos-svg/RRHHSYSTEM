@@ -1077,6 +1077,7 @@ function renderEmp() {
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
       <button class="btn" data-act="empPdf" title="Elegí local, fechas y temas: suspensiones, apercibimientos, puestos, ingresos, licencias…">Descargar PDF</button>
       <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
+      <button class="btn" data-act="empHxPdf" title="Horas extra por local, por empleado y por mes, con su costo">Informe de hs extra (PDF)</button>
       <button class="btn primary" data-act="newEmp">Nuevo empleado</button>
     </div>
     <details class="card fpanel" ${UI.fOpen === true ? 'open' : ''} ontoggle="UI.fOpen = this.open">
@@ -1171,6 +1172,12 @@ function renderDetail() {
   const fer = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'feriado').sort((a, b) => b.fecha.localeCompare(a.fecha));
   const nre = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'nremun').sort((a, b) => b.mes.localeCompare(a.mes));
   const jornal = (+e.sueldoActual || 0) / 30;
+  const hx = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra').sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const vHora = jornal / 8, vHx = vHora * 1.5;
+  const hxMeses = [...new Set(hx.map(n => n.mes))];
+  const hxHtml = hxMeses.map(m => { const del = hx.filter(n => n.mes === m), th = del.reduce((t, n) => t + (+n.horas || 0), 0);
+    return `<tr class="hx-mes"><td colspan="2"><b>${fper(m)}</b></td><td class="muted">${del.length} ${del.length === 1 ? 'día' : 'días'}</td><td class="num"><b>${th} hs</b></td><td class="num"><b>${money(th * vHx)}</b></td><td></td></tr>`
+      + del.map(n => `<tr><td>${fdate(n.fecha)}</td><td class="num">${+n.horas} hs</td><td>${esc(n.motivo || '—')}</td><td></td><td class="num">${money((+n.horas || 0) * vHx)}</td><td class="num"><button class="btn sm danger" data-act="delNovedad" data-id="${n.id}" aria-label="Quitar horas extra del ${fdate(n.fecha)}">Quitar</button></td></tr>`).join(''); }).join('');
   const liqs = S.liquidaciones.filter(l => l.empleadoId === e.id);
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
@@ -1240,6 +1247,11 @@ function renderDetail() {
       <p class="muted" style="margin-top:0">Cada feriado trabajado suma un jornal adicional (sueldo ÷ 30${jornal ? ' = ' + money(jornal) : ''}). Va a la columna FERIADO de la planilla de sueldos y a la liquidación final.</p>
       <div class="row"><label class="fld"><span>Fecha del feriado</span><input type="date" id="fw-fecha"></label><button class="btn" data-act="addFeriado">Agregar</button></div>
       ${fer.length ? `<table style="margin-top:10px"><tbody>${fer.map(n => `<tr><td>${fdate(n.fecha)}${esFeriado(n.fecha) ? '' : '<div class="muted">No figura como feriado nacional</div>'}</td><td class="num">${money(jornal)}</td><td class="num"><button class="btn sm danger" data-act="delNovedad" data-id="${n.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : ''}
+    </div>
+    <div class="card"><h3>Horas extra</h3>
+      <p class="muted" style="margin-top:0">Cargá cada día trabajado de más, con sus horas y el motivo. Se pagan a la hora × 1,5${vHora ? ` (sueldo ÷ 30 ÷ 8 = ${money(vHora)} por hora; hora extra = ${money(vHx)})` : ' (falta el sueldo en el legajo para calcular el costo)'}. Se suman por mes y van a la columna HS EXTRA de la planilla de sueldos.</p>
+      <div class="row"><label class="fld"><span>Día</span><input type="date" id="hx-fecha" value="${today()}"></label><label class="fld"><span>Horas</span><input type="number" id="hx-horas" min="0.5" max="24" step="0.5" placeholder="Ej.: 2"></label><label class="fld" style="flex:1 1 200px"><span>Motivo</span><input type="text" id="hx-motivo" placeholder="Ej.: cubrió a un compañero"></label><button class="btn" data-act="addHsExtra">Agregar</button></div>
+      ${hx.length ? `<div class="tablewrap"><table style="margin-top:10px"><thead><tr><th>Día</th><th class="num">Horas</th><th>Motivo</th><th></th><th class="num">Costo (×1,5)</th><th></th></tr></thead><tbody>${hxHtml}</tbody></table></div>` : '<p class="muted" style="margin-bottom:0">Sin horas extra cargadas.</p>'}
     </div>
     <div class="card"><h3>Agregados no remunerativos</h3>
       <p class="muted" style="margin-top:0">Conceptos que se suman al total sin ser remunerativos. Van a la columna NREMUN de la planilla del mes y a la liquidación final.</p>
@@ -1771,7 +1783,7 @@ function renderPar() {
   </div>
   <div class="card">
     <h2>Planilla de sueldos (Excel)</h2>
-    <p class="muted" style="margin-top:0">Arma una planilla con el mismo formato que SUELDO_SEPTIEMBRE: una fila por colaborador en nómina (activos y en licencia), agrupados por local y pintados con el color de su local, con resumen de totales por local al final. Toma del programa legajo, nombre, local, ingreso y sueldo, y del mes elegido las vacaciones (P.VAC) y los ausentes (licencia sin goce y suspensiones). Transferencia, feriado, hs extra, no remunerativo, adelantos y presentismo quedan vacíos para completar en Excel; las fórmulas calculan solas.</p>
+    <p class="muted" style="margin-top:0">Arma una planilla con el mismo formato que SUELDO_SEPTIEMBRE: una fila por colaborador en nómina (activos y en licencia), agrupados por local y pintados con el color de su local, con resumen de totales por local al final. Toma del programa legajo, nombre, local, ingreso y sueldo, y del mes elegido las vacaciones (P.VAC) y los ausentes (licencia sin goce y suspensiones). Del legajo toma también feriados, hs extra y no remunerativo. Transferencia, adelantos y presentismo quedan vacíos para completar en Excel; las fórmulas calculan solas.</p>
     <div class="frm"><label class="fld"><span>Mes</span><input type="month" id="pl-mes" value="${esc(UI.planillaMes || today().slice(0, 7))}"></label></div>
     <div style="margin-top:14px"><button class="btn primary" type="button" data-act="planillaSueldos">Descargar planilla de sueldos</button></div>
   </div>
@@ -1949,6 +1961,9 @@ function planillaDatos(mes) {
       .forEach(s => { aus += +s.dias; notas.push(`Suspensión ${s.dias} d (${fdate(s.fecha)})`); });
     const fer = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'feriado' && n.fecha >= ini && n.fecha <= fin);
     const nre = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'nremun' && n.mes === mes);
+    const hxs = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra' && n.fecha >= ini && n.fecha <= fin).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const hsExtra = hxs.reduce((t, n) => t + (+n.horas || 0), 0);
+    if (hxs.length) notas.push(`Hs extra ${hsExtra} (${hxs.map(n => `${fdate(n.fecha).slice(0, 5)} ${+n.horas}h${n.motivo ? ' ' + n.motivo : ''}`).join(', ')})`);
     const nremun = r2(nre.reduce((t, n) => t + (+n.monto || 0), 0));
     if (fer.length) notas.push(`Feriados trabajados ${fer.length} (${fer.map(n => fdate(n.fecha).slice(0, 5)).sort().join(', ')})`);
     nre.forEach(n => notas.push(`No remunerativo: ${n.concepto || 'agregado'} ${money(n.monto)}`));
@@ -1956,7 +1971,7 @@ function planillaDatos(mes) {
     return {
       local, etiqueta: etiqueta(local), legajo: /^\d+$/.test(leg) ? +leg : leg,
       nombre: `${e.apellido || ''} ${e.nombre || ''}`.replace(/\s+/g, ' ').trim(),
-      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, feriados: fer.length, nremun, obs: notas.join(' · '),
+      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, feriados: fer.length, hsExtra, nremun, obs: notas.join(' · '),
     };
   });
   const locales = [];
@@ -2008,7 +2023,7 @@ async function descargarPlanilla(mes) {
     .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f }));
   ws.getCell('G1').note = 'A completar: monto que se paga por transferencia. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
   ws.getCell('J1').note = 'Días de feriado trabajados en el mes, tomados de los feriados cargados en cada legajo.';
-  ws.getCell('K1').note = 'A completar: horas extra (se pagan a hora × 1,5).';
+  ws.getCell('K1').note = 'Horas extra del mes, tomadas de las cargadas en cada legajo (se pagan a hora × 1,5). Se puede corregir a mano.';
   ws.getCell('L1').note = 'Días de vacaciones del mes, tomados de las vacaciones cargadas en el programa.';
   ws.getCell('M1').note = 'Suma de los agregados no remunerativos del mes cargados en cada legajo (se suman al total).';
   ws.getCell('N1').note = 'Días de licencia sin goce de sueldo y de suspensión del mes, tomados del programa. Las demás licencias figuran en Observaciones y no se descuentan.';
@@ -2031,7 +2046,7 @@ async function descargarPlanilla(mes) {
     put(r, 8, { formula: `ROUNDUP(I${r}-G${r},-3)` }, { size: 10, fill: VERDE, fmt: FMT.p0, borde: true });
     put(r, 9, { formula: `S${r}+V${r}+W${r}+X${r}-Y${r}-Z${r}-O${r}+M${r}` }, { size: 10, bold: true, fill: ROSA, fmt: FMT.p0, borde: true });
     put(r, 10, f.feriados || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
-    put(r, 11, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
+    put(r, 11, f.hsExtra || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 12, f.vac || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 13, f.nremun || '', { fill: LILA, fmt: FMT.n, borde: true });
     put(r, 14, f.aus || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
@@ -2340,6 +2355,87 @@ async function pdfEmpInforme(c) {
   });
 }
 
+/* ---- Informe de horas extra (botón en Empleados): locales, empleados y meses a elegir ---- */
+function dlgHsExtra() {
+  const old = $('#dlg-hx'); if (old) old.remove();
+  const lc = e => (e.local || '').trim() || 'Sin local', nm = e => `${e.apellido || '—'}, ${e.nombre || ''}`.trim();
+  const conHx = new Set(S.novedades.filter(n => n.tipo === 'hsextra').map(n => n.empleadoId));
+  const pool = S.empleados.filter(e => ['activo', 'licencia'].includes(e.estado) || conHx.has(e.id));
+  const locs = ordenLocales().slice(); pool.forEach(e => { if (!locs.includes(lc(e))) locs.push(lc(e)); });
+  const d = document.createElement('dialog'); d.id = 'dlg-hx';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:580px;width:94%;max-height:92vh;overflow:auto;color:var(--ink)';
+  const row = 'display:flex;gap:8px;align-items:center', mes = today().slice(0, 7);
+  d.innerHTML = `<h3 style="margin:0 0 12px">Descargar informe de horas extra (PDF)</h3>
+    <div class="fld" style="margin-bottom:10px"><span>Locales</span>
+      <label style="${row};margin:4px 0"><input type="checkbox" id="hx-todos" checked> <strong>Todos los locales</strong></label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px;max-height:130px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px">${locs.map(l => `<label style="${row}"><input type="checkbox" class="hx-loc" value="${esc(l)}" checked> ${esc(l)}</label>`).join('')}</div>
+    </div>
+    <div class="fld" style="margin-bottom:10px"><span>Empleados</span>
+      <label style="${row};margin:4px 0"><input type="radio" name="hx-modo" id="hx-all" checked> Todos los de los locales elegidos</label>
+      <label style="${row};margin:4px 0"><input type="radio" name="hx-modo" id="hx-sel"> Elegir empleados</label>
+      <div id="hx-selbox" hidden>
+        <div style="display:flex;gap:8px;margin:6px 0"><button type="button" class="btn sm" id="hx-marcar">Marcar todos</button><button type="button" class="btn sm" id="hx-ninguno">Quitar todos</button></div>
+        <div id="hx-lista" style="display:grid;gap:4px;max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:4px"><label class="fld" style="flex:1"><span>Mes desde</span><input type="month" id="hx-desde" value="${mes}"></label><label class="fld" style="flex:1"><span>Mes hasta</span><input type="month" id="hx-hasta" value="${mes}"></label></div>
+    <p class="muted" style="margin:0 0 12px">Para un solo mes, dejá el mismo mes en los dos campos. Si elegís varios meses, el informe suma un resumen por mes y el detalle de cada uno.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="hx-cancel">Cancelar</button><button type="button" class="btn primary" id="hx-ok">Descargar</button></div>`;
+  document.body.appendChild(d);
+  const todos = d.querySelector('#hx-todos'), cl = [...d.querySelectorAll('.hx-loc')], lista = d.querySelector('#hx-lista'), box = d.querySelector('#hx-selbox'), selIds = new Set();
+  const locsSel = () => cl.filter(c => c.checked).map(c => c.value), modoSel = () => d.querySelector('#hx-sel').checked;
+  const visibles = () => pool.filter(e => locsSel().includes(lc(e))).sort(ordenNomina());
+  const paint = () => { const a = visibles(); lista.innerHTML = a.length ? a.map(e => `<label style="${row}"><input type="checkbox" class="hx-emp" value="${e.id}" ${selIds.has(e.id) ? 'checked' : ''}> ${esc(nm(e))} <span class="muted">· ${esc(lc(e))}</span></label>`).join('') : '<span class="muted">No hay empleados en los locales elegidos.</span>'; };
+  d.querySelectorAll('input[name=hx-modo]').forEach(r => r.addEventListener('change', () => { box.hidden = !modoSel(); if (modoSel()) paint(); }));
+  todos.addEventListener('change', () => { cl.forEach(c => { c.checked = todos.checked; }); paint(); });
+  cl.forEach(c => c.addEventListener('change', () => { todos.checked = cl.every(x => x.checked); paint(); }));
+  lista.addEventListener('change', ev => { const t = ev.target; if (t.classList.contains('hx-emp')) { if (t.checked) selIds.add(t.value); else selIds.delete(t.value); } });
+  d.querySelector('#hx-marcar').addEventListener('click', () => { visibles().forEach(e => selIds.add(e.id)); paint(); });
+  d.querySelector('#hx-ninguno').addEventListener('click', () => { visibles().forEach(e => selIds.delete(e.id)); paint(); });
+  const cerrar = () => { d.close(); d.remove(); };
+  d.querySelector('#hx-cancel').addEventListener('click', cerrar);
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.querySelector('#hx-ok').addEventListener('click', async () => {
+    const sel = locsSel(), desde = d.querySelector('#hx-desde').value, hasta = d.querySelector('#hx-hasta').value;
+    if (!sel.length) { toast('Elegí al menos un local.'); return; }
+    if (!desde || !hasta) { toast('Elegí el mes desde y el mes hasta.'); return; }
+    if (desde > hasta) { toast('El mes "desde" no puede ser posterior a "hasta".'); return; }
+    const ids = modoSel() ? visibles().filter(e => selIds.has(e.id)).map(e => e.id) : null;
+    if (ids && !ids.length) { toast('Marcá al menos un empleado.'); return; }
+    const o = { locs: sel, todosLocs: todos.checked, ids, desde, hasta };
+    cerrar(); await conPdf(() => pdfHsExtra(o))();
+  });
+  d.showModal();
+}
+async function pdfHsExtra(c) {
+  const lc = e => (e.local || '').trim() || 'Sin local', nm = e => `${e.apellido || '—'}, ${e.nombre || ''}`.trim(), P = PDF_C;
+  const oi = new Map(ordenLocales().map((l, i) => [l, i])), ord = l => oi.has(l) ? oi.get(l) : 999;
+  const vHx = e => (+e.sueldoActual || 0) / 30 / 8 * 1.5, fh = h => String(+(+h).toFixed(2)).replace('.', ',');
+  const emps = new Map(S.empleados.filter(e => c.locs.includes(lc(e)) && (!c.ids || c.ids.includes(e.id))).map(e => [e.id, e]));
+  const regs = S.novedades.filter(n => n.tipo === 'hsextra' && emps.has(n.empleadoId) && n.mes >= c.desde && n.mes <= c.hasta)
+    .map(n => { const e = emps.get(n.empleadoId), h = +n.horas || 0; return { n, e, h, costo: h * vHx(e) }; });
+  if (!regs.length) { toast('No hay horas extra cargadas con esos filtros.'); return false; }
+  regs.sort((a, b) => ord(lc(a.e)) - ord(lc(b.e)) || nm(a.e).localeCompare(nm(b.e), 'es') || a.n.fecha.localeCompare(b.n.fecha));
+  const sum = a => ({ d: a.length, h: a.reduce((t, r) => t + r.h, 0), c: a.reduce((t, r) => t + r.costo, 0), p: new Set(a.map(r => r.e.id)).size });
+  const T = sum(regs), sinSueldo = new Set(regs.filter(r => !(+r.e.sueldoActual > 0)).map(r => r.e.id)).size;
+  const locsU = [...new Set(regs.map(r => lc(r.e)))].sort((a, b) => ord(a) - ord(b)), meses = [...new Set(regs.map(r => r.n.mes))].sort();
+  const resLoc = locsU.map(l => { const s = sum(regs.filter(r => lc(r.e) === l)); return [l, s.p, s.d, fh(s.h), mp(s.c)]; });
+  const resEmp = [...new Set(regs.map(r => r.e.id))].map(id => { const a = regs.filter(r => r.e.id === id), e = a[0].e, s = sum(a); return [e.legajo || '—', nm(e), lc(e), s.d, fh(s.h), +e.sueldoActual > 0 ? mp(vHx(e)) : 'Sin sueldo', mp(s.c)]; });
+  const secs = [
+    { t: 'Resumen por local', head: ['Local', 'Colaboradores', 'Días', 'Horas', 'Costo'], body: resLoc, foot: ['TOTAL', T.p, T.d, fh(T.h), mp(T.c)], loc: 0, ctr: [1, 2], num: [3, 4], cols: { 0: { cellWidth: 150 } } },
+    { t: 'Resumen por empleado', n: `${resEmp.length} colaborador${resEmp.length === 1 ? '' : 'es'}`, head: ['Legajo', 'Empleado', 'Local', 'Días', 'Horas', 'Valor hora extra', 'Costo'], body: resEmp, foot: ['TOTAL', '', '', T.d, fh(T.h), '', mp(T.c)], loc: 2, ctr: [3], num: [4, 5, 6], cols: { 0: { cellWidth: 46 } } },
+  ];
+  if (meses.length > 1) secs.splice(1, 0, { t: 'Resumen por mes', head: ['Mes', 'Colaboradores', 'Días', 'Horas', 'Costo'], body: meses.map(m => { const s = sum(regs.filter(r => r.n.mes === m)); return [fper(m), s.p, s.d, fh(s.h), mp(s.c)]; }), foot: ['TOTAL', T.p, T.d, fh(T.h), mp(T.c)], ctr: [1, 2], num: [3, 4], cols: { 0: { cellWidth: 150 } } });
+  meses.forEach(m => { const a = regs.filter(r => r.n.mes === m), s = sum(a);
+    secs.push({ t: `Detalle · ${fper(m)}`, n: `${s.d} día${s.d === 1 ? '' : 's'} · ${fh(s.h)} hs · ${mp(s.c)}`, head: ['Fecha', 'Empleado', 'Local', 'Horas', 'Motivo', 'Costo'], body: a.map(r => [fdate(r.n.fecha), nm(r.e), lc(r.e), fh(r.h), r.n.motivo || '—', mp(r.costo)]), foot: ['TOTAL', '', '', fh(s.h), '', mp(s.c)], loc: 2, ctr: [0], num: [3, 5], cols: { 0: { cellWidth: 62 }, 3: { cellWidth: 50 }, 5: { cellWidth: 90 } } }); });
+  const loTxt = c.todosLocs ? 'Todos los locales' : c.locs.length <= 3 ? c.locs.join(', ') : `${c.locs.length} locales`, perTxt = c.desde === c.hasta ? fper(c.desde) : `${fper(c.desde)} a ${fper(c.hasta)}`;
+  return pdfInforme({
+    orient: 'l', titulo: 'Informe de horas extra', sub: `${loTxt}  ·  ${perTxt}${c.ids ? '  ·  Empleados seleccionados' : ''}  ·  Hora extra = sueldo ÷ 30 ÷ 8 × 1,5`, archivo: `horas-extra-${c.desde}${c.desde === c.hasta ? '' : '_a_' + c.hasta}.pdf`,
+    kpis: [{ l: 'Colaboradores', v: T.p, n: 'con horas extra' }, { l: 'Días con hs extra', v: T.d }, { l: 'Horas totales', v: fh(T.h), c: P.blue }, { l: 'Costo total', v: mp(T.c), c: P.gold, n: sinSueldo ? `${sinSueldo} sin sueldo cargado` : 'hora × 1,5' }],
+    tortas: locsU.length > 1 ? [{ t: 'Horas extra por local', d: locsU.map(l => ({ l, v: +regs.filter(r => lc(r.e) === l).reduce((t, r) => t + r.h, 0).toFixed(1), c: pcLocal(l) })) }] : undefined, secs,
+  });
+}
+
 /* ---- Estadística (toma los datos que muestra cada tarjeta del panel; sin historial de movimientos) ---- */
 function estSecs() {   // secciones (título, cabecera, filas) tomadas de las tarjetas del panel de Estadística, sin el historial
   const area = $('#est-area'); if (!area) return [];
@@ -2616,6 +2712,14 @@ const ACT = {
     S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'feriado', fecha: f, mes: f.slice(0, 7) });
     log(e.id, `Feriado trabajado: ${fdate(f)}`); save(); keepScroll(renderDetail);
   },
+  addHsExtra: () => {
+    const e = empActual(), f = $('#hx-fecha').value, h = +$('#hx-horas').value, motivo = $('#hx-motivo').value.trim();
+    if (!f) { toast('Elegí el día de las horas extra.'); return; }
+    if (!(h > 0) || h > 24) { toast('Cargá una cantidad de horas entre 0,5 y 24.'); return; }
+    if (S.novedades.some(n => n.empleadoId === e.id && n.tipo === 'hsextra' && n.fecha === f)) { toast('Ya hay horas extra cargadas ese día. Quitá la carga anterior y volvé a cargarla.'); return; }
+    S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'hsextra', fecha: f, mes: f.slice(0, 7), horas: h, motivo });
+    log(e.id, `Horas extra ${fdate(f)}: ${h} hs${motivo ? ' — ' + motivo : ''}`); save(); keepScroll(renderDetail);
+  },
   addNRem: () => {
     const e = empActual(), mes = $('#nr-mes').value, concepto = $('#nr-conc').value.trim(), monto = +$('#nr-monto').value || 0;
     if (!mes || !(monto > 0)) { toast('Completá el período y un monto mayor a cero.'); return; }
@@ -2693,6 +2797,7 @@ const ACT = {
   llPdf: () => dlgInforme('pdf'),
   estPdf: conPdf(() => pdfEst()),
   empPdf: () => dlgEmpInforme(),
+  empHxPdf: () => dlgHsExtra(),
   empAltasPdf: conPdf(() => pdfAltas()),
   alClear: () => { UI.al = { q: '', prio: '', cat: '', local: '' }; renderAle(); },
   llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },

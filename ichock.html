@@ -62,6 +62,90 @@
     .badge-manual { background: #451a03; color: #fcd34d; border: 1px solid #78350f; }
   body.phone #kiosk-view, body.phone #admin-view, body.phone #acceso-rrhh { display: none !important; }
   .pop{animation:pop .6s ease}@keyframes pop{0%{transform:scale(.9)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+
+    /* ═══ VISOR A PANTALLA COMPLETA (sin scroll) ═══ */
+    body.visor-on #acceso-rrhh { display: none !important; }
+    #admin-view.visor-wide { max-width: none; width: 100%; height: 100vh; height: 100dvh; margin: 0; border-radius: 0; border: 0; padding: 8px 14px 10px; box-sizing: border-box; overflow: hidden; }
+    #admin-view.visor-wide:not(.hidden) { display: flex; flex-direction: column; }
+    #admin-view.visor-wide > header { margin-bottom: 6px; padding-bottom: 6px; }
+    #admin-view.visor-wide > header p { display: none; }
+    #admin-view.visor-wide > header h2 { font-size: 1rem; }
+    #admin-view.visor-wide > #admin-tabs { margin-bottom: 8px; }
+    #admin-view.visor-wide #tab-visor.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    .vz-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .vz-title { font-weight: 800; font-size: 1.05rem; color: #c7d2fe; margin-right: auto; }
+    .vz-title small { display: block; font-weight: 400; font-size: .72rem; color: #94a3b8; }
+    .vz-in { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 9px 12px; font-size: .95rem; }
+    .vz-btn { background: #334155; color: #e2e8f0; border: 0; border-radius: 10px; padding: 9px 14px; font-size: .95rem; font-weight: 600; cursor: pointer; list-style: none; }
+    .vz-btn:hover { background: #475569; }
+    .vz-alerts { position: relative; }
+    .vz-alerts > summary::-webkit-details-marker { display: none; }
+    .vz-alerts-panel { position: absolute; right: 0; top: 110%; z-index: 60; width: min(440px, 92vw); background: #0f172a; border: 1px solid #475569; border-radius: 14px; padding: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+
+    .vz-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+    .vz-chip { min-width: 92px; border-radius: 12px; border: 2px solid #334155; background: rgba(15,23,42,.7); padding: 4px 12px; text-align: center; cursor: pointer; color: #e2e8f0; }
+    .vz-chip b { display: block; font-size: 1.5rem; line-height: 1.15; }
+    .vz-chip span { font-size: .72rem; color: #94a3b8; }
+    .vz-chip.on { box-shadow: 0 0 0 3px #6366f1; }
+    .vz-chip.k-present { border-color: #059669; } .vz-chip.k-present b { color: #34d399; }
+    .vz-chip.k-late { border-color: #d97706; } .vz-chip.k-late b { color: #fbbf24; }
+    .vz-chip.k-upcoming { border-color: #0284c7; } .vz-chip.k-upcoming b { color: #38bdf8; }
+    .vz-chip.k-free { border-color: #7c3aed; } .vz-chip.k-free b { color: #a78bfa; }
+    .vz-sumtxt { align-self: center; font-size: .9rem; color: #94a3b8; }
+    .vz-sumtxt b { color: #e2e8f0; }
+
+    #visor-turnos { max-height: 24vh; overflow: auto; }
+    #visor-turnos:empty { display: none; }
+    #visor-turnos > * + * { margin-top: 8px; }
+
+    .vz-grid { --u: 1; flex: 1; min-height: 0; display: grid; gap: 10px; }
+    .vz-venue { min-height: 0; min-width: 0; display: flex; flex-direction: column; border: 1px solid #475569; border-radius: 16px; background: #0b1220; overflow: hidden; }
+    .vz-vhead { display: flex; align-items: center; gap: 12px; padding: 7px 14px; background: #1e293b; }
+    .vz-vhead h4 { margin: 0; font-size: 1.1rem; font-weight: 800; color: #f1f5f9; }
+    .vz-vhead span { font-size: .9rem; color: #cbd5e1; }
+    .vz-prog { flex: 1; min-width: 60px; height: 8px; border-radius: 99px; background: #334155; overflow: hidden; }
+    .vz-prog i { display: block; height: 100%; background: #10b981; } .vz-prog i.low { background: #f59e0b; }
+
+    .vz-secs { flex: 1; min-height: 0; display: grid; gap: 0; }
+    .vz-sec { min-height: 0; min-width: 0; display: flex; flex-direction: column; position: relative; }
+    .vz-sechead { display: flex; align-items: center; gap: 10px; padding: 6px 14px; color: #fff; }
+    .vz-sechead .ico { font-size: 1.6rem; line-height: 1; }
+    .vz-sechead b { font-size: 1.2rem; letter-spacing: .12em; font-weight: 900; }
+    .vz-sechead small { margin-left: auto; font-size: .9rem; opacity: .95; }
+    .vz-fichas { flex: 1; min-height: 0; overflow: auto; padding: calc(var(--u) * 8px); display: grid; align-content: start; gap: calc(var(--u) * 7px);
+      grid-template-columns: repeat(auto-fill, minmax(calc(var(--u) * 210px), 1fr)); }
+
+    .vz-cocina { background-color: #2a1306; background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22 viewBox=%220 0 100 100%22%3E%3Cg transform=%22translate(0 0)%22%3E%3Cg fill=%22%23fb923c%22%3E%3Crect x=%2216%22 y=%2244%22 width=%2268%22 height=%2238%22 rx=%228%22/%3E%3Crect x=%2210%22 y=%2252%22 width=%228%22 height=%228%22 rx=%223%22/%3E%3Crect x=%2282%22 y=%2252%22 width=%228%22 height=%228%22 rx=%223%22/%3E%3Crect x=%2212%22 y=%2236%22 width=%2276%22 height=%226%22 rx=%223%22/%3E%3Ccircle cx=%2250%22 cy=%2230%22 r=%225%22/%3E%3C/g%3E%3Cg fill=%22none%22 stroke=%22%23fb923c%22 stroke-width=%224%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M34 22 q-6 -8 0 -14%22/%3E%3Cpath d=%22M66 22 q-6 -8 0 -14%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22%3E%3Cg transform=%22translate(8 10) rotate(0 40 40) scale(0.81)%22%3E%3Cg fill=%22%23fdba74%22%3E%3Ccircle cx=%2230%22 cy=%2234%22 r=%2215%22/%3E%3Ccircle cx=%2250%22 cy=%2224%22 r=%2218%22/%3E%3Ccircle cx=%2270%22 cy=%2234%22 r=%2215%22/%3E%3Crect x=%2224%22 y=%2240%22 width=%2252%22 height=%2216%22/%3E%3Crect x=%2226%22 y=%2260%22 width=%2248%22 height=%2222%22 rx=%223%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(128 22) rotate(10 40 40) scale(0.7200000000000001)%22%3E%3Cg fill=%22%23fdba74%22%3E%3Crect x=%2216%22 y=%2244%22 width=%2268%22 height=%2238%22 rx=%228%22/%3E%3Crect x=%2210%22 y=%2252%22 width=%228%22 height=%228%22 rx=%223%22/%3E%3Crect x=%2282%22 y=%2252%22 width=%228%22 height=%228%22 rx=%223%22/%3E%3Crect x=%2212%22 y=%2236%22 width=%2276%22 height=%226%22 rx=%223%22/%3E%3Ccircle cx=%2250%22 cy=%2230%22 r=%225%22/%3E%3C/g%3E%3Cg fill=%22none%22 stroke=%22%23fdba74%22 stroke-width=%224%22 stroke-linecap=%22round%22%3E%3Cpath d=%22M34 22 q-6 -8 0 -14%22/%3E%3Cpath d=%22M66 22 q-6 -8 0 -14%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(24 128) rotate(-12 40 40) scale(0.765)%22%3E%3Cg fill=%22%23fdba74%22%3E%3Ccircle cx=%2238%22 cy=%2256%22 r=%2228%22/%3E%3Crect x=%2262%22 y=%2252%22 width=%2238%22 height=%229%22 rx=%224%22 transform=%22rotate(-18 62 56)%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(136 134) rotate(8 40 40) scale(0.81)%22%3E%3Cg fill=%22%23fdba74%22%3E%3Cpath d=%22M20 90 L24 20 Q50 14 56 44 L30 92 Z%22/%3E%3Crect x=%2226%22 y=%2278%22 width=%2230%22 height=%2212%22 rx=%223%22 transform=%22rotate(-28 40 84)%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); background-repeat: no-repeat, repeat; background-position: right -20px bottom -20px, 0 0; background-size: 46% auto, 240px 240px; border-right: 4px solid #0b1220; }
+    .vz-cocina::before { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(60,25,5,.82), rgba(25,10,3,.88)); pointer-events: none; z-index: 0; }
+    .vz-cocina .vz-sechead { background: #c2410c; }
+    .vz-salon { background-color: #08243f; background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22 viewBox=%220 0 100 100%22%3E%3Cg transform=%22translate(0 0)%22%3E%3Cg fill=%22%2338bdf8%22%3E%3Cpath d=%22M10 68 A40 40 0 0 1 90 68 Z%22/%3E%3Ccircle cx=%2250%22 cy=%2222%22 r=%226%22/%3E%3Crect x=%224%22 y=%2272%22 width=%2292%22 height=%228%22 rx=%224%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22240%22 height=%22240%22 viewBox=%220 0 240 240%22%3E%3Cg transform=%22translate(8 10) rotate(0 40 40) scale(0.81)%22%3E%3Cg fill=%22%237dd3fc%22%3E%3Cpath d=%22M28 8 H72 C72 40 64 54 50 56 C36 54 28 40 28 8 Z%22/%3E%3Crect x=%2247%22 y=%2256%22 width=%226%22 height=%2228%22/%3E%3Crect x=%2230%22 y=%2284%22 width=%2240%22 height=%227%22 rx=%223%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(128 22) rotate(10 40 40) scale(0.7200000000000001)%22%3E%3Cg fill=%22%237dd3fc%22%3E%3Cpath d=%22M10 68 A40 40 0 0 1 90 68 Z%22/%3E%3Ccircle cx=%2250%22 cy=%2222%22 r=%226%22/%3E%3Crect x=%224%22 y=%2272%22 width=%2292%22 height=%228%22 rx=%224%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(24 128) rotate(-12 40 40) scale(0.765)%22%3E%3Cg fill=%22%237dd3fc%22%3E%3Crect x=%2242%22 y=%226%22 width=%2216%22 height=%2224%22 rx=%223%22/%3E%3Cpath d=%22M42 30 Q28 40 28 56 V90 Q28 94 32 94 H68 Q72 94 72 90 V56 Q72 40 58 30 Z%22/%3E%3C/g%3E%3C/g%3E%3Cg transform=%22translate(136 134) rotate(8 40 40) scale(0.81)%22%3E%3Cg fill=%22%237dd3fc%22%3E%3Crect x=%2226%22 y=%228%22 width=%226%22 height=%2284%22 rx=%223%22/%3E%3Cpath d=%22M16 8 h6 v26 q0 8 5 8 t5 -8 v-26 h6 v26 q0 14 -11 16 q-11 -2 -11 -16 z%22/%3E%3Cpath d=%22M66 8 Q86 20 80 52 H70 V92 H64 V8 Z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); background-repeat: no-repeat, repeat; background-position: right -20px bottom -20px, 0 0; background-size: 46% auto, 240px 240px; }
+    .vz-salon::before { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(6,40,72,.82), rgba(5,16,38,.9)); pointer-events: none; z-index: 0; }
+    .vz-salon .vz-sechead { background: #0369a1; }
+    .vz-otro { background: #1e293b; } .vz-otro .vz-sechead { background: #475569; }
+    .vz-sec > * { position: relative; z-index: 1; }
+
+    .vz-ficha { display: flex; align-items: center; gap: calc(var(--u) * 9px); padding: calc(var(--u) * 6px) calc(var(--u) * 9px); border-radius: calc(var(--u) * 11px); background: rgba(15,23,42,.9); border: 2px solid #334155; border-left-width: calc(var(--u) * 7px); cursor: pointer; min-width: 0; color: #e2e8f0; }
+    .vz-ficha:hover { background: rgba(30,41,59,.98); }
+    .vz-av { position: relative; flex: none; width: calc(var(--u) * 40px); height: calc(var(--u) * 40px); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: calc(var(--u) * 14px); background: #1e293b; border: 2px solid currentColor; }
+    .vz-dot { position: absolute; right: -2px; bottom: -2px; width: calc(var(--u) * 11px); height: calc(var(--u) * 11px); border-radius: 50%; background: currentColor; border: 2px solid #0f172a; }
+    .vz-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+    .vz-name { font-size: calc(var(--u) * 15px); font-weight: 800; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vz-st { font-size: calc(var(--u) * 12px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vz-sh { font-size: calc(var(--u) * 11px); color: #94a3b8; font-family: ui-monospace, monospace; white-space: nowrap; }
+    .vz-present { color: #34d399; border-color: #059669; } .vz-late { color: #fbbf24; border-color: #d97706; background: rgba(69,26,3,.9); }
+    .vz-upcoming { color: #38bdf8; border-color: #0369a1; } .vz-left { color: #94a3b8; border-color: #475569; }
+    .vz-free { color: #a78bfa; border-color: #6d28d9; } .vz-none { color: #94a3b8; border-color: #334155; }
+    .vz-ficha.vz-warn { border-color: #ef4444; }
+    .vz-ficha .vz-st { color: inherit; }
+    .vz-empty { color: #94a3b8; font-size: 1rem; padding: 20px; }
+
+    @media (max-width: 900px) {
+      #admin-view.visor-wide { height: auto; min-height: 100dvh; overflow: auto; }
+      .vz-grid { grid-template-columns: 1fr !important; grid-template-rows: none !important; }
+      .vz-secs { grid-template-columns: 1fr !important; }
+      .vz-fichas { max-height: none; }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col items-center overflow-x-hidden">
@@ -352,7 +436,7 @@
     </button>
   </header>
 
-  <div class="flex gap-1 border-b border-slate-700 mb-4 flex-wrap">
+  <div id="admin-tabs" class="flex gap-1 border-b border-slate-700 mb-4 flex-wrap">
     <button class="admin-tab active" onclick="switchTab('tab-venues')" id="tabbtn-venues"><i class="fa-solid fa-store mr-1.5"></i>Locales</button>
     <button class="admin-tab" onclick="switchTab('tab-staff')"  id="tabbtn-staff"><i class="fa-solid fa-users mr-1.5"></i>Colaboradores</button>
     <button class="admin-tab" onclick="switchTab('tab-logs')"   id="tabbtn-logs"><i class="fa-solid fa-table-list mr-1.5"></i>Registros</button>
@@ -593,23 +677,13 @@
 
   <!-- TAB: VISOR DE PRESENTISMO -->
   <div id="tab-visor" class="tab-content">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-      <div>
-        <h3 class="text-sm font-bold text-indigo-300 uppercase tracking-widest"><i class="fa-solid fa-eye mr-2"></i>Quién está en el local</h3>
-        <span id="visor-updated" class="text-[11px] text-slate-400"></span>
-      </div>
-      <button onclick="loadVisorData(true)" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap"><i class="fa-solid fa-rotate mr-1.5"></i>Actualizar</button>
-    </div>
-    <div id="visor-summary" class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3"></div>
-    <div class="flex flex-col sm:flex-row gap-2 mb-4">
-      <input type="text" id="visor-search" placeholder="Buscar colaborador..." oninput="setVisorSearch(this.value)" class="flex-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
-      <select id="visor-venue" onchange="setVisorVenue(this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"><option value="">Todos los locales</option></select>
-    </div>
-    <div id="visor-turnos" class="space-y-3 mb-4"></div>
-     <div id="visor-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><p class="text-slate-400 text-xs">Cargando...</p></div>
-    <details class="mt-5 bg-slate-900/60 border border-slate-700 rounded-lg p-3">
-      <summary class="text-xs font-semibold text-indigo-300 cursor-pointer"><i class="fa-solid fa-bell mr-2"></i>Alertas por mail</summary>
-      <div class="mt-3 space-y-2 text-xs">
+    <div class="vz-bar">
+      <div class="vz-title">👁 Quién está en el local<small id="visor-updated"></small></div>
+      <input type="text" id="visor-search" placeholder="🔎 Buscar..." oninput="setVisorSearch(this.value)" class="vz-in" style="width:190px">
+      <select id="visor-venue" onchange="setVisorVenue(this.value)" class="vz-in"><option value="">Todos los locales</option></select>
+      <button onclick="loadVisorData(true)" class="vz-btn">↻ Actualizar</button>
+      <details class="vz-alerts"><summary class="vz-btn">🔔 Alertas</summary><div class="vz-alerts-panel">
+      <div class="space-y-2 text-xs">
         <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="alert-enabled" class="accent-indigo-500">Activar alertas (el kiosco tiene que quedar abierto)</label>
         <input id="alert-recipients" placeholder="mails separados por coma" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500">
         <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-400">
@@ -620,7 +694,11 @@
         <div class="flex gap-2"><button onclick="saveAlertCfg()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs cursor-pointer">Guardar</button><button onclick="sendTestAlert()" class="bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs cursor-pointer">Enviar prueba</button></div>
         <p class="text-[11px] text-slate-400">Cada alerta se manda una sola vez por día, agrupada en un mail. Se envía escribiendo en la colección <span class="font-mono">mail</span> de Firestore: necesita la extensión "Trigger Email from Firestore" instalada y configurada.</p>
       </div>
-    </details>
+    </div></details>
+    </div>
+    <div id="visor-summary" class="vz-summary"></div>
+    <div id="visor-turnos"></div>
+    <div id="visor-grid" class="vz-grid"><p class="vz-empty">Cargando...</p></div>
     <div id="visor-detail" class="hidden fixed inset-0 bg-slate-900/90 z-[9000] flex items-center justify-center p-4" onclick="if(event.target===this)closeVisorDetail()">
       <div id="visor-detail-body" class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-sm p-5 space-y-3 max-h-[85vh] overflow-y-auto"></div>
     </div>
@@ -1872,7 +1950,7 @@ window.closeAdmin = function() {
   const adminEl = document.getElementById('admin-view');
   adminEl.removeEventListener('click',   startAdminSessionTimer);
   adminEl.removeEventListener('keydown', startAdminSessionTimer);
-  adminEl.classList.add('hidden');
+  adminEl.classList.add('hidden'); adminEl.classList.remove('visor-wide'); document.body.classList.remove('visor-on');
   document.getElementById('kiosk-view').classList.remove('hidden');
 };
 
@@ -1964,6 +2042,7 @@ window.switchTab = function(tabId) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
+  document.getElementById('admin-view').classList.toggle('visor-wide', tabId === 'tab-visor'); document.body.classList.toggle('visor-on', tabId === 'tab-visor');
   const map = { 'tab-venues':'tabbtn-venues','tab-staff':'tabbtn-staff','tab-logs':'tabbtn-logs','tab-hours':'tabbtn-hours','tab-shifts':'tabbtn-shifts','tab-visor':'tabbtn-visor' };
   document.getElementById(map[tabId])?.classList.add('active');
   // El visor se auto-refresca cada 30s mientras está abierto; se apaga al salir de la pestaña
@@ -2056,15 +2135,10 @@ function statusLine(st) {
   return 'Sin turno ni marcas hoy';
 }
 function visorRow(st) {
-  const k = KIND[st.kind], s = st.s;
-  const warn = st.flag ? 'border-red-500/60 ' : '';
-  return `<div data-dni="${escHtml(s.dni)}" class="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-700/40 cursor-pointer">
-    <div class="relative w-9 h-9 shrink-0 rounded-full border-2 ${warn}flex items-center justify-center text-[11px] font-bold ${k.cls}">${initials(s.name)}<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-800 ${k.dot}"></span></div>
-    <div class="min-w-0 flex-1">
-      <p class="text-xs font-medium text-slate-200 truncate">${escHtml(s.name)}${st.manual ? ' <i class="fa-solid fa-triangle-exclamation text-amber-400 text-[10px]" title="Fichó por DNI"></i>' : ''}</p>
-      <p class="text-[11px] ${st.flag ? 'text-red-400' : k.txt} truncate">${escHtml(statusLine(st))}</p>
-    </div>
-    <span class="shrink-0 text-[10px] text-slate-400 font-mono">${escHtml(shiftText(st.sh))}</span></div>`;
+  const s = st.s;
+  return `<div data-dni="${escHtml(s.dni)}" class="vz-ficha vz-${st.kind}${st.flag ? ' vz-warn' : ''}">
+    <div class="vz-av">${initials(s.name)}<i class="vz-dot"></i></div>
+    <div class="vz-txt"><b class="vz-name">${escHtml(s.name)}${st.manual ? ' ⚠' : ''}</b><span class="vz-st">${escHtml(statusLine(st))}</span>${shiftText(st.sh) ? `<span class="vz-sh">${escHtml(shiftText(st.sh))}</span>` : ''}</div></div>`;
 }
 window.setVisorFilter = k => { visorFilter = visorFilter === k ? '' : k; renderVisorGrid(); };
 window.setVisorSearch = v => { visorSearch = normalizeKey(v); renderVisorGrid(); };
@@ -2083,6 +2157,14 @@ window.openVisorDetail = function(dni) {
   document.getElementById('visor-detail').classList.remove('hidden');
 };
 
+function fitVisor() {
+  const gridEl = document.getElementById('visor-grid'); if (!gridEl || !gridEl.offsetParent) return;
+  const over = () => [...gridEl.querySelectorAll('.vz-fichas')].some(f => f.scrollHeight > f.clientHeight + 1);
+  let u = 1.6; gridEl.style.setProperty('--u', u);
+  while (u > 0.6 && over()) { u = Math.round((u - 0.05) * 100) / 100; gridEl.style.setProperty('--u', u); }
+}
+window.addEventListener('resize', () => { clearTimeout(window.__vzT); window.__vzT = setTimeout(fitVisor, 120); });
+
 function renderVisorGrid() {
   const gridEl = document.getElementById('visor-grid'), sumEl = document.getElementById('visor-summary');
   if (!gridEl.dataset.bound) { gridEl.dataset.bound = '1'; gridEl.addEventListener('click', e => { const r = e.target.closest('[data-dni]'); if (r) openVisorDetail(r.dataset.dni); }); }
@@ -2093,12 +2175,12 @@ function renderVisorGrid() {
 
   const nowM = nowMinLocal(), nowMs = Date.now();
   let people = allStaff.filter(s => s.activo !== false && (!visorVenue || (venueKey(s) || '__none__') === visorVenue)).map(s => personState(s, nowM, nowMs));
-  if (!people.length) { gridEl.innerHTML = '<p class="text-slate-400 text-xs">No hay colaboradores activos cargados desde RRHH.</p>'; sumEl.innerHTML = ''; return; }
+  if (!people.length) { gridEl.style.gridTemplateColumns = '1fr'; gridEl.innerHTML = '<p class="vz-empty">No hay colaboradores activos cargados desde RRHH.</p>'; sumEl.innerHTML = ''; return; }
 
   const counts = {}; Object.keys(KIND).forEach(k => counts[k] = 0); people.forEach(p => counts[p.kind]++);
   const expected = people.filter(p => expectedNow(p.sh, nowM)).length;
-  sumEl.innerHTML = Object.entries(KIND).map(([k, m]) => `<button onclick="setVisorFilter('${k}')" class="rounded-lg border ${visorFilter === k ? 'ring-2 ring-indigo-500 ' : ''}${m.ring} bg-slate-900/60 px-2 py-2 text-center cursor-pointer"><p class="text-xl font-bold ${m.txt}">${counts[k]}</p><p class="text-[10px] text-slate-400 leading-tight">${m.label}</p></button>`).join('')
-    + `<p class="col-span-3 sm:col-span-6 text-[11px] text-slate-400">Esperados ahora según turnos: <b class="text-slate-200">${expected}</b> · Presentes: <b class="text-emerald-400">${counts.present}</b>${counts.late ? ` · <b class="text-amber-400">${counts.late} sin fichar</b>` : ''}${people.some(p => p.flag) ? ` · <b class="text-red-400">${people.filter(p => p.flag).length} con alertas</b>` : ''}</p>`;
+  sumEl.innerHTML = Object.entries(KIND).map(([k, m]) => `<button onclick="setVisorFilter('${k}')" class="vz-chip k-${k}${visorFilter === k ? ' on' : ''}"><b>${counts[k]}</b><span>${m.label}</span></button>`).join('')
+    + `<span class="vz-sumtxt">Esperados ahora: <b>${expected}</b>${people.some(p => p.flag) ? ` · <b style="color:#f87171">${people.filter(p => p.flag).length} con alertas</b>` : ''}</span>`;
 
   let shown = people;
   if (visorFilter) shown = shown.filter(p => p.kind === visorFilter);
@@ -2106,18 +2188,23 @@ function renderVisorGrid() {
   const order = { late: 0, present: 1, upcoming: 2, left: 3, free: 4, none: 5 };
   const groups = new Map();
   shown.forEach(p => { const key = venueKey(p.s) || '__none__'; if (!groups.has(key)) groups.set(key, { name: venueLabel(p.s) || 'Sin local asignado', all: people.filter(x => (venueKey(x.s) || '__none__') === key), list: [] }); groups.get(key).list.push(p); });
-  if (!groups.size) { gridEl.innerHTML = '<p class="text-slate-400 text-xs">Nadie coincide con el filtro.</p>'; return; }
+  if (!groups.size) { gridEl.style.gridTemplateColumns = '1fr'; gridEl.innerHTML = '<p class="vz-empty">Nadie coincide con el filtro.</p>'; return; }
+
+  const n = groups.size, cols = n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : n === 4 ? 2 : n <= 6 ? 3 : 4, rows = Math.ceil(n / cols);
+  gridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`; gridEl.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+  const SEC = { cocina: ['🍳', 'COCINA', 'vz-cocina'], salon: ['🍽️', 'SALÓN', 'vz-salon'], '': ['❓', 'SIN SECTOR', 'vz-otro'] };
   gridEl.innerHTML = [...groups.values()].map(g => {
     const pres = g.all.filter(p => p.kind === 'present').length, exp = g.all.filter(p => expectedNow(p.sh, nowM)).length;
     const pct = Math.min(100, Math.round(pres / Math.max(exp, pres, 1) * 100));
-    const sect = (label, icon, key) => { const l = g.list.filter(p => (key ? p.s.sector === key : p.s.sector !== 'cocina' && p.s.sector !== 'salon')).sort((a, b) => order[a.kind] - order[b.kind] || a.s.name.localeCompare(b.s.name));
-      if (!l.length) return ''; const tot = g.all.filter(p => key ? p.s.sector === key : p.s.sector !== 'cocina' && p.s.sector !== 'salon');
-      return `<div><p class="text-[10px] text-slate-400 uppercase font-semibold mb-1 flex items-center gap-1.5"><i class="fa-solid ${icon}"></i>${label}<span class="font-normal normal-case">(${tot.filter(p => p.kind === 'present').length}/${tot.length} presentes)</span></p><div class="space-y-0.5">${l.map(visorRow).join('')}</div></div>`; };
-    return `<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-      <div class="flex items-center justify-between mb-1"><h4 class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-store text-indigo-400 mr-2"></i>${escHtml(g.name)}</h4><span class="text-[11px] text-slate-400">${pres} presentes${exp ? ` · ${exp} esperados` : ''}</span></div>
-      <div class="h-1.5 rounded-full bg-slate-700 mb-3 overflow-hidden"><div class="h-full ${pres >= exp ? 'bg-emerald-500' : 'bg-amber-500'}" style="width:${pct}%"></div></div>
-      <div class="space-y-3">${sect('Cocina', 'fa-kitchen-set', 'cocina')}${sect('Salón', 'fa-utensils', 'salon')}${sect('Sin sector', 'fa-circle-question', '')}</div></div>`;
+    const sect = key => { const inSec = p => key ? p.s.sector === key : p.s.sector !== 'cocina' && p.s.sector !== 'salon';
+      const l = g.list.filter(inSec).sort((a, b) => order[a.kind] - order[b.kind] || a.s.name.localeCompare(b.s.name)); if (!l.length) return '';
+      const tot = g.all.filter(inSec), [ico, lab, cls] = SEC[key];
+      return `<section class="vz-sec ${cls}"><div class="vz-sechead"><span class="ico">${ico}</span><b>${lab}</b><small>${tot.filter(p => p.kind === 'present').length} de ${tot.length} presentes</small></div><div class="vz-fichas">${l.map(visorRow).join('')}</div></section>`; };
+    const secs = [sect('cocina'), sect('salon'), sect('')].filter(Boolean);
+    return `<div class="vz-venue"><div class="vz-vhead"><h4>🏬 ${escHtml(g.name)}</h4><span>${pres} presentes${exp ? ` · ${exp} esperados` : ''}</span><div class="vz-prog"><i class="${pres >= exp ? '' : 'low'}" style="width:${pct}%"></i></div></div>
+      <div class="vz-secs" style="grid-template-columns:repeat(${secs.length}, minmax(0, 1fr))">${secs.join('')}</div></div>`;
   }).join('');
+  fitVisor();
 }
 
 // ── TAB HORAS ─────────────────────────────────────────────────────────────

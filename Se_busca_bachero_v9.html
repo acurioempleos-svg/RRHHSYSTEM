@@ -1383,8 +1383,10 @@ function ownWork(w){
 function findJob(w){
   const bach=hasRole('bachero'),isB=w.role==='bachero';
   if(!isB&&w.task)return null;
-  if(w.role==='camarero'&&!hasRole('cajero')){const t=S.tables.find(t=>t.g&&t.g.st==='pay'&&!t.g.by);if(t){t.g.by=w.id;return{k:'cash',t,ph:'go',half:true,cp:2.6}}}
-  if(w.role==='cajero'&&!hasRole('camarero')){const o=S.orders.find(x=>x.stage==='ready'&&x.landed&&!x.by&&!x.take);if(o){o.by=w.id;o.stage='carry';return{k:'serve',o,ph:'pick',half:true}}}
+  /* ayuda en el salón: todos dan una mano, pero fuera de su puesto van a mitad de velocidad */
+  {const kit=w.role!=='camarero'&&w.role!=='cajero',free=!kit||(!ownWork(w)&&(!isB||!S.sink.some(x=>x.vis&&!x.by)));
+   if(free&&w.role!=='cajero'){const t=S.tables.find(t=>t.g&&t.g.st==='pay'&&!t.g.by&&(t.g.pt>2||!hasRole('cajero')));if(t){t.g.by=w.id;return{k:'cash',t,ph:'go',half:true,cp:2.6}}}
+   if(free&&w.role!=='camarero'){const o=S.orders.find(x=>x.stage==='ready'&&x.landed&&!x.by&&!x.take&&(x.rt>2||!hasRole('camarero')));if(o){o.by=w.id;o.stage='carry';return{k:'serve',o,ph:'pick',half:true}}}}
   const o=S.orders.find(x=>x.stage==='cooked'&&!x.by&&(x.take?(w.role==='cocinero'||(w.role==='ayudante'&&!hasRole('cocinero'))):(isB||(!bach&&w.role!=='cajero')||((w.role==='camarero'&&x.cw>4)||((w.role==='ayudante'||w.role==='cocinero')&&x.cw>7)))));
   if(o){o.by=w.id;return o.take?{k:'take',o}:{k:'run',o,ph:'go',half:!isB}}
   if(!isB&&!bach&&w.role!=='cajero'&&!ownWork(w)&&S.sink.some(x=>x.vis&&!x.by))return{k:'wash',it:null,at:false};

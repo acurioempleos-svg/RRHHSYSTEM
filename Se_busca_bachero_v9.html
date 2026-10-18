@@ -101,6 +101,13 @@ canvas.port.big{width:108px;height:156px;animation:shake .4s steps(2) 3}
 .tk span{font-size:16px;color:#555}
 .tk i{position:absolute;left:0;bottom:0;height:5px;background:#1fa36b}
 .tk.urgent i{background:#d2263d}
+.svmain{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+.svleft{min-width:0}
+.svteam{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto;margin-bottom:12px}
+.svteam .trow{grid-template-columns:42px 1fr}.svteam .trow .rowbtns{grid-column:1/-1;flex-direction:row}.svteam .trow .rowbtns .btn{flex:1}
+.wrap:has(.svmain){max-width:1320px}
+@media (min-width:1001px){.svleft .stage{max-width:max(520px,calc((100vh - 220px)*1.143 + 14px));margin-left:auto;margin-right:auto}}
+@media (max-width:1000px){.svmain{grid-template-columns:1fr}.svleft{display:contents}.svleft .stage{order:1}.svteam{order:2;position:static;max-height:none}.svlog{order:3}}
 .trow{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;padding:6px 0;border-bottom:3px dashed var(--panel2)}
 .trow:last-child{border-bottom:0}
 .trow canvas.port{width:38px;height:55px}
@@ -566,9 +573,21 @@ const TRAITS=[
   {id:'contador',name:'Contador frustrado',roles:['cajero'],good:'+20% de velocidad y no se confunde',bad:'Se enoja el doble si cobra poco',quejoso:2,fx:w=>{w.speed*=1.2;w.auto=Math.max(w.auto,.93)}},
   {id:'vuelto',name:'Vuelto a favor',roles:['cajero'],good:'Los clientes dejan 30% más de propina',bad:'Pide 15% más de sueldo',tip:1.3,wage:1.15},
   {id:'distra',name:'Mirando el celu',roles:['cajero'],good:'Cobra 30% menos',bad:'20% más lento y sin iniciativa',wage:.7,fx:w=>{w.speed*=.8;w.auto=Math.min(w.auto,.4)}},
-  {id:'caja',name:'Caja que no cierra',roles:['cajero'],good:'+15% de velocidad',bad:'Se guarda 15% de las propinas',steal:.15,fx:w=>{w.speed*=1.15}}
+  {id:'caja',name:'Caja que no cierra',roles:['cajero'],good:'+15% de velocidad',bad:'Se guarda 15% de las propinas',steal:.15,fx:w=>{w.speed*=1.15}},
+  /* poderes especiales con mecánica propia */
+  {id:'clepto',name:'Cleptómano de cubiertos',roles:['bachero'],good:'Trabaja gratis y no pide aumento',bad:'Cada tanto desaparecen cubiertos (gasto extra)',free:true,clepto:true},
+  {id:'halcon',name:'Ojo de halcón',roles:['bachero'],good:'Detecta insumos pasados: hay 70% menos platos pasados',bad:'Tarda 15% más en preparar cada pedido',halcon:true,fx:w=>{w.speed*=.87}},
+  {id:'aprov',name:'Aprovecha todo',roles:['ayudante'],good:'Cada 5 platos, uno gasta 1 insumo menos',bad:'A veces el plato sale medio raro (−10% de precio)',aprov:true},
+  {id:'dormip',name:'Dormilón productivo',roles:['cocinero'],good:'Si lo dejás sin laburo, descansa y vuelve 20% más rápido',bad:'Se duerme en serio una vez por día',dormip:true},
+  {id:'conocido',name:'Cara de conocido',roles:['camarero'],good:'Los clientes frecuentes dejan 30% más de propina',bad:'A los clientes nuevos los atiende con 10% más de demora',conocido:true},
+  {id:'tiempos',name:'Dueño de los tiempos',roles:['camarero'],good:'Los clientes esperan 20% más antes de irse',bad:'Se pelea con los cocineros (baja el ánimo del cocinero más cercano)',pat:1.2,pelea:true},
+  {id:'postres',name:'Vendedor de postres',roles:['camarero'],good:'Cada mesa tiene 15% de probabilidad de pedir un flan extra',bad:'Si la mesa no pide, se pone de mal humor',postres:true},
+  {id:'poli',name:'Políglota',roles:['camarero'],good:'Los turistas pagan el doble de propina',bad:'Los clientes de siempre se quejan de que habla raro',poli:true},
+  {id:'brindis',name:'Rey del brindis',roles:['camarero'],good:'+1 de ánimo al equipo por día',bad:'Se toma una copa en servicio: 10% de probabilidad de dejar caer una bandeja',dayBonus:1,brindis:true},
+  {id:'cabecera',name:'Contador de cabecera',roles:['cajero'],good:'Nunca se pierde un cobro ni se va nadie sin pagar',bad:'Pide 10% más de sueldo',wage:1.1,sinfuga:true},
+  {id:'fiado',name:'Cobra de a poco',roles:['cajero'],good:'Acepta fiado de clientes: cobra 50% hoy y el resto mañana, con 10% más',bad:'A veces el cliente no vuelve',fiado:true}
 ];
-const CONFLICTS=[['chef','sazon','tradi','oro','artista','gourmet','vend'],['hidro','vajilla','esponja'],['mise','cortes','picador','suplente'],['patin','timido','bandeja','flash','torpe','memo'],['contador','distra','caja','calcu'],['vuelto','caja','poker','redond'],['madru','dormi','tarde','turbo','insomne','hipo'],['vet','falta','primo','sensible','chanta','hipo','cumpli'],['pibe','prolijo','manitas','celu','ninja','vago'],['quejoso','sensible','insomne'],['amable','chusma','bocon','mate'],['lider','chusma','primo','bocon'],['cerca','pibe'],['oro','artista','gourmet'],['vago','turbo','ninja'],['sonrisa','chamu','propi','redond','poker'],['torpe','flash'],['abraz','fiesta','chamu','mate']];
+const CONFLICTS=[['chef','sazon','tradi','oro','artista','gourmet','vend'],['hidro','vajilla','esponja'],['mise','cortes','picador','suplente'],['patin','timido','bandeja','flash','torpe','memo'],['contador','distra','caja','calcu'],['vuelto','caja','poker','redond'],['madru','dormi','tarde','turbo','insomne','hipo','dormip'],['vet','falta','primo','sensible','chanta','hipo','cumpli'],['pibe','prolijo','manitas','celu','ninja','vago'],['quejoso','sensible','insomne'],['amable','chusma','bocon','mate'],['lider','chusma','primo','bocon'],['cerca','pibe'],['oro','artista','gourmet'],['vago','turbo','ninja'],['sonrisa','chamu','propi','redond','poker'],['torpe','flash'],['abraz','fiesta','chamu','mate','brindis'],['conocido','poli','sonrisa','chamu','propi']];
 const clash=(a,b)=>CONFLICTS.some(c=>c.includes(a)&&c.includes(b));
 function pickTraits(role,n,ban){
   const pool=TRAITS.filter(t=>(!t.roles||t.roles.includes(role))&&!ban.includes(t.id)),out=[];
@@ -580,6 +599,9 @@ const hasT=(w,id)=>w.traits.some(t=>t.id===id);
 const tmul=(w,k)=>w.traits.reduce((a,t)=>a*(t[k]||1),1);
 const tmax=(w,k)=>w.traits.reduce((a,t)=>Math.max(a,t[k]||0),0);
 const tany=(w,k)=>w.traits.some(t=>t[k]);
+const teamMul=k=>G.team.reduce((a,w)=>a*((w.absent||w.left)?1:tmul(w,k)),1);
+const teamAny=k=>G.team.some(w=>!w.absent&&!w.left&&tany(w,k));
+const CUT=['tenedor','cuchillo','cucharita'];
 const SK=['#f5c9a0','#d9a073','#a86b45','#6e4328'];
 
 /* ====== sprites 16x24 con contorno ====== */
@@ -715,6 +737,7 @@ function usedNames(){return G.team.concat(G.cands).map(w=>w.name)}
 function uniqueName(sex){const u=usedNames(),pool=sex==='f'?NM_F:NM_M;const free=pool.filter(n=>!u.includes(n));return pick(free.length?free:pool)}
 function quality(w){return .8+.15*clamp((w.speed-.7)/.8,0,1)+.15*clamp((w.rel-.55)/.4,0,1)}
 function calcWage(w){
+  if(tany(w,'free'))return 0;
   const base=ROLES[w.role].base*Math.pow(1.1,w.lvl-1);
   return Math.round(base*quality(w)*clamp(tmul(w,'wage'),.55,1.8)/10)*10;
 }
@@ -728,7 +751,7 @@ function makeWorker(role,o={}){
     task:null,focusT:0,active:0,waste:0,done:0,bad:0};
   if(o.starter)Object.assign(w,{speed:1,rel:.88,disc:.8,auto:.78,dist:4,sat:75});
   const n=o.starter?1:(Math.random()<.3?3:2);
-  w.traits=pickTraits(role,n,o.starter?['primo','falta','dormi','tarde','chusma','pica','chanta','hipo','turbo','vago','insomne']:[]);
+  w.traits=pickTraits(role,n,o.starter?['primo','falta','dormi','tarde','chusma','pica','chanta','hipo','turbo','vago','insomne','clepto','dormip']:[]);
   w.traits.forEach(t=>{if(t.fx)t.fx(w)});
   w.wage=calcWage(w);
   return w;
@@ -738,7 +761,7 @@ const menu=()=>DISHES.filter(d=>d.lvl<=G.lvl+1);
 const priceMult=()=>1+.13*G.lvl;
 const avail=()=>G.stock+G.fresh;
 function take(n){const a=Math.min(G.stock,n);G.stock-=a;G.fresh-=n-a}
-const marketWage=w=>ROLES[w.role].base*Math.pow(1.1,w.lvl-1)*(1+.08*G.lvl)*quality(w)*clamp(tmul(w,'wage'),.55,1.8);
+const marketWage=w=>tany(w,'free')?0:ROLES[w.role].base*Math.pow(1.1,w.lvl-1)*(1+.08*G.lvl)*quality(w)*clamp(tmul(w,'wage'),.55,1.8);
 const sevCost=w=>(w.strikes||0)>=2?0:Math.round(w.wage*(2+Math.min(8,Math.floor((w.days||0)/3)))/10)*10;
 const expectedOrders=()=>Math.round(DAY_T/((4.7-.37*G.lvl)*.78));
 const rentLeft=()=>(RENT_EVERY-G.day%RENT_EVERY)%RENT_EVERY;
@@ -973,10 +996,11 @@ function openService(){
     w.num=i+1;
     w.pos=w.role==='ayudante'?{x:18+k*38,y:74}:w.role==='cocinero'?{x:144+k*38,y:74}:w.role==='camarero'?{x:150+k*34,y:224}:w.role==='cajero'?{x:18+k*34,y:212}:{x:250+k*38,y:144};w.home={x:w.pos.x,y:w.pos.y};
     w.cur=null;w.ct=null;w.jb=null;w.carry=null;w.nav=null;w.task=null;w.focusT=0;w.active=0;w.waste=0;w.done=0;w.bad=0;w.prog=0;w.working=false;w.blocked=false;w.status='ok';w.noQuitToday=false;w.noPromise=false;
+    w.napFell=false;w.napDay=R(14,50);w.napBoost=0;w.idleT=0;w.napT=0;w.cleptT=R(20,36);w.copaT=R(18,52);w.copaDone=false;w.peleaT=R(14,28);
     if(w.absent){w.status='absent';return}
     const sl=tmax(w,'sleepy');
     const p=tany(w,'noSleep')?0:(sl?sl:(1-w.rel)*.45);
-    if(Math.random()<p){w.status='asleep';w.sleepT=14}
+    if(Math.random()<p){w.status='asleep';w.sleepT=14;w.napFell=true}
     else{const late=tmax(w,'late');if(late){w.status='late';w.lateT=late}}
   });
   G.team.forEach(w=>{
@@ -998,26 +1022,26 @@ function interval(){
 const PH={angry:['QUE LENTO','TENGO HAMBRE','Y MI PLATO','MUCHA ESPERA','ME VOY A IR','TIENEN COCINA'],happy:['RICO','GRACIAS','ESTUVO BUENO','VOLVERE','ESPECTACULAR','TODO PERFECTO'],queja:['TODO FRIO','PESIMO','MUY CARO','LLAMEN AL JEFE','ESTO NO ES','QUE RUIDO'],leave:['ME VOY','CHAU','NUNCA MAS','AHI LES DEJO'],tip:['QUEDATE EL VUELTO','PARA EL CAFE','BUENISIMO'],cold:['ESTA FRIO','ESTA HELADO','LO QUIERO CALIENTE']};
 function say(x,y,text){S.says.push({x,y,t:0,text:up(text)});if(S.says.length>7)S.says.shift()}
 function pickType(){
-  const L=G.lvl,tb=[['normal',50],['take',14],['queja',11],['siempre',5],['influ',4],['dormi',4],['familia',L>=1?7:0],['cumple',L>=2?3:0]];
+  const L=G.lvl,tb=[['normal',50],['take',14],['queja',11],['siempre',5],['influ',4],['dormi',4],['turista',7],['familia',L>=1?7:0],['cumple',L>=2?3:0]];
   let x=Math.random()*tb.reduce((a,b)=>a+b[1],0);for(const b of tb){x-=b[1];if(x<=0)return b[0]}return 'normal';
 }
 function dishPick(){const m=menu(),w=m.map(d=>1/Math.sqrt(d.price));let x=Math.random()*w.reduce((a,b)=>a+b,0);for(let i=0;i<m.length;i++){x-=w[i];if(x<=0)return m[i]}return m[0]}
 const TYPE_MSG={queja:'Llegó un cliente que se queja de todo.',siempre:'Un cliente pidió "lo de siempre". Nadie sabe qué es.',influ:'Llegó un influencer con aro de luz: va a filmar el plato.',dormi:'Entró un cliente con cara de sueño.',familia:'Llegó una familia numerosa de 3 personas.',cumple:'¡Fiesta de cumpleaños! Llegaron 4 con una torta.'};
-const TYPE_TAG={queja:'QUEJOSO',influ:'INFLUENCER',familia:'FAMILIA',cumple:'CUMPLE',take:'PARA LLEVAR'};
+const TYPE_TAG={queja:'QUEJOSO',influ:'INFLUENCER',familia:'FAMILIA',cumple:'CUMPLE',take:'PARA LLEVAR',turista:'TURISTA'};
 function spawn(){
   let type=pickType();
   const fr=S.tables.filter(t=>!t.g&&(t!==S.vipT||S.evDone));
   if(type==='take'&&S.win.length>=2)type='normal';
   if(type!=='take'&&!fr.length){if(S.win.length<2&&Math.random()<.5)type='take';else return}
-  const mk=d=>({id:S.oid++,dish:d,age:0,pat:RI(42,60),stage:'walk',hold:1.2,improv:null});
+  const mk=d=>({id:S.oid++,dish:d,age:0,pat:Math.round(RI(42,60)*teamMul('pat')),stage:'walk',hold:1.2,improv:null});
   if(type==='take'){
-    const slot=S.win.some(x=>x.slot===0)?1:0,od=mk(dishPick());od.pat=RI(35,50);od.take=true;od.slot=slot;od.hold=.8;od.tag=TYPE_TAG.take;
+    const slot=S.win.some(x=>x.slot===0)?1:0,od=mk(dishPick());od.pat=Math.round(RI(35,50)*teamMul('pat'));od.take=true;od.slot=slot;od.hold=.8;od.tag=TYPE_TAG.take;
     S.win.push({o:od,slot,wt:0,st:'walk',sk:RI(0,3),hr:RI(0,4),sh:RI(0,4),acc:RI(0,4)});S.orders.push(od);return;
   }
   const tb=pick(fr),sz=type==='familia'?3:type==='cumple'?4:(type==='normal'&&Math.random()<.45?2:1);
-  const g={st:'walk',wt:0,sk:RI(0,3),hr:RI(0,4),sh:RI(0,4),acc:RI(0,4),type,sz,os:[],left:sz,price:0,hs:0,dn:0,dishes:[],wtip:1,wsteal:0,qt:R(4,7)};
+  const g={st:'walk',wt:0,sk:RI(0,3),hr:RI(0,4),sh:RI(0,4),acc:RI(0,4),type,sz,os:[],left:sz,price:0,hs:0,dn:0,dishes:[],wtip:1,wsteal:0,qt:R(4,7),regular:type==='siempre'||(type==='normal'&&Math.random()<.2)};
   g.ps=seatsOf(tb,sz).map(s=>mkPath(DOOR,{x:s.x+4,y:s.y+20}));g.wl=Math.max(1.2,Math.max(...g.ps.map(p=>p.len))/60);
-  for(let j=0;j<sz;j++){const od=mk(dishPick());od.tbl=tb;od.first=j===0;od.hold=g.wl;od.tag=TYPE_TAG[type];if(type==='queja')od.pat=Math.round(od.pat*.7);if(type==='siempre')od.siempre=true;g.os.push(od);S.orders.push(od)}
+  for(let j=0;j<sz;j++){const od=mk(dishPick());od.tbl=tb;od.first=j===0;od.hold=g.wl;od.tag=TYPE_TAG[type]||(g.regular&&type==='normal'?'HABITUAL':undefined);if(type==='queja')od.pat=Math.round(od.pat*.7);if(type==='siempre')od.siempre=true;g.os.push(od);S.orders.push(od)}
   tb.g=g;if(TYPE_MSG[type])toast(TYPE_MSG[type],'warn');
 }
 function toast(text,tone){S.log.unshift({id:S.lid++,text,tone});S.log.length=Math.min(S.log.length,7)}
@@ -1127,10 +1151,22 @@ function deliver(o,w){
   if(ag>COLD_T&&Math.random()<Math.min(.85,(ag-COLD_T)/18)){o.cold=true;pr=Math.round(pr*.7);g.cold=true;S.bad++;say(t.x,t.y-32,pick(PH.cold));toast('El plato de la mesa '+(t.i+1)+' llegó frío. El cliente puso mala cara.','bad')}
   g.price+=pr;g.hs+=clamp(1-o.age/o.pat,0,1);g.dn++;g.dishes.push(o.dish);if(o.wrong)g.nogo=true;
   if(!w)g.wtip=.5;
-  if(w){g.wtip=tmul(w,'tip');if(tmax(w,'steal')>g.wsteal){g.wsteal=tmax(w,'steal');g.wn=w.name}}
+  if(w){g.wtip=tmul(w,'tip');if(tmax(w,'steal')>g.wsteal){g.wsteal=tmax(w,'steal');g.wn=w.name}
+    if(g.regular&&hasT(w,'conocido'))g.wtip*=1.3;
+    if(g.type==='turista'&&hasT(w,'poli')){g.wtip*=2;if(!g.poliSaid){g.poliSaid=1;say(t.x,t.y-32,'THANK YOU')}}
+    if(g.regular&&hasT(w,'poli')){g.wtip*=.6;if(!g.poliSaid){g.poliSaid=1;say(t.x,t.y-32,'QUE HABLA RARO')}}}
   sfx.ding();burst(t.x,t.y-8,'#ffd23c',4);
   if(--g.left>0)return;
-  g.happy=g.hs/g.dn;g.st='eat';g.t=R(4,6)+(g.sz>1?3:0);
+  const pv=(w&&hasT(w,'postres'))?w:G.team.find(x=>x.role==='camarero'&&!x.absent&&!x.left&&x.status==='ok'&&hasT(x,'postres'));
+  if(pv&&!g.postDone&&g.type!=='vip'){
+    g.postDone=true;
+    if(Math.random()<.15){
+      const fd=DISHES.find(d=>d.id==='flan'),od={id:S.oid++,dish:fd,age:0,pat:Math.round(RI(42,60)*teamMul('pat')),stage:'walk',hold:.6,improv:null,tbl:t,extra:true,tag:'POSTRE'};
+      g.os.push(od);S.orders.push(od);g.left=1;g.st='wait';say(t.x,t.y-32,'UN FLAN, DALE');
+      toast(`${pv.name} le vendió un flan extra a la mesa ${t.i+1}.`,'good');return;
+    }else{g.dessertNo=true;say(t.x,t.y-32,'NO QUIERO POSTRE');toast(`La mesa ${t.i+1} no quiso postre y se puso de mal humor con ${pv.name}.`,'warn')}
+  }
+  g.happy=g.hs/g.dn;if(g.dessertNo)g.happy*=.85;g.st='eat';g.t=R(4,6)+(g.sz>1?3:0);
   if(g.type==='cumple'){G.team.forEach(x=>{x.sat=clamp(x.sat+2,0,100)});g.bonus=150;say(t.x,t.y-32,'FELIZ CUMPLE');toast('El equipo le canta el cumpleaños feliz a la mesa '+(t.i+1)+' (+2 de ánimo).','good')}
   else if(g.type==='influ'){say(t.x,t.y-32,'LA FOTO PRIMERO');g.t+=3}
   else if(g.type==='siempre'&&g.nogo)say(t.x,t.y-32,'ESTO NO ES')
@@ -1144,16 +1180,18 @@ function collectTake(o){
 function settle(t,c){
   const g=t.g;if(!g)return;t.g=null;
   S.leaving.push(leaveEntry(t,g,false));
-  if(!c&&Math.random()<.1){S.lost+=g.sz;sfx.alert();say(t.x,t.y-32,'ME VOY SIN PAGAR');shakeStage();burst(t.x,t.y-20,['#ff5a6e','#ffffff'],10,{sp:24});toast('Un cliente se fue sin pagar porque no había cajero. Perdiste '+money(g.price)+'.','bad');S.floats.push({x:t.x,y:t.y-26,t:0,text:'X',col:'#ff5a6e'});return}
+  if(!c&&!teamAny('sinfuga')&&Math.random()<.1){S.lost+=g.sz;sfx.alert();say(t.x,t.y-32,'ME VOY SIN PAGAR');shakeStage();burst(t.x,t.y-20,['#ff5a6e','#ffffff'],10,{sp:24});toast('Un cliente se fue sin pagar porque no había cajero. Perdiste '+money(g.price)+'.','bad');S.floats.push({x:t.x,y:t.y-26,t:0,text:'X',col:'#ff5a6e'});return}
   let tip=c?Math.round(g.price*.26*g.happy*g.wtip*tmul(c,'tip')):0,bonus=g.bonus||0;
   if(g.nogo||g.cold||(g.type==='queja'&&g.happy<.6))tip=0;
   if(g.type==='influ'){if(Math.random()<.3+.6*g.happy){bonus+=RI(100,200);S.repExtra+=3;toast('¡El video del influencer se hizo viral! (+3 reputación y un pago extra)','good')}else{S.repExtra-=2;toast('El influencer subió una reseña pésima del lugar (-2 reputación).','bad')}}
   if(g.type==='queja'&&g.happy<.4){S.repExtra-=1;toast('El cliente quejoso dejó una reseña de una estrella (-1 reputación).','bad')}
   const cs=c?tmax(c,'steal'):0,st=Math.max(g.wsteal,cs),stolen=Math.round(tip*st);
   if(stolen>0){S.stolen+=stolen;tip-=stolen;if(Math.random()<.5)toast((cs>=g.wsteal&&c?c.name:g.wn||'Alguien')+' se quedó con '+money(stolen)+' de propina. Nadie vio nada.','warn')}
-  S.revenue+=g.price+tip+bonus;S.served+=g.sz;sfx.coin();
+  let paid=g.price;
+  if(c&&hasT(c,'fiado')&&!g.nogo&&g.price>=40&&Math.random()<.35){const rest=Math.round(g.price*.5);paid=g.price-rest;(G.fiadoCli=G.fiadoCli||[]).push(rest);S.fiado=(S.fiado||0)+rest;toast(`${c.name} le fió a la mesa ${t.i+1}: hoy cobra ${money(paid)} y el resto queda para mañana.`,'warn')}
+  S.revenue+=paid+tip+bonus;S.served+=g.sz;sfx.coin();
   say(t.x,t.y-32,tip>g.price*.34?pick(PH.tip):g.happy>.55&&!g.nogo?pick(PH.happy):g.nogo||g.happy<.3?pick(PH.queja):'LA CUENTA');
-  S.floats.push({x:t.x,y:t.y-26,t:0,text:'$'+(g.price+tip+bonus),col:tip>g.price*.26?'#ffd23c':'#7fe3a8'});
+  S.floats.push({x:t.x,y:t.y-26,t:0,text:'$'+(paid+tip+bonus),col:tip>g.price*.26?'#ffd23c':'#7fe3a8'});
   if(tip>g.price*.34)burst(t.x,t.y-24,['#ffd23c','#fff2a8','#7fe3a8'],12,{sp:30,up:true});
   if(tip>g.price*.34)toast('Propina grande: '+money(tip)+'. Al cliente le encantó la atención.','good');
 }
@@ -1199,6 +1237,11 @@ function dropTask(w){
 }
 function loseOrder(o,why){
   S.orders=S.orders.filter(x=>x!==o);
+  if(o.extra&&o.tbl&&o.tbl.g&&o.tbl.g.os.includes(o)){
+    const g=o.tbl.g;g.left=0;g.happy=Math.max(.1,g.hs/Math.max(1,g.dn)*.8);g.st='eat';g.t=R(2,4);
+    G.team.forEach(w=>{if(w.task&&w.task.o===o)w.task=null});S.bad++;
+    toast(`El flan extra de la mesa ${o.tbl.i+1} no salió (${why==='insumos'?'faltaron insumos':'tardó demasiado'}). La mesa paga lo que comió.`,'bad');return;
+  }
   if(o.take){const i=S.win.findIndex(x=>x.o===o);if(i>=0){say(322+S.win[i].slot*30,26,pick(PH.leave));S.win.splice(i,1)}}
   else if(o.tbl&&o.tbl.g){
     const g=o.tbl.g;
@@ -1233,8 +1276,13 @@ function serve(w,o){
     else{m=.5;badI=true;S.bad++;w.bad++;toast(`${w.name} hizo el plato a su manera. El cliente puso cara.`,'bad')}
   }
   m*=tmul(w,'price');
+  if(o.raro){m*=.9;toast('Un plato salió medio raro: el cliente pagó 10% menos.','warn')}
   m*=qualMult();
-  if(Math.random()<badPlateP()){m*=.55;o.wrong=true;S.bad++;toast('Mercadería pasada: un cliente se quejó del plato y pagó menos.','bad')}
+  if(Math.random()<badPlateP()){
+    const hk=G.team.find(x=>!x.absent&&!x.left&&hasT(x,'halcon'));
+    if(hk&&Math.random()<.7)toast(`${hk.name} detectó un insumo pasado y lo tiró antes de que llegue al plato.`,'good');
+    else{m*=.55;o.wrong=true;S.bad++;toast('Mercadería pasada: un cliente se quejó del plato y pagó menos.','bad')}
+  }
   if(o.siempre){if(Math.random()<.35){m*=1.3;toast('¡Eso mismo! Alguien adivinó "lo de siempre" (+30%).','good')}else{m*=.55;o.wrong=true;toast('"Esto no es lo de siempre", dijo el cliente. Pagó menos.','bad')}}
   if(o.vip){
     m*=2;
@@ -1398,8 +1446,9 @@ function taskStep(w,dt,spd){
     if(stage==='prep'){
       const d=o.dish;let need=d.ing;
       if(hasT(w,'ahorra')&&need>=2&&Math.random()<.5)need-=1;
+      if(hasT(w,'aprov')){w.apCnt=(w.apCnt||0)+1;if(w.apCnt%5===0&&need>=2){need-=1;toast(`${w.name} aprovechó todo: ahorró 1 insumo.`,'good')}}
       if(avail()<need){loseOrder(o,'insumos');return}
-      take(need);S.used+=need;o.stage='prep';
+      take(need);S.used+=need;o.stage='prep';if(hasT(w,'aprov')&&Math.random()<.2)o.raro=true;
       w.task={o,stage:'prep',rem:d.prep*(w.role==='cocinero'?1.5:1)};
     }else startCook(w,o);
   }
@@ -1425,14 +1474,22 @@ function workerStep(w,dt){
   if(w.pop>0)w.pop-=dt;
   if(w.status==='late'){w.lateT-=dt;w.waste+=dt;if(w.lateT<=0){w.status='ok';toast(`${w.name} llegó (tarde, como siempre).`,'')}return}
   if(w.status==='asleep'){w.sleepT-=dt;w.waste+=dt;if(w.sleepT<=0){w.status='ok';toast(`${w.name} se despertó solo.`,'')}return}
+  if(w.status==='nap'){w.napT-=dt;if(w.napT<=0&&(S.orders.some(x=>x.stage==='wait'||x.stage==='prepped')||S.t>=DAY_T)){w.status='ok';w.napBoost=25;w.idleT=0;toast(`${w.name} se despertó descansado: rinde 20% más por un rato.`,'good')}return}
   if(w.status==='confused'){w.confT-=dt;w.waste+=dt;if(w.confT<=0){w.status='ok';toast(`${w.name} entendió solo, pero tarde.`,'')}return}
   if(w.status==='smitten'){w.smitT-=dt;w.waste+=dt;if(w.smitT<=0){w.status='ok';toast(`${w.name} volvió a la realidad.`,'')}return}
   if(w.status==='interview'){w.waste+=dt;return}
   if(w.status==='fight'){w.fightT-=dt;w.waste+=dt;if(w.fightT<=0){w.status='ok';w.sat=clamp(w.sat-3,0,100);toast(`${w.name} dejó de pelear, pero sigue a los gritos.`,'')}return}
   if(w.status==='recover'){w.recT-=dt;w.waste+=dt;if(w.recT<=0){w.status='ok';w.focusT=w.afterF||0}return}
   if(w.status==='quitting'){w.quitT-=dt;w.waste+=dt;if(w.quitT<=0)leaveNow(w);return}
+  if(w.napBoost>0)w.napBoost-=dt;
+  if(hasT(w,'dormip')){
+    if(!w.napFell&&S.t>=w.napDay&&S.t<DAY_T-12){w.napFell=true;dropTask(w);w.status='asleep';w.sleepT=14;toast(`${w.name} se durmió en serio (una vez por día no falla).`,'warn');return}
+    const idle=!w.task&&(!w.jb||w.jb.k==='home')&&!w.working&&!S.orders.some(x=>x.stage==='wait'||x.stage==='prepped'||x.stage==='prep'||x.stage==='cook'||(x.stage==='cooked'&&!x.by));
+    w.idleT=idle?(w.idleT||0)+dt:0;
+    if(w.idleT>5){w.idleT=0;w.status='nap';w.napT=4;toast(`${w.name} no tiene laburo y se echó una siestita.`,'')}
+  }
   if(w.focusT>0)w.focusT-=dt;
-  const spd=.94*w.speed*spdMul(w)*(w.focusT>0?1.15:1)*(w.role==='cocinero'&&G.up.hood?1.12:1)*(S.heat?.9:1);
+  const spd=.94*w.speed*spdMul(w)*(w.napBoost>0?1.2:1)*(w.focusT>0?1.15:1)*(w.role==='cocinero'&&G.up.hood?1.12:1)*(S.heat?.9:1);
   w.working=false;w.blocked=false;
   if(w.jb){
     if(w.jb.k==='home'){const nj=findJob(w);if(nj)w.jb=nj}
@@ -1457,7 +1514,8 @@ function workerStep(w,dt){
       else if(!w.nav){const nj=findJob(w);if(nj){w.jb=nj;return}}
     }
     if(!w.nav)return;
-    if(!walkTo(w,w.nav.x,w.nav.y,dt,70*spd))return;
+    const cg=w.carry&&w.carry.tbl&&w.carry.tbl.g,slowK=(cg&&!cg.regular&&hasT(w,'conocido'))?1/1.1:1;
+    if(!walkTo(w,w.nav.x,w.nav.y,dt,70*spd*slowK))return;
     if(w.nav.ph==='pick'){w.carry.picked=true;w.nav={x:w.carry.tbl.x-8,y:w.carry.tbl.y-8,ph:'serve'}}
     else if(w.nav.ph==='serve'){deliver(w.carry,w);w.carry=null;w.done++;w.pop=.3;w.nav={x:w.home.x,y:w.home.y,ph:'home'};maybeConfuse(w,.05)}
     else w.nav=null;
@@ -1493,6 +1551,29 @@ function step(dt){
   });
   S.orders.slice().forEach(o=>{if(o.age>o.pat)loseOrder(o,'espera')});
   G.team.forEach(w=>workerStep(w,dt));
+  if(S.t<DAY_T-3)G.team.forEach(w=>{
+    if(w.absent||w.left)return;
+    if(tany(w,'clepto')){w.cleptT-=dt;if(w.cleptT<=0){
+      w.cleptT=R(22,40);let gone=null;const ri=S.rack.findIndex(k=>CUT.includes(k));
+      if(ri>=0)gone=S.rack.splice(ri,1)[0];
+      else{const it=S.sink.find(x=>CUT.includes(x.k)&&x.vis&&!x.by);if(it){gone=it.k;S.sink.splice(S.sink.indexOf(it),1);syncDirty()}}
+      const cost=RI(40,90);S.fines+=cost;S.cutCost=(S.cutCost||0)+cost;S.cutN=(S.cutN||0)+1;
+      toast(`${w.name} se guardó ${gone?'un '+UT[gone].n:'un cubierto'} en el bolsillo. Reponerlo cuesta ${money(cost)}.`,'warn');
+    }}
+    if(tany(w,'pelea')){w.peleaT-=dt;if(w.peleaT<=0){
+      w.peleaT=R(24,38);const cs=G.team.filter(x=>x.role==='cocinero'&&!x.absent&&!x.left);
+      if(cs.length){cs.sort((a,b)=>Math.hypot(a.home.x-w.home.x,a.home.y-w.home.y)-Math.hypot(b.home.x-w.home.x,b.home.y-w.home.y));const c=cs[0];c.sat=clamp(c.sat-1,0,100);toast(`${w.name} se peleó con ${c.name} por los tiempos de los pedidos (-1 de ánimo).`,'warn')}
+    }}
+    if(tany(w,'brindis')&&!w.copaDone&&w.status==='ok'){w.copaT-=dt;if(w.copaT<=0){
+      w.copaDone=true;toast(`${w.name} se tomó una copa en pleno servicio.`,'');
+      if(Math.random()<.1){
+        const cost=RI(100,180);S.fines+=cost;
+        if(w.carry&&S.orders.includes(w.carry)){const o=w.carry;o.stage='wait';o.by=null;o.picked=false;o.landed=false;o.cw=0;o.improv=null;w.carry=null;w.nav={x:w.home.x,y:w.home.y,ph:'home'};toast(`¡${w.name} dejó caer la bandeja! Se perdió ${o.dish.name}, hay que rehacerlo (-${money(cost)}).`,'bad')}
+        else toast(`¡${w.name} dejó caer una bandeja! Vajilla rota: ${money(cost)}.`,'bad');
+        sfx.alert();shakeStage();
+      }
+    }}
+  });
   if(G.up.lava&&S.power){S.lava=Math.min(S.lava+dt/2.5,1.4);while(S.lava>=1){const it=S.sink.find(x=>x.vis&&!x.by);if(!it){S.lava=1;break}S.lava-=1;S.sink.splice(S.sink.indexOf(it),1);syncDirty();S.cleaned++;rackAdd(it.k)}}
   if(open){
     S.loveT-=dt;if(S.loveT<=0){S.loveT=R(9,16);loveEvent()}
@@ -1543,6 +1624,7 @@ function statusInfo(w){
   if(w.absent)return{t:w.onVac?'De vacaciones':'Faltó hoy',k:'muted'};
   if(w.status==='late')return{t:`Llega en ${Math.ceil(w.lateT)} s`,k:'warn'};
   if(w.status==='asleep')return{t:'Se quedó dormido',a:'wake',b:'Despertar',k:'bad',g:PROB.asleep.g};
+  if(w.status==='nap')return{t:'Descansando: vuelve 20% más rápido',k:'good'};
   if(w.status==='interview')return{t:'En entrevista con el sindicato',k:'warn'};
   if(w.status==='fight')return{t:'Peleándose con un compañero',a:'unfight',b:'Separarlos',k:'bad',g:PROB.fight.g};
   if(w.status==='recover')return{t:`Reacomodándose (${Math.ceil(w.recT)} s)`,k:'warn'};
@@ -1677,6 +1759,8 @@ function endService(){
   }else sfx.coin();
   G.news=[];
   if(S.stolen)G.news.push({tone:'warn',text:'Se esfumaron '+money(S.stolen)+' de propinas. Alguien del equipo tiene la mano larga.'});
+  if(S.cutN)G.news.push({tone:'warn',text:`Desaparecieron ${S.cutN} cubierto${S.cutN>1?'s':''}: gasto extra de ${money(S.cutCost)}.`});
+  if(S.fiado)G.news.push({tone:'warn',text:`Hoy se fió ${money(S.fiado)}: mañana cobrás ese resto con 10% más (si los clientes vuelven).`});
   rows.forEach(r=>{
     const w=r.w;
     if(w.absent)return;
@@ -1688,7 +1772,7 @@ function endService(){
       w.wage=Math.round(w.wage*1.1/10)*10;w.sat=clamp(w.sat+8,0,100);
       report.ups.push(`${w.name} subió a nivel ${w.lvl}${w.lvl%5===0?' (elegís una ventaja)':''}`);
     }
-    const ratio=r.owed/w.wage;
+    const ratio=w.wage?r.owed/w.wage:1;
     let d=ratio>=1.1?5:ratio>=.95?1:ratio>=.8?-4:-9;
     if(d<0)d*=tmul(w,'quejoso');
     if(!tany(w,'noDist')&&!w.viat)d-=Math.max(0,(w.dist-3)/4);
@@ -1715,6 +1799,13 @@ function endService(){
   if(G.queue.length)sfx.alert();
   render();
 }
+function collectFiado(){
+  const l=G.fiadoCli||[];if(!l.length)return;
+  let got=0,lost=0;l.forEach(r=>{if(Math.random()<.12)lost+=r;else got+=Math.round(r*1.1)});
+  G.fiadoCli=[];G.cash+=got;
+  if(got)G.news.push({tone:'good',text:`Cobraste ${money(got)} de lo que se fió ayer (con 10% más).`});
+  if(lost)G.news.push({tone:'bad',text:`Hubo clientes que no volvieron a pagar: se perdieron ${money(lost)} de fiado.`});
+}
 function payDebt(){
   const d=G.debt||0;if(!d)return;const pay=Math.min(d,Math.max(0,G.cash));G.cash-=pay;const rest=d-pay;
   if(rest>0){G.debt=Math.round(rest*(1+FIADO.rate));G.news.push({tone:'bad',text:`No te alcanzó para pagarle a Don Rubén: le diste ${money(pay)} y le quedás debiendo ${money(G.debt)} (con 10% más).`})}
@@ -1727,7 +1818,7 @@ function supDaily(){
   });
 }
 function nextDay(){
-  G.day++;relDaily();supDaily();payDebt();G.stock=Math.floor(G.stock*KEEP[G.up.fridge]);
+  G.day++;relDaily();supDaily();payDebt();collectFiado();G.stock=Math.floor(G.stock*KEEP[G.up.fridge]);
   G.team.forEach(w=>{if(canPromo(w)&&ambitious(w)){w.wait=(w.wait||0)+1;if(w.wait>=2){w.sat=clamp(w.sat-3,0,100)}if(w.wait===3)G.news.push({tone:'warn',text:`${w.name} se enoja: lleva años de ${ROLES[w.role].label.toLowerCase()} y nunca lo ascendés.`})}});
   G.team.forEach(w=>{w.days++;if(G.up.ac)w.sat=clamp(w.sat+1,0,100)});
   G.team.forEach(w=>{w.sat=clamp(w.sat-1,0,100)});
@@ -1897,7 +1988,7 @@ function viewMorning(){
     }
     return `<div class="mrow"><canvas class="port" data-port="${w.id}"></canvas>
     <div><div><b>${w.name}</b> ${ROLES[w.role].label}, nivel ${w.lvl}${w.absent?(w.onVac?' <span class="good">(de vacaciones)</span>':' <span class="bad">(faltó hoy)</span>'):''}</div>
-    <div class="stats"><span>Sueldo ${money(w.wage)}/día</span><span>Vive a ${w.dist} km</span><span>Ánimo ${bar(satFrac,satFrac<.4?'var(--bad)':'var(--good)')}</span><span>XP ${w.xp}/${34*w.lvl}</span><span class="${sev?'warn':'good'}">Despedir: ${sev?money(sev):'con causa, $0'} · Renuncia: $0</span>${relHTML(w)}${w.strikes?`<span class="bad">Excusas truchas: ${w.strikes}</span>`:''}${p?`<span><img class="ic" src="${ICO.heart}" alt="" style="width:18px;height:18px"> Pareja: ${p.name}</span>`:''}</div>
+    <div class="stats"><span>Sueldo ${w.wage?money(w.wage)+'/día':'Gratis'}</span><span>Vive a ${w.dist} km</span><span>Ánimo ${bar(satFrac,satFrac<.4?'var(--bad)':'var(--good)')}</span><span>XP ${w.xp}/${34*w.lvl}</span><span class="${sev?'warn':'good'}">Despedir: ${sev?money(sev):'con causa, $0'} · Renuncia: $0</span>${relHTML(w)}${w.strikes?`<span class="bad">Excusas truchas: ${w.strikes}</span>`:''}${p?`<span><img class="ic" src="${ICO.heart}" alt="" style="width:18px;height:18px"> Pareja: ${p.name}</span>`:''}</div>
     ${traitBlock(w)}${exh}</div>
     <div class="rowbtns">
       <button class="btn small ghost" type="button" data-act="raise" data-id="${w.id}" ${w.raised?'disabled':''}>${w.raised?'Ya aumentó':'Dar aumento 10%'}</button>
@@ -1920,7 +2011,7 @@ function viewMorning(){
     <div class="hc-main"><canvas class="port" data-port="${w.id}"></canvas>
       <div class="hc-info">
         <div class="hc-name"><b class="nm">${w.name}</b><span class="pips" title="Nivel ${w.lvl}">${'<i></i>'.repeat(w.lvl)}</span></div>
-        <div class="hc-sub"><span class="rolebadge">${ROLES[w.role].label}</span>${need?'<span class="tagb good">FALTA</span>':''}<span class="hc-wg">${money(w.wage)}<small>/día</small></span></div>
+        <div class="hc-sub"><span class="rolebadge">${ROLES[w.role].label}</span>${need?'<span class="tagb good">FALTA</span>':''}<span class="hc-wg">${w.wage?money(w.wage)+'<small>/día</small>':'Gratis'}</span></div>
         <div class="hc-meta muted">${w.sex==='f'?'Mujer':'Varón'} · ${w.dist} km</div>
       </div></div>
     <div class="stats4">${statBars(w,true)}</div>
@@ -2172,7 +2263,7 @@ function buildScene(){
 }
 
 function drawWorker(c,w,now){
-  const asleep=w.status==='asleep',wk=w.working&&w.status==='ok';
+  const asleep=w.status==='asleep'||w.status==='nap',wk=w.working&&w.status==='ok';
   let bob=wk?((Math.floor(now*5+w.id)%2)?-1:0):0;
   if(!wk&&w.status==='ok')bob=(Math.floor(now*1.1+w.id*.7)%2)?-1:0;
   const hop=w.pop>0?Math.round(Math.sin((1-w.pop/.3)*Math.PI)*3):0;
@@ -2670,12 +2761,16 @@ function buildServiceDOM(){
     <button class="btn small ghost" type="button" data-svc="speed" id="sv-speed">Velocidad 1x</button>
   </div>
   <div class="tickets" id="sv-tickets"><span class="muted" id="sv-tk-none">Sin pedidos en espera.</span></div>
+  <div class="svmain">
+  <div class="svleft">
   <div class="stage"><canvas id="cv" width="${CW}" height="${CH}" aria-label="Cocina en servicio"></canvas></div>
-  <section class="panel"><h2>Tu equipo en servicio</h2><div id="sv-team">${G.team.map(w=>`<div class="trow" id="tr-${w.id}">
+  <section class="panel svlog"><h2>Qué está pasando</h2><div id="sv-log" aria-live="polite"></div></section>
+  </div>
+  <section class="panel svteam"><h2>Tu equipo en servicio</h2><div id="sv-team">${G.team.map(w=>`<div class="trow" id="tr-${w.id}">
     <canvas class="port" data-port="${w.id}"></canvas>
     <div><b>${w.num}. ${w.name}</b> <span class="muted">${ROLES[w.role].label}, nivel ${w.lvl}</span><div class="tst muted"></div></div>
     <div class="rowbtns"><button class="btn small" type="button" data-svc="act" data-id="${w.id}" hidden></button><button class="btn small ghost" type="button" data-svc="act" data-id="${w.id}" hidden></button></div></div>`).join('')}</div></section>
-  <section class="panel"><h2>Qué está pasando</h2><div id="sv-log" aria-live="polite"></div></section>`;
+  </div>`;
   cv=$('#cv');ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
   if(!BG)buildScene();
   cv.addEventListener('pointerdown',ev=>{

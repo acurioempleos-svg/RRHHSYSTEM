@@ -288,8 +288,9 @@ body,button,.tchip{touch-action:manipulation;-webkit-tap-highlight-color:transpa
 <li>Elegís entre cartas de candidatos. Pasá el mouse (o tocá) una etiqueta para ver su ventaja y su desventaja.</li>
 <li>Los candidatos quedan guardados, pero por cada día que pasa hay 10% más de chance de que, al querer contratarlo, te diga que ya consiguió laburo en otro lado. Cada mañana entran 3 nuevos (máximo 12 en la lista). Podés descartar a los que no te sirven y filtrar por puesto.</li>
 <li>Cuando alguien falta, decidís si le creés (y le pagás el día) o se lo descontás. A veces dicen la verdad.</li>
-<li>Después comprás insumos. Lo barato sale caro cuando no llega.</li>
+<li>Después comprás insumos. Cada proveedor tiene precio, calidad y riesgo distintos: lo barato rinde menos por plato y a veces no llega; lo caro cobra más y no se pudre. Fijate el costo real por insumo.</li>
 <li>Los sueldos salen de la caja del día. Cada 7 días vence el alquiler: si no llegás, te echan.</li>
+<li>Don Rubén te fía (la mitad hoy, el resto mañana con 10% de interés). Si le comprás seguido a un proveedor te baja el precio y falla menos; si lo dejás de visitar, se olvida de vos. Si necesitás plata, pedí un adelanto de caja (caro) o, si cerrás en negativo, te dan uno de emergencia.</li>
 <li>Con tu plata comprás mejoras: lavavajillas, heladera, extractor y aire acondicionado.</li></ul></details>
 <details><summary>Quién hace qué</summary><ul>
 <li><b>Ayudante:</b> prepara los pedidos. <b>Cocinero:</b> cocina. <b>Bachero:</b> lava la vajilla y lleva los platos cocinados hasta el pase. <b>Camarero:</b> lleva los platos a las mesas. <b>Cajero:</b> cobra caminando hasta cada mesa.</li>
@@ -386,24 +387,51 @@ const LOCALS=[
   {name:'Restó',slots:8,tb:8,rep:190,meta:4000,rent:7250},
   {name:'Estrella',slots:9,tb:8,rep:300,meta:5000,rent:9500}
 ];
+const START_CASH=4000;
+const REL_TIERS=[{p:3,name:'Cliente',disc:.03,fail:.8},{p:8,name:'Cliente fiel',disc:.06,fail:.5},{p:15,name:'Socio',disc:.09,fail:.2}];
+const REL_MIN=10;
+const REL_IDLE=3;
+const FIADO={now:.5,rate:.10};
+const LOAN={offers:[1000,2500],rate:.30,days:3,rescueRate:.35,rescueBuffer:500,rescueEvery:7};
 const RENT_EVERY=7;
 const SUPPLIERS=[
-  {id:'feria',name:'Feria del Barrio',base:24,bulk:[30,.12],fail:[.2,.75],note:'Precio de oferta y 12% menos desde 30 insumos, pero 1 de cada 5 veces falta mercadería.'},
-  {id:'ruben',name:'Don Rubén',base:27,fail:[.33,.6],note:'Barato, pero 1 de cada 3 veces llega incompleto.'},
-  {id:'mayor',name:'Mayorista Central',base:34,bulk:[50,.1],note:'Precio justo. Llega todo lo que pedís y 10% menos desde 50 insumos.'},
-  {id:'fresco',name:'Verdulería Fresca',base:45,fresh:true,note:'Caro, pero lo que sobra no se echa a perder de un día al otro.'},
-  {id:'express',name:'Delivery Express',base:62,fresh:true,extra:.1,note:'El más caro: todo fresco y siempre manda 10% de regalo.'}
+  {id:'feria',name:'Feria del Barrio',base:20,q:.35,bulk:[30,.12],fail:[.2,.75],note:'El más barato, sobre todo desde 30 insumos. Mercadería regular (los platos se cobran menos y algún plato sale pasado) y 1 de cada 5 veces falta.'},
+  {id:'ruben',name:'Don Rubén',base:29,q:.5,fail:[.1,.8],fiado:true,note:'Precio medio y calidad pasable. Sin descuento por cantidad. 1 de cada 10 veces llega incompleto. Te fía: pagás la mitad hoy y el resto mañana con 10% de interés.'},
+  {id:'mayor',name:'Mayorista Central',base:36,q:.7,bulk:[50,.1],note:'Buena calidad y siempre cumple. 10% menos desde 50 insumos. La opción segura.'},
+  {id:'fresco',name:'Verdulería Fresca',base:56,q:.9,fresh:true,note:'Producto de primera: los platos se cobran más y lo que sobra no se echa a perder de un día al otro.'},
+  {id:'express',name:'Delivery Express',base:70,q:1,fresh:true,extra:.1,note:'Lo mejor de lo mejor: calidad máxima, todo fresco y manda 10% de regalo. Es el más caro.'}
 ];
+const supRec=id=>{G.sup=G.sup||{};return G.sup[id]=G.sup[id]||{p:0,idle:0}};
+const relLvl=id=>{const p=supRec(id).p;let l=0;REL_TIERS.forEach((t,i)=>{if(p>=t.p)l=i+1});return l};
+const relDisc=s=>relLvl(s.id)?REL_TIERS[relLvl(s.id)-1].disc:0;
+const relFail=s=>relLvl(s.id)?REL_TIERS[relLvl(s.id)-1].fail:1;
+const supFail=s=>s.fail?s.fail[0]*relFail(s):0;
+const supDeliv=s=>((s.fail?1-supFail(s)+supFail(s)*s.fail[1]:1)*(1+(s.extra||0)));
+const supUnit=(s,q)=>G.prices[s.id]*(s.bulk&&q>=s.bulk[0]?1-s.bulk[1]:1)*(1-relDisc(s));
+const loanOffers=()=>LOAN.offers.map(a=>Math.round(a*(1+.6*G.lvl)/100)*100);
+const qualMult=()=>.85+.3*clamp(G.qual===undefined?.5:G.qual,0,1);
+const badPlateP=()=>Math.max(0,.5-(G.qual===undefined?.5:G.qual))*.3;
 const newBuy=()=>Object.fromEntries(SUPPLIERS.map(s=>[s.id,0]));
-const buyCost=(s,q)=>Math.round(q*G.prices[s.id]*(s.bulk&&q>=s.bulk[0]?1-s.bulk[1]:1));
+const buyCost=(s,q)=>Math.round(q*supUnit(s,q));
 const needNow=()=>{const m=menu(),ai=m.reduce((a,d)=>a+d.ing,0)/m.length;return Math.round(expectedOrders()*ai)};
-function doBuy(id){
+function doBuy(id,fiado){
   const s=SUPPLIERS.find(x=>x.id===id),q=G.buy[id];if(!s||q<=0)return false;
-  const cost=buyCost(s,q);if(cost>G.cash)return false;
-  G.cash-=cost;let got=q;
-  if(s.fail&&Math.random()<s.fail[0]){got=Math.floor(q*s.fail[1]);G.buyMsg.unshift({tone:'bad',text:`${s.name} llegó incompleto: pagaste ${q} y recibiste ${got}.`})}
-  else{const ex=s.extra?Math.floor(q*s.extra):0;got+=ex;G.buyMsg.unshift({tone:'good',text:`${s.name} entregó ${got} insumos${ex?' (con '+ex+' de regalo)':''}.`})}
+  const cost=buyCost(s,q),fi=!!(fiado&&s.fiado);
+  const now=fi?Math.round(cost*FIADO.now):cost,later=fi?Math.round((cost-now)*(1+FIADO.rate)):0;
+  if(now>G.cash)return false;
+  G.cash-=now;if(later)G.debt=(G.debt||0)+later;
+  let got=q;const had=avail(),q0=G.qual===undefined?.5:G.qual,c0=G.unitCost===undefined?28:G.unitCost;
+  if(s.fail&&Math.random()<supFail(s)){got=Math.floor(q*s.fail[1]);G.buyMsg.unshift({tone:'bad',text:`${s.name} llegó incompleto: pagaste ${q} y recibiste ${got}.`})}
+  else{const ex=s.extra?Math.floor(q*s.extra):0;got+=ex;G.buyMsg.unshift({tone:'good',text:`${s.name} entregó ${got} insumos${ex?' (con '+ex+' de regalo)':''}${fi?`. Fiado: hoy pagaste ${money(now)} y mañana ${money(later)}`:''}.`})}
   if(s.fresh)G.fresh+=got;else G.stock+=got;
+  G.qual=(q0*had+s.q*got)/Math.max(1,had+got);
+  G.unitCost=(c0*had+now+later)/Math.max(1,had+got);
+  G.dayBuy=G.dayBuy||{cost:0,got:0,bought:0};G.dayBuy.cost+=now+later;G.dayBuy.got+=got;G.dayBuy.bought+=q;
+  G.supToday=G.supToday||{};
+  if(q>=REL_MIN&&!G.supToday[id]){
+    G.supToday[id]=1;const r=supRec(id),l0=relLvl(id);r.p++;r.idle=0;
+    if(relLvl(id)>l0){const t=REL_TIERS[relLvl(id)-1];G.buyMsg.unshift({tone:'good',text:`${s.name} te trata como «${t.name}»: ${Math.round(t.disc*100)}% menos de precio y ${t.fail<=.2?'casi nunca falla':'falla menos'}.`})}
+  }
   G.buy[id]=0;return true;
 }
 /* ====== mejoras del local ====== */
@@ -680,7 +708,7 @@ let G=null, S=null, uid=1, raf=0, lastT=0, lastDom=0;
 
 function newGame(){
   uid=1;
-  G={day:1,cash:2000,rep:0,lvl:0,stock:15,fresh:0,team:[],cands:[],news:[],queue:[],phase:'morning',buy:newBuy(),buyMsg:[],prices:{},confirm:null,report:null,won:false,rerolls:0,up:{lava:0,fridge:0,hood:0,ac:0},event:null};
+  G={day:1,cash:START_CASH,rep:0,lvl:0,stock:15,fresh:0,qual:.5,unitCost:28,sup:{},debt:0,loan:null,dayBuy:{cost:0,got:0,bought:0},supToday:{},team:[],cands:[],news:[],queue:[],phase:'morning',buy:newBuy(),buyMsg:[],prices:{},confirm:null,report:null,won:false,rerolls:0,up:{lava:0,fridge:0,hood:0,ac:0},event:null};
   G.team.push(makeWorker('bachero',{starter:true}),makeWorker('ayudante',{starter:true}),makeWorker('cocinero',{starter:true}));
 }
 function usedNames(){return G.team.concat(G.cands).map(w=>w.name)}
@@ -928,7 +956,7 @@ function startMorning(){
   loveDaily();
   genCands();G.rerolls=0;
   SUPPLIERS.forEach(s=>G.prices[s.id]=Math.round(s.base*R(.85,1.15)));
-  G.buy=newBuy();G.buyMsg=[];
+  G.buy=newBuy();G.buyMsg=[];G.dayBuy={cost:0,got:0,bought:0};G.supToday={};
   render();
 }
 
@@ -1178,7 +1206,7 @@ function loseOrder(o,why){
     S.leaving.push(leaveEntry(o.tbl,g,true));say(o.tbl.x,o.tbl.y-32,pick(PH.leave));o.tbl.g=null;
   }
   G.team.forEach(w=>{if(w.task&&w.task.o===o)w.task=null});
-  S.lost++;sfx.alert();shakeStage();
+  S.lost++;if(why==='insumos')S.noIns=(S.noIns||0)+1;sfx.alert();shakeStage();
   S.floats.push({x:341,y:80,t:0,text:'X',col:'#ff5a6e'});
   toast(why==='insumos'?`Faltaron insumos: se perdió un pedido de ${o.dish.name}.`:`Un cliente se cansó de esperar ${o.dish.name} y se fue.`,'bad');
   if(o.vip){S.repExtra-=10;evToast('El crítico se fue sin probar bocado y lo cuenta en su blog (-10 reputación).','bad')}
@@ -1205,6 +1233,8 @@ function serve(w,o){
     else{m=.5;badI=true;S.bad++;w.bad++;toast(`${w.name} hizo el plato a su manera. El cliente puso cara.`,'bad')}
   }
   m*=tmul(w,'price');
+  m*=qualMult();
+  if(Math.random()<badPlateP()){m*=.55;o.wrong=true;S.bad++;toast('Mercadería pasada: un cliente se quejó del plato y pagó menos.','bad')}
   if(o.siempre){if(Math.random()<.35){m*=1.3;toast('¡Eso mismo! Alguien adivinó "lo de siempre" (+30%).','good')}else{m*=.55;o.wrong=true;toast('"Esto no es lo de siempre", dijo el cliente. Pagó menos.','bad')}}
   if(o.vip){
     m*=2;
@@ -1617,13 +1647,19 @@ function endService(){
   extra+=S.fines;
   const rentDue=G.day%RENT_EVERY===0,rent=rentDue?L.rent:0;
   const before=G.cash+rev-owedTotal-extra;
-  const cashAfter=before-rent;
+  const loanDue=G.loan&&G.day>=G.loan.due?G.loan.amt:0;
+  let cashAfter=before-rent-loanDue,rescue=null;
+  if(cashAfter<0&&!G.loan&&G.day-(G.rescueDay===undefined?-99:G.rescueDay)>=LOAN.rescueEvery){
+    const amt=Math.ceil((-cashAfter+LOAN.rescueBuffer)/100)*100,repay=Math.round(amt*(1+LOAN.rescueRate));
+    G.loan={amt:repay,due:G.day+LOAN.days,emergency:true};G.rescueDay=G.day;cashAfter+=amt;rescue={amt,repay,due:G.loan.due};
+  }
+  const uc=G.unitCost===undefined?28:G.unitCost,costUsed=Math.round(S.used*uc),merma=Math.round(G.stock*(1-KEEP[G.up.fridge]));
   const metaOk=rev>=L.meta;
   const repGain=Math.round(S.served*.5-2*S.lost+(metaOk?8:0)+S.great-S.bad+S.repExtra);
-  const report={rev,owedTotal,extra,bonus:S.bonus,rent,rentDue,net:rev-owedTotal-extra-S.bonus-rent,served:S.served,lost:S.lost,used:S.used,meta:L.meta,metaOk,rep:{before:G.rep,gain:repGain},rows,great:S.great,bad:S.bad,ev:G.event?{name:G.event.name,notes:S.evNotes.slice()}:null,cashAfter,levelUp:null,broke:false,rentFail:false,ups:[]};
+  const report={rev,owedTotal,extra,bonus:S.bonus,rent,rentDue,net:rev-owedTotal-extra-S.bonus-rent-loanDue,loanPay:loanDue,rescue,loanFail:false,costUsed,unitCost:uc,buyCost:(G.dayBuy&&G.dayBuy.cost)||0,buyGot:(G.dayBuy&&G.dayBuy.got)||0,qual:G.qual===undefined?.5:G.qual,qualM:qualMult(),noIns:S.noIns||0,merma,mermaCost:Math.round(merma*uc),served:S.served,lost:S.lost,used:S.used,meta:L.meta,metaOk,rep:{before:G.rep,gain:repGain},rows,great:S.great,bad:S.bad,ev:G.event?{name:G.event.name,notes:S.evNotes.slice()}:null,cashAfter,levelUp:null,broke:false,rentFail:false,ups:[]};
   G.report=report;
-  if(cashAfter<0){report.broke=true;report.rentFail=rentDue&&before>=0;G.cash=cashAfter;G.phase='over';clearSave();render();sfx.sad();return}
-  G.cash=cashAfter;
+  if(cashAfter<0){report.broke=true;report.loanFail=loanDue>0;report.rentFail=rentDue&&before>=0&&!loanDue;G.cash=cashAfter;G.phase='over';clearSave();render();sfx.sad();return}
+  G.cash=cashAfter;if(loanDue>0)G.loan=null;
   G.rep=Math.max(0,G.rep+repGain);
   {const tgt=weekGoal();G.wk.rev+=rev;G.wk.sv+=S.served;
    if(G.day%RENT_EVERY===0){
@@ -1679,8 +1715,19 @@ function endService(){
   if(G.queue.length)sfx.alert();
   render();
 }
+function payDebt(){
+  const d=G.debt||0;if(!d)return;const pay=Math.min(d,Math.max(0,G.cash));G.cash-=pay;const rest=d-pay;
+  if(rest>0){G.debt=Math.round(rest*(1+FIADO.rate));G.news.push({tone:'bad',text:`No te alcanzó para pagarle a Don Rubén: le diste ${money(pay)} y le quedás debiendo ${money(G.debt)} (con 10% más).`})}
+  else{G.debt=0;G.news.push({tone:'warn',text:`Le pagaste ${money(d)} a Don Rubén por lo que te fió.`})}
+}
+function supDaily(){
+  SUPPLIERS.forEach(sp=>{const r=supRec(sp.id);
+    if(G.supToday&&G.supToday[sp.id])r.idle=0;
+    else{r.idle++;if(r.idle>=REL_IDLE&&r.p>0){const l0=relLvl(sp.id);r.p--;r.idle=0;if(relLvl(sp.id)<l0)G.news.push({tone:'warn',text:`${sp.name} se olvidó de vos: dejaste de comprarle y perdiste el trato.`})}}
+  });
+}
 function nextDay(){
-  G.day++;relDaily();G.stock=Math.floor(G.stock*KEEP[G.up.fridge]);
+  G.day++;relDaily();supDaily();payDebt();G.stock=Math.floor(G.stock*KEEP[G.up.fridge]);
   G.team.forEach(w=>{if(canPromo(w)&&ambitious(w)){w.wait=(w.wait||0)+1;if(w.wait>=2){w.sat=clamp(w.sat-3,0,100)}if(w.wait===3)G.news.push({tone:'warn',text:`${w.name} se enoja: lleva años de ${ROLES[w.role].label.toLowerCase()} y nunca lo ascendés.`})}});
   G.team.forEach(w=>{w.days++;if(G.up.ac)w.sat=clamp(w.sat+1,0,100)});
   G.team.forEach(w=>{w.sat=clamp(w.sat-1,0,100)});
@@ -1757,6 +1804,7 @@ function loadGame(){
   try{
     const de=w=>{w.traits=w.traits.map(id=>{const t=TRAITS.find(x=>x.id===id);if(t)return t;const p=PERKS.find(x=>x.id===id);return p?Object.assign({id:p.id,name:p.name,good:p.desc,bad:'',perk:true},p.t||{}):null}).filter(Boolean);return w};
     G=d.G;G.team=G.team.map(de);G.cands=G.cands.map(de);uid=d.uid;
+    if(G.qual===undefined)G.qual=.5;if(G.unitCost===undefined)G.unitCost=28;G.sup=G.sup||{};G.debt=G.debt||0;G.dayBuy=G.dayBuy||{cost:0,got:0,bought:0};G.supToday=G.supToday||{};
     if(G.event){G.event=EVENTS.find(x=>x.id===G.event.id)||null}
     if(G.phase!=='buy')G.phase='morning';
     return true;
@@ -1817,6 +1865,13 @@ function vacHTML(){
 }
 function evBanner(){
   return G.event?`<div class="banner ev"><b class="px" style="font-size:11px">Hoy: ${G.event.name}</b><br>${G.event.news}</div>`:'';
+}
+function loanHTML(){
+  const L=G.loan;
+  const body=L?`<p class="muted">Tenés un adelanto pendiente: devolvés <b>${money(L.amt)}</b> al cierre del día ${L.due}${L.emergency?' (era el de emergencia)':''}. No podés pedir otro hasta pagarlo.</p>`
+   :`<p class="muted">Plata ya, a devolver con ${Math.round(LOAN.rate*100)}% de interés al cierre del día ${G.day+LOAN.days}. Si la caja queda en negativo al cerrar, te dan uno de emergencia a +${Math.round(LOAN.rescueRate*100)}% (una vez cada ${LOAN.rescueEvery} días) en vez de la quiebra.</p>
+   <div class="rowbtns row">${loanOffers().map(a=>`<button class="btn small ghost" type="button" data-act="loan" data-amt="${a}">Pedir ${money(a)} (devolvés ${money(Math.round(a*(1+LOAN.rate)))})</button>`).join('')}</div>`;
+  return `<section class="panel"><h2>Adelanto de caja</h2>${body}</section>`;
 }
 function upgradesHTML(){
   const rows=UPS.map(u=>{
@@ -1895,15 +1950,15 @@ function viewMorning(){
 function viewBuy(){
   const rec=Math.round(needNow()*1.1),left=rentLeft();
   const inCart=SUPPLIERS.reduce((a,x)=>a+G.buy[x.id],0),total=SUPPLIERS.reduce((a,x)=>a+buyCost(x,G.buy[x.id]),0);
-  const have=avail()+inCart,cheap=SUPPLIERS.reduce((a,b)=>G.prices[a.id]<=G.prices[b.id]?a:b).id;
+  const have=Math.round(avail()+SUPPLIERS.reduce((a,x)=>a+G.buy[x.id]*supDeliv(x),0)),cheap=SUPPLIERS.reduce((a,b)=>G.prices[a.id]/supDeliv(a)<=G.prices[b.id]/supDeliv(b)?a:b).id,qd=Math.round(clamp(G.qual===undefined?.5:G.qual,0,1)*100);
   const sups=SUPPLIERS.map(s=>{
     const q=G.buy[s.id],p=G.prices[s.id],c=buyCost(s,q),u=q>0?Math.round(c/q):p;
     const bt=d=>`<button class="btn small ghost" type="button" data-act="qty" data-id="${s.id}" data-d="${d}" ${q+d<0?'disabled':''}>${d>0?'+'+d:d}</button>`;
-    return `<div class="sup buy"><div><b>${s.name}</b> ${s.id===cheap?'<span class="tagb good">MÁS BARATO</span>':''}${s.fresh?'<span class="tagb fr">FRESCO</span>':''}${s.bulk?`<span class="tagb">-${Math.round(s.bulk[1]*100)}% desde ${s.bulk[0]}</span>`:''}${s.fail?'<span class="tagb bad">RIESGO</span>':''}
-    <div>Hoy ${money(u)} por insumo${q>0&&u<p?' <span class="good">(con descuento)</span>':''}</div><div class="muted">${s.note}</div></div>
+    return `<div class="sup buy"><div><b>${s.name}</b> ${s.id===cheap?'<span class="tagb good">MÁS BARATO</span>':''}<span class="tagb">CALIDAD ${Math.round(s.q*100)}%</span>${s.fiado?'<span class="tagb">FÍA</span>':''}${relLvl(s.id)?`<span class="tagb good">${REL_TIERS[relLvl(s.id)-1].name.toUpperCase()}</span>`:''}${s.fresh?'<span class="tagb fr">FRESCO</span>':''}${s.bulk?`<span class="tagb">-${Math.round(s.bulk[1]*100)}% desde ${s.bulk[0]}</span>`:''}${s.fail?'<span class="tagb bad">RIESGO</span>':''}
+    <div>Hoy ${money(u)} por insumo${q>0&&u<p?' <span class="good">(con descuento)</span>':''} · costo real ${money(Math.round(supUnit(s,q||1)/supDeliv(s)))} por insumo útil</div><div class="muted">${s.note}</div>${(()=>{const r=supRec(s.id),l=relLvl(s.id),nx=REL_TIERS[l];return `<div class="muted">Trato: ${r.p} compras${nx?` · próximo nivel «${nx.name}» a las ${nx.p} (${Math.round(nx.disc*100)}% menos y menos fallas)`:' · nivel máximo'}. Comprá ${REL_MIN}+ insumos por día para sumar.</div>`})()}</div>
     <div class="qty">${bt(-10)}${bt(-5)}${bt(-1)}<span class="n">${q}</span>${bt(1)}${bt(5)}${bt(10)}
     <button class="btn small ghost" type="button" data-act="fill" data-id="${s.id}">Lo que falta</button>
-    <button class="btn small" type="button" data-act="buy" data-id="${s.id}" ${q<=0||c>G.cash?'disabled':''}>Comprar ${q>0?money(c):''}</button></div></div>`;
+    <button class="btn small" type="button" data-act="buy" data-id="${s.id}" ${q<=0||c>G.cash?'disabled':''}>Comprar ${q>0?money(c):''}</button>${s.fiado?`<button class="btn small" type="button" data-act="buy" data-id="${s.id}" data-fiado="1" ${q<=0||Math.round(c*FIADO.now)>G.cash?'disabled':''}>Fiado ${q>0?money(Math.round(c*FIADO.now))+' hoy':''}</button>`:''}</div></div>`;
   }).join('');
   const present=G.team.filter(w=>!w.absent),warn=[];
   if(!present.some(w=>w.role==='cocinero'))warn.push('Hoy no hay ningún cocinero. No va a salir ningún plato.');
@@ -1912,6 +1967,8 @@ function viewBuy(){
   if(!present.some(w=>w.role==='bachero'))warn.push('Hoy no hay bachero. La vajilla sucia se va a acumular.');
   return `<section class="panel"><h2>Compras</h2>
   <div class="kv"><span>Insumos en depósito</span><b>${G.stock}${G.fresh?` (+${G.fresh} frescos)`:''}</b></div>
+  ${G.debt?`<div class="kv"><span>Le debés a Don Rubén (mañana)</span><b class="bad">${money(G.debt)}</b></div>`:''}
+  <div class="kv"><span>Calidad del depósito</span><b class="${qd<40?'bad':qd>=70?'good':''}">${qd}%${qd<40?' (platos más baratos y riesgo de platos pasados)':''}</b></div>
   <div class="kv"><span>Pedidos que se esperan hoy</span><b>unos ${expectedOrders()} (varía)</b></div>
   <div class="kv"><span>Recomendado para hoy</span><b>${rec}</b></div>
   <div class="kv"><span>Cobertura con tu carrito</span>${bar(have/rec,have>=rec?'#0f9d62':have>=rec*.7?'#d98c00':'#d2263d')}<b>${have}/${rec}</b></div>
@@ -1923,6 +1980,7 @@ function viewBuy(){
   <button class="btn small ghost" type="button" data-act="clear" ${inCart?'':'disabled'}>Vaciar</button>
   <button class="btn small" type="button" data-act="buyAll" ${inCart&&total<=G.cash?'':'disabled'}>Comprar todo</button></div></section>
   ${upgradesHTML()}
+  ${loanHTML()}
   ${evBanner()}
   ${warn.length?`<div class="banner bad">${warn.join('<br>')}</div>`:''}
   <div class="actions"><button class="btn ghost" type="button" data-act="toMorning">Volver al equipo</button><button class="btn" type="button" data-act="open">Abrir el local</button></div>`;
@@ -1950,15 +2008,26 @@ function viewClose(){
   <div class="kv"><span>Pedidos servidos</span><b>${r.served}</b></div>
   <div class="kv"><span>Pedidos perdidos</span><b class="${r.lost?'bad':''}">${r.lost}</b></div>
   <div class="kv"><span>Insumos usados</span><b>${r.used}</b></div>
+  ${r.noIns?`<div class="kv"><span>Pedidos perdidos por falta de insumos</span><b class="bad">${r.noIns}</b></div>`:''}
   <div class="kv"><span>Recaudación</span><b>${money(r.rev)}</b></div>
   <div class="kv"><span>Sueldos pagados con la caja</span><b>${money(-r.owedTotal)}</b></div>
   ${r.extra?`<div class="kv"><span>Platos rotos, multas y otros gastos</span><b class="bad">${money(-r.extra)}</b></div>`:''}
   ${r.bonus?`<div class="kv"><span>Bonos pagados en servicio</span><b class="bad">${money(-r.bonus)}</b></div>`:''}
   ${r.rentDue?`<div class="kv"><span>Alquiler pagado</span><b class="bad">${money(-r.rent)}</b></div>`:''}
+  ${r.loanPay?`<div class="kv"><span>Adelanto devuelto</span><b class="bad">${money(-r.loanPay)}</b></div>`:''}
   <div class="kv"><span>Resultado del día</span><b class="${r.net<0?'bad':'good'}">${money(r.net)}</b></div>
   <div class="kv"><span>Meta del día ${money(r.meta)}</span><b class="${r.metaOk?'good':'warn'}">${r.metaOk?'Cumplida (+8 reputación)':'No se llegó'}</b></div>
   <div class="kv"><span>Reputación</span><b>${r.rep.gain>=0?'+':''}${r.rep.gain}</b></div>
   ${r.great||r.bad?`<p class="muted">Recetas inventadas: ${r.great} salieron bien, ${r.bad} salieron mal.</p>`:''}</section>
+  <section class="panel"><h2>Mercadería</h2>
+  <div class="kv"><span>Comprado hoy</span><b>${r.buyGot} insumos por ${money(r.buyCost)}</b></div>
+  <div class="kv"><span>Costo por insumo (promedio del depósito)</span><b>${money(Math.round(r.unitCost))}</b></div>
+  <div class="kv"><span>Costo de lo que se usó</span><b class="bad">${money(-r.costUsed)}</b></div>
+  <div class="kv"><span>Ganancia por plato (sin sueldos)</span><b class="${r.served&&r.rev-r.costUsed<0?'bad':'good'}">${r.served?money(Math.round((r.rev-r.costUsed)/r.served)):'-'}</b></div>
+  <div class="kv"><span>Calidad del depósito</span><b>${Math.round(r.qual*100)}% (platos ${r.qualM>=1?'+':''}${Math.round((r.qualM-1)*100)}%)</b></div>
+  <div class="kv"><span>Resultado real (con mercadería)</span><b class="${r.net-r.costUsed<0?'bad':'good'}">${money(r.net-r.costUsed)}</b></div>
+  ${r.merma?`<p class="muted">Esta noche se van a echar a perder ${r.merma} insumos (unos ${money(r.mermaCost)}).</p>`:''}</section>
+  ${r.rescue?`<div class="banner bad"><b class="px" style="font-size:11px">Adelanto de emergencia</b><br>La caja quedaba en negativo y te prestaron ${money(r.rescue.amt)}. Devolvés ${money(r.rescue.repay)} al cierre del día ${r.rescue.due}.</div>`:''}
   ${r.ev?`<div class="banner"><b class="px" style="font-size:11px">${r.ev.name}</b>${r.ev.notes.map(n=>`<div class="${n.tone||''}">${n.text}</div>`).join('')}</div>`:''}
   ${r.levelUp?`<div class="banner good"><b class="px" style="font-size:12px">¡El local sube a nivel ${r.levelUp.n}: ${r.levelUp.name}!</b><br>Ahora hay ${r.levelUp.slots} puestos${r.levelUp.dishes.length?' y entra al menú: '+r.levelUp.dishes.join(', '):''}. Los precios suben y llega más gente. El alquiler pasa a ${money(r.levelUp.rent)}.</div>`:''}
   ${r.won?`<div class="banner good"><b class="px" style="font-size:12px">¡Llegaste al nivel máximo!</b><br>Tu local es una Estrella. Podés seguir jugando todo lo que quieras.</div>`:''}
@@ -1969,7 +2038,7 @@ function viewClose(){
 }
 function viewOver(){
   const r=G.report;
-  const why=r.rentFail?`El día ${G.day} no pudiste pagar el alquiler (${money(r.rent)}) y el dueño te pidió las llaves.`:`El día ${G.day} la recaudación (${money(r.rev)}) no alcanzó para cubrir sueldos${r.extra?' y gastos':''}${r.rentDue?' y alquiler':''} y la caja quedó en ${money(r.cashAfter)}.`;
+  const why=r.loanFail?`El día ${G.day} no pudiste devolver el adelanto de caja (${money(r.loanPay)}) y se quedaron con el local.`:r.rentFail?`El día ${G.day} no pudiste pagar el alquiler (${money(r.rent)}) y el dueño te pidió las llaves.`:`El día ${G.day} la recaudación (${money(r.rev)}) no alcanzó para cubrir sueldos${r.extra?' y gastos':''}${r.rentDue?' y alquiler':''} y la caja quedó en ${money(r.cashAfter)}.`;
   return `<section class="panel title"><h1 style="font-size:clamp(20px,5vw,32px)">QUIEBRA</h1>
   <p>${why}</p>
   <p class="muted">Llegaste al nivel ${G.lvl+1} (${LOCALS[G.lvl].name}) con ${G.rep} de reputación.</p>
@@ -2760,9 +2829,10 @@ const ACT={
   toBuy(){sfx.click();G.phase='buy';render()},
   toMorning(){sfx.click();G.phase='morning';render()},
   qty(d){G.buy[d.id]=Math.max(0,G.buy[d.id]+(+d.d));sfx.click();render(true)},
-  fill(d){const o=SUPPLIERS.reduce((a,x)=>a+(x.id===d.id?0:G.buy[x.id]),0);G.buy[d.id]=Math.max(0,Math.round(needNow()*1.1)-avail()-o);sfx.click();render(true)},
+  fill(d){const sp=SUPPLIERS.find(x=>x.id===d.id),o=SUPPLIERS.reduce((a,x)=>a+(x.id===d.id?0:G.buy[x.id]*supDeliv(x)),0);G.buy[d.id]=Math.max(0,Math.ceil((Math.round(needNow()*1.1)-avail()-o)/supDeliv(sp)));sfx.click();render(true)},
   clear(){G.buy=newBuy();sfx.click();render(true)},
-  buy(d){if(doBuy(d.id))sfx.coin();render(true)},
+  buy(d){if(doBuy(d.id,!!d.fiado))sfx.coin();render(true)},
+  loan(d){const a=+d.amt;if(G.loan||!a)return;G.cash+=a;G.loan={amt:Math.round(a*(1+LOAN.rate)),due:G.day+LOAN.days};G.buyMsg.unshift({tone:'warn',text:`Pediste un adelanto de ${money(a)}. Tenés que devolver ${money(G.loan.amt)} al cierre del día ${G.loan.due}.`});sfx.coin();render(true)},
   buyAll(){let k=false;SUPPLIERS.forEach(s=>{if(doBuy(s.id))k=true});if(k)sfx.coin();render(true)},
   open(){sfx.click();openService()},
   nextDay(){sfx.click();nextDay()}

@@ -285,6 +285,9 @@ body,button,.tchip{touch-action:manipulation;-webkit-tap-highlight-color:transpa
 .tagb.good{background:#bff0d8;color:#06613c}.tagb.fr{background:#cfe9ff}.tagb.bad{background:#ffd0d6;color:#8c1426}
 .cartbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;justify-content:space-between;margin-top:10px;padding:10px;border:3px solid var(--edge);background:var(--panel2)}
 .actions .btn.small{white-space:normal;text-align:left}
+.btn.pw{background:#b79cff;color:#14102a;border-color:#4b3a8c;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18),inset 0 4px 0 rgba(255,255,255,.4),0 4px 0 #4b3a8c}
+.btn.pw:disabled{background:var(--panel2);color:var(--muted);border-color:var(--edge);box-shadow:none;opacity:.6}
+.tk[data-oid]{cursor:pointer}
 </style>
 </head>
 <body>
@@ -314,6 +317,12 @@ body,button,.tchip{touch-action:manipulation;-webkit-tap-highlight-color:transpa
 <li>Sin camareros, la comida llega sola a la mesa pero más lenta y con menos propina. Sin cajero no hay propinas y algún cliente se va sin pagar.</li>
 <li>Tipos: quejosos (poca paciencia), familias de 3 y cumpleaños de 4 (varios platos), influencers (pueden hacerte famoso o arruinarte), dormilones (tocá su mesa para despertarlos), "lo de siempre" (nadie sabe qué es) y el crítico, con su mesa reservada.</li>
 <li>Las propinas dependen de qué tan rápido se atendió. Algunos del equipo se quedan con parte de ellas.</li></ul></details>
+<details><summary>Cartelitos, tus manos y poderes</summary><ul id="carlLegend">
+<li>Cuando a un cliente se le acaba la paciencia aparece un cartelito arriba suyo, al instante y con un sonido, para que lo veas desde lejos.</li>
+<li>Tocá al cliente (o su ticket de arriba) y pasa al frente de la fila: todo el equipo atiende primero ese pedido, y gana unos segundos de paciencia. Si está esperando para pagar, tocalo y le cobrás vos.</li>
+<li><b>Tus manos:</b> vos también laburás. Tocá un plato cocinado para llevarlo al pase, un plato del pase para servirlo a su mesa, la pila de vajilla para lavar una pieza, la mesada de preparación para preparar un pedido en espera, la hornalla para apurar lo que se cocina, o a un empleado para alentarlo (rinde más unos segundos). Después de cada cosa, tus manos quedan ocupadas un instante (lo ves arriba). Si se corta la luz, tocá el tablero (arriba, cerca del cartel de alquiler) para que vuelva antes.</li>
+<li>Cada puesto tiene un poder especial de un solo uso por servicio. Usalo con el botón violeta de "Tu equipo" o tocando dos veces al empleado (tiene una estrella arriba cuando su poder está listo).</li>
+<li><b>Camarero, Calmar mesa:</b> calma al cliente más enojado. <b>Cajero, Cobro exprés:</b> cobra todas las mesas pendientes. <b>Cocinero, Fuego máximo:</b> termina lo que cocina y va al doble 10 s. <b>Ayudante, Manos veloces:</b> termina lo que prepara y va al doble 10 s. <b>Bachero, Lavado relámpago:</b> limpia toda la vajilla del lavadero.</li></ul></details>
 <details><summary>Vajilla</summary><ul>
 <li>Cada plato servido deja platos, cubiertos, sartenes y más para lavar. Cada pieza tarda distinto.</li>
 <li>Si la vajilla sucia se acumula, la cocina se enlentece y puede frenarse. Con mucha sucia, la inspección te multa.</li></ul></details>
@@ -374,27 +383,27 @@ const SINK={x:262,y:144},PASS_K={x:204,y:170},COLD_T=16;
 const UT={plato:{n:'plato',t:1.2},tenedor:{n:'tenedor',t:.6},cuchillo:{n:'cuchillo',t:.6},cucharita:{n:'cucharita',t:.5},vaso:{n:'vaso',t:.8},sarten:{n:'sartén',t:2.2},olla:{n:'olla',t:2.6},tabla:{n:'tabla de picar',t:1.5},canasto:{n:'canasto de fritura',t:1.8},molde:{n:'molde',t:1.4},pinza:{n:'pinza',t:.8},bandeja:{n:'bandeja',t:1.5},parrilla:{n:'parrilla',t:2.4}};
 const DUT={emp:['plato','tenedor','bandeja'],mila:['plato','tenedor','cuchillo','sarten','tabla'],papas:['plato','tenedor','canasto'],bife:['plato','plato','tenedor','cuchillo','pinza','parrilla'],flan:['plato','cucharita','molde']};
 const ROLES={
-  bachero:{label:'Bachero',base:290,max:2,color:'#e2554f'},
-  ayudante:{label:'Ayudante',base:325,max:3,color:'#3fbf82'},
-  cocinero:{label:'Cocinero',base:445,max:3,color:'#f4f4f0'},
-  camarero:{label:'Camarero',base:195,max:3,color:'#f2a33c'},
-  cajero:{label:'Cajero',base:205,max:2,color:'#56ccf2'}
+  bachero:{label:'Bachero',base:250,max:2,color:'#e2554f'},
+  ayudante:{label:'Ayudante',base:275,max:3,color:'#3fbf82'},
+  cocinero:{label:'Cocinero',base:380,max:3,color:'#f4f4f0'},
+  camarero:{label:'Camarero',base:165,max:3,color:'#f2a33c'},
+  cajero:{label:'Cajero',base:175,max:2,color:'#56ccf2'}
 };
 const DISHES=[
-  {id:'emp',name:'Empanadas',price:108,ing:1,prep:2,cook:4,pl:1,lvl:1},
-  {id:'mila',name:'Milanesa',price:243,ing:2,prep:3,cook:6,pl:1,lvl:1},
-  {id:'papas',name:'Papas fritas',price:135,ing:1,prep:2,cook:4,pl:1,lvl:2},
-  {id:'bife',name:'Bife de chorizo',price:432,ing:3,prep:3,cook:9,pl:2,lvl:3},
-  {id:'flan',name:'Flan mixto',price:173,ing:1,prep:2,cook:3,pl:1,lvl:4}
+  {id:'emp',name:'Empanadas',price:135,ing:1,prep:2,cook:4,pl:1,lvl:1},
+  {id:'mila',name:'Milanesa',price:300,ing:2,prep:3,cook:6,pl:1,lvl:1},
+  {id:'papas',name:'Papas fritas',price:170,ing:1,prep:2,cook:4,pl:1,lvl:2},
+  {id:'bife',name:'Bife de chorizo',price:540,ing:3,prep:3,cook:9,pl:2,lvl:3},
+  {id:'flan',name:'Flan mixto',price:215,ing:1,prep:2,cook:3,pl:1,lvl:4}
 ];
 const LOCALS=[
-  {name:'Fondita',slots:5,tb:5,rep:0,meta:1600,rent:1000},
-  {name:'Bodegón',slots:6,tb:6,rep:40,meta:2300,rent:3250},
-  {name:'Parrilla',slots:7,tb:7,rep:100,meta:3100,rent:5250},
-  {name:'Restó',slots:8,tb:8,rep:190,meta:4000,rent:7250},
-  {name:'Estrella',slots:9,tb:8,rep:300,meta:5000,rent:9500}
+  {name:'Fondita',slots:5,tb:5,rep:0,meta:1600,rent:700},
+  {name:'Bodegón',slots:6,tb:6,rep:40,meta:2300,rent:1900},
+  {name:'Parrilla',slots:7,tb:7,rep:100,meta:3100,rent:3200},
+  {name:'Restó',slots:8,tb:8,rep:190,meta:4000,rent:4600},
+  {name:'Estrella',slots:9,tb:8,rep:300,meta:5000,rent:6200}
 ];
-const START_CASH=4000;
+const START_CASH=5000;
 const REL_TIERS=[{p:3,name:'Cliente',disc:.03,fail:.8},{p:8,name:'Cliente fiel',disc:.06,fail:.5},{p:15,name:'Socio',disc:.09,fail:.2}];
 const REL_MIN=10;
 const REL_IDLE=3;
@@ -402,11 +411,11 @@ const FIADO={now:.5,rate:.10};
 const LOAN={offers:[1000,2500],rate:.30,days:3,rescueRate:.35,rescueBuffer:500,rescueEvery:7};
 const RENT_EVERY=7;
 const SUPPLIERS=[
-  {id:'feria',name:'Feria del Barrio',base:20,q:.35,bulk:[30,.12],fail:[.2,.75],note:'El más barato, sobre todo desde 30 insumos. Mercadería regular (los platos se cobran menos y algún plato sale pasado) y 1 de cada 5 veces falta.'},
-  {id:'ruben',name:'Don Rubén',base:29,q:.5,fail:[.1,.8],fiado:true,note:'Precio medio y calidad pasable. Sin descuento por cantidad. 1 de cada 10 veces llega incompleto. Te fía: pagás la mitad hoy y el resto mañana con 10% de interés.'},
-  {id:'mayor',name:'Mayorista Central',base:36,q:.7,bulk:[50,.1],note:'Buena calidad y siempre cumple. 10% menos desde 50 insumos. La opción segura.'},
-  {id:'fresco',name:'Verdulería Fresca',base:56,q:.9,fresh:true,note:'Producto de primera: los platos se cobran más y lo que sobra no se echa a perder de un día al otro.'},
-  {id:'express',name:'Delivery Express',base:70,q:1,fresh:true,extra:.1,note:'Lo mejor de lo mejor: calidad máxima, todo fresco y manda 10% de regalo. Es el más caro.'}
+  {id:'feria',name:'Feria del Barrio',base:18,q:.35,bulk:[30,.12],fail:[.2,.75],note:'El más barato, sobre todo desde 30 insumos. Mercadería regular (los platos se cobran menos y algún plato sale pasado) y 1 de cada 5 veces falta.'},
+  {id:'ruben',name:'Don Rubén',base:26,q:.5,fail:[.1,.8],fiado:true,note:'Precio medio y calidad pasable. Sin descuento por cantidad. 1 de cada 10 veces llega incompleto. Te fía: pagás la mitad hoy y el resto mañana con 10% de interés.'},
+  {id:'mayor',name:'Mayorista Central',base:32,q:.7,bulk:[50,.1],note:'Buena calidad y siempre cumple. 10% menos desde 50 insumos. La opción segura.'},
+  {id:'fresco',name:'Verdulería Fresca',base:50,q:.9,fresh:true,note:'Producto de primera: los platos se cobran más y lo que sobra no se echa a perder de un día al otro.'},
+  {id:'express',name:'Delivery Express',base:63,q:1,fresh:true,extra:.1,note:'Lo mejor de lo mejor: calidad máxima, todo fresco y manda 10% de regalo. Es el más caro.'}
 ];
 const supRec=id=>{G.sup=G.sup||{};return G.sup[id]=G.sup[id]||{p:0,idle:0}};
 const relLvl=id=>{const p=supRec(id).p;let l=0;REL_TIERS.forEach((t,i)=>{if(p>=t.p)l=i+1});return l};
@@ -988,7 +997,7 @@ function openService(){
   G.team.forEach(w=>{if(w.absent&&w.excuse&&!w.excuse.decision)resolveExcuse(w,'dock')});
   if(G.vacReq)ACT.vacNo(null,true);
   G.phase='service';
-  S={t:0,next:2,orders:[],oid:1,revenue:0,served:0,lost:0,used:0,dirty:0,sink:[],rack:[],dfly:[],tables:makeTables(),leaving:[],says:[],win:[],vipT:null,stolen:0,speed:1,paused:false,great:0,bad:0,log:[],pass:[],cleaned:0,floats:[],bell:0,done:false,phase:'open',stock0:avail(),loveT:R(8,14),fightT:R(20,28),bonus:0,fines:0,repExtra:0,evNotes:[],evSat:0,power:true,lava:0,fly:[],parts:[],lid:1,revShown:0,flash:0,ev:null,heat:false};
+  S={t:0,next:2,orders:[],oid:1,revenue:0,served:0,lost:0,used:0,dirty:0,sink:[],rack:[],dfly:[],tables:makeTables(),leaving:[],says:[],win:[],vipT:null,stolen:0,speed:1,paused:false,great:0,bad:0,log:[],pass:[],cleaned:0,floats:[],bell:0,done:false,phase:'open',stock0:avail(),loveT:R(8,14),fightT:R(20,28),bonus:0,fines:0,repExtra:0,evNotes:[],evSat:0,power:true,lava:0,fly:[],parts:[],lid:1,revShown:0,flash:0,ev:null,heat:false,hand:0};
   setupEvent();
   const cnt={ayudante:0,cocinero:0,bachero:0,camarero:0,cajero:0};
   G.team.forEach((w,i)=>{
@@ -996,7 +1005,7 @@ function openService(){
     w.num=i+1;
     w.pos=w.role==='ayudante'?{x:18+k*38,y:74}:w.role==='cocinero'?{x:144+k*38,y:74}:w.role==='camarero'?{x:150+k*34,y:224}:w.role==='cajero'?{x:18+k*34,y:212}:{x:250+k*38,y:144};w.home={x:w.pos.x,y:w.pos.y};
     w.cur=null;w.ct=null;w.jb=null;w.carry=null;w.nav=null;w.task=null;w.focusT=0;w.active=0;w.waste=0;w.done=0;w.bad=0;w.prog=0;w.working=false;w.blocked=false;w.status='ok';w.noQuitToday=false;w.noPromise=false;
-    w.napFell=false;w.napDay=R(14,50);w.napBoost=0;w.idleT=0;w.napT=0;w.cleptT=R(20,36);w.copaT=R(18,52);w.copaDone=false;w.peleaT=R(14,28);
+    w.napFell=false;w.powUsed=false;w.turbo=0;w.napDay=R(14,50);w.napBoost=0;w.idleT=0;w.napT=0;w.cleptT=R(20,36);w.copaT=R(18,52);w.copaDone=false;w.peleaT=R(14,28);
     if(w.absent){w.status='absent';return}
     const sl=tmax(w,'sleepy');
     const p=tany(w,'noSleep')?0:(sl?sl:(1-w.rel)*.45);
@@ -1009,6 +1018,7 @@ function openService(){
     if(avail()>=n){take(n);S.used+=n;toast(`${w.name} se comió ${n} insumo${n>1?'s':''} a escondidas.`,'warn')}
   });
   buildServiceDOM();
+  toast('Si un cliente tiene un cartelito arriba, tocalo (o tocá su ticket) y pasa al frente. Tocá platos, vajilla y mesas para dar una mano vos. Cada puesto tiene un poder de un solo uso: botón violeta en "Tu equipo".','');
   toast('Abrió el local. ¡Que no falten insumos ni platos limpios!','');
   lastT=performance.now();raf=requestAnimationFrame(loop);
 }
@@ -1033,9 +1043,9 @@ function spawn(){
   const fr=S.tables.filter(t=>!t.g&&(t!==S.vipT||S.evDone));
   if(type==='take'&&S.win.length>=2)type='normal';
   if(type!=='take'&&!fr.length){if(S.win.length<2&&Math.random()<.5)type='take';else return}
-  const mk=d=>({id:S.oid++,dish:d,age:0,pat:Math.round(RI(42,60)*teamMul('pat')),stage:'walk',hold:1.2,improv:null});
+  const mk=d=>({id:S.oid++,dish:d,age:0,pat:Math.round(RI(50,70)*teamMul('pat')),stage:'walk',hold:1.2,improv:null});
   if(type==='take'){
-    const slot=S.win.some(x=>x.slot===0)?1:0,od=mk(dishPick());od.pat=Math.round(RI(35,50)*teamMul('pat'));od.take=true;od.slot=slot;od.hold=.8;od.tag=TYPE_TAG.take;
+    const slot=S.win.some(x=>x.slot===0)?1:0,od=mk(dishPick());od.pat=Math.round(RI(42,58)*teamMul('pat'));od.take=true;od.slot=slot;od.hold=.8;od.tag=TYPE_TAG.take;
     S.win.push({o:od,slot,wt:0,st:'walk',sk:RI(0,3),hr:RI(0,4),sh:RI(0,4),acc:RI(0,4)});S.orders.push(od);return;
   }
   const tb=pick(fr),sz=type==='familia'?3:type==='cumple'?4:(type==='normal'&&Math.random()<.45?2:1);
@@ -1161,7 +1171,7 @@ function deliver(o,w){
   if(pv&&!g.postDone&&g.type!=='vip'){
     g.postDone=true;
     if(Math.random()<.15){
-      const fd=DISHES.find(d=>d.id==='flan'),od={id:S.oid++,dish:fd,age:0,pat:Math.round(RI(42,60)*teamMul('pat')),stage:'walk',hold:.6,improv:null,tbl:t,extra:true,tag:'POSTRE'};
+      const fd=DISHES.find(d=>d.id==='flan'),od={id:S.oid++,dish:fd,age:0,pat:Math.round(RI(50,70)*teamMul('pat')),stage:'walk',hold:.6,improv:null,tbl:t,extra:true,tag:'POSTRE'};
       g.os.push(od);S.orders.push(od);g.left=1;g.st='wait';say(t.x,t.y-32,'UN FLAN, DALE');
       toast(`${pv.name} le vendió un flan extra a la mesa ${t.i+1}.`,'good');return;
     }else{g.dessertNo=true;say(t.x,t.y-32,'NO QUIERO POSTRE');toast(`La mesa ${t.i+1} no quiso postre y se puso de mal humor con ${pv.name}.`,'warn')}
@@ -1484,6 +1494,7 @@ function workerStep(w,dt){
   if(w.status==='recover'){w.recT-=dt;w.waste+=dt;if(w.recT<=0){w.status='ok';w.focusT=w.afterF||0}return}
   if(w.status==='quitting'){w.quitT-=dt;w.waste+=dt;if(w.quitT<=0)leaveNow(w);return}
   if(w.napBoost>0)w.napBoost-=dt;
+  if(w.turbo>0)w.turbo-=dt;
   if(hasT(w,'dormip')){
     if(!w.napFell&&S.t>=w.napDay&&S.t<DAY_T-12){w.napFell=true;dropTask(w);w.status='asleep';w.sleepT=14;toast(`${w.name} se durmió en serio (una vez por día no falla).`,'warn');return}
     const idle=!w.task&&(!w.jb||w.jb.k==='home')&&!w.working&&!S.orders.some(x=>x.stage==='wait'||x.stage==='prepped'||x.stage==='prep'||x.stage==='cook'||(x.stage==='cooked'&&!x.by));
@@ -1491,7 +1502,7 @@ function workerStep(w,dt){
     if(w.idleT>5){w.idleT=0;w.status='nap';w.napT=4;toast(`${w.name} no tiene laburo y se echó una siestita.`,'')}
   }
   if(w.focusT>0)w.focusT-=dt;
-  const spd=.94*w.speed*spdMul(w)*(w.napBoost>0?1.2:1)*(w.focusT>0?1.15:1)*(w.role==='cocinero'&&G.up.hood?1.12:1)*(S.heat?.9:1);
+  const spd=.94*w.speed*spdMul(w)*(w.napBoost>0?1.2:1)*(w.focusT>0?1.15:1)*(w.turbo>0?2:1)*(w.role==='cocinero'&&G.up.hood?1.12:1)*(S.heat?.9:1);
   w.working=false;w.blocked=false;
   if(w.jb){
     if(w.jb.k==='home'){const nj=findJob(w);if(nj)w.jb=nj}
@@ -1544,7 +1555,7 @@ function workerStep(w,dt){
 function step(dt){
   S.t+=dt;
   const open=S.t<DAY_T;
-  eventStep(dt);updParts(dt);dfStep(dt);tableStep(dt);S.flash=Math.max(0,S.flash-dt);
+  eventStep(dt);updParts(dt);dfStep(dt);tableStep(dt);carlWatch();S.flash=Math.max(0,S.flash-dt);
   if(open){S.next-=dt;if(S.next<=0){spawn();S.next=interval()}}
   S.fly.forEach(f=>f.t+=dt/.5);S.fly=S.fly.filter(landFly);S.pass=S.pass.filter(p=>S.orders.some(o=>o.id===p.oid&&(o.stage==='ready'||(o.stage==='carry'&&!o.picked))));S.floats.forEach(f=>f.t+=dt);S.floats=S.floats.filter(f=>f.t<1.4);S.bell=Math.max(0,S.bell-dt);
   S.orders.forEach(o=>{
@@ -1594,6 +1605,223 @@ function step(dt){
     }
   }
 }
+/* ====== CARLITOS (clientes apurados/enojados) Y PODERES DE UN SOLO USO ====== */
+const SIGN_COL={1:{t:'APURADO',f:'#ffc83c',x:'#14102a',e:'#a36b00'},2:{t:'ENOJADO',f:'#ff4d5e',x:'#ffffff',e:'#8a0f22'}};
+function drawSign(c,cx,y,u,now,k,ptx){
+  const P=SIGN_COL[u],w=tw(P.t)+6,sh=u===2?(Math.floor(now*14+k)%2?1:-1):0,bob=Math.floor(now*3+k)%2,x=Math.round(cx-w/2)+sh,yy=y-bob;
+  if(u===2&&now>0)glow(c,x+w/2,yy+5,24,'#ff3b3b',.28+.12*Math.sin(now*10+k));
+  rc(c,'#14102a',x,yy,w,9);
+  rc(c,(u===2&&Math.floor(now*5+k)%2)?'#ff7a8a':P.f,x+1,yy+1,w-2,7);
+  rc(c,P.e,x+1,yy+7,w-2,1);
+  txt(c,P.t,x+3,yy+2,P.x);
+  const ax=Math.round(ptx===undefined?cx:ptx)-2;
+  rc(c,'#14102a',ax,yy+9,5,1);rc(c,P.f,ax+1,yy+9,3,1);rc(c,'#14102a',ax+1,yy+10,3,1);rc(c,'#14102a',ax+2,yy+11,1,1);
+}
+function initSignLegend(){
+  const ul=document.getElementById('carlLegend');if(!ul)return;
+  ul.insertAdjacentHTML('beforeend',[[1,'Cartelito amarillo: el cliente se está apurando.'],[2,'Cartelito rojo: el cliente está enojado y se está por ir.']].map(p=>{
+    const e=document.createElement('canvas');e.width=40;e.height=14;drawSign(e.getContext('2d'),20,0,p[0],0,1,20);
+    return `<li class="plg"><img src="${e.toDataURL()}" style="width:80px;height:28px" alt=""><span>${p[1]}</span></li>`}).join(''));
+}
+
+/* urgencia: 0 tranquilo, 1 apurado, 2 enojado (según la paciencia que le queda) */
+function urgOf(p){return p<.25?2:p<.55?1:0}
+function tblPc(t){
+  const g=t.g;if(!g)return 1;
+  if(g.st==='wait'){let pc=1;g.os.forEach(x=>{if(S.orders.includes(x))pc=Math.min(pc,1-x.age/x.pat)});return clamp(pc,0,1)}
+  if(g.st==='pay'&&!g.by){const lim=(hasRole('cajero')||hasRole('camarero'))?10:6;return clamp(1-g.pt/lim,0,1)}
+  return 1;
+}
+function winPc(wn){return wn.st==='wait'&&wn.o&&wn.o.stage!=='ready'?clamp(1-wn.o.age/wn.o.pat,0,1):1}
+function urgList(){
+  const a=[];
+  S.tables.forEach(t=>{if(!t.g)return;const p=tblPc(t),u=urgOf(p);if(u)a.push({t,p,u})});
+  S.win.forEach(wn=>{const p=winPc(wn),u=urgOf(p);if(u)a.push({wn,p,u})});
+  return a.sort((x,y)=>y.u-x.u||x.p-y.p);
+}
+function carlAlert(x,y,u,who){
+  if(u===2){beep(300,.12,'sawtooth',.05);burst(x,y,['#ff5a6e','#ffffff'],8,{sp:22});toast(`¡${who} está enojada! Tocala para pasarla al frente.`,'bad')}
+  else beep(660,.07,'square',.035);
+}
+function carlWatch(){
+  S.tables.forEach(t=>{const g=t.g;if(!g)return;const u=(g.st==='wait'||g.st==='pay')?urgOf(tblPc(t)):0,c=g.cu||0;
+    if(u>c){g.cu=u;carlAlert(t.x,t.y-30,u,'La mesa '+(t.i+1))}else if(u<c)g.cu=u});
+  S.win.forEach(wn=>{const p=winPc(wn),u=urgOf(p),c=wn.cu||0;
+    if(u>c){wn.cu=u;carlAlert(322+wn.slot*30,26,u,'La ventanilla')}else if(u<c)wn.cu=u});
+}
+function drawCarlitos(c,now){
+  [1,2].forEach(lv=>{
+    S.tables.forEach(t=>{const g=t.g;if(!g||(g.st!=='wait'&&g.st!=='pay'))return;const u=urgOf(tblPc(t));if(u!==lv)return;
+      const s0=seatsOf(t,g.sz)[0];drawSign(c,s0.f===1?t.x-28:t.x+28,t.y-46,u,now,t.i,s0.x+4)});
+    S.win.forEach(wn=>{const u=urgOf(winPc(wn));if(u===lv)drawSign(c,wn.slot?358:312,1,u,now,wn.slot+9,320+wn.slot*30)});
+  });
+}
+function powerStar(c,w,now){
+  const x=Math.round(w.pos.x)+16,y=Math.round(w.pos.y)-12-(Math.floor(now*3+w.id)%2);
+  rc(c,'#14102a',x-1,y-1,7,7);
+  [[2,0],[1,1],[2,1],[3,1],[0,2],[1,2],[2,2],[3,2],[4,2],[1,3],[2,3],[3,3],[1,4],[3,4]].forEach(p=>rc(c,'#ffd23c',x+p[0],y+p[1],1,1));
+}
+
+/* pasar un cliente al frente de la fila (gratis): se atiende primero en toda la cadena */
+function prioTable(t,quiet){
+  const g=t.g;if(!g)return false;
+  const mine=S.orders.filter(o=>o.tbl===t);
+  if(!mine.length)return false;
+  mine.forEach(o=>{if(!o.pr){o.pr=1;o.age=Math.max(0,o.age-4)}});
+  S.orders=mine.concat(S.orders.filter(o=>o.tbl!==t));
+  if(!quiet){sfx.click();burst(t.x,t.y-20,['#ffd23c','#ffffff'],6,{sp:18,up:true});say(t.x,t.y-32,'YA VIENE');toast(`La mesa ${t.i+1} pasa al frente de la fila.`,'good')}
+  return true;
+}
+function prioWin(wn,quiet){
+  const o=wn.o;if(!o||!S.orders.includes(o))return false;
+  if(!o.pr){o.pr=1;o.age=Math.max(0,o.age-4)}
+  S.orders=[o].concat(S.orders.filter(x=>x!==o));
+  if(!quiet){sfx.click();say(322+wn.slot*30,26,'YA VIENE');toast('El pedido de la ventanilla pasa al frente de la fila.','good')}
+  return true;
+}
+function dispatchCash(t){
+  const g=t.g;if(!g||g.st!=='pay'||g.by){toast('Esa mesa ya la están cobrando.','');return}
+  const free=r=>G.team.find(w=>w.role===r&&!w.absent&&!w.left&&w.status==='ok'&&!w.carry&&!w.ct&&(!w.nav||w.nav.ph==='home')&&(!w.jb||w.jb.k==='home'));
+  const c=free('cajero');
+  if(c){g.by=c.id;c.ct=t;c.nav={x:t.x-8,y:t.y-8,ph:'go'}}
+  else{const m=free('camarero');if(!m){toast(`Nadie está libre para cobrar la mesa ${t.i+1}.`,'warn');return}g.by=m.id;m.jb={k:'cash',t,ph:'go',half:true,cp:2.6}}
+  sfx.click();toast(`Mandaste a cobrar la mesa ${t.i+1}.`,'good');
+}
+const BOSS={name:'Vos',traits:[],id:-1,role:'camarero'};
+function handsOk(){
+  if(S.t<S.hand){if(S.t-(S.handToast||-9)>2){S.handToast=S.t;toast('Tenés las manos ocupadas un segundito.','')}return false}
+  return true;
+}
+function handUse(sec){S.hand=S.t+sec}
+function handTap(x,y){
+  /* servir un plato que está en el pase */
+  for(let i=0;i<Math.min(S.pass.length,4);i++){
+    if(Math.abs(x-(195+i*11))>9||Math.abs(y-194)>12)continue;
+    const o=S.orders.find(q=>q.id===S.pass[i].oid);
+    if(o&&o.stage==='ready'&&o.landed&&!o.by&&!o.take&&o.tbl&&o.tbl.g){if(!handsOk())return true;handUse(1.2);deliver(o,BOSS);return true}
+  }
+  /* llevar al pase un plato cocinado */
+  const co=S.orders.find(q=>q.stage==='cooked'&&!q.by&&Math.abs(x-(q.sx+10))<=12&&Math.abs(y-(q.sy-10))<=12);
+  if(co){if(!handsOk())return true;handUse(1);co.stage='ready';co.landed=true;co.rt=0;if(!co.take)S.pass.push({oid:co.id,id:co.dish.id});sfx.ding();burst(co.sx+10,co.sy-10,'#ffd23c',4);return true}
+  /* lavadero: lavar una pieza */
+  if(x>=236&&x<=304&&y>=146&&y<=178){
+    const it=S.sink.find(q=>q.vis&&!q.by);
+    if(it){if(!handsOk())return true;handUse(1.2);S.sink.splice(S.sink.indexOf(it),1);syncDirty();S.cleaned++;rackAdd(it.k);return true}
+  }
+  /* mesada de preparación: preparar un pedido en espera */
+  if(x>=4&&x<=132&&y>=88&&y<=120){
+    const o=S.orders.filter(q=>q.stage==='wait').sort((a,b)=>(a.pat-a.age)/a.pat-(b.pat-b.age)/b.pat)[0];
+    if(o){
+      if(!handsOk())return true;
+      const need=o.dish.ing;
+      if(avail()<need){toast('No alcanzan los insumos para ese pedido.','bad');return true}
+      handUse(1.5);take(need);S.used+=need;o.stage='prepped';sfx.click();burst(60,96,['#6fcf97','#f2c94c'],5,{sp:14,up:true});say(60,84,'LISTO');return true;
+    }
+  }
+  /* hornalla: dar fuego a lo que se está cocinando */
+  if(x>=140&&x<=232&&y>=84&&y<=120){
+    let best=null;G.team.forEach(w=>{if(w.task&&w.task.stage==='cook'&&w.task.rem>0&&(!best||w.task.rem>best.task.rem))best=w});
+    if(best){if(!handsOk())return true;handUse(1);best.task.rem=Math.max(0,best.task.rem-1.5);burst(best.pos.x+8,88,['#ff9a3c','#ffd23c'],6,{sp:14,up:true});sfx.click();return true}
+  }
+  return false;
+}
+function workerAt(x,y){
+  return G.team.find(w=>!w.absent&&w.pos&&x>=w.pos.x-6&&x<=w.pos.x+22&&y>=w.pos.y-20&&y<=w.pos.y+24);
+}
+function cheer(w){
+  if(w.status!=='ok'||S.t<(w.cheerAt||0))return false;
+  w.cheerAt=S.t+10;w.focusT=Math.max(w.focusT||0,5);w.pop=.3;
+  say(w.pos.x+8,w.pos.y-22,pick(['DALE','VAMOS','ASI SE HACE','BUENISIMO']));sfx.click();burst(w.pos.x+8,w.pos.y,['#6fcf97','#ffffff'],5,{sp:14,up:true});
+  return true;
+}
+function tapTables(x,y){
+  let best=null,bd=1e9;
+  S.tables.forEach(t=>{const g=t.g;if(!g||(g.st!=='wait'&&g.st!=='pay'))return;const dx=Math.abs(x-t.x),dy=y-(t.y-22);if(dx>36||dy<-30||dy>34)return;const d=dx+Math.abs(dy);if(d<bd){bd=d;best={t}}});
+  S.win.forEach(wn=>{if(wn.st!=='wait'||x<296||y>48)return;const d=Math.abs(x-(320+wn.slot*30));if(d<24&&d<bd){bd=d;best={wn}}});
+  if(!best)return false;
+  if(best.wn){prioWin(best.wn);return true}
+  const t=best.t;
+  if(t.g.st==='pay'){
+    if(t.g.by){toast(`La mesa ${t.i+1} ya la están cobrando.`,'');return true}
+    if(S.t>=S.hand){handUse(1.5);settle(t,BOSS)}else dispatchCash(t);
+  }else prioTable(t);
+  return true;
+}
+function canvasTap(x,y){
+  if(!S||S.done)return;
+  /* 1) problemas del equipo */
+  for(const w of G.team){
+    if(w.absent||!w.pos)continue;
+    if(x>=w.pos.x-10&&x<=w.pos.x+28&&y>=w.pos.y-26&&y<=w.pos.y+28){const s=statusInfo(w);if(s.a&&s.a!=='bonus'){doAct(s.a,w);return}}
+  }
+  /* 2) clientes dormidos */
+  for(const t of S.tables)if(t.g&&t.g.st==='sleep'&&Math.abs(x-t.x)<24&&Math.abs(y-t.y)<24){t.g.sl=0;return}
+  /* 3) corte de luz: tocar el tablero para que vuelva antes */
+  if(S.ev==='luz'&&!S.power&&x>=172&&x<=208&&y<=30){S.outEnd-=2.5;sfx.click();burst(190,8,'#ffd23c',6,{sp:16});say(190,26,'ARRANCANDO');return}
+  /* 4) tus manos */
+  if(handTap(x,y))return;
+  /* 5) cartelitos y mesas (primero, para que un empleado parado al lado no los tape) */
+  const nearTable=S.tables.some(t=>t.g&&(t.g.st==='wait'||t.g.st==='pay')&&Math.abs(x-t.x)<=30&&y>=t.y-44&&y<=t.y+12);
+  if(nearTable||!workerAt(x,y)){if(tapTables(x,y))return}
+  /* 6) alentar al empleado / usar su poder (segundo toque) */
+  const w=workerAt(x,y);
+  if(w){
+    if(w.status!=='ok')return;
+    const a=S.armed;
+    if(powReady(w)&&a&&a.id===w.id&&S.t-a.t<4){S.armed=null;usePower(w);return}
+    const ok=cheer(w);
+    if(powReady(w)){S.armed={id:w.id,t:S.t};toast(`Tocá de nuevo a ${w.name} para usar su poder: ${POWERS[w.role].n}.`,'warn')}
+    else if(!ok)toast(`${w.name} ya está a pleno. Dejalo laburar unos segundos.`,'');
+  }
+}
+
+const POWERS={
+  camarero:{n:'Calmar mesa',d:'Calma al cliente más enojado o apurado: le devuelve la paciencia y lo pasa al frente.'},
+  cajero:{n:'Cobro exprés',d:'Cobra ya mismo todas las mesas que están esperando para pagar.'},
+  cocinero:{n:'Fuego máximo',d:'Termina al instante lo que está cocinando y cocina al doble de velocidad durante 10 segundos.'},
+  ayudante:{n:'Manos veloces',d:'Termina al instante lo que está preparando y trabaja al doble de velocidad durante 10 segundos.'},
+  bachero:{n:'Lavado relámpago',d:'Deja limpia de golpe toda la vajilla que está en el lavadero.'}
+};
+function powReady(w){return !!S&&!S.done&&!w.absent&&!w.left&&w.status==='ok'&&!w.powUsed}
+function usePower(w){
+  if(!powReady(w))return false;
+  const P=POWERS[w.role];
+  if(w.role==='camarero'){
+    const it=urgList()[0];
+    if(!it){toast('Nadie está apurado todavía. Guardá el poder para cuando haga falta.','warn');return false}
+    if(it.t){const t=it.t,g=t.g;S.orders.forEach(o=>{if(o.tbl===t)o.age=Math.min(o.age,o.pat*.3)});g.sa=0;g.sb=0;if(g.st==='pay')g.pt=0;prioTable(t,true);say(t.x,t.y-32,'GRACIAS');toast(`${w.name} calmó a la mesa ${t.i+1}: tiene paciencia de nuevo.`,'good')}
+    else{const o=it.wn.o;o.age=Math.min(o.age,o.pat*.3);prioWin(it.wn,true);say(322+it.wn.slot*30,26,'GRACIAS');toast(`${w.name} calmó al cliente de la ventanilla.`,'good')}
+  }else if(w.role==='cajero'){
+    const ts=S.tables.filter(t=>t.g&&t.g.st==='pay'&&!t.g.by);
+    if(!ts.length){toast('No hay mesas esperando para pagar.','warn');return false}
+    ts.forEach(t=>{settle(t,w);w.done++});
+    toast(`${w.name} cobró ${ts.length} mesa${ts.length>1?'s':''} de golpe.`,'good');
+  }else if(w.role==='cocinero'||w.role==='ayudante'){
+    if(!S.orders.length){toast('Todavía no hay pedidos para apurar.','warn');return false}
+    if(w.task)w.task.rem=0;
+    w.turbo=10;
+    const it=urgList().find(x=>x.t);if(it)prioTable(it.t,true);
+    toast(`${w.name} usó ${P.n}: va al doble de velocidad 10 segundos.`,'good');
+  }else if(w.role==='bachero'){
+    const its=S.sink.filter(x=>x.vis&&!x.by);
+    if(!its.length){toast('No hay vajilla sucia para lavar.','warn');return false}
+    its.forEach(it=>{S.sink.splice(S.sink.indexOf(it),1);S.cleaned++;rackAdd(it.k)});
+    syncDirty();
+    toast(`${w.name} lavó ${its.length} pieza${its.length>1?'s':''} de un saque.`,'good');
+  }
+  w.powUsed=true;w.pop=.3;sfx.level();
+  burst(w.pos.x+8,w.pos.y,['#b79cff','#ffd23c','#ffffff'],14,{sp:30,up:true});
+  say(w.pos.x+8,w.pos.y-22,P.n);
+  updDom(true);
+  return true;
+}
+function tapPower(w){
+  const a=S.armed;
+  if(a&&a.id===w.id&&S.t-a.t<4){S.armed=null;usePower(w);return}
+  S.armed={id:w.id,t:S.t};sfx.click();
+  toast(`Tocá de nuevo a ${w.name} para usar su poder: ${POWERS[w.role].n}.`,'warn');
+}
+
 function doAct(a,w){
   if(!S||S.done)return;
   if(a==='wake'&&w.status==='asleep'){w.status='ok';w.focusT=3;toast(`${w.name} se despertó. Menos mal.`,'good');sfx.click()}
@@ -2711,7 +2939,7 @@ function drawScene(now){
   G.team.forEach(w=>{if(!w.absent)drawWorker(c,w,now)});
   drawInspector(c,now);
   c.drawImage(FG,0,0);
-  dynStations(c,now);dynExtras(c,now);
+  dynStations(c,now);dynExtras(c,now);drawCarlitos(c,now);
   /* luces */
   if(S.power){
     glow(c,325,66,36,'#ff9a3c',.2);glow(c,359,66,32,'#ff9a3c',.18);glow(c,216,40,60,'#fff2a8',.1);
@@ -2735,6 +2963,7 @@ function drawScene(now){
     if(w.absent)return;
     if(S.heat&&w.status==='ok'){const ph=(now*9+w.id*3.3)%10;c.globalAlpha=1-ph/10;rc(c,'#7fd0ff',w.pos.x+14,Math.round(w.pos.y+2+ph),1,2);c.globalAlpha=1}
     nameplate(c,w);
+    if(powReady(w))powerStar(c,w,now);
     if(w.love){
       const ph=(now*.7+w.id*.37)%1;
       c.globalAlpha=1-ph;heart(c,Math.round(w.pos.x-2+Math.sin(now*3+w.id)*2),Math.round(w.pos.y-4-ph*14),'#ff6f9c');c.globalAlpha=1;
@@ -2757,6 +2986,7 @@ function buildServiceDOM(){
     <div class="chip">Meta <b>${money(LOCALS[G.lvl].meta)}</b></div>
     ${G.event?`<div class="chip ev"><img class="ic" src="${ICO.star}" alt="">${G.event.name}</div>`:''}
     <div class="chip"><img class="ic" src="${ICO.crate}" alt="">Insumos <b id="sv-stock">0</b></div>
+    <div class="chip">Tus manos <b id="sv-hand">listas</b></div>
     <div class="chip"><img class="ic" src="${ICO.plate}" alt="">Vajilla sucia <span class="bar" id="sv-dirty"></span> <b id="sv-dn">0</b></div>
     <div class="grow"></div>
     <button class="btn small ghost" type="button" data-svc="pause" id="sv-pause">Pausa</button>
@@ -2771,17 +3001,13 @@ function buildServiceDOM(){
   <section class="panel svteam"><h2>Tu equipo en servicio</h2><div id="sv-team">${G.team.map(w=>`<div class="trow" id="tr-${w.id}">
     <canvas class="port" data-port="${w.id}"></canvas>
     <div><b>${w.num}. ${w.name}</b> <span class="muted">${ROLES[w.role].label}, nivel ${w.lvl}</span><div class="tst muted"></div></div>
-    <div class="rowbtns"><button class="btn small" type="button" data-svc="act" data-id="${w.id}" hidden></button><button class="btn small ghost" type="button" data-svc="act" data-id="${w.id}" hidden></button></div></div>`).join('')}</div></section>
+    <div class="rowbtns"><button class="btn small" type="button" data-svc="act" data-id="${w.id}" hidden></button><button class="btn small ghost" type="button" data-svc="act" data-id="${w.id}" hidden></button><button class="btn small pw" type="button" data-svc="pow" data-id="${w.id}" hidden></button></div></div>`).join('')}</div></section>
   </div>`;
   cv=$('#cv');ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
   if(!BG)buildScene();
   cv.addEventListener('pointerdown',ev=>{
-    const r=cv.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width*CW,y=(ev.clientY-r.top)/r.height*CH;
-    for(const w of G.team){
-      if(w.absent||!w.pos)continue;
-      if(x>=w.pos.x-10&&x<=w.pos.x+28&&y>=w.pos.y-26&&y<=w.pos.y+28){const s=statusInfo(w);if(s.a&&s.a!=='bonus'){doAct(s.a,w);break}}
-    }
-    for(const t of S.tables)if(t.g&&t.g.st==='sleep'&&Math.abs(x-t.x)<24&&Math.abs(y-t.y)<24){t.g.sl=0;break}
+    const r=cv.getBoundingClientRect();
+    canvasTap((ev.clientX-r.left)/r.width*CW,(ev.clientY-r.top)/r.height*CH);
   });
   portraits();
   updDom(true);
@@ -2793,9 +3019,9 @@ function syncTickets(){
   tkEls.forEach((el,id)=>{if(!ids.has(id)){tkEls.delete(id);el.className='tk out';setTimeout(()=>el.remove(),280)}});
   S.orders.forEach(o=>{
     let el=tkEls.get(o.id);
-    if(!el){el=document.createElement('div');el.innerHTML='<b></b><span></span><i></i>';tkEls.set(o.id,el);box.appendChild(el)}
+    if(!el){el=document.createElement('div');el.innerHTML='<b></b><span></span><i></i>';el.dataset.oid=o.id;tkEls.set(o.id,el);box.appendChild(el)}
     const pct=clamp(1-o.age/o.pat,0,1);
-    const st={walk:'sentándose',wait:'en cola',prep:'preparando',prepped:'listo para cocinar',cook:'cocinándose',ready:'listo para llevar',carry:'en camino'}[o.stage];
+    const st={walk:'sentándose',wait:'en cola',prep:'preparando',prepped:'listo para cocinar',cook:'cocinándose',cooked:'esperando que lo lleven',run:'en camino al pase',ready:'listo para llevar',carry:'en camino'}[o.stage];
     const cls='tk'+(pct<.3?' urgent':'')+(o.vip?' vip':'');
     if(el.dataset.c!==cls){el.dataset.c=cls;el.className=cls}
     el.children[0].textContent=(o.vip?'CRÍTICO · ':o.tag?o.tag+' · ':'')+(o.siempre?'¿Lo de siempre?':o.dish.name);
@@ -2820,6 +3046,7 @@ function updDom(force){
   $('#sv-clock').textContent=`${String(hh%24).padStart(2,'0')}:${String(mm).padStart(2,'0')}`+(S.phase==='closing'?' (cerrando)':'');
   if(force){S.revShown=S.revenue;$('#sv-rev').textContent=money(S.revenue)}
   $('#sv-stock').textContent=avail();
+  {const hh=$('#sv-hand');if(hh)hh.textContent=S.t>=S.hand?'listas':Math.ceil(S.hand-S.t)+' s'}
   {const nb=14,mx=DSTOP+4,fill=Math.ceil(Math.min(S.dirty,mx)/mx*nb),col=S.dirty>=DSTOP?'var(--bad)':S.dirty>=DSLOW?'var(--warn)':'var(--good)';let d='';for(let i=0;i<nb;i++)d+=`<i class="${i<fill?'on':''}" style="--c:${col}"></i>`;$('#sv-dirty').innerHTML=d;$('#sv-dn').textContent=S.dirty}
   syncTickets();
   G.team.forEach(w=>{
@@ -2836,6 +3063,13 @@ function updDom(force){
       const b=bs[i];if(!b)return;
       if(p[0]&&p[1]){b.hidden=false;b.textContent=p[1];b.dataset.a=p[0]}else b.hidden=true;
     });
+    {const pb=bs[2],P=POWERS[w.role];
+     if(pb&&P){
+       const can=!w.absent&&!w.left&&w.status==='ok';
+       if(w.powUsed){pb.hidden=false;pb.disabled=true;pb.textContent='Poder usado: '+P.n}
+       else if(can){pb.hidden=false;pb.disabled=false;pb.textContent='Poder: '+P.n;pb.title=P.d}
+       else pb.hidden=true;
+     }}
   });
   const lk=S.log.map(l=>l.id).join(',');
   if(lk!==S.logKey){
@@ -2942,7 +3176,12 @@ document.addEventListener('click',e=>{
     if(s.dataset.svc==='pause'){S.paused=!S.paused;s.textContent=S.paused?'Seguir':'Pausa'}
     else if(s.dataset.svc==='speed'){S.speed=S.speed===1?2:S.speed===2?3:1;s.textContent='Velocidad '+S.speed+'x'}
     else if(s.dataset.svc==='act'){const w=G.team.find(x=>x.id==s.dataset.id);if(w&&s.dataset.a)doAct(s.dataset.a,w)}
+    else if(s.dataset.svc==='pow'){const w=G.team.find(x=>x.id==s.dataset.id);if(w)usePower(w)}
   }
+});
+document.addEventListener('click',e=>{
+  const tk=e.target.closest('.tk[data-oid]');
+  if(tk&&S&&!S.done){const o=S.orders.find(x=>x.id==tk.dataset.oid);if(o){if(o.tbl)prioTable(o.tbl);else{const wn=S.win.find(x=>x.o===o);if(wn)prioWin(wn)}}}
 });
 document.addEventListener('click',e=>{const c=e.target.closest('.tchip');$$('.tchip.open').forEach(x=>{if(x!==c)x.classList.remove('open')});if(c)c.classList.toggle('open')});
 ['pageshow','focus','resize','orientationchange'].forEach(ev=>window.addEventListener(ev,()=>setTimeout(refreshGfx,50)));
@@ -2955,6 +3194,7 @@ function setHelp(on){
 $('#helpX').addEventListener('click',()=>setHelp(false));
 $('#help').addEventListener('click',e=>{if(e.target.id==='help')setHelp(false)});
 $('#muteBtn').addEventListener('click',()=>{muted=!muted;$('#muteBtn').textContent='Sonido: '+(muted?'no':'sí');if(!muted)sfx.click()});
+initSignLegend();
 render();
 </script>
 </body>

@@ -742,6 +742,40 @@ const PLANTILLAS = {
         pdfFirmasFilas(ctx, [['Firma del empleado','Firma del encargado'], ['Aclaración del empleado','Aclaración del encargado'], ['DNI del empleado','DNI del encargado']], [[], ['nom|Empleado (nombre y apellido)','enc|Encargado (nombre y apellido)'], ['dni|DNI del empleado','dnienc|DNI del encargado']]);
       }
     },
+    /* ---------------- NOTIFICACIÓN DE VACACIONES ---------------- */
+    {
+      id:'notificacion-vacaciones', nombre:'Notificación de vacaciones',
+      desc:'Aviso por escrito de las fechas de vacaciones, el regreso a las labores y los días usados y pendientes.',
+      archivo: m => 'Notificacion_de_Vacaciones_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        pdfTituloC(ctx, 'NOTIFICACIÓN DE VACACIONES');
+        pdfParrafo(ctx, 'En CABA, a {{Fecha de firma@fecha|4|d}} de {{Fecha de firma@fecha|13|m}} del 20{{Fecha de firma@fecha|3|yy}}');
+        pdfParrafo(ctx, 'Señor/a {{Empleado (nombre y apellido)@nom|50}}');
+        pdfParrafo(ctx, 'DNI: {{DNI del empleado@dni|30}}');
+        pdfParrafo(ctx, 'La Gerencia de la Empresa, ha fijado la fecha para otorgar su período de vacaciones a partir del día {{Inicio de las vacaciones@vdesde|4|d}} de {{Inicio de las vacaciones@vdesde|13|m}} del 20{{Inicio de las vacaciones@vdesde|3|yy}}, hasta el día {{Fin de las vacaciones@vhasta|4|d}} de {{Fin de las vacaciones@vhasta|13|m}} del 20{{Fin de las vacaciones@vhasta|3|yy}} inclusive, retomando sus labores ordinarias el día {{Regreso a las labores@vvuelve|4|d}} de {{Regreso a las labores@vvuelve|13|m}} del 20{{Regreso a las labores@vvuelve|3|yy}}.');
+        pdfParrafo(ctx, 'Estas vacaciones corresponden al período trabajado del año 20{{Año del período trabajado (2 últimos dígitos, ej. 25)@anio|4|num}}, por el cual le corresponden un proporcional de {{Días de vacaciones que le corresponden@dprop|8|num}} días de vacaciones, el cual va a hacer uso de {{Días que va a usar@duso|6|num}} días, dejando pendientes {{Días pendientes@dpend|8|num}} días para un futuro descanso.');
+        pdfParrafo(ctx, 'En nombre de la Empresa, le deseamos que disfrute un provechoso y merecido descanso.');
+        pdfFirmasFilas(ctx, [['Firma del empleado','Firma del encargado'], ['Aclaración del empleado','Aclaración del encargado'], ['DNI del empleado','DNI del encargado']], [[], ['nom|Empleado (nombre y apellido)','enc|Encargado (nombre y apellido)'], ['dni|DNI del empleado','dnienc|DNI del encargado']]);
+      }
+    },
+    /* ---------------- RECIBO DE UNIFORMES DE TRABAJO ---------------- */
+    {
+      id:'recibo-uniformes', nombre:'Recibo de uniformes de trabajo',
+      desc:'Constancia de entrega de uniformes y ropa de trabajo, con talles, detalle de prendas y valor.',
+      archivo: m => 'Recibo_de_Uniformes_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        pdfTituloC(ctx, 'RECIBO DE UNIFORMES DE TRABAJO');
+        pdfDerecha(ctx, 'En CABA a {{Fecha de firma@fecha|6|d}} de {{Fecha de firma@fecha|14|m}} del 20{{Fecha de firma@fecha|3|yy}}');
+        pdfFila(ctx, [{ e:'Nombre', id:'nom', ui:'Nombre y apellido' }]);
+        pdfFila(ctx, [{ e:'Mi talle de camisa es' }, { e:'Mi talle de pantalón es' }, { e:'Mi talle de calzado es' }]);
+        pdfParrafo(ctx, 'El día de la fecha, recibí de {{Entregado por@ent|30}} los uniformes y/o ropa de trabajo que a continuación se detallan:');
+        pdfTabla(ctx, ['Prenda','Cantidad','Firma','Devolución','Persona que recibe'],
+          Array.from({length:7}, () => ['','','','','']), [3,1.4,1.4,1.5,2.2], 9, { ui:'Uniformes entregados' });
+        pdfFila(ctx, [{ e:'Valor: $', ui:'Valor de los uniformes ($)', id:'vu' }]);
+        pdfParrafo(ctx, 'Hago constar que los artículos listados los recibo nuevos y en perfectas condiciones para su uso, obligándome a conservarlos en buen estado, utilizarlos para lo que están destinados dentro de mi trabajo y a restituirlos cuando me sean canjeados o requeridos por el empleador, responsabilizándome de los mismos bajo cualquier circunstancia, obligándome a cubrir su costo en caso de pérdida por negligencia de mi parte.');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración']);
+      }
+    },
     /* ---------------- LEGAJO COMPLETO (9 páginas) ---------------- */
     {
       id:'legajo-completo', nombre:'Legajo completo', soloPdf:true,

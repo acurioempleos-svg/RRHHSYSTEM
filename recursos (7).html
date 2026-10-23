@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recursos — Acurio Restaurantes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans', sans-serif; padding:0;}
+
+/* ============ SWITCHER ============ */
+.switcher-bar{
+  position:sticky; top:0; z-index:50; background:#0B2E4F;
+  display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px;
+  padding:12px 16px; box-shadow:0 4px 14px rgba(0,0,0,0.18);
+}
+.switcher-bar button{
+  font-family:'Anton',sans-serif; font-size:13px; letter-spacing:1px;
+  border:2px solid transparent; background:rgba(255,255,255,0.12); color:#F4E9D4;
+  padding:9px 20px; border-radius:999px; cursor:pointer; transition:all .15s ease;
+}
+.switcher-bar button.active{ background:#F2B705; color:#0B2E4F; border-color:#F4E9D4; }
+.switcher-bar button:not(.active):hover{ background:rgba(255,255,255,0.22); }
+
+
+.page{ display:none; }
+.page.active{ display:block; }
+
+/* ============ BASE COMPARTIDA ============ */
+.page{ padding:36px 16px 60px; min-height:calc(100vh - 56px); }
+.wrap{ max-width:1040px; margin:0 auto; }
+.navbar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; }
+.brand{ display:flex; align-items:center; gap:14px; }
+.brand .icon{ width:46px; height:46px; flex-shrink:0; }
+.brand .text{ display:flex; flex-direction:column; line-height:1; }
+.brand .sub{ margin-top:8px; font-size:10.5px; letter-spacing:2.5px; font-weight:700; text-transform:uppercase; }
+.stamp{ font-family:'Anton',sans-serif; font-size:14px; letter-spacing:1.5px; white-space:nowrap; }
+.doodle-row{ display:flex; align-items:center; justify-content:center; gap:24px; margin-bottom:6px; opacity:.96; }
+.doodle-row svg{ height:52px; width:auto; }
+.doodle-title{ font-family:'Anton',sans-serif; letter-spacing:1px; text-transform:uppercase; }
+
+.toolbar{ display:flex; justify-content:center; gap:10px; margin:18px 0 18px; flex-wrap:wrap; }
+.count-pill{ display:flex; align-items:center; font-size:12.5px; font-weight:600; padding:5px 14px; border-radius:999px; background:var(--paper); border:1.5px solid var(--c1); color:var(--ink); }
+
+.files{ display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px; margin-top:6px; }
+.file-card{ position:relative; background:var(--paper); color:var(--ink); padding:18px 18px 16px; display:flex; flex-direction:column; gap:8px; }
+.file-tag{ align-self:flex-start; font-family:'Anton',sans-serif; font-size:10px; letter-spacing:1.5px; padding:3px 10px; border-radius:999px; background:var(--c1); color:var(--paper); }
+.file-name{ font-family:'Anton',sans-serif; font-size:20px; letter-spacing:.5px; color:var(--c1); line-height:1.15; }
+.file-desc{ font-size:13.5px; line-height:1.4; opacity:.85; flex:1; }
+.dl-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:6px; text-decoration:none; cursor:pointer;
+  font-family:'Anton',sans-serif; font-size:13px; letter-spacing:1px; color:#fff; background:var(--c2);
+  border:2px solid var(--c1); border-radius:999px; padding:10px 18px; box-shadow:3px 3px 0 rgba(0,0,0,0.18);
+  transition:transform .12s ease, opacity .15s ease;
+}
+.dl-btn:hover{ opacity:.88; } .dl-btn:active{ transform:scale(.97); }
+.empty{ grid-column:1/-1; text-align:center; padding:46px 20px; background:rgba(255,255,255,0.6); border:2px dashed var(--c1); border-radius:14px; color:var(--ink); }
+.empty .big{ font-family:'Anton',sans-serif; font-size:22px; letter-spacing:1px; color:var(--c1); text-transform:uppercase; margin-bottom:6px; }
+.empty .small{ font-size:13.5px; opacity:.8; }
+
+footer{ margin-top:28px; display:flex; align-items:center; justify-content:flex-end; gap:10px; font-size:11.5px; font-style:italic; }
+footer svg{ height:22px; width:auto; opacity:.85; }
+
+/* ======================================================= */
+/* ================= THEME 1: BARRA CHALACA ================ */
+/* ======================================================= */
+.theme-barra{
+  --c1:#0B2E4F; --c2:#E8492B; --paper:#FFFDF7; --ink:#0B2E4F;
+  --navy:#0B2E4F; --ocean:#145C82; --coral:#E8492B; --sand:#F4E9D4; --gold:#F2B705; --wood-a:#E4D2A6; --wood-b:#D8C293;
+  background-color:var(--wood-a);
+  background-image:
+    repeating-linear-gradient(180deg,var(--wood-a) 0px,var(--wood-a) 46px,var(--wood-b) 46px,var(--wood-b) 48px),
+    radial-gradient(circle at 10% 5%,rgba(255,255,255,0.25) 0%,transparent 45%),
+    radial-gradient(circle at 90% 95%,rgba(0,0,0,0.06) 0%,transparent 45%);
+  color:var(--ink);
+}
+.theme-barra .navbar{ background:var(--sand); border-radius:14px; padding:16px 26px; box-shadow:0 8px 0 rgba(7,32,56,0.12),0 14px 26px rgba(11,46,79,0.18); border:2px solid var(--navy); }
+.theme-barra .brand .logo{ font-family:'Alfa Slab One',serif; font-size:clamp(24px,3.4vw,34px); color:var(--coral); text-shadow:2px 2px 0 var(--navy); letter-spacing:.5px; }
+.theme-barra .brand .sub{ color:var(--ocean); letter-spacing:3px; font-size:11px; }
+.theme-barra .stamp{ color:var(--sand); background:var(--coral); padding:10px 22px; border-radius:999px; transform:rotate(-3deg); border:2px dashed var(--sand); box-shadow:3px 3px 0 var(--navy); }
+.theme-barra .stripe{ height:8px; margin:22px 0 20px; border-radius:4px; background:repeating-linear-gradient(90deg,var(--navy) 0 22px,var(--coral) 22px 26px); box-shadow:0 2px 0 rgba(0,0,0,0.08); }
+.theme-barra .doodle-title{ font-size:22px; color:var(--navy); }
+.theme-barra .count-pill{ background:rgba(255,255,255,0.55); }
+.theme-barra .file-card{ border:2px solid var(--navy); border-radius:12px; box-shadow:0 6px 0 rgba(7,32,56,0.14),0 12px 22px rgba(11,46,79,0.16); background-image:radial-gradient(circle at 90% 10%,rgba(20,92,130,0.05) 0%,transparent 55%); }
+.theme-barra .file-tag{ background:var(--coral); transform:rotate(-2deg); border:1px dashed rgba(255,255,255,0.7); }
+.theme-barra footer{ color:var(--ocean); }
+
+/* ======================================================= */
+/* ===================== THEME 2: TANTA ===================== */
+/* ======================================================= */
+.theme-tanta{
+  --c1:#A5115C; --c2:#E0177C; --paper:#FFFFFF; --ink:#2B1330;
+  --magenta:#E0177C; --magenta-deep:#A5115C; --orange:#F5821F; --pink:#EE3E8E; --purple:#7A2D8C; --cloud:#FBF3F8;
+  background-color:var(--cloud);
+  background-image:radial-gradient(circle at 6% 4%,rgba(224,23,124,0.10) 0%,transparent 42%),radial-gradient(circle at 96% 96%,rgba(245,130,31,0.10) 0%,transparent 42%);
+  color:var(--ink);
+}
+.theme-tanta .navbar{ background:var(--paper); border-radius:10px; padding:18px 30px; box-shadow:0 10px 28px rgba(122,45,140,0.16); border-top:4px solid var(--magenta); }
+.theme-tanta .brand .icon{ width:46px; height:46px; }
+.theme-tanta .brand .logo{ font-family:'Anton',sans-serif; font-size:clamp(28px,3.8vw,40px); letter-spacing:.5px; }
+.theme-tanta .brand .logo .c1{color:var(--magenta);} .theme-tanta .brand .logo .c2{color:var(--orange);} .theme-tanta .brand .logo .c3{color:var(--pink);}
+.theme-tanta .brand .sub{ color:var(--purple); }
+.theme-tanta .stamp{ color:var(--paper); background:linear-gradient(120deg,var(--purple),var(--magenta) 55%,var(--orange)); padding:10px 24px; border-radius:999px; }
+.theme-tanta .stripe{ height:9px; margin:22px 0 20px; border-radius:999px; background:linear-gradient(90deg,var(--magenta) 0%,var(--pink) 34%,var(--orange) 68%,var(--purple) 100%); }
+.theme-tanta .doodle-title{ font-size:24px; color:var(--purple); letter-spacing:.5px; }
+.theme-tanta .doodle-row svg{ height:54px; }
+.theme-tanta .count-pill{ border-color:var(--magenta); }
+.theme-tanta .dl-btn{ background:linear-gradient(120deg,var(--magenta),var(--pink)); border:none; box-shadow:0 6px 14px rgba(224,23,124,0.28); }
+.theme-tanta .file-card{ border-radius:10px; border-top:4px solid var(--magenta); box-shadow:0 10px 24px rgba(122,45,140,0.16); }
+.theme-tanta .file-tag{ background:linear-gradient(120deg,var(--purple),var(--magenta)); }
+.theme-tanta .file-name{ color:var(--purple); }
+.theme-tanta .empty{ border-color:var(--magenta); }
+.theme-tanta footer{ color:var(--purple); }
+
+/* ======================================================= */
+/* ===================== THEME 3: LA MAR ===================== */
+/* ======================================================= */
+.theme-lamar{
+  --c1:#10495E; --c2:#D96C4A; --paper:#FBF7EC; --ink:#10314A;
+  --azul:#10495E; --azul-deep:#0A3140; --verde:#4C8C6E; --arena:#EFE6D3; --coral:#D96C4A;
+  background-color:var(--arena);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='46'><path d='M0 26 Q17.5 8 35 26 T70 26 T105 26 T140 26' fill='none' stroke='%2310495E' stroke-width='1.4' opacity='0.10'/></svg>"),
+    radial-gradient(circle at 10% 8%,rgba(76,140,110,0.14) 0%,transparent 45%),
+    radial-gradient(circle at 90% 92%,rgba(16,73,94,0.12) 0%,transparent 45%);
+  background-repeat:repeat,no-repeat,no-repeat;
+  color:var(--ink);
+}
+.theme-lamar .navbar{ position:relative; background:var(--paper); border-radius:8px 8px 0 0; padding:18px 28px 24px; box-shadow:0 10px 24px rgba(16,49,64,0.16); border:1px solid rgba(16,73,94,0.22); border-bottom:none; margin-bottom:14px; }
+.theme-lamar .navbar::after{ content:""; position:absolute; left:0; right:0; bottom:-13px; height:16px; background-image:radial-gradient(circle at 12px 0,transparent 12px,var(--paper) 12.5px); background-size:24px 16px; background-repeat:repeat-x; filter:drop-shadow(0 6px 6px rgba(16,49,64,0.14)); }
+.theme-lamar .brand .icon{ width:44px; height:44px; }
+.theme-lamar .brand .logo{ font-family:'Alfa Slab One',serif; font-size:clamp(24px,3.4vw,34px); color:var(--azul); letter-spacing:1px; }
+.theme-lamar .brand .sub{ color:var(--verde); }
+.theme-lamar .stamp{ color:var(--paper); background:var(--coral); padding:11px 22px 11px 30px; clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%); }
+.theme-lamar .ola-divider{ margin:6px 0 20px; }
+.theme-lamar .ola-divider svg{ width:100%; height:20px; display:block; }
+.theme-lamar .doodle-row{ gap:18px; } .theme-lamar .doodle-row svg{ height:46px; }
+.theme-lamar .doodle-title{ font-size:18px; color:var(--arena); letter-spacing:1.5px; background:var(--azul-deep); padding:8px 20px; border-radius:6px; border:1.5px dashed var(--coral); transform:rotate(-1deg); }
+.theme-lamar .count-pill{ border-color:var(--azul); }
+.theme-lamar .dl-btn{ border-color:var(--azul); border-radius:0; clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%); padding-left:28px; box-shadow:none; }
+.theme-lamar .file-card{ border:1px solid rgba(16,73,94,0.28); border-radius:4px 4px 16px 16px; box-shadow:0 10px 22px rgba(16,49,64,0.14); }
+.theme-lamar .file-tag{ background:var(--verde); border-radius:999px 999px 999px 2px; }
+.theme-lamar .empty{ border-color:var(--azul); }
+.theme-lamar footer{ color:var(--verde); }
+
+@media (max-width:700px){
+  .page{ padding:22px 12px 44px; }
+  .navbar{ padding:14px 18px !important; }
+  .brand .icon{ width:34px !important; height:34px !important; }
+  .doodle-row{ gap:10px; } .doodle-row svg{ height:34px !important; }
+  .theme-barra .doodle-title,.theme-tanta .doodle-title{ font-size:15px; }
+  .theme-lamar .doodle-title{ font-size:13px; padding:6px 12px; }
+  .files{ grid-template-columns:1fr; }
+  .switcher-bar button{ padding:8px 14px; font-size:12px; }
+  footer{ justify-content:center; }
+}
+
+
+/* ============ COMPLETAR E IMPRIMIR ============ */
+.btn-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.btn-row .dl-btn{ margin-top:0; padding:9px 8px; font-size:12px; }
+.dl-btn.alt{ background:var(--paper); color:var(--c1); }
+.dl-btn.main{ margin-top:8px; }
+
+.ov{ position:fixed; inset:0; z-index:100; background:rgba(7,20,35,.62); display:flex; align-items:flex-end; justify-content:center; font-family:'DM Sans',sans-serif; }
+.ov.top{ z-index:110; }
+.sheet{ background:#fff; color:#1c2630; width:100%; max-width:860px; height:94vh; display:flex; flex-direction:column; border-radius:16px 16px 0 0; overflow:hidden; border:3px solid var(--c1); }
+@media(min-width:700px){ .ov{ align-items:center; } .sheet{ border-radius:16px; height:90vh; } }
+.sheet-h{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:12px 16px; background:var(--c1); color:#fff; }
+.sheet-h .t{ font-family:'Anton',sans-serif; font-size:17px; letter-spacing:.8px; line-height:1.15; }
+.sheet-h .t small{ display:block; font-family:'DM Sans',sans-serif; font-size:11.5px; letter-spacing:0; opacity:.85; margin-top:2px; }
+.bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.bar-btn{ font-family:'Anton',sans-serif; font-size:12.5px; letter-spacing:1px; border:2px solid #fff; background:var(--c2); color:#fff; border-radius:999px; padding:8px 14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+.bar-btn.alt{ background:#fff; color:var(--c1); }
+.bar-btn:active{ transform:scale(.97); }
+.x{ background:rgba(255,255,255,.2); color:#fff; border:0; border-radius:999px; width:34px; height:34px; font-size:17px; cursor:pointer; }
+.sheet-b{ overflow:auto; padding:16px; background:var(--fondo); flex:1; }
+.sec{ background:#fff; border:2px solid var(--c1); border-radius:12px; padding:14px; margin-bottom:14px; }
+.sec h3{ font-family:'Anton',sans-serif; font-weight:400; font-size:15px; letter-spacing:1px; color:var(--c1); margin-bottom:12px; padding-bottom:6px; border-bottom:3px solid var(--c2); text-transform:uppercase; }
+.grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+.fld{ min-width:0; }
+.fld.wide{ grid-column:1/-1; }
+.fld label{ display:block; font-size:12px; font-weight:700; color:var(--c1); margin-bottom:4px; }
+.fld .tag{ font-weight:400; font-size:10.5px; opacity:.65; margin-left:6px; font-style:italic; }
+.fld input,.fld select,.fld textarea{ width:100%; font:16px 'DM Sans',sans-serif; padding:9px 10px; border:2px solid #c9ced6; border-radius:8px; background:#fff; color:#1c2630; }
+.fld input:focus,.fld select:focus,.fld textarea:focus{ outline:none; border-color:var(--c2); }
+.fld textarea{ resize:vertical; min-height:96px; }
+.tbl{ overflow-x:auto; border:2px solid var(--c1); border-radius:8px; }
+.tbl table{ border-collapse:collapse; width:100%; min-width:430px; }
+.tbl th{ background:var(--c1); color:#fff; font-size:11px; letter-spacing:.5px; padding:6px; text-transform:uppercase; }
+.tbl td{ border-top:1px solid #d5d9df; padding:3px; }
+.tbl td input{ border-width:1px; padding:6px 7px; font-size:15px; }
+.tbl td.st{ background:var(--fondo); font-weight:700; color:var(--c1); font-size:13px; padding:6px 8px; white-space:nowrap; }
+.tbl td.na{ text-align:center; font-size:11px; font-style:italic; color:#8a929c; }
+.sheet-f{ display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; padding:12px 16px; border-top:3px solid var(--c1); background:#fff; }
+.sheet-f .dl-btn{ margin-top:0; }
+.hint{ font-size:12px; color:#5a6470; margin:0 2px 12px; }
+.warn{ background:#FFF3CD; color:#664d03; font-size:13px; padding:8px 14px; border-bottom:2px solid #e6c85c; }
+.sheet iframe{ flex:1; width:100%; border:0; background:#555; }
+
+</style>
+</head>
+<body>
+
+<div class="switcher-bar">
+  <button id="btn-barra" class="active" onclick="showPage('barra')">BARRA CHALACA</button>
+  <button id="btn-tanta" onclick="showPage('tanta')">TANTA</button>
+  <button id="btn-lamar" onclick="showPage('lamar')">LA MAR</button>
+</div>
+
+<!-- ================= PAGE: BARRA CHALACA ================= -->
+<div id="page-barra" class="page active theme-barra">
+  <div class="wrap">
+    <div class="navbar">
+      <div class="brand">
+        <div class="text">
+          <div class="logo">BARRA CHALACA</div>
+          <div class="sub">STREET FOOD PERUANO · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp">RECURSOS</div>
+    </div>
+    <div class="stripe"></div>
+    <div class="doodle-row">
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
+        <path d="M95 30 L118 15 L112 30 L118 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
+        <circle cx="34" cy="26" r="3.2" fill="#0B2E4F"/>
+        <path d="M15 30 Q35 40 55 30" fill="none" stroke="#E8492B" stroke-width="2"/>
+      </svg>
+      <div class="doodle-title">Archivos para firmar</div>
+      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path d="M110 30 C 90 5, 50 5, 25 30 C 50 55, 90 55, 110 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
+        <path d="M25 30 L2 15 L8 30 L2 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
+        <circle cx="86" cy="26" r="3.2" fill="#0B2E4F"/>
+        <path d="M105 30 Q85 40 65 30" fill="none" stroke="#E8492B" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="toolbar">
+      <span class="count-pill" id="count-barra">0 archivos</span>
+    </div>
+    <div class="files" id="files-barra"></div>
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 C 8 4, 16 4, 20 14 C 24 4, 32 4, 38 14" fill="none" stroke="#145C82" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= PAGE: TANTA ================= -->
+<div id="page-tanta" class="page theme-tanta">
+  <div class="wrap">
+    <div class="navbar">
+      <div class="brand">
+        <svg class="icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="26" fill="none" stroke="#E0177C" stroke-width="4"/>
+          <path d="M30 8 A22 22 0 0 1 30 52" fill="none" stroke="#F5821F" stroke-width="4"/>
+          <circle cx="30" cy="30" r="8" fill="#EE3E8E"/>
+        </svg>
+        <div class="text">
+          <div class="logo"><span class="c1">T</span><span class="c2">A</span><span class="c2">n</span><span class="c1">t</span><span class="c3">a</span></div>
+          <div class="sub">Cocina casera peruana · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp">RECURSOS</div>
+    </div>
+    <div class="stripe"></div>
+    <div class="doodle-row">
+      <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,44 24,14 44,44" fill="none" stroke="#E0177C" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="44,44 64,14 84,44" fill="none" stroke="#F5821F" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="84,44 104,14 118,34" fill="none" stroke="#7A2D8C" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+      <div class="doodle-title">archivos para firmar</div>
+      <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="2,34 16,14 36,44" fill="none" stroke="#7A2D8C" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="36,44 56,14 76,44" fill="none" stroke="#F5821F" stroke-width="3" stroke-linejoin="round"/>
+        <polyline points="76,44 96,14 116,44" fill="none" stroke="#E0177C" stroke-width="3" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="toolbar">
+      <span class="count-pill" id="count-tanta">0 archivos</span>
+    </div>
+    <div class="files" id="files-tanta"></div>
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><polyline points="2,16 12,4 22,16 32,4 38,10" fill="none" stroke="#E0177C" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= PAGE: LA MAR ================= -->
+<div id="page-lamar" class="page theme-lamar">
+  <div class="wrap">
+    <div class="navbar">
+      <div class="brand">
+        <svg class="icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 38 Q16 26 30 38 T54 38" fill="none" stroke="#10495E" stroke-width="3"/>
+          <path d="M6 46 Q16 34 30 46 T54 46" fill="none" stroke="#4C8C6E" stroke-width="3"/>
+          <circle cx="30" cy="18" r="8" fill="#D96C4A"/>
+        </svg>
+        <div class="text">
+          <div class="logo">LA MAR</div>
+          <div class="sub">Cebichería peruana · RRHH</div>
+        </div>
+      </div>
+      <div class="stamp">RECURSOS</div>
+    </div>
+    <div class="ola-divider">
+      <svg viewBox="0 0 400 20" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 10 Q 12.5 0 25 10 T 50 10 T 75 10 T 100 10" fill="none" stroke="#10495E" stroke-width="2.5" transform="scale(4,1)"/>
+        <path d="M0 15 Q 12.5 6 25 15 T 50 15 T 75 15 T 100 15" fill="none" stroke="#4C8C6E" stroke-width="2" opacity="0.7" transform="scale(4,1)"/>
+      </svg>
+    </div>
+    <div class="doodle-row">
+      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#D96C4A" stroke-width="3"/>
+        <path d="M52 25 L58 18 L58 32 Z" fill="#D96C4A"/>
+        <circle cx="20" cy="22" r="2.4" fill="#10495E"/>
+      </svg>
+      <div class="doodle-title">archivos para firmar</div>
+      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#4C8C6E" stroke-width="3" transform="scale(-1,1) translate(-60,0)"/>
+        <path d="M8 25 L2 18 L2 32 Z" fill="#4C8C6E"/>
+        <circle cx="40" cy="22" r="2.4" fill="#10495E"/>
+      </svg>
+    </div>
+    <div class="toolbar">
+      <span class="count-pill" id="count-lamar">0 archivos</span>
+    </div>
+    <div class="files" id="files-lamar"></div>
+    <footer>
+      RRHH · Acurio Restaurantes
+      <svg viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 14 Q10 6 20 14 T38 14" fill="none" stroke="#4C8C6E" stroke-width="2.5"/></svg>
+    </footer>
+  </div>
+</div>
+
+<script>
+const LOCALES = ['barra','tanta','lamar'];
+
+
+/* ======================================================================
+   MARCAS — colores (RGB) usados por los PDF generados
+   ====================================================================== */
+const MARCAS = {
+  barra: { nombre:'BARRA CHALACA', local:'Barra Chalaca', slug:'BarraChalaca', sub:'Street food peruano', fondo:[244,233,212], prim:[11,46,79],  acento:[232,73,43] },
+  tanta: { nombre:'TANTA',         local:'Tanta', slug:'Tanta', sub:'Cocina casera peruana', fondo:[251,243,248], prim:[122,45,140], acento:[224,23,124] },
+  lamar: { nombre:'LA MAR',        local:'La Mar', slug:'LaMar', sub:'Cebichería peruana',    fondo:[239,230,211], prim:[16,73,94],  acento:[217,108,74] }
+};
+
+/* ======================================================================
+   PLANTILLAS PDF (se generan en el navegador, sin Firebase)
+   Ya incluye Acta de reunión, Apercibimiento, Carta de suspensión y Legajo completo
+   (en 'todas'). Para sumar otra, agregá un objeto al array de la marca
+   (o de 'todas' para que aparezca en las 3 pestañas):
+
+   barra: [{
+     id: 'ficha-ingreso',
+     nombre: 'Ficha de ingreso',
+     desc: 'Datos personales del empleado',
+     archivo: 'ficha-ingreso-barra-chalaca.pdf',
+     generar(ctx){
+       pdfTitulo(ctx, 'FICHA DE INGRESO');
+       pdfParrafo(ctx, 'Texto del documento...');
+       pdfCampo(ctx, 'Nombre y apellido');
+       pdfCampo(ctx, 'DNI');
+       pdfFirmas(ctx, ['Empleado', 'Encargado']);
+     }
+   }]
+   ====================================================================== */
+
+/* ======================================================================
+   MODOS DE GENERACIÓN
+   'blanco' = documento vacío (como siempre)
+   'scan'   = recorre la plantilla para descubrir qué campos hay que completar
+   'llenar' = escribe en el PDF los datos que cargó la persona
+   ====================================================================== */
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const ID_AUTO = { 'Aclaración':'nom', 'DNI':'dni' };   /* se repiten en todas las firmas */
+function limpiar(s){ return String(s == null ? '' : s).replace(/[\r\n\t]+/g,' ').replace(/[^\x20-\x7E\u00A1-\u00FF•]/g,'?'); }
+function fechaParte(v, p){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+  if(!m) return '';
+  if(p === 'd') return String(+m[3]);
+  if(p === 'm') return MESES[+m[2]-1];
+  if(p === 'y') return m[1];
+  if(p === 'yy') return m[1].slice(2);
+  return m[3] + '/' + m[2] + '/' + m[1];
+}
+/* Registra un campo (modo scan) o devuelve lo que escribió la persona (modo llenar). */
+function campo(ctx, s){
+  const k = s.id || ('c' + (ctx.n++));
+  if(ctx.modo === 'scan'){
+    if(k === 'nom' && (ctx.reg.ape || ctx.reg.nomb)) return '';   /* se arma con Apellido + Nombre */
+    if(ctx.reg[k]){ ctx.reg[k].n++; return ''; }
+    const c = { k, l:s.l, tipo:s.tipo || 'text', opts:s.opts, def:s.def, sec:ctx.sec, n:1, cab:s.cab, base:s.base, skip:s.skip };
+    ctx.reg[k] = c; ctx.campos.push(c);
+    return '';
+  }
+  if(ctx.modo !== 'llenar') return '';
+  let v = ctx.vals[k];
+  if(k === 'nom' && !v) v = [ctx.vals.nomb, ctx.vals.ape].filter(Boolean).join(' ');
+  return v == null ? '' : v;
+}
+/* Texto con huecos:  {{Etiqueta@id|tamaño|tipo|valorPorDefecto}}
+   tipo: (vacío)=texto · num · d/m/y/yy/f = partes de una fecha · sel=a/b/c · chk=a/b/c  */
+function pdfTexto(ctx, t){
+  if(t.indexOf('{{') < 0) return t;
+  return t.replace(/\{\{([^}]+)\}\}(\s\([^)]*\))?/g, (_, raw, par) => {
+    const a = raw.split('|'), lab = a[0].split('@'), l = lab[0], id = lab[1];
+    const tam = a[1] || '12', kind = a[2] || '', def = a[3];
+    let tipo = 'text', opts, parte;
+    if(kind.indexOf('chk=') === 0){ tipo = 'chk'; opts = kind.slice(4).split('/'); }
+    else if(kind.indexOf('sel=') === 0){ tipo = 'sel'; opts = kind.slice(4).split('/'); }
+    else if(kind === 'num') tipo = 'num';
+    else if(kind){ tipo = 'date'; parte = kind; }
+    const blanco = tipo === 'chk' ? opts.map(o => '( ) ' + o).join(' ') : (/^\d+$/.test(tam) ? '_'.repeat(+tam) : tam);
+    const v = campo(ctx, { l, id, tipo, opts, def });
+    const resto = par || '';
+    if(ctx.modo !== 'llenar' || !v) return blanco + resto;
+    if(tipo === 'chk') return opts.map(o => (o === v ? '(X) ' : '( ) ') + o).join(' ') + resto;
+    if(tipo === 'sel') return limpiar(v);                 /* descarta el "(leve, grave…)" aclaratorio */
+    if(tipo === 'date') return fechaParte(v, parte) || (blanco + resto);
+    return limpiar(v) + resto;
+  });
+}
+/* Escribe un texto achicando la letra si no entra en el ancho disponible */
+function textoAjustado(ctx, t, x, y, maxW, size, opc){
+  const { doc } = ctx;
+  t = limpiar(t);
+  let s = size || 10;
+  doc.setFont('helvetica','normal'); doc.setFontSize(s); doc.setTextColor(20,20,20);
+  while(s > 6 && doc.getTextWidth(t) > maxW){ s -= 0.5; doc.setFontSize(s); }
+  if(doc.getTextWidth(t) > maxW){
+    while(t.length > 1 && doc.getTextWidth(t + '...') > maxW) t = t.slice(0,-1);
+    t += '...';
+  }
+  doc.text(t, x, y, opc || {});
+}
+
+/* ---------- Helpers extra para formularios ---------- */
+function pdfPagina(ctx){ ctx.doc.addPage(); pdfEncabezado(ctx); }
+function pdfTituloC(ctx, texto, sub){
+  ctx.sec = texto;
+  pdfEspacio(ctx, 16);
+  const { doc } = ctx;
+  const ti = tituloImg(ctx.marca, texto);
+  doc.addImage(ti.data, 'PNG', ctx.W/2 - ti.w/2, ctx.y - ti.base, ti.w, ti.h, 't|' + ctx.marca + '|' + texto, 'FAST');
+  pdfAcento(ctx, ctx.W/2, ctx.y + 2.8);
+  ctx.y += 10;
+  if(sub){
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(90,90,90);
+    doc.text(sub, ctx.W/2, ctx.y, { align:'center' });
+    ctx.y += 6;
+  }
+  ctx.y += 3;
+}
+function pdfSub(ctx, texto){
+  pdfEspacio(ctx, 10);
+  const { doc, M } = ctx;
+  doc.setFillColor(...M.acento); doc.rect(ctx.mx, ctx.y - 2.7, 2.2, 2.2, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...M.prim);
+  doc.text(texto, ctx.mx + 4, ctx.y); ctx.y += 7;
+}
+function pdfDerecha(ctx, texto){
+  texto = pdfTexto(ctx, texto);
+  pdfEspacio(ctx, 8);
+  ctx.doc.setFont('helvetica','normal'); ctx.doc.setFontSize(10); ctx.doc.setTextColor(40,40,40);
+  ctx.doc.text(texto, ctx.W-ctx.mx, ctx.y, { align:'right' }); ctx.y += 9;
+}
+function pdfLista(ctx, items, size, gap){
+  const { doc } = ctx; size = size || 10; gap = (gap == null) ? 2 : gap;
+  const lh = size*0.46, sang = 5;
+  items.forEach(t => {
+    doc.setFont('helvetica','normal'); doc.setFontSize(size);
+    const lineas = doc.splitTextToSize(t, ctx.W - ctx.mx*2 - sang);
+    pdfEspacio(ctx, lh*lineas.length + gap);
+    doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(40,40,40);
+    doc.text('•', ctx.mx + 1, ctx.y);
+    lineas.forEach(l => { doc.text(l, ctx.mx + sang, ctx.y); ctx.y += lh; });
+    ctx.y += gap;
+  });
+  ctx.y += 1;
+}
+function pdfFila(ctx, campos){
+  pdfEspacio(ctx, 12);
+  const { doc, M } = ctx;
+  const gap = 5, ancho = ctx.W - ctx.mx*2;
+  const total = campos.reduce((s,c) => s + (c.w || 1), 0);
+  let x = ctx.mx;
+  campos.forEach(c => {
+    const w = (ancho - gap*(campos.length-1)) * (c.w || 1) / total;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...M.prim);
+    doc.text(c.e + ':', x, ctx.y);
+    const x0 = x + doc.getTextWidth(c.e + ': ') + 2;
+    const rotulo = c.ui || c.e;
+    if(c.chk){
+      const v = campo(ctx, { l:rotulo, id:c.id, tipo:'chk', opts:c.chk });
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(40,40,40);
+      doc.text(c.chk.map(o => o + (v === o ? ' (X)' : ' ( )')).join('    '), x0, ctx.y);
+    }else if(c.texto){
+      doc.setFont('helvetica','normal'); doc.setTextColor(40,40,40);
+      doc.text(c.texto, x0, ctx.y);
+    }else{
+      doc.setDrawColor(120,120,120); doc.setLineWidth(0.2); doc.line(x0, ctx.y+0.6, x+w, ctx.y+0.6);
+      if(!/^firma/i.test(c.e)){
+        const tipo = /^fecha/i.test(c.e) ? 'date' : /^hora/i.test(c.e) ? 'time' : 'text';
+        let v = campo(ctx, { l:rotulo, id:c.id || ID_AUTO[c.e], tipo });
+        if(v){
+          if(tipo === 'date') v = fechaParte(v, 'f');
+          textoAjustado(ctx, v, x0 + 0.5, ctx.y - 0.3, x + w - x0 - 1, 10);
+        }
+      }
+    }
+    x += w + gap;
+  });
+  ctx.y += 10;
+}
+function pdfRenglones(ctx, n, sep, ui){
+  sep = sep || 8;
+  const v = campo(ctx, { l: ui || 'Detalle', tipo:'area' });
+  let lineas = [];
+  if(v){
+    ctx.doc.setFont('helvetica','normal'); ctx.doc.setFontSize(10);
+    lineas = ctx.doc.splitTextToSize(limpiar(v), ctx.W - ctx.mx*2 - 2);
+    n = Math.max(n, lineas.length);
+  }
+  pdfEspacio(ctx, Math.min(n, 4)*sep);
+  for(let i=0;i<n;i++){
+    pdfEspacio(ctx, sep);
+    ctx.y += sep;
+    ctx.doc.setDrawColor(150,150,150); ctx.doc.setLineWidth(0.2);
+    ctx.doc.line(ctx.mx, ctx.y, ctx.W-ctx.mx, ctx.y);
+    if(lineas[i]){
+      ctx.doc.setFont('helvetica','normal'); ctx.doc.setFontSize(10); ctx.doc.setTextColor(20,20,20);
+      ctx.doc.text(lineas[i], ctx.mx + 1, ctx.y - 1.6);
+    }
+  }
+  ctx.y += 5;
+}
+function pdfFirmaApilada(ctx, etiquetas){
+  pdfEspacio(ctx, etiquetas.length*10 + 6);
+  ctx.y += 6;
+  const { doc } = ctx;
+  etiquetas.forEach(e => {
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...ctx.M.prim);
+    doc.text(e + ':', ctx.mx, ctx.y);
+    doc.setDrawColor(120,120,120); doc.setLineWidth(0.2);
+    doc.line(ctx.mx + 26, ctx.y+0.6, ctx.mx + 96, ctx.y+0.6);
+    if(!/^firma/i.test(e)){
+      const v = campo(ctx, { l: e === 'Aclaración' ? 'Nombre y apellido' : e, id: ID_AUTO[e] });
+      if(v) textoAjustado(ctx, v, ctx.mx + 28, ctx.y - 0.3, 66, 10);
+    }
+    ctx.y += 10;
+  });
+}
+function pdfFirmasFilas(ctx, filas, ids){
+  const { doc } = ctx;
+  pdfEspacio(ctx, filas.length*15 + 6);
+  ctx.y += 6;
+  const n = filas[0].length, sep = 20, ancho = (ctx.W - ctx.mx*2 - (n-1)*sep) / n;
+  filas.forEach((f, r) => {
+    ctx.y += 8;
+    f.forEach((t,i) => {
+      const x = ctx.mx + i*(ancho+sep);
+      doc.setDrawColor(40,40,40); doc.setLineWidth(0.3); doc.line(x, ctx.y, x+ancho, ctx.y);
+      const sp = ids && ids[r] && ids[r][i];
+      if(sp){
+        const p = sp.split('|');
+        const v = campo(ctx, { l:p[1] || t, id:p[0] });
+        if(v) textoAjustado(ctx, v, x+ancho/2, ctx.y - 1.4, ancho - 2, 10, { align:'center' });
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...ctx.M.prim);
+      doc.text(t, x+ancho/2, ctx.y+4.5, { align:'center' });
+    });
+    ctx.y += 7;
+  });
+}
+function pdfTabla(ctx, cab, filas, anchos, alto, opc){
+  opc = opc || {};
+  const { doc, M } = ctx;
+  const skip = cab.map(t => /firma/i.test(t));
+  const dat = campo(ctx, { l: opc.ui || 'Tabla', tipo:'tabla', cab, base:filas, skip });
+  const vals = Array.isArray(dat) ? dat : [];
+  const ancho = ctx.W - ctx.mx*2, suma = anchos.reduce((a,b) => a+b, 0);
+  const ws = anchos.map(a => ancho*a/suma), hCab = 8;
+  pdfEspacio(ctx, hCab + alto);
+  doc.setFillColor(...M.prim); doc.rect(ctx.mx, ctx.y, ancho, hCab, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  let x = ctx.mx;
+  cab.forEach((t,i) => { doc.text(t, x+ws[i]/2, ctx.y+5.3, { align:'center' }); x += ws[i]; });
+  ctx.y += hCab;
+  filas.forEach((f, ri) => {
+    pdfEspacio(ctx, alto);
+    doc.setDrawColor(...M.prim); doc.setLineWidth(0.25);
+    let xx = ctx.mx;
+    ws.forEach((w,i) => {
+      if(i === 0 && opc.primeraColumna){ doc.setFillColor(...M.fondo); doc.rect(xx, ctx.y, w, alto, 'FD'); }
+      else doc.rect(xx, ctx.y, w, alto);
+      if(f[i]){
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...M.prim);
+        doc.text(f[i], xx+2.5, ctx.y + alto/2 + 1.2);
+      }else if(!skip[i] && vals[ri] && vals[ri][i]){
+        textoAjustado(ctx, vals[ri][i], xx+2.5, ctx.y + alto/2 + 1.2, w - 5, 9.5);
+      }
+      xx += w;
+    });
+    ctx.y += alto;
+  });
+  ctx.y += 6;
+}
+function pdfCaja(ctx, titulo, alto){
+  const { doc, M } = ctx, ancho = ctx.W - ctx.mx*2;
+  pdfEspacio(ctx, 8 + alto);
+  doc.setFillColor(...M.prim); doc.rect(ctx.mx, ctx.y, ancho, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text(titulo, ctx.W/2, ctx.y+5.3, { align:'center' });
+  doc.setDrawColor(...M.prim); doc.setLineWidth(0.25);
+  doc.rect(ctx.mx, ctx.y+8, ancho, alto);
+  ctx.y += 8 + alto + 6;
+}
+function pdfCajaRenglones(ctx, titulo, n, sep){
+  const { doc, M } = ctx, ancho = ctx.W - ctx.mx*2;
+  const v = campo(ctx, { l:titulo, tipo:'area' });
+  let lineas = [];
+  if(v){
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    lineas = doc.splitTextToSize(limpiar(v), ancho - 8);
+    const tope = Math.floor((ctx.H - 24 - 50 - 8 - 6) / sep);
+    if(lineas.length > tope){
+      lineas = lineas.slice(0, tope);
+      lineas[tope-1] = lineas[tope-1].replace(/.{0,3}$/, '...');
+      (ctx.avisos = ctx.avisos || []).push('El texto de «' + titulo + '» es muy largo y se recortó. Acortalo para que entre completo.');
+    }
+    n = Math.max(n, lineas.length);
+  }
+  const alto = n*sep;
+  pdfEspacio(ctx, 8 + alto);
+  doc.setFillColor(...M.prim); doc.rect(ctx.mx, ctx.y, ancho, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text(titulo, ctx.W/2, ctx.y+5.3, { align:'center' });
+  doc.setDrawColor(...M.prim); doc.setLineWidth(0.25);
+  doc.rect(ctx.mx, ctx.y+8, ancho, alto);
+  doc.setDrawColor(150,150,150); doc.setLineWidth(0.2);
+  for(let i=1;i<n;i++){ const yy = ctx.y + 8 + i*sep; doc.line(ctx.mx+3, yy, ctx.W-ctx.mx-3, yy); }
+  lineas.forEach((l, i) => {
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(20,20,20);
+    doc.text(l, ctx.mx + 4, ctx.y + 8 + (i+1)*sep - 2);
+  });
+  ctx.y += 8 + alto + 6;
+}
+function pdfColumnas(ctx, cols){
+  const { doc, M } = ctx, gap = 3, ancho = ctx.W - ctx.mx*2;
+  const w = (ancho - gap*(cols.length-1)) / cols.length, lh = 3.6, pad = 2.5, hCab = 13;
+  const prep = cols.map(c => c.parrafos.map(p => {
+    doc.setFont('helvetica', p.it ? 'italic' : 'normal'); doc.setFontSize(7.8);
+    return { it:p.it, lineas: doc.splitTextToSize(p.t, w - pad*2) };
+  }));
+  const alto = Math.max(...prep.map(c => c.reduce((s,p) => s + p.lineas.length*lh + 1.6, 0))) + pad*2;
+  pdfEspacio(ctx, hCab + alto);
+  cols.forEach((c,i) => {
+    const x = ctx.mx + i*(w+gap);
+    doc.setFillColor(...(i === 1 ? M.acento : M.prim)); doc.rect(x, ctx.y, w, hCab, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.8); doc.setTextColor(255,255,255);
+    const tl = doc.splitTextToSize(c.titulo, w - pad*2);
+    const y0 = ctx.y + hCab/2 - (tl.length-1)*1.8 + 1;
+    tl.forEach((l,k) => doc.text(l, x+w/2, y0 + k*3.6, { align:'center' }));
+    doc.setDrawColor(...M.prim); doc.setLineWidth(0.25); doc.rect(x, ctx.y+hCab, w, alto);
+    let y = ctx.y + hCab + pad + 2.4;
+    prep[i].forEach(p => {
+      doc.setFont('helvetica', p.it ? 'italic' : 'normal'); doc.setFontSize(7.8); doc.setTextColor(40,40,40);
+      p.lineas.forEach(l => { doc.text(l, x+pad, y); y += lh; });
+      y += 1.6;
+    });
+  });
+  ctx.y += hCab + alto + 7;
+}
+
+/* ======================================================================
+   PLANTILLAS — se generan al tocar "Descargar", con los colores y el
+   nombre de cada local. Las de 'todas' aparecen en las 3 pestañas.
+   ====================================================================== */
+const PLANTILLAS = {
+  todas: [
+    /* ---------------- ACTA DE REUNIÓN ---------------- */
+    {
+      id:'acta-reunion', nombre:'Acta de reunión',
+      desc:'Fecha, horarios, participantes con firma, temas de la reunión y firma de RRHH y del encargado.',
+      archivo: m => 'Acta_de_Reunion_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        pdfTituloC(ctx, 'ACTA DE REUNIÓN');
+        pdfFila(ctx, [{ e:'Fecha' }, { e:'Hora inicio' }, { e:'Hora cierre' }]);
+        ctx.y += 2;
+        pdfTabla(ctx, ['PARTICIPANTES','FIRMA'], Array.from({length:10}, () => ['','']), [1,1], 8.5, { ui:'Participantes' });
+        pdfCajaRenglones(ctx, 'TEMAS DE LA REUNIÓN', 6, 8);
+        pdfFirmasFilas(ctx, [['Firma RRHH','Firma encargado de la reunión'], ['Aclaración RRHH','Aclaración encargado de la reunión']], [[], ['rrhh|Aclaración de RRHH','enc|Aclaración del encargado de la reunión']]);
+      }
+    },
+    /* ---------------- APERCIBIMIENTO ---------------- */
+    {
+      id:'apercibimiento', nombre:'Apercibimiento',
+      desc:'Amonestación por escrito por incumplimiento contractual.',
+      archivo: m => 'Apercibimiento_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        pdfTituloC(ctx, 'APERCIBIMIENTO');
+        pdfParrafo(ctx, 'En {{Ciudad@ciudad|14||CABA}}, {{Fecha de firma@fecha|4|d}} de {{Fecha de firma@fecha|13|m}} de {{Fecha de firma@fecha|6|y}}');
+        pdfParrafo(ctx, 'Sr/Sra {{Empleado (nombre y apellido)@nom|50}}');
+        pdfParrafo(ctx, 'La gerencia del restaurante ' + ctx.M.local + ' ha tenido conocimiento del siguiente incumplimiento contractual de carácter {{Gravedad de la falta@grav|13|sel=leve/grave/muy grave}} (leve, grave o muy grave).');
+        pdfParrafo(ctx, 'Los hechos se han desarrollado como siguen:');
+        pdfRenglones(ctx, 4, 8, 'Hechos ocurridos');
+        pdfParrafo(ctx, 'Por todo ello y considerando que su conducta se encuentra tipificada como falta {{Gravedad de la falta@grav|7|sel=leve/grave/muy grave}} (leve, grave o muy grave) según el convenio colectivo de trabajo UTHGRA le comunicamos que es usted sancionado/a con Amonestación por escrito.');
+        pdfParrafo(ctx, 'Por último advertirle que la reincidencia en faltas de esta u otra naturaleza serán sancionadas en lo sucesivo con mayor rigor.');
+        pdfFirmasFilas(ctx, [['Firma empleado','Firma encargado'], ['Nombre completo','Nombre completo'], ['DNI','DNI']], [[], ['nom|Empleado (nombre y apellido)','enc|Encargado (nombre y apellido)'], ['dni|DNI del empleado','dnienc|DNI del encargado']]);
+      }
+    },
+    /* ---------------- CARTA DE SUSPENSIÓN ---------------- */
+    {
+      id:'carta-suspension', nombre:'Carta de suspensión',
+      desc:'Sanción disciplinaria con días de suspensión sin goce de sueldo.',
+      archivo: m => 'Carta_de_Suspension_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        pdfTituloC(ctx, 'CARTA DE SUSPENSIÓN');
+        pdfParrafo(ctx, 'CABA, {{Fecha de firma@fecha|4|d}} de {{Fecha de firma@fecha|11|m}} de 20{{Fecha de firma@fecha|3|yy}}');
+        pdfParrafo(ctx, 'Sr/Sra {{Empleado (nombre y apellido)@nom|50}}');
+        pdfParrafo(ctx, 'La gerencia del restaurante ' + ctx.M.local + ' ha tenido conocimiento del siguiente incumplimiento contractual de carácter {{Gravedad de la falta@grav|13|sel=leve/grave/muy grave}} (leve, grave o muy grave).');
+        pdfParrafo(ctx, 'Los hechos se han desarrollado como siguen:');
+        pdfRenglones(ctx, 4, 8, 'Hechos ocurridos');
+        pdfParrafo(ctx, 'Estos hechos son considerados por la empresa como una falta importante, ya que perjudica la operativa normal de la misma; por lo tanto, se ha decidido imponer una sanción disciplinaria consistente en una amonestación escrita suspendiéndolo por {{Días de suspensión@dias|8|num}} días sin goce de sueldo, que deberá cumplir desde el {{Suspensión desde@desde|10|f}} hasta el {{Suspensión hasta@hasta|10|f}} inclusive.');
+        pdfParrafo(ctx, 'Deseamos y confiamos que esta sanción servirá para reflexionar y corregir los hechos antes descritos, en evitación de reiteración y de mayores consecuencias.');
+        pdfFirmasFilas(ctx, [['Firma del empleado','Firma del encargado'], ['Aclaración del empleado','Aclaración del encargado'], ['DNI del empleado','DNI del encargado']], [[], ['nom|Empleado (nombre y apellido)','enc|Encargado (nombre y apellido)'], ['dni|DNI del empleado','dnienc|DNI del encargado']]);
+      }
+    },
+    /* ---------------- LEGAJO COMPLETO (9 páginas) ---------------- */
+    {
+      id:'legajo-completo', nombre:'Legajo completo',
+      desc:'Ficha de ingreso, declaraciones juradas, esquema de sanciones, faltas y presentismo, política interna, recibos de uniforme y locker (9 páginas).',
+      archivo: m => 'Legajo_Completo_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        /* 1 — Ficha de ingreso */
+        pdfTituloC(ctx, 'FICHA DE INGRESO');
+        pdfFila(ctx, [{ e:'Puesto' }, { e:'Fecha de ingreso' }]);
+        pdfFila(ctx, [{ e:'Apellido', id:'ape' }]);
+        pdfFila(ctx, [{ e:'Nombre', id:'nomb' }]);
+        pdfFila(ctx, [{ e:'DNI / Precaria', id:'dni' }, { e:'CUIL' }]);
+        pdfFila(ctx, [{ e:'Fecha de nacimiento' }, { e:'Nacionalidad', id:'nac' }]);
+        pdfFila(ctx, [{ e:'Celular' }, { e:'Email' }]);
+        pdfFila(ctx, [{ e:'Calle', w:3 }, { e:'Nro.', w:1.3 }, { e:'Piso', w:1.2 }, { e:'Depto.', w:1.4 }]);
+        pdfFila(ctx, [{ e:'Código postal' }, { e:'Localidad' }]);
+        pdfFila(ctx, [{ e:'Antecedentes penales', chk:['SI','NO'] }]);
+        pdfFila(ctx, [{ e:'Nivel de educación' }]);
+        pdfFila(ctx, [{ e:'Idiomas' }]);
+        pdfFila(ctx, [{ e:'Composición familiar' }]);
+        pdfFila(ctx, [{ e:'Tipo sanguíneo' }]);
+        pdfFila(ctx, [{ e:'Patologías' }]);
+        ctx.y += 2;
+        pdfSub(ctx, 'Persona de contacto en caso de emergencias');
+        pdfFila(ctx, [{ e:'Nombre', w:1.4, ui:'Emergencias: nombre del contacto' }, { e:'Parentesco', ui:'Emergencias: parentesco' }, { e:'Teléfono', ui:'Emergencias: teléfono' }]);
+        pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
+
+        /* 2 — Declaración jurada de domicilio */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'DECLARACIÓN JURADA DE DOMICILIO', '(Ley Nro. 28882, Ley Simplificación de la Certificación Domiciliaria)');
+        pdfParrafo(ctx, 'Yo, {{Nombre y apellido@nom|76}}');
+        pdfParrafo(ctx, 'Identificado/a con DNI Nro. {{DNI@dni|24}}, en pleno ejercicio de mis Derechos Ciudadanos y de conformidad con lo dispuesto en la Ley Nro. 28882 de Simplificación de la Certificación Domiciliaria, en su Artículo 1');
+        pdfParrafo(ctx, 'DECLARO BAJO JURAMENTO: que mi domicilio actual se encuentra ubicado en:');
+        ctx.y += 2;
+        pdfFila(ctx, [{ e:'Dirección', w:3 }, { e:'Número', w:1.2 }]);
+        pdfFila(ctx, [{ e:'Piso / Casa', w:1.5 }, { e:'Dpto.', w:1 }, { e:'CP', w:1 }, { e:'Localidad', w:1.6 }]);
+        ctx.y += 2;
+        pdfParrafo(ctx, 'Realizo la presente declaración jurada manifestando que la información proporcionada es verdadera y autorizo la verificación de lo declarado.');
+        pdfParrafo(ctx, 'En caso de falsedad declaro haber incurrido en el delito contra la Fe Pública, falsificación de documentos (Artículo 427 del Código Penal, en concordancia con el Artículo IV inciso 1.7) «Principio de Presunción de Veracidad» del Título Preliminar de la Ley de Procedimiento Administrativo General, Ley Nro. 27444.');
+        pdfLista(ctx, ['En caso de que el empleado cambiase su domicilio, deberá notificarlo a la empresa dentro de las 24 hs de producido el mismo.']);
+        pdfParrafo(ctx, 'En señal de conformidad firmo el presente documento.');
+        pdfDerecha(ctx, 'En {{Ciudad@ciudad|16||CABA}} a, {{Fecha de firma@fecha|5|d}} de {{Fecha de firma@fecha|14|m}} de 20{{Fecha de firma@fecha|4|yy}}');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
+
+        /* 3 — Esquema de sanciones */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'Esquema de sanciones');
+        pdfColumnas(ctx, [
+          { titulo:'INCUMPLIMIENTO EN UNIFORME Y PRESENCIA', parrafos:[
+            { t:'1) Llamado de atención verbal' },
+            { t:'2) Apercibimiento escrito donde conste que ya hubo un llamado de atención verbal respecto al tema.' },
+            { t:'3) Suspensión de 1 día' },
+            { it:true, t:'(En casos de falta grave se procederá a apercibir o suspender directamente de acuerdo al criterio del Gerente)' } ] },
+          { titulo:'INCUMPLIMIENTO EN LOS PROCEDIMIENTOS', parrafos:[
+            { t:'1) Apercibimiento por escrito.' },
+            { t:'2) Suspensión por 1 día en adelante dependiendo de la gravedad en las consecuencias posibles y/o reales, como así también de los antecedentes del empleado.' },
+            { it:true, t:'(En casos de faltas GRAVES donde el patrimonio de la empresa se ve directamente perjudicado se procederá a suspender directamente previo acuerdo con el Gerente)' } ] },
+          { titulo:'CONDUCTAS FUERA DE LOS VALORES DE LA EMPRESA', parrafos:[
+            { t:'1) Llamado de atención verbal' },
+            { t:'2) Apercibimiento escrito donde conste que ya hubo un llamado de atención verbal respecto al tema.' },
+            { t:'3) Suspensión por 1 día en adelante, dependiendo de la gravedad de la falta, como así también de los antecedentes del empleado.' },
+            { it:true, t:'(En casos de faltas GRAVES, como falta de respeto a su superior o compañero, etc. se procederá a suspender directamente previo acuerdo con el Gerente)' } ] }
+        ]);
+        pdfLista(ctx, [
+          'Con la acumulación de suspensiones, la Empresa tomará medidas con respecto al caso.',
+          'Faltas fuera de lo común, como violencia física y/o robo, ya sea mercadería, insumos, plata, elementos estructurales, bienes de la Empresa o de compañeros, la Empresa tomará medidas especiales sobre el caso.',
+          'Este sistema se aplica a TODOS los empleados que trabajan para la Empresa.'
+        ], 9.5, 2.5);
+        ctx.y += 2;
+        pdfParrafo(ctx, 'He leído el procedimiento respecto a las medidas disciplinarias y acepto las mismas. Firmo en conformidad.');
+        pdfDerecha(ctx, 'Fecha: {{Fecha de firma@fecha|______/______/______|f}}');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
+
+        /* 4 — Faltas y presentismo */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'FALTAS Y PRESENTISMO');
+        pdfSub(ctx, 'Faltas leves');
+        pdfLista(ctx, [
+          'Llegadas tarde (pasados los 10 minutos de su horario de entrada)',
+          'Incumplimiento de tareas diarias y/o solicitadas por los Encargados',
+          'Uso del celular en horario de trabajo.',
+          'Falta de respeto hacia compañero de trabajo, sin agresión verbal ni física.',
+          'Falta de higiene personal y en el uniforme.'
+        ], 9, 1.6);
+        pdfSub(ctx, 'Faltas graves');
+        pdfLista(ctx, [
+          'Falta de respeto hacia otro empleado o cliente, con agresión verbal.',
+          'Falta de respeto, con agresión respecto a: sexualidad, etnia, religión, familia y/o aspectos físicos y emocionales.',
+          'Incentivar a resolver conflictos con violencia física (dentro o fuera del establecimiento).',
+          'Falta a su puesto de trabajo sin previo aviso y/o justificativo.',
+          'Incumplir con normas y procedimientos solicitados por la Empresa.',
+          'Violar alguna de las normas establecidas en el código de ética.',
+          'Retirarse del establecimiento sin previa autorización de su Encargado directo.',
+          'Pérdida y/o mal uso de herramientas, artefactos de la infraestructura o bienes de la Empresa.',
+          'Consumo de alcohol y estupefacientes en áreas de trabajo y horario laboral.',
+          'Faltar a una convocatoria de la Empresa.',
+          'Falta de respeto con agresión física, dentro o fuera del establecimiento.',
+          'Robo y/o hurto ya sea a compañeros o a la Empresa.',
+          'Mentir y/o presentar documentación falsa.'
+        ], 9, 1.6);
+        pdfSub(ctx, 'Presentismo');
+        pdfParrafo(ctx, 'El presentismo consiste en el 10% del salario, siendo este una parte del mismo. La razón del presentismo es premiar a aquellos empleados que cumplen sus funciones sin incumplir ninguna de las siguientes situaciones:', 9);
+        pdfParrafo(ctx, '1) Faltar 1 o más veces en el mes sin justificación.', 9);
+        pdfParrafo(ctx, '2) Acumular 3 o más llegadas tarde en el mes, siendo estas contabilizadas a partir de los diez minutos de retraso.', 9);
+        pdfParrafo(ctx, '3) Que el empleado sea sancionado con una suspensión.', 9);
+        ctx.y += 3;
+        pdfFila(ctx, [{ e:'Firma' }, { e:'Aclaración' }, { e:'DNI' }]);
+
+        /* 5 — Política interna */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'POLÍTICA INTERNA DE ACURIO RESTAURANTES');
+        pdfParrafo(ctx, 'La empresa podrá aplicar las sanciones disciplinarias que correspondan, graduándose de conformidad con la gravedad de la falta ante las siguientes situaciones:', 8.5);
+        [
+          'A. En el caso de reiteradas llegadas tarde sin justificación alguna; y habiendo pasado el límite y cupo de tolerancia al respecto mensualmente. También se deberá fichar en el reloj biométrico ya cambiado para trabajar.',
+          'B. Cumplir con los tiempos establecidos para la comida de personal, siendo flexible en el caso que un líder o supervisor lo necesite en mejora del servicio.',
+          'C. En caso de que el empleado cambiase su domicilio, deberá notificarlo a la empresa dentro de las 24 hs de producido el mismo.',
+          'D. La cortesía, buena educación y amabilidad deberán ejercerse permanentemente en el trato que se le otorgue a nuestros clientes y compañeros de trabajo.',
+          'E. El empleado deberá tener su uniforme en perfectas condiciones, siendo responsable de mantenerlo limpio y prolijo, al igual que su lugar de trabajo.',
+          'F. En caso de verse impedido de concurrir a su trabajo, deberá notificarlo a su superior inmediato. Al reincorporarse luego de una licencia por enfermedad, deberá presentar el certificado médico correspondiente.',
+          'G. Los permisos de pedido para ausentarse deberán ser tramitados por nota con un mínimo de 24 hs de anticipación, ante el jefe inmediato, entregando una copia al Dto. de RRHH. El empleado no podrá hacer abandono del lugar de trabajo. Si hubiere causa justificada, deberá informar al superior jerárquico. Quien omita este punto será pasible de sanción disciplinaria.',
+          'H. Un conflicto de interés se produce cuando los intereses personales de un empleado compiten con los intereses de la empresa. Este código no puede contemplar todas las posibles situaciones, de modo que si el empleado se encuentra frente a una situación que pueda involucrar o dar lugar a un conflicto de intereses, deberá comunicarlo inmediatamente con un superior inmediato o cualquier miembro del equipo de Recursos Humanos o Legal, con el fin de resolver la situación de forma clara y transparente.',
+          'I. Rechazamos tajantemente toda conducta ilegal que pueda conjurarse en delitos, prohibiendo a sus propietarios, socios, accionistas, administradores y empleados en general a realizar las siguientes acciones: recibir sobornos u otorgarlos en beneficio propio o de personas ajenas, sobornar a las autoridades municipales, judiciales, administrativas, entre otras conductas ilícitas. Es obligación de los empleados informar sobre cualquier hecho o conducta que pudiera considerarse como sospechosa.',
+          'J. Todos los empleados tienen la responsabilidad de proteger los bienes tangibles e intangibles (celulares, vajilla, vasos, equipamiento de cocina, vestuarios, etc.) e información contra la pérdida, daño o uso incorrecto. Por ello, está prohibido tomar sin permiso los recursos del restaurante o área para fines distintos a su labor habitual. Asimismo, nos referimos a información como acciones de marketing, recetas, bases de datos y cualquier otra información relacionada a la empresa que no haya sido publicada.',
+          'K. El consumo de alcohol y drogas puede tener un impacto negativo en la salud y la seguridad dentro de nuestros restaurantes y oficinas administrativas, ya que pone en riesgo a los empleados, clientes, etc. — Está explícitamente prohibido fumar, consumir alcohol o drogas en el interior de nuestros restaurantes u oficinas. — No está permitida la utilización, posesión, distribución y/o venta de drogas dentro de nuestras instalaciones. — Está prohibido acudir al restaurante bajo influencias de alcohol o drogas.',
+          'L. El empleado deberá cumplir con las normas higiénico-sanitarias vigentes establecidas en el código sanitario argentino. De no cumplirlas será sancionado.'
+        ].forEach(t => pdfParrafo(ctx, t, 8.5));
+
+        /* 6 — Declaración jurada de conocimiento */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'Declaración Jurada de Conocimiento');
+        pdfParrafo(ctx, 'Yo {{Nombre y apellido@nom|44}} de nacionalidad {{Nacionalidad@nac|22}} con {{Tipo de documento@tdoc|0|chk=DNI/C.E./PASAPORTE|DNI}} N° {{Número de documento@dni|16}} declaro bajo juramento que:');
+        pdfParrafo(ctx, '1) Conozco con claridad la política interna establecida por la Empresa y me comprometo con las disposiciones, requisitos, normas y políticas que contiene.');
+        pdfParrafo(ctx, '2) Acepto y expreso mi compromiso de informar cualquier situación de riesgo real o potencial que vaya en contra de esta política interna. Del mismo modo, asumo cualquier medida que sea aplicada por la Empresa, ante un eventual incumplimiento de mi parte.');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
+
+        /* 7 — Declaración de integrantes de la familia */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'DECLARACIÓN DE INTEGRANTES DE LA FAMILIA');
+        pdfParrafo(ctx, 'Yo, {{Nombre y apellido@nom|78}}');
+        pdfParrafo(ctx, 'Identificado/a con DNI Nro. ________________________, en pleno ejercicio de mis Derechos Ciudadanos, declaro bajo juramento que mi grupo familiar está conformado por:');
+        pdfTabla(ctx, ['Parentesco','Nombre','Fecha de nacimiento'],
+          ['Madre','Padre','Hermanos','Esposa / Pareja','Marido / Pareja','Hijo/a','Hijo/a'].map(p => [p,'','']),
+          [2,4,2.4], 9.5, { primeraColumna:true, ui:'Grupo familiar' });
+        pdfParrafo(ctx, 'Realizo la presente declaración jurada manifestando que la información proporcionada es verdadera y autorizo la verificación de lo declarado.');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
+
+        /* 8 — Recibo de uniformes */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'RECIBO DE UNIFORMES DE TRABAJO');
+        pdfDerecha(ctx, 'En CABA a {{Fecha de firma@fecha|6|d}} de {{Fecha de firma@fecha|14|m}} del 20{{Fecha de firma@fecha|3|yy}}');
+        pdfFila(ctx, [{ e:'Nombre', id:'nom', ui:'Nombre y apellido' }]);
+        pdfFila(ctx, [{ e:'Mi talle de camisa es' }, { e:'Mi talle de pantalón es' }, { e:'Mi talle de calzado es' }]);
+        pdfParrafo(ctx, 'El día de la fecha, recibí de {{Entregado por@ent|30}} los uniformes y/o ropa de trabajo que a continuación se detallan:');
+        pdfTabla(ctx, ['Prenda','Cantidad','Firma','Devolución','Persona que recibe'],
+          Array.from({length:7}, () => ['','','','','']), [3,1.4,1.4,1.5,2.2], 9, { ui:'Uniformes entregados' });
+        pdfFila(ctx, [{ e:'Valor: $', ui:'Valor de los uniformes ($)', id:'vu' }]);
+        pdfParrafo(ctx, 'Hago constar que los artículos listados los recibo nuevos y en perfectas condiciones para su uso, obligándome a conservarlos en buen estado, utilizarlos para lo que están destinados dentro de mi trabajo y a restituirlos cuando me sean canjeados o requeridos por el empleador, responsabilizándome de los mismos bajo cualquier circunstancia, obligándome a cubrir su costo en caso de pérdida por negligencia de mi parte.');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración']);
+
+        /* 9 — Recibo de lockers */
+        pdfPagina(ctx);
+        pdfTituloC(ctx, 'RECIBO DE LOCKERS DE TRABAJO');
+        pdfDerecha(ctx, 'En CABA a {{Fecha de firma@fecha|6|d}} de {{Fecha de firma@fecha|14|m}} del 20{{Fecha de firma@fecha|3|yy}}');
+        pdfFila(ctx, [{ e:'Nombre', id:'nom', ui:'Nombre y apellido' }]);
+        pdfParrafo(ctx, 'El día de la fecha, recibí de {{Entregado por@ent|30}} el locker de trabajo que a continuación se detalla:');
+        pdfTabla(ctx, ['Número de locker','Firma','Devolución','Persona que recibe'],
+          Array.from({length:3}, () => ['','','','']), [2.2,1.6,1.6,2.4], 9, { ui:'Locker entregado' });
+        pdfFila(ctx, [{ e:'Valor: $', ui:'Valor del locker ($)', id:'vl' }]);
+        pdfParrafo(ctx, 'Hago constar que el locker de trabajo lo recibo nuevo y en perfectas condiciones para su uso, obligándome a conservarlo en buen estado y utilizarlo para lo que está destinado dentro de mi trabajo. Responsabilizándome del mismo bajo cualquier circunstancia, obligándome a cubrir su costo en caso de rotura por negligencia de mi parte.');
+        pdfFirmaApilada(ctx, ['Firma','Aclaración']);
+      }
+    }
+  ],
+  barra: [],
+  tanta: [],
+  lamar: []
+};
+
+/* ---------- Diseño PDF por local (A4, mm) ----------
+   Los logos y títulos se dibujan con las mismas tipografías de la web
+   (Alfa Slab One / Anton) y se pegan como imagen dentro del PDF. */
+const PX = 12;                 /* píxeles por mm en las imágenes del PDF */
+const _img = {};
+let _fuentes = null;
+function prepararFuentes(){
+  if(!_fuentes){
+    const muestra = 'BARRA CHALACA TAnta LA MAR RRHH ÁÉÍÓÚÑ';
+    const pedir = f => (document.fonts && document.fonts.load) ? document.fonts.load(f, muestra).catch(() => {}) : Promise.resolve();
+    _fuentes = Promise.race([
+      Promise.all([pedir('40px "Alfa Slab One"'), pedir('40px "Anton"'), pedir('700 40px "DM Sans"')]),
+      new Promise(r => setTimeout(r, 4000))
+    ]);
+  }
+  return _fuentes;
+}
+function nuevoCanvas(wMm, hMm){
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(wMm * PX); c.height = Math.ceil(hMm * PX);
+  const g = c.getContext('2d');
+  g.scale(PX, PX);
+  return { c, g };
+}
+/* Texto letra por letra (permite separación y colores distintos por letra) */
+function anchoTxt(g, s, esp){ let w = 0; for(const ch of s) w += g.measureText(ch).width + esp; return w - esp; }
+function dibTxt(g, s, x, y, esp, colores){
+  let cx = x, i = 0;
+  for(const ch of s){
+    if(colores) g.fillStyle = colores[i % colores.length];
+    g.fillText(ch, cx, y);
+    cx += g.measureText(ch).width + esp; i++;
+  }
+  return cx - esp;
+}
+function dibTxtCentro(g, s, cx, y, esp, colores){
+  dibTxt(g, s, cx - anchoTxt(g, s, esp)/2, y, esp, colores);
+}
+function pildora(g, x, y, w, h){
+  const r = h/2;
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y);
+  g.arc(x + w - r, y + r, r, -Math.PI/2, Math.PI/2);
+  g.lineTo(x + r, y + h);
+  g.arc(x + r, y + r, r, Math.PI/2, Math.PI*1.5);
+  g.closePath();
+}
+function onda(g, x0, x1, y, amp, largo, fase){
+  g.beginPath();
+  for(let x = x0; x <= x1; x += 0.25){
+    const yy = y + Math.sin((x/largo + fase) * Math.PI * 2) * amp;
+    if(x === x0) g.moveTo(x, yy); else g.lineTo(x, yy);
+  }
+  g.stroke();
+}
+function trazo(g, d, x, y, esc, color, grosor, relleno){
+  g.save(); g.translate(x, y); g.scale(esc, esc);
+  const p = new Path2D(d);
+  if(relleno){ g.fillStyle = relleno; g.fill(p); }
+  if(color){ g.strokeStyle = color; g.lineWidth = grosor; g.lineJoin = 'round'; g.lineCap = 'round'; g.stroke(p); }
+  g.restore();
+}
+const SANS = '"DM Sans", Arial, sans-serif';
+const ALFA = '"Alfa Slab One", Georgia, serif';
+const ANTON = '"Anton", Impact, sans-serif';
+
+/* ---- Cabecera (210 x 36 mm) ---- */
+function cabeceraImg(marca){
+  const key = 'cab|' + marca;
+  if(_img[key]) return _img[key];
+  const W = 210, H = 36;
+  const { c, g } = nuevoCanvas(W, H);
+  g.textBaseline = 'alphabetic';
+
+  if(marca === 'barra'){
+    const navy = '#0B2E4F', ocean = '#145C82', coral = '#E8492B', sand = '#F4E9D4', gold = '#F2B705';
+    g.fillStyle = sand; g.fillRect(0, 0, W, 33.6);
+    for(let x = 0; x < W; x += 8.2){
+      g.fillStyle = navy; g.fillRect(x, 33.6, 7, 2.4);
+      g.fillStyle = coral; g.fillRect(x + 7, 33.6, 1.2, 2.4);
+    }
+    g.font = '11px ' + ALFA;
+    const wl = anchoTxt(g, 'BARRA CHALACA', 0.35);
+    g.fillStyle = navy; dibTxt(g, 'BARRA CHALACA', 18.45, 19.95, 0.35);
+    g.fillStyle = coral; dibTxt(g, 'BARRA CHALACA', 18, 19.5, 0.35);
+    g.font = '700 3px ' + SANS; g.fillStyle = ocean;
+    dibTxt(g, 'STREET FOOD PERUANO · RRHH', 18, 26.5, 0.75);
+    /* pez */
+    const fx = Math.min(18 + wl + 9, 130), fy = 9, fe = 0.2;
+    trazo(g, 'M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z', fx, fy, fe, ocean, 3);
+    trazo(g, 'M95 30 L118 15 L112 30 L118 45 Z', fx, fy, fe, ocean, 2, gold);
+    g.fillStyle = navy; g.beginPath(); g.arc(fx + 34*fe, fy + 26*fe, 3.2*fe, 0, Math.PI*2); g.fill();
+    trazo(g, 'M15 30 Q35 40 55 30', fx, fy, fe, coral, 2);
+    /* sello */
+    g.save(); g.translate(175, 17); g.rotate(-3 * Math.PI / 180);
+    g.fillStyle = navy; pildora(g, -17 + 0.8, -5 + 0.8, 34, 10); g.fill();
+    g.fillStyle = coral; pildora(g, -17, -5, 34, 10); g.fill();
+    g.strokeStyle = sand; g.lineWidth = 0.35; g.setLineDash([0.9, 0.7]); pildora(g, -16, -4, 32, 8); g.stroke(); g.setLineDash([]);
+    g.font = '5.4px ' + ANTON; g.fillStyle = sand; dibTxtCentro(g, 'RRHH', 0, 2.1, 0.7);
+    g.restore();
+
+  }else if(marca === 'tanta'){
+    const magenta = '#E0177C', orange = '#F5821F', pink = '#EE3E8E', purple = '#7A2D8C', cloud = '#FBF3F8';
+    g.fillStyle = cloud; g.fillRect(0, 0, W, 33.6);
+    g.fillStyle = magenta; g.fillRect(0, 0, W, 1.4);
+    const gr = g.createLinearGradient(0, 0, W, 0);
+    gr.addColorStop(0, magenta); gr.addColorStop(0.34, pink); gr.addColorStop(0.68, orange); gr.addColorStop(1, purple);
+    g.fillStyle = gr; g.fillRect(0, 33.6, W, 2.4);
+    /* icono */
+    g.save(); g.translate(18, 9.5); g.scale(16/60, 16/60);
+    g.lineWidth = 4; g.strokeStyle = magenta; g.beginPath(); g.arc(30, 30, 26, 0, Math.PI*2); g.stroke();
+    g.strokeStyle = orange; g.stroke(new Path2D('M30 8 A22 22 0 0 1 30 52'));
+    g.fillStyle = pink; g.beginPath(); g.arc(30, 30, 8, 0, Math.PI*2); g.fill();
+    g.restore();
+    g.font = '13px ' + ANTON;
+    dibTxt(g, 'TAnta', 39, 21.5, 0.5, [magenta, orange, orange, magenta, pink]);
+    g.font = '700 3px ' + SANS; g.fillStyle = purple;
+    dibTxt(g, 'COCINA CASERA PERUANA · RRHH', 39, 27.5, 0.75);
+    /* zigzag */
+    /* ocupa de ~116 a ~150 mm: separado del subtítulo (termina ~109) y del sello (empieza en 158) */
+    trazo(g, 'M4 44 L24 14 L44 44', 115.2, 11.2, 0.30, magenta, 3.4);
+    trazo(g, 'M44 44 L64 14 L84 44', 115.2, 11.2, 0.30, orange, 3.4);
+    trazo(g, 'M84 44 L104 14 L118 34', 115.2, 11.2, 0.30, purple, 3.4);
+    /* sello */
+    const gp = g.createLinearGradient(158, 0, 192, 0);
+    gp.addColorStop(0, purple); gp.addColorStop(0.55, magenta); gp.addColorStop(1, orange);
+    g.fillStyle = gp; pildora(g, 158, 12, 34, 10); g.fill();
+    g.font = '5.4px ' + ANTON; g.fillStyle = '#fff'; dibTxtCentro(g, 'RRHH', 175, 19.1, 0.7);
+
+  }else{ /* lamar */
+    const azul = '#10495E', verde = '#4C8C6E', coral = '#D96C4A', paper = '#FBF7EC';
+    g.fillStyle = paper; g.fillRect(0, 0, W, H);
+    g.lineCap = 'round';
+    g.strokeStyle = azul; g.lineWidth = 0.5; onda(g, 0, W, 33.3, 0.9, 8, 0);
+    g.strokeStyle = verde; g.lineWidth = 0.4; onda(g, 0, W, 34.9, 0.8, 8, 0.25);
+    /* icono */
+    g.save(); g.translate(18, 9.5); g.scale(16/60, 16/60);
+    trazo(g, 'M6 38 Q16 26 30 38 T54 38', 0, 0, 1, azul, 3);
+    trazo(g, 'M6 46 Q16 34 30 46 T54 46', 0, 0, 1, verde, 3);
+    g.fillStyle = coral; g.beginPath(); g.arc(30, 18, 8, 0, Math.PI*2); g.fill();
+    g.restore();
+    g.font = '11px ' + ALFA; g.fillStyle = azul;
+    const wl = anchoTxt(g, 'LA MAR', 0.5);
+    dibTxt(g, 'LA MAR', 39, 20.5, 0.5);
+    g.font = '700 3px ' + SANS; g.fillStyle = verde;
+    dibTxt(g, 'CEBICHERÍA PERUANA · RRHH', 39, 27, 0.75);
+    /* pez */
+    const fx = Math.min(39 + wl + 12, 125), fy = 10.5, fe = 0.4;
+    g.save(); g.translate(fx, fy); g.scale(fe, fe);
+    g.strokeStyle = coral; g.lineWidth = 3; g.beginPath(); g.ellipse(30, 25, 22, 12, 0, 0, Math.PI*2); g.stroke();
+    g.fillStyle = coral; g.fill(new Path2D('M52 25 L58 18 L58 32 Z'));
+    g.fillStyle = azul; g.beginPath(); g.arc(20, 22, 2.4, 0, Math.PI*2); g.fill();
+    g.restore();
+    /* etiqueta con punta */
+    g.fillStyle = coral; g.beginPath();
+    g.moveTo(161, 11.5); g.lineTo(192, 11.5); g.lineTo(192, 21.5); g.lineTo(161, 21.5); g.lineTo(158, 16.5); g.closePath(); g.fill();
+    g.font = '5.4px ' + ANTON; g.fillStyle = paper; dibTxtCentro(g, 'RRHH', 177, 19.1, 0.7);
+  }
+  return (_img[key] = c.toDataURL('image/png'));
+}
+
+/* ---- Franja del pie (174 x 1.8 mm) ---- */
+function pieImg(marca){
+  const key = 'pie|' + marca;
+  if(_img[key]) return _img[key];
+  const W = 174, H = 1.8;
+  const { c, g } = nuevoCanvas(W, H);
+  if(marca === 'barra'){
+    for(let x = 0; x < W; x += 8.2){
+      g.fillStyle = '#0B2E4F'; g.fillRect(x, 0, 7, H);
+      g.fillStyle = '#E8492B'; g.fillRect(x + 7, 0, 1.2, H);
+    }
+  }else if(marca === 'tanta'){
+    const gr = g.createLinearGradient(0, 0, W, 0);
+    gr.addColorStop(0, '#E0177C'); gr.addColorStop(0.34, '#EE3E8E'); gr.addColorStop(0.68, '#F5821F'); gr.addColorStop(1, '#7A2D8C');
+    g.fillStyle = gr; pildora(g, 0, 0.3, W, 1.2); g.fill();
+  }else{
+    g.lineCap = 'round';
+    g.strokeStyle = '#10495E'; g.lineWidth = 0.4; onda(g, 0, W, 0.9, 0.55, 8, 0);
+    g.strokeStyle = '#4C8C6E'; g.lineWidth = 0.3; onda(g, 0, W, 1.1, 0.45, 8, 0.25);
+  }
+  return (_img[key] = c.toDataURL('image/png'));
+}
+
+/* ---- Títulos con la tipografía de cada local ---- */
+function tituloImg(marca, texto){
+  const key = 'tit|' + marca + '|' + texto;
+  if(_img[key]) return _img[key];
+  const alfa = marca !== 'tanta';
+  const fam = alfa ? ALFA : ANTON;
+  let fs = alfa ? 6 : 7.6;
+  const esp = alfa ? 0.25 : 0.5, maxW = 172, pad = 1, alto = 11, base = 8;
+  const m = nuevoCanvas(10, 10).g;
+  m.font = fs + 'px ' + fam;
+  let w = anchoTxt(m, texto, esp);
+  if(w > maxW){ fs = fs * maxW / w; m.font = fs + 'px ' + fam; w = anchoTxt(m, texto, esp); }
+  const { c, g } = nuevoCanvas(w + pad*2, alto);
+  g.textBaseline = 'alphabetic'; g.font = fs + 'px ' + fam;
+  if(marca === 'barra'){
+    g.fillStyle = '#E8492B'; dibTxt(g, texto, pad + 0.35, base + 0.35, esp);
+    g.fillStyle = '#0B2E4F'; dibTxt(g, texto, pad, base, esp);
+  }else if(marca === 'tanta'){
+    g.fillStyle = '#7A2D8C'; dibTxt(g, texto, pad, base, esp);
+  }else{
+    g.fillStyle = '#10495E'; dibTxt(g, texto, pad, base, esp);
+  }
+  return (_img[key] = { data: c.toDataURL('image/png'), w: w + pad*2, h: alto, base });
+}
+
+/* ---- Rayita decorativa debajo de los títulos ---- */
+const ACENTOS = {
+  barra: [[11,46,79,16],[232,73,43,7]],
+  tanta: [[224,23,124,6],[238,62,142,6],[245,130,31,6],[122,45,140,6]],
+  lamar: [[16,73,94,14],[76,140,110,4.5],[217,108,74,4.5]]
+};
+function pdfAcento(ctx, cx, y){
+  const seg = ACENTOS[ctx.marca];
+  const total = seg.reduce((s,a) => s + a[3], 0) + (seg.length-1)*0.5;
+  let x = cx - total/2;
+  seg.forEach(a => { ctx.doc.setFillColor(a[0], a[1], a[2]); ctx.doc.rect(x, y, a[3], 1.2, 'F'); x += a[3] + 0.5; });
+}
+
+/* ---------- Estructura de la página ---------- */
+function pdfNuevo(marca, modo, vals){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const ctx = { doc, marca, M:MARCAS[marca], W:210, H:297, mx:18, y:0,
+                modo: modo || 'blanco', vals: vals || {}, campos: [], reg: {}, n: 0, sec: '', avisos: [] };
+  pdfEncabezado(ctx);
+  return ctx;
+}
+function pdfEncabezado(ctx){
+  ctx.doc.addImage(cabeceraImg(ctx.marca), 'PNG', 0, 0, ctx.W, 36, 'cab|' + ctx.marca, 'FAST');
+  ctx.y = 50;
+}
+function pdfPie(ctx){
+  const { doc, M, marca } = ctx;
+  const n = doc.getNumberOfPages();
+  const pie = pieImg(marca);
+  for(let i=1;i<=n;i++){
+    doc.setPage(i);
+    doc.addImage(pie, 'PNG', ctx.mx, ctx.H-17.4, ctx.W-ctx.mx*2, 1.8, 'pie|' + marca, 'FAST');
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...M.prim);
+    doc.text('RRHH · Acurio Restaurantes · ' + M.nombre, ctx.mx, ctx.H-10);
+    doc.text('Página ' + i + ' de ' + n, ctx.W-ctx.mx, ctx.H-10, { align:'right' });
+  }
+}
+function pdfEspacio(ctx, h){
+  if(ctx.y + h > ctx.H - 24){ ctx.doc.addPage(); pdfEncabezado(ctx); }
+}
+function pdfTitulo(ctx, texto){
+  pdfEspacio(ctx, 14);
+  ctx.doc.setFont('helvetica','bold'); ctx.doc.setFontSize(16); ctx.doc.setTextColor(...ctx.M.prim);
+  ctx.doc.text(texto, ctx.mx, ctx.y);
+  ctx.doc.setFillColor(...ctx.M.acento); ctx.doc.rect(ctx.mx, ctx.y+2.5, 24, 1.2, 'F');
+  ctx.y += 13;
+}
+function pdfParrafo(ctx, texto, size){
+  texto = pdfTexto(ctx, texto);
+  const { doc } = ctx;
+  doc.setFont('helvetica','normal'); doc.setFontSize(size || 10.5); doc.setTextColor(40,40,40);
+  const lineas = doc.splitTextToSize(texto, ctx.W - ctx.mx*2);
+  const lh = (size || 10.5) * 0.46;
+  lineas.forEach(l => {
+    pdfEspacio(ctx, lh+1);
+    doc.setFont('helvetica','normal'); doc.setFontSize(size || 10.5); doc.setTextColor(40,40,40);
+    doc.text(l, ctx.mx, ctx.y); ctx.y += lh;
+  });
+  ctx.y += 3;
+}
+function pdfCampo(ctx, etiqueta){
+  pdfEspacio(ctx, 12);
+  const { doc } = ctx;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...ctx.M.prim);
+  doc.text(etiqueta + ':', ctx.mx, ctx.y);
+  const x0 = ctx.mx + doc.getTextWidth(etiqueta + ': ') + 2;
+  doc.setDrawColor(120,120,120); doc.setLineWidth(0.2); doc.line(x0, ctx.y+0.6, ctx.W-ctx.mx, ctx.y+0.6);
+  ctx.y += 10;
+}
+function pdfFirmas(ctx, roles){
+  pdfEspacio(ctx, 40);
+  ctx.y += 22;
+  const { doc } = ctx;
+  const n = roles.length, ancho = (ctx.W - ctx.mx*2 - (n-1)*14) / n;
+  roles.forEach((r,i) => {
+    const x = ctx.mx + i*(ancho+14);
+    doc.setDrawColor(40,40,40); doc.setLineWidth(0.3); doc.line(x, ctx.y, x+ancho, ctx.y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...ctx.M.prim);
+    doc.text(r, x+ancho/2, ctx.y+5, { align:'center' });
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,110);
+    doc.text('Firma y aclaración', x+ancho/2, ctx.y+9.5, { align:'center' });
+  });
+  ctx.y += 16;
+}
+async function generarPDF(marca, id){
+  const p = (PLANTILLAS.todas.concat(PLANTILLAS[marca] || [])).find(x => x.id === id);
+  if(!p) return;
+  if(!window.jspdf){ alert('No cargó la librería de PDF. Revisá la conexión y recargá.'); return; }
+  try{
+    await prepararFuentes();
+    const ctx = pdfNuevo(marca);
+    p.generar(ctx);
+    pdfPie(ctx);
+    ctx.doc.save((typeof p.archivo === 'function' ? p.archivo(marca) : p.archivo) || (id + '-' + marca + '.pdf'));
+  }catch(e){ console.error(e); alert('No se pudo generar el PDF.'); }
+}
+
+
+/* ======================================================================
+   COMPLETAR E IMPRIMIR
+   ====================================================================== */
+const _ui = { form:null, vista:null, url:null };
+const rgb = a => 'rgb(' + a.join(',') + ')';
+function buscarPlantilla(marca, id){ return PLANTILLAS.todas.concat(PLANTILLAS[marca] || []).find(x => x.id === id); }
+function nombreArchivo(p, marca, completo){
+  let n = (typeof p.archivo === 'function' ? p.archivo(marca) : p.archivo) || (p.id + '-' + marca + '.pdf');
+  return completo ? n.replace(/\.pdf$/i, '_completado.pdf') : n;
+}
+function overlay(marca, top){
+  const M = MARCAS[marca], ov = crear('div', 'ov' + (top ? ' top' : ''));
+  ov.style.setProperty('--c1', rgb(M.prim));
+  ov.style.setProperty('--c2', rgb(M.acento));
+  ov.style.setProperty('--fondo', rgb(M.fondo));
+  ov.style.setProperty('--paper', '#fff');
+  return ov;
+}
+function cerrarVista(){
+  if(_ui.vista){ _ui.vista.remove(); _ui.vista = null; }
+  if(_ui.url){ URL.revokeObjectURL(_ui.url); _ui.url = null; }
+  if(!_ui.form) document.body.style.overflow = '';
+}
+function cerrarTodo(){
+  cerrarVista();
+  if(_ui.form){ _ui.form.remove(); _ui.form = null; }   /* los datos cargados no se guardan en ningún lado */
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  if(_ui.vista) cerrarVista(); else if(_ui.form) cerrarTodo();
+});
+
+function campoUI(c, refs, inputs){
+  const f = crear('div', 'fld' + ((c.tipo === 'area' || c.tipo === 'tabla') ? ' wide' : ''));
+  const lb = crear('label', '', c.l);
+  if(c.n > 1) lb.appendChild(crear('span', 'tag', '· se usa en varias hojas'));
+  f.appendChild(lb);
+  if(c.tipo === 'tabla'){
+    const wrap = crear('div', 'tbl'), t = crear('table'), th = crear('tr');
+    c.cab.forEach(h => th.appendChild(crear('th', '', h)));
+    t.appendChild(th);
+    const celdas = [];
+    c.base.forEach((fila, r) => {
+      const tr = crear('tr'); celdas[r] = [];
+      fila.forEach((txt, i) => {
+        const td = crear('td');
+        if(txt){ td.className = 'st'; td.textContent = txt; }
+        else if(c.skip[i]){ td.className = 'na'; td.textContent = 'a mano'; }
+        else{
+          const inp = crear('input'); inp.type = 'text'; inp.maxLength = 80;
+          inp.setAttribute('aria-label', c.cab[i] + ' fila ' + (r+1));
+          td.appendChild(inp); celdas[r][i] = inp; inputs.push(inp);
+        }
+        tr.appendChild(td);
+      });
+      t.appendChild(tr);
+    });
+    wrap.appendChild(t); f.appendChild(wrap);
+    refs[c.k] = () => celdas.map(fila => fila.map(i => i ? i.value.trim() : ''));
+    return f;
+  }
+  let inp;
+  if(c.tipo === 'area'){ inp = crear('textarea'); inp.maxLength = 900; inp.placeholder = 'Escribí acá…'; }
+  else if(c.tipo === 'sel' || c.tipo === 'chk'){
+    inp = crear('select');
+    const o0 = crear('option', '', '— elegir —'); o0.value = ''; inp.appendChild(o0);
+    c.opts.forEach(o => { const op = crear('option', '', o); op.value = o; inp.appendChild(op); });
+  }else{
+    inp = crear('input');
+    inp.type = c.tipo === 'date' ? 'date' : c.tipo === 'time' ? 'time' : c.tipo === 'num' ? 'number' : 'text';
+    if(c.tipo === 'num'){ inp.min = 0; inp.inputMode = 'numeric'; }
+    if(inp.type === 'text') inp.maxLength = 120;
+  }
+  inp.value = c.def || '';
+  inp.dataset.def = c.def || '';
+  lb.htmlFor = inp.id = 'f_' + c.k;
+  inputs.push(inp);
+  refs[c.k] = () => inp.value.trim();
+  f.appendChild(inp);
+  return f;
+}
+
+async function abrirFormulario(marca, id){
+  const p = buscarPlantilla(marca, id); if(!p) return;
+  if(!window.jspdf){ alert('No cargó la librería de PDF. Revisá la conexión y recargá.'); return; }
+  try{
+    await prepararFuentes();
+    const sc = pdfNuevo(marca, 'scan'); p.generar(sc);
+    construirFormulario(marca, p, sc.campos);
+  }catch(e){ console.error(e); alert('No se pudo abrir el formulario.'); }
+}
+
+function construirFormulario(marca, p, campos){
+  cerrarTodo();
+  const ov = overlay(marca, false); _ui.form = ov;
+  document.body.style.overflow = 'hidden';
+  const sheet = crear('div', 'sheet'); ov.appendChild(sheet);
+
+  const h = crear('div', 'sheet-h');
+  const t = crear('div', 't', 'Completar: ' + p.nombre);
+  t.appendChild(crear('small', '', MARCAS[marca].nombre + ' · los datos solo se usan para armar el PDF, no se guardan'));
+  const x = crear('button', 'x', '✕'); x.title = 'Cerrar'; x.onclick = cerrarTodo;
+  h.appendChild(t); h.appendChild(x); sheet.appendChild(h);
+
+  const body = crear('div', 'sheet-b'); sheet.appendChild(body);
+  body.appendChild(crear('p', 'hint', 'Completá lo que necesites. Lo que dejes vacío sale con la línea en blanco para escribir a mano; las firmas siempre quedan para firmar a mano.'));
+  const refs = {}, inputs = [];
+  const secs = campos.map(c => c.sec).filter((s, i, a) => a.indexOf(s) === i);
+  secs.forEach(s => {
+    const sec = crear('div', 'sec');
+    if(secs.length > 1) sec.appendChild(crear('h3', '', s || 'Datos'));
+    const g = crear('div', 'grid');
+    campos.filter(c => c.sec === s).forEach(c => g.appendChild(campoUI(c, refs, inputs)));
+    sec.appendChild(g); body.appendChild(sec);
+  });
+
+  const f = crear('div', 'sheet-f');
+  const bl = crear('button', 'dl-btn alt', 'LIMPIAR');
+  bl.onclick = () => { if(confirm('¿Borrar todo lo que escribiste?')) inputs.forEach(i => i.value = i.dataset.def || ''); };
+  const bp = crear('button', 'dl-btn', '🖨 VER E IMPRIMIR');
+  bp.onclick = () => {
+    const vals = {};
+    Object.keys(refs).forEach(k => vals[k] = refs[k]());
+    mostrarVista(marca, p, 'llenar', vals);
+  };
+  f.appendChild(bl); f.appendChild(bp); sheet.appendChild(f);
+  document.body.appendChild(ov);
+  const first = body.querySelector('input,textarea,select'); if(first && window.innerWidth > 700) first.focus();
+}
+
+async function mostrarVista(marca, p, modo, vals){
+  if(!window.jspdf){ alert('No cargó la librería de PDF. Revisá la conexión y recargá.'); return; }
+  try{
+    await prepararFuentes();
+    const ctx = pdfNuevo(marca, modo, vals); p.generar(ctx); pdfPie(ctx);
+    cerrarVista();
+    const completo = modo === 'llenar';
+    const url = URL.createObjectURL(ctx.doc.output('blob')); _ui.url = url;
+    const ov = overlay(marca, true); _ui.vista = ov;
+    document.body.style.overflow = 'hidden';
+    const sheet = crear('div', 'sheet'); ov.appendChild(sheet);
+
+    const h = crear('div', 'sheet-h');
+    const t = crear('div', 't', p.nombre + (completo ? ' — completado' : ' — en blanco'));
+    t.appendChild(crear('small', '', 'Revisá la vista previa y tocá Imprimir'));
+    const bar = crear('div', 'bar');
+    const fr = crear('iframe'); fr.src = url; fr.title = 'Vista previa del PDF';
+    const bi = crear('button', 'bar-btn', '🖨 IMPRIMIR');
+    bi.onclick = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ window.open(url, '_blank'); } };
+    const bd = crear('button', 'bar-btn alt', '⬇ PDF');
+    bd.onclick = () => ctx.doc.save(nombreArchivo(p, marca, completo));
+    const ba = crear('a', 'bar-btn alt', '↗ ABRIR'); ba.href = url; ba.target = '_blank'; ba.rel = 'noopener';
+    bar.appendChild(bi); bar.appendChild(bd); bar.appendChild(ba);
+    if(completo && _ui.form){
+      const be = crear('button', 'bar-btn alt', '✎ EDITAR'); be.onclick = cerrarVista; bar.appendChild(be);
+    }
+    const x = crear('button', 'x', '✕'); x.title = 'Cerrar'; x.onclick = cerrarTodo; bar.appendChild(x);
+    h.appendChild(t); h.appendChild(bar); sheet.appendChild(h);
+    if(ctx.avisos.length) sheet.appendChild(crear('div', 'warn', '⚠ ' + ctx.avisos.join(' ')));
+    sheet.appendChild(fr);
+    document.body.appendChild(ov);
+  }catch(e){ console.error(e); alert('No se pudo generar el PDF.'); }
+}
+function imprimirBlanco(marca, id){ const p = buscarPlantilla(marca, id); if(p) mostrarVista(marca, p, 'blanco', {}); }
+
+/* ======================================================================
+   PANTALLA
+   ====================================================================== */
+function crear(tag, cls, txt){
+  const el = document.createElement(tag);
+  if(cls) el.className = cls;
+  if(txt != null) el.textContent = txt;
+  return el;
+}
+function render(){
+  LOCALES.forEach(l => {
+    const cont = document.getElementById('files-' + l);
+    cont.innerHTML = '';
+    const pdfs = PLANTILLAS.todas.concat(PLANTILLAS[l] || []);
+    document.getElementById('count-' + l).textContent = pdfs.length + (pdfs.length === 1 ? ' archivo' : ' archivos');
+    pdfs.forEach(p => {
+      const c = crear('div','file-card');
+      c.appendChild(crear('span','file-tag','PDF'));
+      c.appendChild(crear('div','file-name',p.nombre));
+      c.appendChild(crear('div','file-desc',p.desc || ''));
+      const b = crear('button','dl-btn main','✎ COMPLETAR E IMPRIMIR');
+      b.onclick = () => abrirFormulario(l, p.id);
+      c.appendChild(b);
+      const fila = crear('div','btn-row');
+      const b2 = crear('button','dl-btn alt','🖨 EN BLANCO');
+      b2.title = 'Imprimir el documento vacío';
+      b2.onclick = () => imprimirBlanco(l, p.id);
+      const b3 = crear('button','dl-btn alt','⬇ PDF');
+      b3.title = 'Descargar el documento vacío';
+      b3.onclick = () => generarPDF(l, p.id);
+      fila.appendChild(b2); fila.appendChild(b3);
+      c.appendChild(fila);
+      cont.appendChild(c);
+    });
+  });
+}
+
+function showPage(name){
+  LOCALES.forEach(n => {
+    document.getElementById('page-' + n).classList.toggle('active', n === name);
+    document.getElementById('btn-' + n).classList.toggle('active', n === name);
+  });
+}
+
+render();
+</script>
+</body>
+</html>

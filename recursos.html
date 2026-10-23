@@ -160,8 +160,9 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 }
 
 
-/* ============ COMPLETAR E IMPRIMIR ============ */
+/* ============ COMPLETAR Y PDF ============ */
 .btn-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.btn-row.uno{ grid-template-columns:1fr; }
 .btn-row .dl-btn{ margin-top:0; padding:9px 8px; font-size:12px; }
 .dl-btn.alt{ background:var(--paper); color:var(--c1); }
 .dl-btn.main{ margin-top:8px; }
@@ -393,8 +394,13 @@ function fechaParte(v, p){
   return m[3] + '/' + m[2] + '/' + m[1];
 }
 /* Registra un campo (modo scan) o devuelve lo que escribió la persona (modo llenar). */
+/* Nombre y apellido, DNI y firmas NO se completan: quedan en blanco para escribir a mano */
+const BLOQ_ID  = ['nom','dni','ape','nomb','rrhh','enc','ent','tdoc'];
+const BLOQ_LAB = /nombre|apellido|dni|firma|aclaraci|documento|persona que recibe|participantes/i;
+function bloqueado(s){ return BLOQ_ID.indexOf(s.id) >= 0 || BLOQ_LAB.test(s.l || ''); }
 function campo(ctx, s){
   const k = s.id || ('c' + (ctx.n++));
+  if(ctx.noEditar || (s.tipo !== 'tabla' && bloqueado(s))) return '';
   if(ctx.modo === 'scan'){
     if(k === 'nom' && (ctx.reg.ape || ctx.reg.nomb)) return '';   /* se arma con Apellido + Nombre */
     if(ctx.reg[k]){ ctx.reg[k].n++; return ''; }
@@ -584,8 +590,9 @@ function pdfFirmasFilas(ctx, filas, ids){
 function pdfTabla(ctx, cab, filas, anchos, alto, opc){
   opc = opc || {};
   const { doc, M } = ctx;
-  const skip = cab.map(t => /firma/i.test(t));
-  const dat = campo(ctx, { l: opc.ui || 'Tabla', tipo:'tabla', cab, base:filas, skip });
+  const skip = cab.map(t => BLOQ_LAB.test(t));
+  const hayEditable = skip.some(x => !x);
+  const dat = hayEditable ? campo(ctx, { l: opc.ui || 'Tabla', tipo:'tabla', cab, base:filas, skip }) : '';
   const vals = Array.isArray(dat) ? dat : [];
   const ancho = ctx.W - ctx.mx*2, suma = anchos.reduce((a,b) => a+b, 0);
   const ws = anchos.map(a => ancho*a/suma), hCab = 8;
@@ -737,11 +744,12 @@ const PLANTILLAS = {
     },
     /* ---------------- LEGAJO COMPLETO (9 páginas) ---------------- */
     {
-      id:'legajo-completo', nombre:'Legajo completo',
+      id:'legajo-completo', nombre:'Legajo completo', soloPdf:true,
       desc:'Ficha de ingreso, declaraciones juradas, esquema de sanciones, faltas y presentismo, política interna, recibos de uniforme y locker (9 páginas).',
       archivo: m => 'Legajo_Completo_' + MARCAS[m].slug + '.pdf',
       generar(ctx){
-        /* 1 — Ficha de ingreso */
+        /* 1 — Ficha de ingreso (solo PDF: no se completa) */
+        ctx.noEditar = true;
         pdfTituloC(ctx, 'FICHA DE INGRESO');
         pdfFila(ctx, [{ e:'Puesto' }, { e:'Fecha de ingreso' }]);
         pdfFila(ctx, [{ e:'Apellido', id:'ape' }]);
@@ -762,6 +770,7 @@ const PLANTILLAS = {
         pdfFila(ctx, [{ e:'Nombre', w:1.4, ui:'Emergencias: nombre del contacto' }, { e:'Parentesco', ui:'Emergencias: parentesco' }, { e:'Teléfono', ui:'Emergencias: teléfono' }]);
         pdfFirmaApilada(ctx, ['Firma','Aclaración','DNI']);
 
+        ctx.noEditar = false;
         /* 2 — Declaración jurada de domicilio */
         pdfPagina(ctx);
         pdfTituloC(ctx, 'DECLARACIÓN JURADA DE DOMICILIO', '(Ley Nro. 28882, Ley Simplificación de la Certificación Domiciliaria)');
@@ -1222,7 +1231,7 @@ async function generarPDF(marca, id){
 
 
 /* ======================================================================
-   COMPLETAR E IMPRIMIR
+   COMPLETAR Y PDF
    ====================================================================== */
 const _ui = { form:null, vista:null, url:null };
 const rgb = a => 'rgb(' + a.join(',') + ')';
@@ -1327,7 +1336,7 @@ function construirFormulario(marca, p, campos){
   h.appendChild(t); h.appendChild(x); sheet.appendChild(h);
 
   const body = crear('div', 'sheet-b'); sheet.appendChild(body);
-  body.appendChild(crear('p', 'hint', 'Completá lo que necesites. Lo que dejes vacío sale con la línea en blanco para escribir a mano; las firmas siempre quedan para firmar a mano.'));
+  body.appendChild(crear('p', 'hint', 'Completá solo los datos del documento. Nombre y apellido, DNI y firma quedan siempre en blanco para completar a mano.'));
   const refs = {}, inputs = [];
   const secs = campos.map(c => c.sec).filter((s, i, a) => a.indexOf(s) === i);
   secs.forEach(s => {
@@ -1341,51 +1350,26 @@ function construirFormulario(marca, p, campos){
   const f = crear('div', 'sheet-f');
   const bl = crear('button', 'dl-btn alt', 'LIMPIAR');
   bl.onclick = () => { if(confirm('¿Borrar todo lo que escribiste?')) inputs.forEach(i => i.value = i.dataset.def || ''); };
-  const bp = crear('button', 'dl-btn', '🖨 VER E IMPRIMIR');
+  const bp = crear('button', 'dl-btn', '⬇ DESCARGAR PDF');
   bp.onclick = () => {
     const vals = {};
     Object.keys(refs).forEach(k => vals[k] = refs[k]());
-    mostrarVista(marca, p, 'llenar', vals);
+    descargarCompletado(marca, p, vals);
   };
   f.appendChild(bl); f.appendChild(bp); sheet.appendChild(f);
   document.body.appendChild(ov);
   const first = body.querySelector('input,textarea,select'); if(first && window.innerWidth > 700) first.focus();
 }
 
-async function mostrarVista(marca, p, modo, vals){
+async function descargarCompletado(marca, p, vals){
   if(!window.jspdf){ alert('No cargó la librería de PDF. Revisá la conexión y recargá.'); return; }
   try{
     await prepararFuentes();
-    const ctx = pdfNuevo(marca, modo, vals); p.generar(ctx); pdfPie(ctx);
-    cerrarVista();
-    const completo = modo === 'llenar';
-    const url = URL.createObjectURL(ctx.doc.output('blob')); _ui.url = url;
-    const ov = overlay(marca, true); _ui.vista = ov;
-    document.body.style.overflow = 'hidden';
-    const sheet = crear('div', 'sheet'); ov.appendChild(sheet);
-
-    const h = crear('div', 'sheet-h');
-    const t = crear('div', 't', p.nombre + (completo ? ' — completado' : ' — en blanco'));
-    t.appendChild(crear('small', '', 'Revisá la vista previa y tocá Imprimir'));
-    const bar = crear('div', 'bar');
-    const fr = crear('iframe'); fr.src = url; fr.title = 'Vista previa del PDF';
-    const bi = crear('button', 'bar-btn', '🖨 IMPRIMIR');
-    bi.onclick = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ window.open(url, '_blank'); } };
-    const bd = crear('button', 'bar-btn alt', '⬇ PDF');
-    bd.onclick = () => ctx.doc.save(nombreArchivo(p, marca, completo));
-    const ba = crear('a', 'bar-btn alt', '↗ ABRIR'); ba.href = url; ba.target = '_blank'; ba.rel = 'noopener';
-    bar.appendChild(bi); bar.appendChild(bd); bar.appendChild(ba);
-    if(completo && _ui.form){
-      const be = crear('button', 'bar-btn alt', '✎ EDITAR'); be.onclick = cerrarVista; bar.appendChild(be);
-    }
-    const x = crear('button', 'x', '✕'); x.title = 'Cerrar'; x.onclick = cerrarTodo; bar.appendChild(x);
-    h.appendChild(t); h.appendChild(bar); sheet.appendChild(h);
-    if(ctx.avisos.length) sheet.appendChild(crear('div', 'warn', '⚠ ' + ctx.avisos.join(' ')));
-    sheet.appendChild(fr);
-    document.body.appendChild(ov);
+    const ctx = pdfNuevo(marca, 'llenar', vals); p.generar(ctx); pdfPie(ctx);
+    if(ctx.avisos.length) alert('⚠ ' + ctx.avisos.join(' '));
+    ctx.doc.save(nombreArchivo(p, marca, true));
   }catch(e){ console.error(e); alert('No se pudo generar el PDF.'); }
 }
-function imprimirBlanco(marca, id){ const p = buscarPlantilla(marca, id); if(p) mostrarVista(marca, p, 'blanco', {}); }
 
 /* ======================================================================
    PANTALLA
@@ -1407,17 +1391,16 @@ function render(){
       c.appendChild(crear('span','file-tag','PDF'));
       c.appendChild(crear('div','file-name',p.nombre));
       c.appendChild(crear('div','file-desc',p.desc || ''));
-      const b = crear('button','dl-btn main','✎ COMPLETAR E IMPRIMIR');
-      b.onclick = () => abrirFormulario(l, p.id);
-      c.appendChild(b);
-      const fila = crear('div','btn-row');
-      const b2 = crear('button','dl-btn alt','🖨 EN BLANCO');
-      b2.title = 'Imprimir el documento vacío';
-      b2.onclick = () => imprimirBlanco(l, p.id);
+      if(!p.soloPdf){
+        const b = crear('button','dl-btn main','✎ COMPLETAR Y PDF');
+        b.onclick = () => abrirFormulario(l, p.id);
+        c.appendChild(b);
+      }
+      const fila = crear('div','btn-row uno'); if(p.soloPdf) fila.style.marginTop = '8px';
       const b3 = crear('button','dl-btn alt','⬇ PDF');
-      b3.title = 'Descargar el documento vacío';
+      b3.title = 'Descargar el documento en blanco';
       b3.onclick = () => generarPDF(l, p.id);
-      fila.appendChild(b2); fila.appendChild(b3);
+      fila.appendChild(b3);
       c.appendChild(fila);
       cont.appendChild(c);
     });

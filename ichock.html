@@ -625,17 +625,22 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function fmtF(t){var d=new Date(t);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
   function hoy(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
   function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+  function hm(h){var p=String(h||'09:00').split(':'),d=new Date();d.setHours(+p[0]||0,+p[1]||0,0,0);return d.getTime();}
+  function hh(t){var d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes());}
+  function ventana(i){var s=hm(i.hora),e=s+i.minutos*60000,n=Date.now();return {s:s,e:e,est:n<s?'antes':(n<e?'abierto':'cerrado')};}
+  function hechoHoy(i){return resps.some(function(r){return r.userId===U.id&&r.informeId===i.id&&r.fecha===hoy()&&r.estado==='ok';});}
   function saveI(){LS.set('barra-informes',infs);} function saveR(){LS.set('barra-resp',resps);}
   function aplica(i){return i.locs.filter(function(l){var a=__auth.areas(l);return i.area==='ambos'?a.length>0:a.indexOf(i.area)>=0;});}
   function porId(id){return infs.filter(function(x){return x.id===id;})[0];}
   function curso(){var c=LS.get('barra-inf-curso',null);return c&&c.uid===U.id?c:null;}
   function setCurso(c){if(c)LS.set('barra-inf-curso',c);else LS.del('barra-inf-curso');}
 
-  var vista='comp', form=null, msg=null, arm=null, tick=null;
+  var vista='comp', fechaP=hoy(), form=null, msg=null, arm=null, tick=null;
 
   /* ---- cuenta regresiva ---- */
   function total(c){var i=porId(c.informeId);return i?i.minutos*60000:0;}
-  function resto(c){return c.inicio+total(c)-Date.now();}
+  function finDe(c){return c.fin||c.inicio+total(c);}
+  function resto(c){return finDe(c)-Date.now();}
   function paintCd(c){
     var r=resto(c), t=total(c), el=$('cd'); if(!el) return;
     $('cd-t').textContent=mmss(r); $('cd-b').style.width=Math.max(0,Math.min(100,r*100/t))+'%';
@@ -650,7 +655,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var c=curso(); if(!c) return; var i=porId(c.informeId); setCurso(null); clearInterval(tick);
     if(i){
       resps.unshift({id:uid('r'),informeId:i.id,titulo:i.titulo,userId:U.id,usuario:U.usuario,local:c.local,fecha:hoy(),inicio:c.inicio,
-        fin:Math.min(Date.now(),c.inicio+i.minutos*60000),limite:i.minutos,estado:estado,
+        fin:Math.min(Date.now(),finDe(c)),ventana:c.ventana||c.inicio,hora:i.hora||'09:00',limite:i.minutos,estado:estado,
         respuestas:i.preguntas.map(function(p){return {p:p.t,tipo:p.tipo,r:String((c.resp||{})[p.id]||'')};})});
       resps=resps.slice(0,500); saveR();
     }
@@ -660,7 +665,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   /* ---- dibujo ---- */
   function subtabs(){
     if(!ADMIN) return '';
-    return '<div class="subtabs" role="tablist">'+[['comp','Completar'],['crear','Crear informes'],['resp','Respuestas <small>'+resps.length+'</small>']].map(function(v){
+    return '<div class="subtabs" role="tablist">'+[['comp','Completar'],['crear','Crear informes'],['pend','Pendientes'],['resp','Respuestas <small>'+resps.length+'</small>']].map(function(v){
       return '<button type="button" class="subtab" role="tab" data-iv="'+v[0]+'" aria-selected="'+(vista===v[0])+'">'+v[1]+'</button>';}).join('')+'</div>';
   }
   function msgH(){return '<div class="msg '+(msg&&msg.e?'e':'o')+'" role="status">'+(msg?esc(msg.t):'')+'</div>';}
@@ -668,13 +673,13 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var h='', vis=infs.filter(function(i){return i.activo!==false&&aplica(i).length;});
     if(!vis.length) return '<div class="empty" style="grid-column:auto"><div class="big">Sin informes</div><div class="small">'+(ADMIN?'Creá el primero en "Crear informes".':'Todavía no hay informes para completar.')+'</div></div>';
     vis.forEach(function(i){
-      var ls=aplica(i), ult=resps.filter(function(r){return r.userId===U.id&&r.informeId===i.id&&r.fecha===hoy();})[0];
-      h+='<div class="card"><div><h3>'+esc(i.titulo)+'</h3><small>⏱ '+i.minutos+' min · '+i.preguntas.length+' preguntas</small>'+
-        (ult?'<small><b>Hoy: '+(ult.estado==='ok'?'completado ✓':'fuera de tiempo')+' ('+fmtF(ult.inicio)+')</b></small>':'')+'</div>'+
-        '<div>'+(ls.length>1?'<select id="loc-'+i.id+'" aria-label="Local">'+ls.map(function(l){return '<option value="'+l+'">'+LN(l)+'</option>';}).join('')+'</select>':'')+
-        '<button type="button" class="dl-btn" data-start="'+i.id+'">COMENZAR</button></div></div>';
+      var ls=aplica(i), w=ventana(i), ok=hechoHoy(i), ult=resps.filter(function(r){return r.userId===U.id&&r.informeId===i.id&&r.fecha===hoy();})[0];
+      var est=ok?'Hoy: completado ✓ ('+hh(ult.fin)+')':w.est==='antes'?'Se habilita hoy a las '+hh(w.s):w.est==='abierto'?'Abierto hasta las '+hh(w.e):'Plazo vencido (cerró a las '+hh(w.e)+')';
+      h+='<div class="card"><div><h3>'+esc(i.titulo)+'</h3><small>Turno '+hh(w.s)+' · '+i.minutos+' min para completarlo · '+i.preguntas.length+' preguntas</small><small><b>'+est+'</b></small></div>'+
+        (w.est==='abierto'&&!ok?'<div>'+(ls.length>1?'<select id="loc-'+i.id+'" aria-label="Local">'+ls.map(function(l){return '<option value="'+l+'">'+LN(l)+'</option>';}).join('')+'</select>':'')+
+        '<button type="button" class="dl-btn" data-start="'+i.id+'">COMENZAR</button></div>':'')+'</div>';
     });
-    return h+'<div class="auth-note">Al tocar Comenzar arranca la cuenta regresiva; si se acaba el tiempo, se envía lo que hayas respondido.</div>';
+    return h+'<div class="auth-note">La cuenta regresiva corre desde la hora de inicio del turno: tenés los minutos del informe a partir de esa hora, sin importar cuándo lo abras. Si se acaba el tiempo, se envía lo que hayas respondido.</div>';
   }
   function formCurso(c){
     var i=porId(c.informeId); if(!i){setCurso(null);return lista();}
@@ -688,13 +693,14 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   function admLista(){
     var h='<div class="top"><div class="doodle-title">Informes</div><button type="button" class="dl-btn mini" data-ia="nuevo">+ NUEVO INFORME</button></div>';
-    h+=infs.length?'<div class="tw"><table><thead><tr><th>Título</th><th>Tiempo</th><th>Locales</th><th>Área</th><th></th></tr></thead><tbody>'+infs.map(function(i){
-      return '<tr><td><b>'+esc(i.titulo)+'</b>'+(i.activo===false?' <span class="rolt x">PAUSADO</span>':'')+'<br><small>'+i.preguntas.length+' preguntas</small></td><td>'+i.minutos+' min</td><td>'+i.locs.map(LN).join(', ')+'</td><td>'+AR[i.area]+'</td>'+
+    h+=infs.length?'<div class="tw"><table><thead><tr><th>Título</th><th>Turno</th><th>Locales</th><th>Área</th><th></th></tr></thead><tbody>'+infs.map(function(i){
+      return '<tr><td><b>'+esc(i.titulo)+'</b>'+(i.activo===false?' <span class="rolt x">PAUSADO</span>':'')+'<br><small>'+i.preguntas.length+' preguntas</small></td><td>'+(i.hora||'09:00')+' hs<br><small>'+i.minutos+' min</small></td><td>'+i.locs.map(LN).join(', ')+'</td><td>'+AR[i.area]+'</td>'+
         '<td><div class="acts"><button type="button" class="dl-btn alt" data-ia="edit" data-id="'+i.id+'">EDITAR</button><button type="button" class="dl-btn alt" data-ia="pausa" data-id="'+i.id+'">'+(i.activo===false?'ACTIVAR':'PAUSAR')+'</button>'+
         '<button type="button" class="dl-btn alt" data-ia="del" data-id="'+i.id+'">'+(arm===i.id?'¿SEGURO?':'ELIMINAR')+'</button></div></td></tr>';}).join('')+'</tbody></table></div>':'<div class="auth-note">Todavía no creaste informes.</div>';
     if(form){
       h+='<div class="frm"><div class="full"><label for="i-tit">Título (ej. Apertura de cocina)</label><input id="i-tit" value="'+esc(form.titulo)+'"></div>'+
-        '<div><label for="i-min">Tiempo para completarlo (minutos)</label><input id="i-min" type="number" min="1" max="240" value="'+form.minutos+'"></div>'+
+        '<div><label for="i-hora">Hora de inicio del turno</label><input id="i-hora" type="time" value="'+esc(form.hora||'09:00')+'"></div>'+
+        '<div><label for="i-min">Minutos para completarlo (desde esa hora)</label><input id="i-min" type="number" min="1" max="240" value="'+form.minutos+'"></div>'+
         '<div><label for="i-area">Área</label><select id="i-area">'+Object.keys(AR).map(function(k){return '<option value="'+k+'"'+(form.area===k?' selected':'')+'>'+AR[k]+'</option>';}).join('')+'</select></div>'+
         '<div class="full"><label>Locales donde se completa</label><div class="perm">'+LOCS.map(function(l){return '<div><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" data-lc="'+l[0]+'"'+(form.locs.indexOf(l[0])>=0?' checked':'')+'>'+l[1]+'</label></div>';}).join('')+'</div></div>'+
         '<div class="full"><label>Preguntas</label>'+form.preguntas.map(function(p,n){
@@ -707,15 +713,39 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function admResp(){
     if(!resps.length) return '<div class="auth-note">Todavía no hay respuestas.</div>';
     return resps.slice(0,100).map(function(r){
-      return '<details class="rsp"><summary><b>'+esc(r.usuario)+'</b> · '+esc(r.titulo)+' · '+LN(r.local)+' · '+fmtF(r.inicio)+' <span class="rolt '+(r.estado==='ok'?'c':'x')+'">'+(r.estado==='ok'?'EN TIEMPO':'FUERA DE TIEMPO')+'</span> · '+mmss(r.fin-r.inicio)+' de '+r.limite+':00</summary><ul>'+
+      return '<details class="rsp"><summary><b>'+esc(r.usuario)+'</b> · '+esc(r.titulo)+' · '+LN(r.local)+' · '+fmtF(r.inicio)+' <span class="rolt '+(r.estado==='ok'?'c':'x')+'">'+(r.estado==='ok'?'EN TIEMPO':'FUERA DE TIEMPO')+'</span> · '+(r.ventana?'entregó a los '+mmss(r.fin-r.ventana)+' del turno de las '+esc(r.hora||'')+' (límite '+r.limite+' min)':mmss(r.fin-r.inicio)+' de '+r.limite+':00')+'</summary><ul>'+
         r.respuestas.map(function(x){return '<li><b>'+esc(x.p)+'</b><br>'+(x.r?esc(x.r):'<i>Sin responder</i>')+'</li>';}).join('')+'</ul></details>';}).join('');
+  }
+  function admPend(){
+    var us=LS.get('barra-users',[]).filter(function(u){return u.rol!=='admin';}), f=fechaP, hoyS=hoy(), act=infs.filter(function(i){return i.activo!==false;});
+    var h='<div class="top"><div class="doodle-title">Quién no completó</div><div class="hbar" style="margin:0"><label for="p-fecha">Fecha</label><input id="p-fecha" type="date" value="'+f+'"></div></div>';
+    if(!act.length) return h+'<div class="auth-note">No hay informes activos.</div>';
+    if(!us.length) return h+'<div class="auth-note">No hay colaboradores cargados en este navegador.</div>';
+    act.forEach(function(i){
+      var w=ventana(i), filas=us.map(function(u){
+        var ls=i.locs.filter(function(l){var p=(u.perm||{})[l];return p&&(i.area==='ambos'||p==='ambos'||p===i.area);});
+        if(!ls.length) return null;
+        var rs=resps.filter(function(r){return r.userId===u.id&&r.informeId===i.id&&r.fecha===f;}), ok=rs.filter(function(r){return r.estado==='ok';})[0], st, cl;
+        if(ok){st='Completó ✓ '+hh(ok.fin);cl=0;}
+        else if(rs.length){st='Fuera de tiempo (incompleto)';cl=2;}
+        else if(f<hoyS||(f===hoyS&&w.est==='cerrado')){st='Sin responder';cl=3;}
+        else if(f===hoyS&&w.est==='abierto'){st='Pendiente · hasta '+hh(w.e);cl=1;}
+        else {st='Aún no empieza ('+hh(w.s)+')';cl=1;}
+        return {u:u,ls:ls,st:st,cl:cl};
+      }).filter(Boolean).sort(function(x,y){return y.cl-x.cl||x.u.usuario.localeCompare(y.u.usuario,'es');});
+      var okN=filas.filter(function(x){return x.cl===0;}).length;
+      h+='<div class="card" style="display:block"><h3>'+esc(i.titulo)+'</h3><small>Turno '+esc(i.hora||'09:00')+' · '+i.minutos+' min · '+okN+' de '+filas.length+' completaron</small>'+
+        (filas.length?'<div class="tw"><table><thead><tr><th>Usuario</th><th>Local</th><th>Estado</th></tr></thead><tbody>'+filas.map(function(x){
+          return '<tr><td><b>'+esc(x.u.usuario)+'</b></td><td>'+x.ls.map(LN).join(', ')+'</td><td><span class="rolt '+(x.cl===0?'c':(x.cl>=2?'x':''))+'">'+esc(x.st)+'</span></td></tr>';}).join('')+'</tbody></table></div>':'<small>Ningún colaborador tiene acceso a este informe.</small>')+'</div>';
+    });
+    return h+'<div class="auth-note">Se calcula con las respuestas guardadas en este navegador: las de otros dispositivos aparecen después de usar Importar.</div>';
   }
   function render(){
     var el=$('inf-root'); if(!el) return; var c=curso(), h='';
     if(c&&vista==='comp'||c&&!ADMIN) h=formCurso(c);
     else{
       h=subtabs();
-      if(vista==='crear'&&ADMIN) h+=admLista(); else if(vista==='resp'&&ADMIN) h+=admResp(); else h+=lista()+msgH();
+      if(vista==='crear'&&ADMIN) h+=admLista(); else if(vista==='pend'&&ADMIN) h+=admPend(); else if(vista==='resp'&&ADMIN) h+=admResp(); else h+=lista()+msgH();
     }
     h+='<div class="auth-note">Los informes y respuestas se guardan en este navegador. <button type="button" class="dl-btn alt mini" data-ia="exp">EXPORTAR</button> <button type="button" class="dl-btn alt mini" data-ia="imp">IMPORTAR</button></div>';
     el.innerHTML=h; var cc=curso(); if(cc&&$('cd')) {paintCd(cc);}
@@ -726,10 +756,11 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function guardar(){
     var t=form.titulo.trim(), m=Math.round(+form.minutos);
     if(!t) return setMsg('Poné un título.',true);
+    if(!/^\d{1,2}:\d{2}$/.test(form.hora||'')) return setMsg('Elegí la hora de inicio del turno.',true);
     if(!(m>=1&&m<=240)) return setMsg('El tiempo debe estar entre 1 y 240 minutos.',true);
     if(!form.locs.length) return setMsg('Elegí al menos un local.',true);
     if(!form.preguntas.length||form.preguntas.some(function(p){return !p.t.trim();})) return setMsg('Agregá preguntas y no dejes ninguna vacía.',true);
-    var o={id:form.id||uid('i'),titulo:t,minutos:m,area:form.area,locs:form.locs.slice(),activo:form.activo!==false,
+    var o={id:form.id||uid('i'),titulo:t,hora:form.hora,minutos:m,area:form.area,locs:form.locs.slice(),activo:form.activo!==false,
       preguntas:form.preguntas.map(function(p){return {id:p.id,t:p.t.trim(),tipo:p.tipo};})};
     var k=infs.map(function(x){return x.id;}).indexOf(o.id); if(k<0) infs.push(o); else infs[k]=o;
     saveI(); form=null; setMsg('Informe guardado.');
@@ -740,7 +771,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     if(b.hasAttribute('data-iv')){vista=b.getAttribute('data-iv');form=null;msg=null;render();}
     else if(b.hasAttribute('data-start')){
       var i=porId(b.getAttribute('data-start')), s=$('loc-'+i.id), l=s?s.value:aplica(i)[0]; if(!l||curso()) return;
-      setCurso({uid:U.id,informeId:i.id,local:l,inicio:Date.now(),resp:{}}); msg=null; render(); arrancar();
+      var w=ventana(i); if(w.est!=='abierto'||hechoHoy(i)){ render(); return; }
+      setCurso({uid:U.id,informeId:i.id,local:l,inicio:Date.now(),ventana:w.s,fin:w.e,resp:{}}); msg=null; render(); arrancar();
     }
     else if(b.hasAttribute('data-yn')){var c=curso();if(!c)return;c.resp[b.getAttribute('data-yn')]=b.getAttribute('data-v');setCurso(c);
       [].forEach.call(host.querySelectorAll('[data-yn="'+b.getAttribute('data-yn')+'"]'),function(x){x.setAttribute('aria-pressed',String(x===b));});}
@@ -752,7 +784,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     else if(b.hasAttribute('data-qdel')){form.preguntas.splice(+b.getAttribute('data-qdel'),1);render();}
     else if(b.hasAttribute('data-ia')&&(ADMIN||['exp','imp'].indexOf(b.getAttribute('data-ia'))>=0)){
       var a=b.getAttribute('data-ia'), id=b.getAttribute('data-id');
-      if(a==='nuevo'){form={titulo:'',minutos:10,area:'ambos',locs:LOCS.map(function(l){return l[0];}),preguntas:[{id:uid('q'),t:'',tipo:'texto'}]};msg=null;render();}
+      if(a==='nuevo'){form={titulo:'',hora:'09:00',minutos:10,area:'ambos',locs:LOCS.map(function(l){return l[0];}),preguntas:[{id:uid('q'),t:'',tipo:'texto'}]};msg=null;render();}
       else if(a==='edit'){form=JSON.parse(JSON.stringify(porId(id)));msg=null;render();}
       else if(a==='cancelar'){form=null;msg=null;render();}
       else if(a==='addq'){form.preguntas.push({id:uid('q'),t:'',tipo:'texto'});render();}
@@ -774,9 +806,10 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   function onInput(ev){
     var t=ev.target, c;
+    if(t.id==='p-fecha'){ if(ev.type==='change'&&/^\d{4}-\d\d-\d\d$/.test(t.value)){ fechaP=t.value; render(); } return; }
     if(t.hasAttribute('data-r')){c=curso();if(c){c.resp[t.getAttribute('data-r')]=t.value;setCurso(c);}}
     else if(!form) return;
-    else if(t.id==='i-tit') form.titulo=t.value; else if(t.id==='i-min') form.minutos=t.value;
+    else if(t.id==='i-tit') form.titulo=t.value; else if(t.id==='i-min') form.minutos=t.value; else if(t.id==='i-hora') form.hora=t.value;
     else if(t.id==='i-area') form.area=t.value;
     else if(t.hasAttribute('data-qt')) form.preguntas[+t.getAttribute('data-qt')].t=t.value;
     else if(t.hasAttribute('data-qk')) form.preguntas[+t.getAttribute('data-qk')].tipo=t.value;
@@ -792,6 +825,9 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   host.addEventListener('click',onClick); host.addEventListener('input',onInput); host.addEventListener('change',onInput);
   tabs.addEventListener('click',function(e){var b=e.target.closest('.tab'); if(b&&b.getAttribute('data-tab')==='inf'){msg=null;render();}});
   var c0=curso(); if(c0){ if(!porId(c0.informeId)) setCurso(null); else if(resto(c0)<=0) cerrar('vencido'); else arrancar(); }
+  function firma(){return infs.map(function(i){return i.id+ventana(i).est+hechoHoy(i);}).join('|');}
+  var fa=firma();
+  setInterval(function(){var f=firma(); if(f!==fa){fa=f; if(!curso()&&vista==='comp') render();}},15000);
   render();
 })();
 </script>

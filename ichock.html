@@ -303,6 +303,31 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .ref i{ display:inline-block; width:13px; height:13px; border:1px solid #888; margin-right:5px; vertical-align:-2px; }
 .hadd{ padding:12px 14px; } .hadd .dl-btn{ margin-top:0; }
 @media (max-width:700px){ #h-locales{ grid-template-columns:repeat(2,minmax(0,1fr)); } .tab{ padding:8px 18px; } }
+
+/* ===================== MINI PESTAÑAS SALÓN / COCINA ===================== */
+.subtabs{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:16px 0 4px; }
+.subtab{ appearance:none; cursor:pointer; font-family:var(--font-display); font-size:14px; letter-spacing:1px; text-transform:uppercase; padding:7px 20px; border-radius:999px; border:2px solid var(--navy); background:var(--paper); color:var(--navy); box-shadow:2px 2px 0 rgba(0,0,0,.18); }
+.subtab small{ font-family:var(--font-body); font-weight:700; font-size:11.5px; letter-spacing:0; opacity:.8; margin-left:4px; }
+.subtab[aria-selected="true"]{ background:var(--navy); color:var(--sand); }
+.subtab:focus-visible{ outline:3px solid var(--coral); outline-offset:2px; }
+
+/* ===================== CONTADORES CON LISTA AL PASAR EL MOUSE ===================== */
+.cnt{ position:relative; min-width:0; text-align:center; border-radius:12px; padding:10px 6px 8px; cursor:pointer; outline:none; }
+.cnt.si{ background:var(--ok-bg); border:2px solid var(--ok); }
+.cnt.no{ background:var(--no-bg); border:2px dashed var(--coral); }
+.cnt-n{ display:block; font-family:var(--font-display); font-size:34px; line-height:1; font-variant-numeric:tabular-nums; }
+.cnt.si .cnt-n{ color:var(--ok); } .cnt.no .cnt-n{ color:var(--no-ink); }
+.cnt-l{ display:block; margin-top:4px; font-size:10.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; opacity:.85; }
+.cnt:hover,.cnt:focus-within{ z-index:50; }
+.cnt:focus-visible{ outline:3px solid var(--coral); outline-offset:2px; }
+.pop{ display:none; position:absolute; top:100%; left:-4px; width:max(100%, 210px); padding-top:6px; z-index:50; text-align:left; }
+.cnt.no .pop{ left:auto; right:-4px; }
+.cnt:hover .pop,.cnt:focus-within .pop{ display:block; }
+.pop-in{ background:var(--paper); border:2px solid var(--navy); border-radius:10px; padding:10px; max-height:280px; overflow:auto; box-shadow:0 8px 0 rgba(7,32,56,.14),0 14px 26px rgba(11,46,79,.28); }
+.pop-in h4{ margin-bottom:8px; }
+.cnt.si .pop-in h4{ color:var(--ok); } .cnt.no .pop-in h4{ color:var(--no-ink); }
+.pop-in .chip:last-child{ margin-bottom:0; }
+@media (max-width:420px){ .cnt-n{ font-size:28px; } .pop{ width:max(100%, 180px); } }
 </style>
 
 <div id="page-barra" class="page active theme-barra">
@@ -391,7 +416,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       var prev=(hor[LOC_HOR[l]]||{}).filas||[];
       var filas=emps.map(function(x){
         var m=prev.filter(function(r){ return plain(r.c)===plain(x.nombre); })[0];
-        return {c:x.nombre,s:x.sector,d:m?m.d:['','','','','','','']};
+        return {c:x.nombre,s:x.sector,a:(['encargado','cajero','salon','limpieza'].indexOf(x.puesto)>=0?'salon':'cocina'),d:m?m.d:['','','','','','','']};
       });
       prev.forEach(function(r){ if(!String(r.c||'').trim()) filas.push(r); });
       if(JSON.stringify(filas)!==JSON.stringify(prev)){ hor[LOC_HOR[l]]={nombre:NOM[l],filas:filas}; changed=true; }
@@ -477,12 +502,14 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   var state = {
     db: null, dbOk: null, emps: [], loaded: false,
     locales: ['Palermo', 'Belgrano', 'Bulnes', 'Caseros'],
-    sel: 'todos', writable: true, hoy: dia(),
+    sel: 'todos', area: 'salon', writable: true, hoy: dia(),
     toast: null, armed: null, sheet: false
   };
   try {
     var saved = localStorage.getItem('barra-local');
     if (saved === 'todos' || /^[0-3]$/.test(saved || '')) state.sel = saved;
+    var savedA = localStorage.getItem('barra-area');
+    if (savedA === 'salon' || savedA === 'cocina') state.area = savedA;
   } catch (e) {}
 
   function isPresent(e){ return e.presenteEl === state.hoy; }
@@ -505,13 +532,23 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   function col(k, titulo, xs){
     var cuerpo = xs.length ? xs.map(chip).join('') : '<p class="nadie">' + (k === 'si' ? 'Nadie todavía' : 'Nadie falta') + '</p>';
-    return '<div class="col ' + k + '"><h4>' + titulo + ' <span>' + xs.length + '</span></h4>' + cuerpo + '</div>';
+    return '<div class="cnt ' + k + '" tabindex="0" role="button" aria-label="' + titulo + ': ' + xs.length + '">' +
+      '<span class="cnt-n">' + xs.length + '</span><span class="cnt-l">' + titulo + '</span>' +
+      '<div class="pop"><div class="pop-in"><h4>' + titulo + ' <span>' + xs.length + '</span></h4>' + cuerpo + '</div></div></div>';
   }
   function card(p, list){
     var xs = list.filter(function(e){ return e.puesto === p.k; }).sort(byName);
     var si = xs.filter(isPresent), no = xs.filter(function(e){ return !isPresent(e); });
     var cuerpo = xs.length ? '<div class="cols">' + col('si', 'Presentes', si) + col('no', 'Ausentes', no) + '</div>' : '<p class="nadie">Nadie cargado en este puesto.</p>';
     return '<article class="pst"><div class="pst-h"><h3>' + p.n + '</h3><span class="pst-n" title="Presentes de total">' + si.length + '/' + xs.length + '</span></div>' + cuerpo + '</article>';
+  }
+  function areaTabs(list){
+    return '<div class="subtabs" role="tablist" aria-label="Área">' + AREAS.map(function(a){
+      var ps = PUESTOS[a.k];
+      var enArea = list.filter(function(e){ return ps.some(function(p){ return p.k === e.puesto; }); });
+      return '<button type="button" class="subtab" role="tab" data-area="' + a.k + '" aria-selected="' + (state.area === a.k) + '">' + a.n +
+        ' <small>' + enArea.filter(isPresent).length + '/' + enArea.length + '</small></button>';
+    }).join('') + '</div>';
   }
   function area(a, list){
     var ps = PUESTOS[a.k];
@@ -530,7 +567,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       return;
     }
     var list = filtrados();
-    el.innerHTML = AREAS.map(function(a){ return area(a, list); }).join('');
+    var ar = AREAS.filter(function(a){ return a.k === state.area; })[0] || AREAS[0];
+    el.innerHTML = areaTabs(list) + area(ar, list);
   }
 
   function renderLocales(){
@@ -606,6 +644,12 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     state.db.doc('empleados/' + id).update(patch).catch(onWriteError);
   }
   $('board').addEventListener('click', function(ev){
+    var t = ev.target.closest('.subtab');
+    if (t) {
+      state.area = t.getAttribute('data-area');
+      try { localStorage.setItem('barra-area', state.area); } catch (e) {}
+      render(); return;
+    }
     var b = ev.target.closest('.chip');
     if (b && !b.disabled) toggle(b.getAttribute('data-id'));
   });
@@ -716,9 +760,10 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function pad(n){ return (n<10?'0':'')+n; }
   function iso(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
   function lunesDe(d){ d=new Date(d.getFullYear(),d.getMonth(),d.getDate()); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
-  var H={db:null,ok:null,w:true,loaded:false,loc:'palermo',vista:'sem',dia:0,col:'',lunes:iso(lunesDe(new Date())),data:{},armed:null,msg:''};
+  var H={db:null,ok:null,w:true,loaded:false,loc:'palermo',area:'salon',vista:'sem',dia:0,col:'',lunes:iso(lunesDe(new Date())),data:{},armed:null,msg:''};
   try{
     var sl=localStorage.getItem('barra-hloc'); if(LOCS.some(function(l){ return l[0]===sl; })) H.loc=sl;
+    var sa=localStorage.getItem('barra-harea'); if(sa==='salon'||sa==='cocina') H.area=sa;
   }catch(e){}
 
   function cls(v){
@@ -735,7 +780,9 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function cur(){ return H.data[H.loc]||{nombre:'',filas:[]}; }
   function ensure(){ if(!H.data[H.loc]) H.data[H.loc]={nombre:'',filas:[]}; return H.data[H.loc]; }
   function nombreLoc(){ return LOCS.filter(function(l){ return l[0]===H.loc; })[0][1]; }
-  function norm(r){ r=r||{}; return {c:String(r.c||''),s:String(r.s||''),d:[0,1,2,3,4,5,6].map(function(i){ return String((r.d||[])[i]||''); })}; }
+  function areaDe(r){ return r.a==='cocina'?'cocina':'salon'; }
+  function visibles(d){ return d.filas.map(function(r,i){ return {r:r,i:i}; }).filter(function(o){ return areaDe(o.r)===H.area; }); }
+  function norm(r){ r=r||{}; return {c:String(r.c||''),s:String(r.s||''),a:(r.a==='cocina'?'cocina':'salon'),d:[0,1,2,3,4,5,6].map(function(i){ return String((r.d||[])[i]||''); })}; }
 
   /* ---------- dibujo ---------- */
   function renderLocs(){
@@ -746,7 +793,11 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   function renderBar(){
     var f=fechas(), d=cur();
-    var h='<div class="seg">'+[['sem','Semana'],['dia','Por día'],['col','Por colaborador']].map(function(v){
+    var h='<div class="subtabs" role="tablist" aria-label="Área">'+[['salon','Salón'],['cocina','Cocina']].map(function(a){
+      var n=d.filas.filter(function(r){ return areaDe(r)===a[0]; }).length;
+      return '<button type="button" class="subtab" role="tab" data-ha="'+a[0]+'" aria-selected="'+(H.area===a[0])+'">'+a[1]+' <small>'+n+'</small></button>';
+    }).join('')+'</div>';
+    h+='<div class="seg">'+[['sem','Semana'],['dia','Por día'],['col','Por colaborador']].map(function(v){
       return '<button type="button" class="dl-btn alt" data-v="'+v[0]+'" aria-pressed="'+(H.vista===v[0])+'">'+v[1]+'</button>';
     }).join('')+'</div>';
     h+='<div class="hbar"><label for="h-lunes">Semana del lunes</label><input type="date" id="h-lunes" value="'+H.lunes+'"'+(H.w?'':' disabled')+'></div>';
@@ -754,7 +805,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       return '<button type="button" class="dl-btn alt" data-dia="'+i+'" aria-pressed="'+(H.dia===i)+'">'+n.slice(0,3)+' '+f[i]+'</button>';
     }).join('')+'</div>';
     if(H.vista==='col'){
-      var nombres=d.filas.map(function(r){ return r.c; }).filter(Boolean);
+      var nombres=visibles(d).map(function(o){ return o.r.c; }).filter(Boolean);
       if(nombres.indexOf(H.col)<0) H.col=nombres[0]||'';
       h+='<div class="hbar"><label for="h-col">Colaborador</label><select id="h-col">'+nombres.map(function(n){
         return '<option'+(n===H.col?' selected':'')+'>'+esc(n)+'</option>';
@@ -763,7 +814,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     $('h-bar').innerHTML=h;
   }
   function totales(d){
-    return [0,1,2,3,4,5,6].map(function(i){ return d.filas.filter(function(r){ return pres(r.d[i]); }).length; });
+    var fs=visibles(d).map(function(o){ return o.r; });
+    return [0,1,2,3,4,5,6].map(function(i){ return fs.filter(function(r){ return pres(r.d[i]); }).length; });
   }
   function renderBoard(){
     var el=$('h-board');
@@ -772,7 +824,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var d=cur(), f=fechas(), ed=H.w&&H.vista==='sem';
     var cols=H.vista==='dia'?[H.dia]:[0,1,2,3,4,5,6];
     var th='<th>N°</th><th>Colaborador</th><th>Sector</th>'+cols.map(function(i){ return '<th>'+DIAS[i].toUpperCase().replace('MIÉRCOLES','MIERCOLES').replace('SÁBADO','SABADO')+'<small>'+f[i]+'</small></th>'; }).join('')+(ed?'<th></th>':'');
-    var rows=d.filas.map(function(r,ri){
+    var rows=visibles(d).map(function(o,k){
+      var r=o.r, ri=o.i;
       if(H.vista==='col'&&r.c!==H.col) return '';
       if(H.vista==='dia'&&!String(r.d[H.dia]).trim()) return '';
       var tds=cols.map(function(i){
@@ -782,14 +835,14 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       var nm=ed?'<input data-r="'+ri+'" data-f="c" value="'+esc(r.c)+'" aria-label="Colaborador" autocomplete="off">':esc(r.c);
       var sc=ed?'<input data-r="'+ri+'" data-f="s" value="'+esc(r.s)+'" aria-label="Sector" autocomplete="off">':esc(r.s);
       var del=ed?'<td class="x"><button type="button" class="mini'+(H.armed===ri?' armed':'')+'" data-del="'+ri+'">'+(H.armed===ri?'¿Seguro?':'Borrar')+'</button></td>':'';
-      return '<tr><td class="n">'+(ri+1)+'</td><td class="cn">'+nm+'</td><td class="sc">'+sc+'</td>'+tds+del+'</tr>';
+      return '<tr><td class="n">'+(k+1)+'</td><td class="cn">'+nm+'</td><td class="sc">'+sc+'</td>'+tds+del+'</tr>';
     }).join('');
-    if(!rows) rows='<tr><td colspan="'+(cols.length+4)+'" style="padding:22px;font-style:italic;opacity:.7">'+(d.filas.length?'Nadie con horario cargado para este día.':'Todavía no hay colaboradores cargados en este local.')+'</td></tr>';
+    if(!rows) rows='<tr><td colspan="'+(cols.length+4)+'" style="padding:22px;font-style:italic;opacity:.7">'+(visibles(d).length?'Nadie con horario cargado para este día.':'Todavía no hay colaboradores cargados en este sector.')+'</td></tr>';
     var t=totales(d);
     var foot=H.vista==='col'?'':'<tfoot><tr><td class="l" colspan="3">PRESENTES / DÍA</td>'+cols.map(function(i){ return '<td data-tot="'+i+'">'+t[i]+'</td>'; }).join('')+(ed?'<td></td>':'')+'</tr></tfoot>';
     var ref='<div class="ref"><b>Referencias:</b><span><i class="s-m"></i>Turno mañana (inicio ≤10 hs)</span><span><i class="s-d"></i>Turno mediodía (inicio 11-16 hs)</span><span><i class="s-c"></i>Turno cierre (inicio ≥17 hs)</span><span><i class="s-f"></i>Franco</span><span><i class="s-v"></i>Vacaciones</span></div>';
     var add=ed?'<div class="hadd"><button type="button" class="dl-btn alt" data-add>+ AGREGAR COLABORADOR</button></div>':'';
-    el.innerHTML='<div class="hwrap"><div class="htit">Barra Chalaca — '+nombreLoc()+'</div><div class="ht"><table><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody>'+foot+'</table></div>'+add+ref+'</div>';
+    el.innerHTML='<div class="hwrap"><div class="htit">Barra Chalaca — '+nombreLoc()+' · '+(H.area==='cocina'?'Cocina':'Salón')+'</div><div class="ht"><table><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody>'+foot+'</table></div>'+add+ref+'</div>';
   }
   function avisos(){
     $('h-avisos').innerHTML=(H.msg?'<div class="aviso err">'+esc(H.msg)+'</div>':'')+(H.loaded&&!H.w?'<div class="aviso">Solo lectura: en esta vista no podés cambiar los horarios.</div>':'');
@@ -831,7 +884,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   $('h-board').addEventListener('click',function(ev){
     var b=ev.target.closest('button'); if(!b||!H.w) return;
     if(b.hasAttribute('data-add')){
-      var d=ensure(); d.filas.push({c:'',s:'',d:['','','','','','','']}); guardar(); render();
+      var d=ensure(); d.filas.push({c:'',s:'',a:H.area,d:['','','','','','','']}); guardar(); render();
       var ins=document.querySelectorAll('#h-board input[data-f="c"]'); if(ins.length) ins[ins.length-1].focus();
     } else if(b.hasAttribute('data-del')){
       var i=+b.getAttribute('data-del');
@@ -842,6 +895,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   $('v-hor').addEventListener('click',function(ev){
     var b=ev.target.closest('button'); if(!b) return;
     if(b.hasAttribute('data-hl')){ H.loc=b.getAttribute('data-hl'); H.armed=null; try{ localStorage.setItem('barra-hloc',H.loc); }catch(e){} render(); }
+    else if(b.hasAttribute('data-ha')){ H.area=b.getAttribute('data-ha'); H.armed=null; try{ localStorage.setItem('barra-harea',H.area); }catch(e){} render(); }
     else if(b.hasAttribute('data-v')){ H.vista=b.getAttribute('data-v'); H.armed=null; render(); }
     else if(b.hasAttribute('data-dia')){ H.dia=+b.getAttribute('data-dia'); render(); }
   });

@@ -396,9 +396,15 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 </div>
 <div id="sheet-root"></div>
 <style>
-#auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;background:#E4D2A6}
+#auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 10%,#145C82 0%,#0B2E4F 75%)}
 #auth-gate[hidden]{display:none!important}
-.auth-card{width:100%;max-width:380px;background:#FFFDF7;border:3px solid #0B2E4F;border-radius:16px;padding:26px 22px;box-shadow:6px 6px 0 rgba(0,0,0,.18);color:#0B2E4F}
+.auth-card{width:100%;max-width:380px;background:#FFFDF7;border-top:8px solid #E8492B;border-radius:16px;padding:26px 22px;box-shadow:0 14px 40px rgba(0,0,0,.35);color:#0B2E4F}
+#auth-gate .dl-btn,.expm .expm-b{display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:1.2px;color:#fff;background:#E8492B;border:2px solid #0B2E4F;border-radius:999px;padding:12px 18px;box-shadow:3px 3px 0 rgba(11,46,79,.35);transition:transform .12s,background .15s}
+#auth-gate .dl-btn:hover,.expm .expm-b:hover{background:#C93A1F}#auth-gate .dl-btn:active,.expm .expm-b:active{transform:scale(.97)}
+.expm{position:fixed;inset:0;z-index:998;background:rgba(11,46,79,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+.expm-c{width:100%;max-width:340px;background:#FFFDF7;border-top:8px solid #E8492B;border-radius:16px;padding:22px;color:#0B2E4F;display:grid;gap:10px;box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.expm-c h3{font-family:'Anton',sans-serif;font-weight:400;font-size:20px;letter-spacing:1px}.expm-c p{font-size:13px;opacity:.75;margin-top:-6px}
+.expm .expm-b.alt{background:#fff;color:#0B2E4F;box-shadow:none}.expm .expm-b.alt:hover{background:#F4E9D4}
 .auth-card .lg{font-family:'Alfa Slab One',serif;font-size:26px;text-align:center}
 .auth-card .sb{text-align:center;font-size:10.5px;letter-spacing:2.5px;font-weight:700;margin:6px 0 18px}
 .auth-card h2{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;font-size:18px;margin-bottom:10px;text-transform:uppercase}
@@ -468,7 +474,6 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var first=!users.length;
     return '<div class="auth-card"><div class="lg">BARRA CHALACA</div><div class="sb">STREET FOOD PERUANO · RRHH</div>'+
       '<h2>'+(first?'Crear administrador':'Iniciar sesión')+'</h2>'+
-      (first?'<label for="a-nom">Nombre</label><input id="a-nom" autocomplete="name">':'')+
       '<label for="a-usr">Usuario</label><input id="a-usr" autocomplete="username" autocapitalize="none">'+
       '<label for="a-pw">Contraseña</label><input id="a-pw" type="password" autocomplete="'+(first?'new-password':'current-password')+'">'+
       '<button type="button" class="dl-btn" id="a-go">'+(first?'CREAR Y ENTRAR':'ENTRAR')+'</button>'+
@@ -480,9 +485,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var err=document.getElementById('a-err'), usr=plain(document.getElementById('a-usr').value), pw=document.getElementById('a-pw').value;
     err.textContent='';
     if(!users.length){
-      var nom=document.getElementById('a-nom').value.trim();
-      if(!nom||!usr||pw.length<6){err.textContent='Completá nombre, usuario y una contraseña de al menos 6 caracteres.';return;}
-      var s=newSalt(); users.push({id:'u'+Date.now(),nombre:nom,usuario:usr,salt:s,hash:await hash(pw,s),rol:'admin',perm:{}}); save();
+      if(!usr||pw.length<6){err.textContent='Completá usuario y una contraseña de al menos 6 caracteres.';return;}
+      var s=newSalt(); users.push({id:'u'+Date.now(),nombre:usr,usuario:usr,salt:s,hash:await hash(pw,s),rol:'admin',perm:{}}); save();
       SS.set(users[0].id); location.reload(); return;
     }
     if(Date.now()<lockUntil){err.textContent='Demasiados intentos. Esperá unos segundos.';return;}
@@ -496,7 +500,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     gate=document.createElement('div'); gate.id='auth-gate'; gate.innerHTML=gateHtml(); document.body.appendChild(gate);
     gate.addEventListener('click',function(e){if(e.target.id==='a-go')go();});
     gate.addEventListener('keydown',function(e){if(e.key==='Enter')go();});
-    setTimeout(function(){var f=document.getElementById(users.length?'a-usr':'a-nom');if(f)f.focus();},0);
+    setTimeout(function(){var f=document.getElementById('a-usr');if(f)f.focus();},0);
   }
 
   /* ---- panel de administrador ---- */
@@ -509,12 +513,12 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function renderAdm(){
     var el=document.getElementById('adm-root'); if(!el) return;
     var h='<div class="top"><div class="doodle-title">Usuarios</div><div class="acts"><button type="button" class="dl-btn mini" data-adm="nuevo">+ NUEVO USUARIO</button></div></div>';
-    h+='<div class="tw"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Puede ver</th><th></th></tr></thead><tbody>'+
-      users.map(function(u){return '<tr><td><b>'+esc(u.nombre)+'</b></td><td>'+esc(u.usuario)+'</td><td><span class="rolt '+(u.rol==='admin'?'':'c')+'">'+(u.rol==='admin'?'ADMIN':'COLABORADOR')+'</span></td><td>'+esc(resumen(u))+'</td>'+
+    h+='<div class="tw"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Puede ver</th><th></th></tr></thead><tbody>'+
+      users.map(function(u){return '<tr><td><b>'+esc(u.usuario)+'</b></td><td><span class="rolt '+(u.rol==='admin'?'':'c')+'">'+(u.rol==='admin'?'ADMIN':'COLABORADOR')+'</span></td><td>'+esc(resumen(u))+'</td>'+
         '<td><div class="acts"><button type="button" class="dl-btn alt" data-adm="edit" data-id="'+u.id+'">EDITAR</button>'+
         '<button type="button" class="dl-btn alt" data-adm="del" data-id="'+u.id+'">'+(ed&&ed.arm===u.id?'¿SEGURO?':'ELIMINAR')+'</button></div></td></tr>';}).join('')+'</tbody></table></div>';
     if(ed&&ed.form){var u=ed.form;
-      h+='<div class="frm"><div><label for="f-nom">Nombre</label><input id="f-nom" value="'+esc(u.nombre)+'"></div>'+
+      h+='<div class="frm">'+
         '<div><label for="f-usr">Usuario</label><input id="f-usr" autocapitalize="none" value="'+esc(u.usuario)+'"></div>'+
         '<div><label for="f-pw">Contraseña'+(ed.nuevo?'':' (vacío = no cambiar)')+'</label><input id="f-pw" type="password" autocomplete="new-password"></div>'+
         '<div><label for="f-rol">Rol</label><select id="f-rol"><option value="colab"'+(u.rol==='colab'?' selected':'')+'>Colaborador</option><option value="admin"'+(u.rol==='admin'?' selected':'')+'>Administrador (ve todo)</option></select></div>'+
@@ -529,16 +533,16 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   function setMsg(t,e){msg={t:t,e:!!e};renderAdm();}
   async function guardarUser(){
-    var f=ed.form, nom=document.getElementById('f-nom').value.trim(), usr=plain(document.getElementById('f-usr').value),
+    var f=ed.form, usr=plain(document.getElementById('f-usr').value),
         pw=document.getElementById('f-pw').value, rol=document.getElementById('f-rol').value, perm={};
     [].forEach.call(document.querySelectorAll('[data-pl]'),function(s){if(s.value)perm[s.getAttribute('data-pl')]=s.value;});
-    if(!nom||!usr) return setMsg('Completá nombre y usuario.',true);
+    if(!usr) return setMsg('Completá el usuario.',true);
     if(users.some(function(x){return x.usuario===usr&&x.id!==f.id;})) return setMsg('Ese usuario ya existe.',true);
     if(ed.nuevo&&pw.length<6) return setMsg('La contraseña debe tener al menos 6 caracteres.',true);
     if(pw&&pw.length<6) return setMsg('La contraseña debe tener al menos 6 caracteres.',true);
     if(f.rol==='admin'&&rol!=='admin'&&users.filter(function(x){return x.rol==='admin';}).length<2) return setMsg('Tiene que quedar al menos un administrador.',true);
     var u=ed.nuevo?{id:'u'+Date.now()}:users.filter(function(x){return x.id===f.id;})[0];
-    u.nombre=nom;u.usuario=usr;u.rol=rol;u.perm=rol==='admin'?{}:perm;
+    u.nombre=usr;u.usuario=usr;u.rol=rol;u.perm=rol==='admin'?{}:perm;
     if(pw){u.salt=newSalt();u.hash=await hash(pw,u.salt);}
     if(ed.nuevo) users.push(u); save();
     var mismo=cur&&u.id===cur.id; ed=null; setMsg('Usuario guardado.');
@@ -564,13 +568,13 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       users=d;save();if(!users.some(function(x){return x.id===cur.id;})){SS.set(null);location.reload();}else setMsg('Usuarios importados.');}catch(e){setMsg('Archivo inválido.',true);}};r.readAsText(i.files[0]);};i.click();}
   });
   document.addEventListener('change',function(ev){
-    if(ev.target.id==='f-rol'&&ed&&ed.form){ed.form.nombre=document.getElementById('f-nom').value;ed.form.usuario=document.getElementById('f-usr').value;ed.form.rol=ev.target.value;
+    if(ev.target.id==='f-rol'&&ed&&ed.form){ed.form.usuario=document.getElementById('f-usr').value;ed.form.rol=ev.target.value;
       var w=document.getElementById('f-permw'); if(w) w.hidden=ev.target.value==='admin';}
   });
   window.__authInit=function(){
     if(!cur){showGate();return;}
     var nav=document.querySelector('.navbar'), st=nav.querySelector('.stamp');
-    var w=document.createElement('div'); w.className='who'; w.innerHTML='<span>'+esc(cur.nombre)+'</span><button type="button" class="dl-btn alt" id="a-out">SALIR</button>';
+    var w=document.createElement('div'); w.className='who'; w.innerHTML='<span>'+esc(cur.usuario)+'</span><button type="button" class="dl-btn alt" id="a-out">SALIR</button>';
     nav.replaceChild(w,st); document.getElementById('a-out').onclick=function(){SS.set(null);location.reload();};
     if(cur.rol==='admin'){
       var tb=document.createElement('button'); tb.type='button'; tb.className='tab'; tb.setAttribute('role','tab'); tb.setAttribute('data-tab','adm'); tb.setAttribute('aria-selected','false'); tb.textContent='Administrar';
@@ -974,6 +978,21 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function expOpts(){ var a=__auth.areas(H.loc); return a.length>1?['ambos','salon','cocina']:a; }
   function expSel(){ var o=expOpts(); return o.indexOf(H.expA)>=0?H.expA:o[0]; }
 
+  function pedirArea(kind){
+    var o=expOpts(); if(o.length<2){ H.expA=o[0]; exportar(kind); return; }
+    var T={ambos:'Salón y Cocina',salon:'Solo Salón',cocina:'Solo Cocina'};
+    var ov=document.createElement('div'); ov.className='expm';
+    ov.innerHTML='<div class="expm-c" role="dialog" aria-modal="true"><h3>¿Qué querés descargar?</h3><p>'+(kind==='pdf'?'PDF':'Imagen')+' · '+esc(nombreLoc())+'</p>'+
+      o.map(function(k){ return '<button type="button" class="expm-b" data-o="'+k+'">'+T[k]+'</button>'; }).join('')+'<button type="button" class="expm-b alt" data-o="">Cancelar</button></div>';
+    function cerrar(){ ov.remove(); document.removeEventListener('keydown',esc2); }
+    function esc2(e){ if(e.key==='Escape') cerrar(); }
+    ov.addEventListener('click',function(e){ var b=e.target.closest('button');
+      if(e.target===ov||(b&&b.getAttribute('data-o')==='')){ cerrar(); return; }
+      if(b){ H.expA=b.getAttribute('data-o'); cerrar(); exportar(kind); } });
+    document.addEventListener('keydown',esc2); document.body.appendChild(ov);
+    var f=ov.querySelector('.expm-b'); if(f) f.focus();
+  }
+
   function cls(v){
     v=String(v||'').trim().toUpperCase();
     if(v==='FRANCO') return 's-f'; if(v==='VACACIONES') return 's-v';
@@ -1009,9 +1028,6 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       return '<button type="button" class="dl-btn alt" data-v="'+v[0]+'" aria-pressed="'+(H.vista===v[0])+'">'+v[1]+'</button>';
     }).join('')+'</div>';
     h+='<div class="hbar"><label for="h-lunes">Semana del lunes</label><input type="date" id="h-lunes" value="'+H.lunes+'"'+(H.w?'':' disabled')+'></div>';
-    if(expOpts().length>1) h+='<div class="expa"><span>Descargar:</span>'+expOpts().map(function(o){
-      return '<button type="button" class="dl-btn alt" data-expa="'+o+'" aria-pressed="'+(expSel()===o)+'">'+({ambos:'Salón y Cocina',salon:'Solo Salón',cocina:'Solo Cocina'})[o]+'</button>';
-    }).join('')+'</div>';
     h+='<div class="seg"><button type="button" class="dl-btn alt" data-exp="pdf">⬇ DESCARGAR PDF</button><button type="button" class="dl-btn alt" data-exp="png">⬇ DESCARGAR IMAGEN</button></div>';
     if(H.vista==='dia') h+='<div class="seg">'+DIAS.map(function(n,i){
       return '<button type="button" class="dl-btn alt" data-dia="'+i+'" aria-pressed="'+(H.dia===i)+'">'+n.slice(0,3)+' '+f[i]+'</button>';
@@ -1234,8 +1250,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     else if(b.hasAttribute('data-ha')){ H.area=b.getAttribute('data-ha'); H.armed=null; try{ localStorage.setItem('barra-harea',H.area); }catch(e){} render(); }
     else if(b.hasAttribute('data-v')){ H.vista=b.getAttribute('data-v'); H.armed=null; render(); }
     else if(b.hasAttribute('data-dia')){ H.dia=+b.getAttribute('data-dia'); render(); }
-    else if(b.hasAttribute('data-expa')){ H.expA=b.getAttribute('data-expa'); render(); }
-    else if(b.hasAttribute('data-exp')){ exportar(b.getAttribute('data-exp')); }
+    else if(b.hasAttribute('data-exp')){ pedirArea(b.getAttribute('data-exp')); }
     else if(b.hasAttribute('data-copy')&&H.w){
       var hay=cur().filas.some(function(r){ return r.d.some(function(v){ return String(v).trim(); }); });
       if(hay&&!H.armCopy){ H.armCopy=true; clearTimeout(armTimer); armTimer=setTimeout(function(){ H.armCopy=false; render(); },4000); render(); return; }

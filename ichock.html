@@ -323,10 +323,13 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .pop{ display:none; position:absolute; top:100%; left:-4px; width:max(100%, 210px); padding-top:6px; z-index:50; text-align:left; }
 .cnt.no .pop{ left:auto; right:-4px; }
 .cnt:hover .pop,.cnt:focus-within .pop{ display:block; }
-.pop-in{ background:var(--paper); border:2px solid var(--navy); border-radius:10px; padding:10px; max-height:280px; overflow:auto; box-shadow:0 8px 0 rgba(7,32,56,.14),0 14px 26px rgba(11,46,79,.28); }
+.pop-in{ background:var(--paper); border:2px solid var(--navy); border-radius:10px; padding:10px; box-shadow:0 8px 0 rgba(7,32,56,.14),0 14px 26px rgba(11,46,79,.28); }
 .pop-in h4{ margin-bottom:8px; }
 .cnt.si .pop-in h4{ color:var(--ok); } .cnt.no .pop-in h4{ color:var(--no-ink); }
-.pop-in .chip:last-child{ margin-bottom:0; }
+.pop-in .chip{ padding:6px 9px; margin-bottom:5px; }
+.pl{ display:grid; grid-template-columns:minmax(0,1fr); gap:0 8px; }
+.cnt.many .pop{ width:min(400px, 86vw); }
+.cnt.many .pl{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media (max-width:420px){ .cnt-n{ font-size:28px; } .pop{ width:max(100%, 180px); } }
 </style>
 
@@ -531,8 +534,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       '<span class="nm">' + esc(e.nombre) + '</span>' + (meta ? '<span class="mt">' + meta + '</span>' : '') + '</button>';
   }
   function col(k, titulo, xs){
-    var cuerpo = xs.length ? xs.map(chip).join('') : '<p class="nadie">' + (k === 'si' ? 'Nadie todavía' : 'Nadie falta') + '</p>';
-    return '<div class="cnt ' + k + '" tabindex="0" role="button" aria-label="' + titulo + ': ' + xs.length + '">' +
+    var cuerpo = xs.length ? '<div class="pl">' + xs.map(chip).join('') + '</div>' : '<p class="nadie">' + (k === 'si' ? 'Nadie todavía' : 'Nadie falta') + '</p>';
+    return '<div class="cnt ' + k + (xs.length > 6 ? ' many' : '') + '" tabindex="0" role="button" aria-label="' + titulo + ': ' + xs.length + '">' +
       '<span class="cnt-n">' + xs.length + '</span><span class="cnt-l">' + titulo + '</span>' +
       '<div class="pop"><div class="pop-in"><h4>' + titulo + ' <span>' + xs.length + '</span></h4>' + cuerpo + '</div></div></div>';
   }

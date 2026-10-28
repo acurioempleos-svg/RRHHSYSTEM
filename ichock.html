@@ -749,7 +749,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
         try{ await acceso($('w-dni').value,$('w-pw').value); }catch(x){ er.textContent=x.message||'Error'; b.disabled=false; } }
     });
     wrap.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id&&e.target.id.indexOf('w-')===0){e.stopPropagation();$('w-go').click();}},true);
-    if(/^#ll\./.test(location.hash)) show('l'); else if(ls('barra-trab')) show('t');
+    show(/^#ll\./.test(location.hash)?'l':(ls('barra-trab')?'t':'e'));
   }};
 
   /* ---------- ya adentro ---------- */

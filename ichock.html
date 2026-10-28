@@ -520,13 +520,14 @@ footer svg{ height:22px; width:auto; opacity:.85; }
         '<button type="button" class="dl-btn alt" data-adm="del" data-id="'+u.id+'">'+(ed&&ed.arm===u.id?'¿SEGURO?':'ELIMINAR')+'</button></div></td></tr>';}).join('')+'</tbody></table></div>';
     if(ed&&ed.form){var u=ed.form;
       h+='<div class="frm">'+
-        '<div><label for="f-usr">Usuario</label><input id="f-usr" autocapitalize="none" value="'+esc(u.usuario)+'"></div>'+
-        '<div><label for="f-pw">Contraseña'+(ed.nuevo?'':' (vacío = no cambiar)')+'</label><input id="f-pw" type="password" autocomplete="new-password"></div>'+
-        '<div><label for="f-rol">Rol</label><select id="f-rol"><option value="colab"'+(u.rol==='colab'?' selected':'')+'>Colaborador</option><option value="admin"'+(u.rol==='admin'?' selected':'')+'>Administrador (ve todo)</option></select></div>'+
-        '<div class="full" id="f-permw"'+(u.rol==='admin'?' hidden':'')+'><label>Locales y áreas que puede ver</label><div class="perm">'+
+        '<div'+(u.rol==='trab'?' hidden':'')+'><label for="f-usr">Usuario</label><input id="f-usr" autocapitalize="none" value="'+esc(u.usuario)+'"></div>'+
+        '<div'+(u.rol==='trab'?' hidden':'')+'><label for="f-pw">Contraseña'+(ed.nuevo?'':' (vacío = no cambiar)')+'</label><input id="f-pw" type="password" autocomplete="new-password"></div>'+
+        '<div><label for="f-rol">Rol</label><select id="f-rol"><option value="colab"'+(u.rol==='colab'?' selected':'')+'>Colaborador</option><option value="trab"'+(u.rol==='trab'?' selected':'')+'>Trabajador</option><option value="admin"'+(u.rol==='admin'?' selected':'')+'>Administrador (ve todo)</option></select></div>'+
+        '<div class="full" id="f-trabw"'+(u.rol==='trab'?'':' hidden')+'><div class="auth-note" style="margin:0;font-size:13px;opacity:1"><b>Los trabajadores no se crean acá.</b> Cada uno crea su cuenta solo: en la pantalla de ingreso (tocá SALIR) va a la pestaña <b>Trabajador</b>, pone su DNI (el que está cargado en ciclo) y elige una contraseña. Su cuenta queda atada a su celular y solo ve los horarios de su local y sección. Para ver quiénes ya se registraron, o reiniciar una cuenta, usá la pestaña <b>Llegadas</b>.</div></div>'+
+        '<div class="full" id="f-permw"'+(u.rol==='admin'||u.rol==='trab'?' hidden':'')+'><label>Locales y áreas que puede ver</label><div class="perm">'+
         LOCS.map(function(l){var v=(u.perm||{})[l[0]]||'';return '<div><b>'+l[1]+'</b><select data-pl="'+l[0]+'">'+
           [['','Sin acceso'],['salon','Solo Salón'],['cocina','Solo Cocina'],['ambos','Salón y Cocina']].map(function(o){return '<option value="'+o[0]+'"'+(v===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></div>';}).join('')+'</div></div>'+
-        '<div class="full acts"><button type="button" class="dl-btn" data-adm="guardar">GUARDAR</button><button type="button" class="dl-btn alt" data-adm="cancelar">CANCELAR</button></div></div>';
+        '<div class="full acts">'+(u.rol==='trab'?'':'<button type="button" class="dl-btn" data-adm="guardar">GUARDAR</button>')+'<button type="button" class="dl-btn alt" data-adm="cancelar">CANCELAR</button></div></div>';
     }
     h+='<div class="msg '+(msg&&msg.e?'e':'o')+'" role="status">'+(msg?esc(msg.t):'')+'</div>';
     h+='<div class="auth-note">Los usuarios se guardan en este navegador. Para usarlos en otro dispositivo: <button type="button" class="dl-btn alt mini" data-adm="exp">EXPORTAR</button> <button type="button" class="dl-btn alt mini" data-adm="imp">IMPORTAR</button></div>';
@@ -570,7 +571,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   });
   document.addEventListener('change',function(ev){
     if(ev.target.id==='f-rol'&&ed&&ed.form){ed.form.usuario=document.getElementById('f-usr').value;ed.form.rol=ev.target.value;
-      var w=document.getElementById('f-permw'); if(w) w.hidden=ev.target.value==='admin';}
+      var w=document.getElementById('f-permw'); if(w) w.hidden=ev.target.value==='admin'||ev.target.value==='trab'; var tw=document.getElementById('f-trabw'); if(ev.target.value==='trab'||(tw&&!tw.hidden)) renderAdm();}
   });
   window.__authInit=function(){
     if(!cur){showGate();return;}

@@ -314,6 +314,28 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
 .llres>summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
 .llres[open]>summary::before{transform:rotate(90deg)}
 @media(max-width:760px){#ll-res .tablewrap{overflow-x:auto}#ll-res .llgrid{table-layout:auto}}
+
+/* Reporte semanal (formulario) */
+.rep-wrap{max-width:860px;margin:0 auto}
+.rep-hero{position:relative;background:var(--ink);color:#fff;border-radius:var(--r) var(--r) 0 0;padding:22px 26px 20px;display:flex;gap:16px;align-items:center;border-bottom:4px solid var(--accent);margin-bottom:18px}
+.rep-hero::after{content:"";position:absolute;left:0;bottom:-4px;width:96px;height:4px;background:var(--signal)}
+.rep-logo{flex:none;width:42px;height:42px;border-radius:9px;background:var(--accent);display:grid;place-items:center;font-weight:700;font-size:23px}
+.rep-kick{font-size:11px;letter-spacing:.08em;color:#F2C46B;font-weight:600}
+.rep-hero h2{margin:2px 0 3px;font-size:22px;color:#fff}
+.rep-sb{font-size:13px;color:#B9C7CB}
+.rep-conf{margin-left:auto;font-size:11px;letter-spacing:.08em;font-weight:700;color:#F2C46B;align-self:flex-start}
+.rep-sec{margin-bottom:14px}
+.rep-h{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.rep-bar{flex:none;width:4px;height:22px;background:var(--accent);border-radius:1px}
+.rep-nom{font-size:17px;font-weight:600;border:1px solid transparent;background:transparent;padding:4px 8px}
+.rep-nom:hover,.rep-nom:focus{border-color:var(--line);background:#fff}
+.rep-sub{font-size:14px;font-weight:700;color:var(--accent);margin:14px 0 8px}
+.rep-it{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.rep-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:15px}
+.rep-it textarea{flex:1;min-height:44px;resize:vertical;line-height:1.45}
+.rep-it .btn{flex:none;margin-top:5px}
+.rep-tip{background:#E3F1ED;color:var(--accent);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-bottom:16px}
+@media(max-width:600px){.rep-hero{flex-wrap:wrap}.rep-conf{margin-left:0}}
 </style>
 </head>
 <body>
@@ -340,6 +362,7 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
   <section class="view" id="v-par" hidden></section>
+  <section class="view" id="v-rep" hidden></section>
 </main>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -687,7 +710,7 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -1016,8 +1039,8 @@ function paintAle() {
 function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
-  $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === tab ? 'page' : 'false'));
-  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar })[tab]();
+  $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === (tab === 'rep' ? 'par' : tab) ? 'page' : 'false'));
+  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar, rep: renderRep })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -1802,6 +1825,11 @@ function renderPar() {
     <div style="margin-top:14px"><button class="btn primary" type="button" data-act="planillaSueldos">Descargar planilla de sueldos</button></div>
   </div>
   <div class="card">
+    <h2>Reporte semanal de novedades</h2>
+    <p class="muted" style="margin-top:0">Formulario con cuadros de texto para completar el reporte semanal de Recursos Humanos: por cada local, las novedades de personal y las búsquedas pendientes, más los avances de gestión. Lo que escribís se guarda solo y se descarga en PDF con el diseño de los informes de la app.</p>
+    <button class="btn primary" type="button" data-act="repAbrir">Abrir formulario del reporte</button>
+  </div>
+  <div class="card">
     <h2>Orden de los puestos</h2>
     <p class="muted" style="margin-top:0">Es el orden en que aparece la nómina en Empleados dentro de cada local (y en las listas de puestos). Arrastrá cada puesto o usá las flechas. Dentro de un mismo local y puesto se ordena por apellido. Se guarda al instante.</p>
     <button class="btn sm" type="button" data-act="puestosReset">Restablecer orden original</button>
@@ -1846,6 +1874,67 @@ function renderPar() {
   </div>`;
   paintOrdenLocales(); paintOrdenPuestos(); paintOrdenCols();
 }
+/* ================= Reporte semanal de novedades (formulario + PDF) ================= */
+const REP_LOCALES = ['La Mar', 'Tanta', 'Barra Chalaca Palermo', 'Barra Chalaca Belgrano', 'Barra Chalaca Bulnes', 'Barra Chalaca Caseros'];
+const repNuevo = () => ({
+  periodo: new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).replace(' de ', ' ').replace(/^./, c => c.toUpperCase()),
+  locales: REP_LOCALES.map(n => ({ n, nov: [''], bus: [''] })), ges: ['']
+});
+const repData = () => { if (!S.reporteSemanal) S.reporteSemanal = repNuevo(); return S.reporteSemanal; };
+let repTimer = null;
+const repSave = () => { clearTimeout(repTimer); repTimer = setTimeout(save, 400); };
+const repAjustar = t => { t.style.height = 'auto'; t.style.height = Math.max(44, t.scrollHeight) + 'px'; };
+function renderRep() {
+  const R = repData();
+  const lista = (k, l, arr, ph) => arr.map((t, i) => `<div class="rep-it"><span class="rep-dot"></span><textarea rows="2" data-rep="${k}" data-l="${l}" data-i="${i}" placeholder="${esc(ph)}">${esc(t)}</textarea><button class="btn sm danger" type="button" data-act="repDel" data-k="${k}" data-l="${l}" data-i="${i}" title="Quitar este punto">✕</button></div>`).join('')
+    + `<button class="btn sm" type="button" data-act="repAdd" data-k="${k}" data-l="${l}">+ Agregar punto</button>`;
+  $('#v-rep').innerHTML = `<div class="rep-wrap">
+  <div class="bar detail-bar"><button class="btn" type="button" data-act="repVolver">Volver a Parámetros</button>
+    <button class="btn danger" type="button" data-act="repLimpiar" style="margin-left:auto">Vaciar formulario</button>
+    <button class="btn primary" type="button" data-act="repPdf">Descargar PDF</button></div>
+  <div class="rep-hero"><div class="rep-logo">A</div><div><div class="rep-kick">ACURIO RESTAURANTES · RECURSOS HUMANOS</div><h2>Reporte semanal de novedades</h2><div class="rep-sb">Departamento de Recursos Humanos - ${esc(R.periodo)}</div></div><div class="rep-conf">CONFIDENCIAL</div></div>
+  <div class="card rep-sec"><label class="fld"><span>Período (aparece en el subtítulo del reporte)</span><input type="text" data-rep="per" value="${esc(R.periodo)}" placeholder="Octubre 2026"></label></div>
+  <div class="rep-tip">Una novedad o búsqueda por cuadro. Si en un local no cargás novedades, esa parte no aparece en el PDF; si no hay búsquedas, dice «Ninguna por el momento». Se guarda solo mientras escribís.</div>
+  ${R.locales.map((L, l) => `<div class="card rep-sec">
+    <div class="rep-h"><span class="rep-bar"></span><input class="rep-nom" type="text" data-rep="nom" data-l="${l}" value="${esc(L.n)}" placeholder="Nombre del local"><button class="btn sm danger" type="button" data-act="repLocalDel" data-l="${l}" style="margin-left:auto">Quitar local</button></div>
+    <div class="rep-sub">Novedades de Personal:</div>
+    ${lista('nov', l, L.nov, 'Ej.: Nombre (puesto): qué pasó o qué se conversó')}
+    <div class="rep-sub">Búsquedas Pendientes:</div>
+    ${lista('bus', l, L.bus, 'Ej.: 2 Cocineros: motivo de la búsqueda')}
+  </div>`).join('')}
+  <div style="margin:0 0 18px"><button class="btn" type="button" data-act="repLocalAdd">+ Agregar local</button></div>
+  <div class="card rep-sec">
+    <div class="rep-h"><span class="rep-bar"></span><h2 style="margin:0">Avances de Gestión</h2></div>
+    <div class="rep-sub">Proyectos finalizados y en curso:</div>
+    ${lista('ges', 0, R.ges, 'Ej.: Planilla de sueldos: lista para enviar.')}
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:30px"><button class="btn primary" type="button" data-act="repPdf">Descargar PDF</button></div>
+  </div>`;
+  $$('#v-rep textarea').forEach(repAjustar);
+}
+function repRefrescar(foco) {
+  const y = window.scrollY; renderRep(); window.scrollTo(0, y);
+  if (foco) { const q = $$('#v-rep ' + foco); if (q.length) q[q.length - 1].focus(); }
+}
+async function pdfReporte() {
+  const R = repData(), P = PDF_C, lim = a => (a || []).map(x => String(x || '').trim()).filter(Boolean);
+  const locs = R.locales.filter(l => (l.n || '').trim() || lim(l.nov).length || lim(l.bus).length), ges = lim(R.ges);
+  if (!locs.length && !ges.length) { toast('Completá al menos una sección antes de descargar.'); return false; }
+  const nN = locs.reduce((a, l) => a + lim(l.nov).length, 0), nB = locs.reduce((a, l) => a + lim(l.bus).length, 0);
+  const secs = locs.map(l => {
+    const nov = lim(l.nov), bus = lim(l.bus), bul = [];
+    if (nov.length) bul.push({ sub: 'Novedades de Personal:', items: nov });
+    bul.push({ sub: 'Búsquedas Pendientes:', items: bus, vacio: 'Ninguna por el momento.' });
+    return { t: (l.n || '').trim() || 'Local sin nombre', bul };
+  });
+  if (ges.length) secs.push({ t: 'Avances de Gestión', bul: [{ sub: 'Proyectos finalizados y en curso:', items: ges }] });
+  return pdfInforme({
+    titulo: 'Reporte semanal de novedades', sub: 'Departamento de Recursos Humanos' + ((R.periodo || '').trim() ? ' - ' + R.periodo.trim() : ''), archivo: `reporte-semanal-rrhh-${today()}.pdf`,
+    kpis: [{ l: 'Locales', v: locs.length, n: 'incluidos en el reporte' }, { l: 'Novedades de personal', v: nN, n: 'puntos cargados', c: P.blue }, { l: 'Búsquedas pendientes', v: nB, n: 'puntos cargados', c: P.gold }],
+    secs
+  });
+}
+
 function paintOrdenLocales() {
   const box = $('#ord-locales'); if (!box) return;
   const ord = ordenLocales(), cnt = {}, cl = S.parametros.coloresLocal || {};
@@ -2221,6 +2310,22 @@ async function pdfInforme(o) {
     F(C.acc); doc.rect(M, y, 4, 15, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); T(C.ink); tx(s.t, M + 12, y + 12);
     if (s.n) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); T(C.mut); tx(s.n, W - M, y + 12, 'right'); }
     y += 24;
+    if (s.bul) {   // secciones de texto con viñetas (reporte semanal)
+      const mw = W - 2 * M - 30;
+      s.bul.forEach(g => {
+        if (y > H - 90) { doc.addPage(); y = 56; }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); T(C.acc); tx(g.sub, M + 12, y + 8); y += 20;
+        if (!g.items.length) { doc.setFont('helvetica', 'italic'); doc.setFontSize(9); T(C.mut); tx(g.vacio || 'Ninguna por el momento.', M + 26, y + 6); y += 20; return; }
+        g.items.forEach(t => {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+          const ls = doc.splitTextToSize(t, mw), alto = ls.length * 13;
+          if (y + alto > H - 50) { doc.addPage(); y = 56; doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); }
+          F(C.acc); doc.circle(M + 18, y + 4.5, 1.9, 'F'); T(C.ink); ls.forEach((l, i) => tx(l, M + 28, y + 7.5 + i * 13)); y += alto + 5;
+        });
+        y += 8;
+      });
+      y += 10; return;
+    }
     if (!s.body.length) { F(C.accL); doc.roundedRect(M, y, W - 2 * M, 30, 5, 5, 'F'); doc.setFont('helvetica', 'italic'); doc.setFontSize(9); T(C.acc); tx(s.vacio || 'Sin registros.', M + 14, y + 19); y += 52; return; }
     const LL = s.locs || (s.loc != null ? s.body.map(r => r[s.loc]) : null), cs = {}, ha = {}; (s.num || []).forEach(i => { ha[i] = 'right'; }); (s.ctr || []).forEach(i => { ha[i] = 'center'; }); Object.entries(s.cols || {}).forEach(([i, v]) => { cs[i] = v; });
     doc.autoTable({
@@ -2628,6 +2733,14 @@ function validarLegajo(d, prev) {
 }
 
 const ACT = {
+  repAbrir: () => go('rep'),
+  repVolver: () => go('par'),
+  repAdd: b => { const R = repData(), k = b.dataset.k, l = +b.dataset.l; (k === 'ges' ? R.ges : R.locales[l][k]).push(''); save(); repRefrescar(`textarea[data-rep="${k}"]` + (k === 'ges' ? '' : `[data-l="${l}"]`)); },
+  repDel: b => { const R = repData(), k = b.dataset.k, l = +b.dataset.l, i = +b.dataset.i; (k === 'ges' ? R.ges : R.locales[l][k]).splice(i, 1); save(); repRefrescar(); },
+  repLocalAdd: () => { repData().locales.push({ n: '', nov: [''], bus: [''] }); save(); repRefrescar('.rep-nom'); },
+  repLocalDel: b => { const R = repData(), l = +b.dataset.l, L = R.locales[l]; if (!L) return; if (!confirm(`¿Quitar la sección "${L.n || 'sin nombre'}" del reporte?`)) return; R.locales.splice(l, 1); save(); repRefrescar(); },
+  repLimpiar: () => { if (!confirm('¿Vaciar todo el formulario? Se borran los textos cargados y se vuelve a la estructura inicial.')) return; const per = repData().periodo; S.reporteSemanal = repNuevo(); S.reporteSemanal.periodo = per; save(); repRefrescar(); toast('Formulario vaciado'); },
+  repPdf: () => conPdf(() => pdfReporte())(),
   addLiqNrem: () => {
     const L = UI.liq; if (!L || !L.empId) { toast('Elegí un empleado primero.'); return; }
     const inp = readLiqForm(); inp.nremunExtra.push({ concepto: '', monto: 0 }); L.inputs = inp;
@@ -2936,6 +3049,16 @@ const ACT = {
   }
 };
 
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.dataset || !t.dataset.rep || !t.closest('#v-rep')) return;
+  const R = repData(), k = t.dataset.rep, l = +t.dataset.l, i = +t.dataset.i;
+  if (k === 'per') { R.periodo = t.value; const sb = $('#v-rep .rep-sb'); if (sb) sb.textContent = 'Departamento de Recursos Humanos - ' + t.value; }
+  else if (k === 'nom') R.locales[l].n = t.value;
+  else if (k === 'ges') R.ges[i] = t.value;
+  else R.locales[l][k][i] = t.value;
+  if (t.tagName === 'TEXTAREA') repAjustar(t);
+  repSave();
+});
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && ACT[b.dataset.act]) ACT[b.dataset.act](b, e); });
 const NAV_ACTS = new Set(['tab', 'back', 'openEmp', 'newEmp', 'openLiq']);
 document.addEventListener('click', e => {

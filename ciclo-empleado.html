@@ -3101,7 +3101,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.ma
 const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'checkbox', 'radio', 'file', 'color', 'time', 'datetime-local', 'range', 'url']);
 document.addEventListener('input', e => {
   const t = e.target;
-  if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly) {
+  if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly && !(t.closest && t.closest('#v-rep'))) {
     const up = t.value.toUpperCase();
     if (up !== t.value) { const p = t.selectionStart, q = t.selectionEnd; t.value = up; t.setSelectionRange(p, q); }
   }

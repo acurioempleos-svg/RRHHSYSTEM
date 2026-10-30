@@ -224,56 +224,6 @@ body {
 .decision-actions button.rechazar.selected { background:var(--d-dim); border-color:var(--d-brd); color:var(--danger); }
 .cd-historial-item { font-size:11.5px; color:var(--muted); padding:6px 0; border-bottom:1px solid var(--b0); }
 
-/* ══ TRAZABILIDAD ═════════════════════════════════════════════════ */
-#view-trazabilidad { padding:20px 14px 100px; animation:fadeUp .35s ease; }
-@media(min-width:900px){ #view-trazabilidad { max-width:1000px; margin:0 auto; padding:28px 32px 80px; } }
-.traza-search { display:flex; gap:8px; margin-bottom:22px; }
-.traza-search .f-input { flex:1; }
-.traza-empty { text-align:center; color:var(--muted); font-size:12px; padding:60px 20px; }
-.traza-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
-.traza-header-name { font-weight:700; font-size:17px; }
-.traza-header-sub { font-family:'DM Sans',sans-serif; font-size:10px; color:var(--muted); margin-top:2px; }
-.traza-line-wrap { overflow-x:auto; padding:20px 4px 6px; }
-.traza-line {
-  position:relative; display:flex; align-items:center; min-width:max-content; padding:30px 20px 0;
-}
-.traza-line::before {
-  content:''; position:absolute; left:20px; right:20px; top:50%; height:2px;
-  background:var(--b2); transform:translateY(-50%); z-index:0;
-}
-.traza-node { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; }
-.traza-node-dot {
-  width:18px; height:18px; border-radius:50%; background:var(--amber); border:3px solid var(--bg);
-  box-shadow:0 0 0 1px var(--amber-brd); flex-shrink:0;
-}
-.traza-node.endpoint .traza-node-dot { width:26px; height:26px; background:var(--s0); border:2px solid var(--amber-hi); box-shadow:none; }
-.traza-node.secundario .traza-node-dot { width:8px; height:8px; background:var(--muted); box-shadow:none; }
-.traza-node-label {
-  position:absolute; top:26px; width:120px; text-align:center; font-size:10.5px; font-weight:600;
-  color:var(--text); left:50%; transform:translateX(-50%);
-}
-.traza-node.secundario .traza-node-label { display:none; }
-.traza-node-date {
-  position:absolute; bottom:26px; width:110px; text-align:center; font-family:'DM Sans',sans-serif;
-  font-size:8.5px; color:var(--muted); left:50%; transform:translateX(-50%);
-}
-.traza-node.secundario .traza-node-date { display:none; }
-.traza-spacer { width:56px; flex-shrink:0; }
-.traza-legend { display:flex; gap:18px; margin-top:70px; flex-wrap:wrap; }
-.traza-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
-.traza-legend-dot { width:9px; height:9px; border-radius:50%; background:var(--amber); }
-.traza-legend-dot.sec { width:5px; height:5px; background:var(--muted); }
-.traza-node-dot { cursor:pointer; }
-#traza-tooltip {
-  position:fixed; z-index:200; pointer-events:none; opacity:0; transform:translate(-50%,-8px);
-  transition:opacity .12s ease; background:var(--s1); border:1px solid var(--b2);
-  border-radius:10px; padding:10px 12px; max-width:220px; box-shadow:0 10px 30px rgba(0,0,0,.4);
-}
-#traza-tooltip.vis { opacity:1; }
-#traza-tooltip .tt-tipo { font-weight:700; font-size:12px; margin-bottom:2px; }
-#traza-tooltip .tt-detalle { font-size:11px; color:var(--muted); margin-bottom:4px; }
-#traza-tooltip .tt-fecha { font-family:'DM Sans',sans-serif; font-size:9px; color:var(--muted); }
-#traza-tooltip img { display:block; width:100%; max-height:120px; object-fit:cover; border-radius:7px; margin-top:6px; }
 .view-label {
   font-family:'DM Sans',sans-serif; font-size:9px;
   color:var(--amber); letter-spacing:.22em; text-transform:uppercase;
@@ -444,62 +394,6 @@ body {
   transition:all var(--t);
 }
 .lb-edit-btn:hover { background:var(--amber-glow); border-color:var(--amber-brd); color:var(--amber-hi); }
-
-/* ── Selector de color del local (modal) ─────────────────────── */
-.color-swatch-row { display:flex; flex-wrap:wrap; gap:9px; }
-.color-swatch {
-  width:30px; height:30px; border-radius:50%; flex-shrink:0;
-  border:2px solid transparent; cursor:pointer; position:relative;
-  transition:transform var(--t-spring), border-color var(--t), box-shadow var(--t);
-}
-.color-swatch:hover { transform:scale(1.12); }
-.color-swatch.active {
-  border-color:var(--bg);
-  box-shadow:0 0 0 2px currentColor;
-}
-.color-swatch.active::after {
-  content:''; position:absolute; inset:0; margin:auto;
-  width:7px; height:7px; border-radius:50%;
-  background:#fff; box-shadow:0 0 3px rgba(0,0,0,.6);
-}
-.color-swatch.cs-none {
-  background:var(--s2); border:1px dashed var(--b2);
-  display:flex; align-items:center; justify-content:center;
-  color:var(--faint); font-size:13px; line-height:1;
-}
-.color-swatch.cs-none.active { box-shadow:0 0 0 2px var(--muted); }
-.color-swatch.cs-none.active::after { display:none; }
-
-/* ── Carga de imagen del local (modal) ───────────────────────── */
-.rl-img-row { display:flex; align-items:flex-start; gap:12px; }
-.rl-img-upload {
-  position:relative; width:104px; height:104px; flex-shrink:0;
-  border-radius:var(--r-lg); overflow:hidden; cursor:pointer;
-  background:var(--s2); border:1px dashed var(--b2);
-  display:flex; align-items:center; justify-content:center;
-  transition:border-color var(--t), background var(--t);
-}
-.rl-img-upload:hover { border-color:var(--amber-brd); background:var(--s3); }
-.rl-img-upload img { width:100%; height:100%; object-fit:cover; display:block; }
-.rl-img-placeholder {
-  display:flex; flex-direction:column; align-items:center; gap:5px;
-  color:var(--faint); text-align:center; padding:6px;
-}
-.rl-img-placeholder svg { width:18px; height:18px; }
-.rl-img-placeholder span {
-  font-family:'DM Sans',sans-serif; font-size:8px; letter-spacing:.05em;
-  text-transform:uppercase;
-}
-.rl-img-remove {
-  position:absolute; top:5px; right:5px; width:20px; height:20px; border-radius:6px;
-  background:rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.18); color:#fff;
-  display:flex; align-items:center; justify-content:center; cursor:pointer;
-  font-size:11px; line-height:1; backdrop-filter:blur(4px);
-}
-.rl-img-hint {
-  font-family:'DM Sans',sans-serif; font-size:9px; color:var(--muted);
-  line-height:1.6; flex:1; padding-top:4px;
-}
 
 /* empty */
 #board-empty {
@@ -1212,7 +1106,7 @@ body {
 
 /* ── Nombres de locales y colaboradores siempre en mayúscula ── */
 .lb-name, .pb-name, .sr-name, .vg-row-name, .org-person, .csi-name, .pl-name,
-#lv-name, .lv-title, #n-nombre, #nco-nombre, #edit-nombre, #nl-nombre, #rl-nombre {
+#lv-name, .lv-title, #n-nombre, #nco-nombre, #edit-nombre, #nl-nombre {
   text-transform: uppercase;
 }
 #volver-index-btn {
@@ -2239,9 +2133,6 @@ body{
 .alerts-close{ background:rgba(255,255,255,.2); border:0; color:#fff; }
 #planilla-bar{ background:var(--sand); border-bottom:2px solid var(--navy); }
 #planilla-bar .pl-title{ font-family:'Anton',sans-serif; font-weight:400; letter-spacing:1px; }
-.traza-header-name{ font-family:'Anton',sans-serif; font-weight:400; letter-spacing:.5px; font-size:22px; }
-#traza-tooltip{ background:var(--navy); color:#fff; border:2px solid var(--sand); }
-#traza-tooltip .tt-tipo,#traza-tooltip .tt-detalle,#traza-tooltip .tt-fecha{ color:#fff; }
 #toast{ background:var(--navy); color:var(--sand); border:2px solid var(--coral); }
 </style>
 </head>
@@ -2268,7 +2159,6 @@ body{
   <div id="app-nav">
     <button class="app-nav-btn active" id="nav-locales" onclick="mostrarSeccion('locales')">Locales</button>
     <button class="app-nav-btn" id="nav-seleccion" onclick="mostrarSeccion('seleccion')">Selección</button>
-    <button class="app-nav-btn" id="nav-trazabilidad" onclick="mostrarSeccion('trazabilidad')">Trazabilidad</button>
   </div>
   <div id="gs-wrap">
     <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
@@ -2301,12 +2191,10 @@ body{
 <div id="app-nav-mobile">
   <button class="app-nav-mobile-btn active" id="navm-locales" onclick="mostrarSeccion('locales')">🏠<span>Locales</span></button>
   <button class="app-nav-mobile-btn" id="navm-seleccion" onclick="mostrarSeccion('seleccion')">🧑‍💼<span>Selección</span></button>
-  <button class="app-nav-mobile-btn" id="navm-trazabilidad" onclick="mostrarSeccion('trazabilidad')">📍<span>Trazabilidad</span></button>
 </div>
 
 <!-- ══ VISTA PRINCIPAL ══════════════════════════════════════════ -->
 <div id="view-main">
-  <div class="doodle-row"><div class="doodle-title">Gestión de locales</div></div>
   <div class="view-label">Locales activos</div>
   <div id="stats-strip"></div>
   <div id="locals-grid">
@@ -2326,9 +2214,6 @@ body{
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px">
         <div class="lv-title" id="lv-name"></div>
-        <button class="lb-edit-btn" style="width:22px;height:22px;border-radius:6px" onclick="abrirRenombrarLocal(currentLocal)" title="Editar local">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
       </div>
       <div class="lv-count" id="lv-count"></div>
     </div>
@@ -2406,17 +2291,6 @@ body{
     <div class="sheet-body" id="cd-body"></div>
   </div>
 </div>
-
-<!-- ══ VISTA TRAZABILIDAD ═════════════════════════════════════════ -->
-<div id="view-trazabilidad" style="display:none">
-  <div class="view-label">Trazabilidad</div>
-  <div class="traza-search">
-    <input id="traza-dni-input" class="f-input" placeholder="Buscar por DNI o nombre…" onkeydown="if(event.key==='Enter')buscarTraza()">
-    <button class="btn btn-amber" style="width:auto;padding:11px 18px" onclick="buscarTraza()">Buscar</button>
-  </div>
-  <div id="traza-resultado"></div>
-</div>
-<div id="traza-tooltip"></div>
 
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
@@ -2999,48 +2873,6 @@ body{
   </div>
 </div>
 
-<!-- Editar local (nombre, color e imagen) -->
-<div id="renombrar-local-modal" class="overlay" onclick="closeSheet('renombrar-local-modal')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-pill"></div>
-    <div class="sheet-hdr">
-      <div style="display:flex;flex-direction:column;gap:3px">
-        <div class="sheet-title">Editar local</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:9px;color:var(--muted)" id="rl-subtitle">Nombre, color e imagen</div>
-      </div>
-      <div class="sheet-x" onclick="closeSheet('renombrar-local-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
-    </div>
-    <div class="sheet-body">
-      <input type="hidden" id="rl-original">
-      <div class="f-field" style="margin-bottom:16px">
-        <label class="f-label">Nombre</label>
-        <input class="f-input" id="rl-nombre" placeholder="Nombre del local…" onkeydown="if(event.key==='Enter')guardarRenombrarLocal()">
-      </div>
-      <div class="f-field" style="margin-bottom:16px">
-        <label class="f-label">Color de la tarjeta</label>
-        <div class="color-swatch-row" id="rl-color-row"></div>
-      </div>
-      <div class="f-field" style="margin-bottom:16px">
-        <label class="f-label">Imagen de portada</label>
-        <div class="rl-img-row">
-          <div class="rl-img-upload" id="rl-img-preview" onclick="document.getElementById('rl-img-input').click()">
-            <img id="rl-img-preview-img" style="display:none" alt="">
-            <div class="rl-img-placeholder" id="rl-img-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <span>Subir</span>
-            </div>
-            <button type="button" class="rl-img-remove" id="rl-img-remove-btn" style="display:none" onclick="event.stopPropagation();quitarImagenLocal()">✕</button>
-          </div>
-          <div class="rl-img-hint">Se recorta automáticamente al centro para que quede cuadrada. Si hay imagen, se muestra en vez del color.</div>
-        </div>
-        <input type="file" id="rl-img-input" accept="image/*" style="display:none" onchange="handleLocalImagePick(event)">
-      </div>
-      <button class="btn btn-amber" id="rl-btn" onclick="guardarRenombrarLocal()">Guardar cambios</button>
-      <button class="btn btn-ghost" style="margin-top:6px" onclick="closeSheet('renombrar-local-modal')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <!-- Nuevo colaborador rápido (desde selector OCR) -->
 <div id="nuevo-colab-ocr-modal" class="overlay" onclick="if(event.target===this)closeSheet('nuevo-colab-ocr-modal')">
   <div class="sheet" onclick="event.stopPropagation()">
@@ -3463,186 +3295,12 @@ onSnapshot(query(collection(db,'locales'),orderBy('nombre','asc')), snap => {
 
 onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
   const nuevos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  detectarEventosColaborador(colabs, nuevos);
   colabs = nuevos;
   actualizarDatalist();
   _renderScheduler.schedule('stats', 'board', 'alertas', 'local');
   _cargaInicialColabs = true;
   _chequearCargaInicial();
 });
-
-/* ══ TRAZABILIDAD ═══════════════════════════════════════════════
-   Colección 'trazabilidad' en Firebase, un doc por evento.
-   Código de seguimiento = DNI de la persona (candidato o colaborador).
-   { dni, tipo, primario, detalle, fecha, colaboradorId, candidatoId } */
-async function registrarEvento({ dni, tipo, primario, detalle, colaboradorId, candidatoId, imagen, fecha }) {
-  if (!dni) return; // sin DNI no hay forma de rastrear el evento
-  // `fecha` es la fecha REAL en que ocurrió el hecho (ej: c.at para el ingreso,
-  // cargado_en del archivo puntual para una carga de documento). Si no se
-  // provee una fecha real, se usa el momento de detección como último recurso.
-  let fechaFinal = Date.now();
-  if (fecha) {
-    const f = (typeof fecha === 'object' && fecha.seconds) ? fecha.seconds*1000 : fecha;
-    const t = new Date(f).getTime();
-    if (!isNaN(t)) fechaFinal = t;
-  }
-  try {
-    await addDoc(collection(db,'trazabilidad'), {
-      dni: String(dni).trim(),
-      tipo, primario: !!primario, detalle: detalle || '',
-      colaboradorId: colaboradorId || null,
-      candidatoId: candidatoId || null,
-      imagen: imagen || null,
-      fecha: fechaFinal,
-    });
-  } catch(e) { console.error('No se pudo registrar evento de trazabilidad', e); }
-}
-
-// Compara el snapshot anterior de colaboradores contra el nuevo y genera
-// automáticamente los eventos primarios de trazabilidad correspondientes.
-let _trazaInicializada = false;
-// Legajo completo = todas las carpetas por defecto (CARPETAS_DEFAULT) tienen
-// al menos un archivo cargado. Usa el sistema vigente de carpetas (con fallback
-// a campos legacy vía getCarpetas) en vez de mirar solo ALL_DOCS.
-function tieneDocsCompletos(c) {
-  if (!c) return false;
-  const carpetas = getCarpetas(c);
-  return CARPETAS_DEFAULT.every(d => {
-    const f = carpetas.find(x => x.nombre === d.nombre);
-    return !!(f && Array.isArray(f.urls) && f.urls.length);
-  });
-}
-// Registra un evento "único por hecho" (alta o baja) evitando duplicados
-// cuando dos o más clientes (pestañas, celulares) tienen el tablero abierto
-// al mismo tiempo y ambos detectan el mismo cambio en Firestore. Antes de
-// escribir, chequea si ya existe un evento equivalente para ese colaborador.
-// - Alta: solo puede haber UNA en la vida del legajo (colaboradorId + tipo).
-// - Egreso: puede repetirse legítimamente (reincorporaciones), así que solo
-//   se descarta si ya hay un evento con una fecha muy cercana (mismo hecho).
-async function registrarEventoUnico({ dni, tipo, detalle, colaboradorId, fecha }) {
-  try {
-    const snap = await getDocs(query(collection(db,'trazabilidad'),
-      where('colaboradorId','==',colaboradorId), where('tipo','==',tipo)));
-    const fechaNum = (typeof fecha === 'object' && fecha?.seconds) ? fecha.seconds*1000 : fecha;
-    const yaExiste = snap.docs.some(d => {
-      const f = d.data().fecha;
-      const fNum = (typeof f === 'object' && f?.seconds) ? f.seconds*1000 : f;
-      return Math.abs((fNum||0) - (fechaNum||Date.now())) < 5*60*1000; // mismo hecho: fechas a <5min
-    });
-    if (yaExiste) return;
-  } catch(e) { console.error('No se pudo chequear duplicados de trazabilidad', e); }
-  registrarEvento({ dni, tipo, primario:true, detalle, colaboradorId, fecha });
-}
-function detectarEventosColaborador(prevList, nuevosList) {
-  if (!_trazaInicializada) { _trazaInicializada = true; return; } // no re-generar historial al cargar la página
-  const prevMap = new Map((prevList||[]).map(c => [c.id, c]));
-  nuevosList.forEach(c => {
-    const dni = c.dni_nro;
-    if (!dni) return;
-    const antes = prevMap.get(c.id);
-    if (!antes) {
-      // Colaborador nuevo → Alta como colaborador.
-      // Usamos c.at (fecha real de alta del legajo) como fecha de inicio,
-      // en vez del momento en que este cliente detectó el cambio.
-      registrarEventoUnico({ dni, tipo:'Alta como colaborador', detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.at });
-      return;
-    }
-    // Cambio de puesto o local
-    if ((c.puesto||'') !== (antes.puesto||'') || (c.local||'') !== (antes.local||'')) {
-      const cambios = [];
-      if ((c.local||'') !== (antes.local||'')) cambios.push(`Local: ${antes.local||'—'} → ${c.local||'—'}`);
-      if ((c.puesto||'') !== (antes.puesto||'')) cambios.push(`Puesto: ${antes.puesto||'—'} → ${c.puesto||'—'}`);
-      registrarEvento({ dni, tipo:'Cambio de puesto/local', primario:true, detalle:cambios.join(' · '), colaboradorId:c.id });
-    }
-    // Aumento de remuneración
-    const rAntes = Number(antes.remuneracion)||0, rNuevo = Number(c.remuneracion)||0;
-    if (rNuevo > 0 && rNuevo !== rAntes) {
-      registrarEvento({ dni, tipo:'Aumento de remuneración', primario:true, detalle:`${rAntes ? '$'+rAntes.toLocaleString('es-AR') : '—'} → $${rNuevo.toLocaleString('es-AR')}`, colaboradorId:c.id });
-    }
-    // Documentación completa (pasa de incompleta a completa) — usa el sistema
-    // vigente de carpetas (nombre por nombre) para no depender de campos legacy
-    // que hoy ya no se actualizan.
-    const completaAntes = tieneDocsCompletos(antes);
-    const completaAhora = tieneDocsCompletos(c);
-    if (completaAhora && !completaAntes) {
-      registrarEvento({ dni, tipo:'Documentación completa', primario:true, detalle:'Todos los documentos del legajo cargados', colaboradorId:c.id });
-    }
-    // Egreso / Desvinculación
-    if (!!c.desvinculado && !antes.desvinculado) {
-      registrarEventoUnico({ dni, tipo:'Egreso / Desvinculación', detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id, fecha:c.desvinculado_en });
-    }
-
-    /* ── Eventos secundarios ── */
-    // Edición de ficha (nombre) — no cuenta si ya se generó un evento primario por el mismo cambio
-    if ((c.nombre||'') !== (antes.nombre||'')) {
-      registrarEvento({ dni, tipo:'Edición de ficha', primario:false, detalle:`Nombre: ${antes.nombre||'—'} → ${c.nombre||'—'}`, colaboradorId:c.id });
-    }
-    // Carga de un documento individual — sistema LEGACY por campo fijo
-    // (dni_frente, salud, etc.). Hoy casi ningún colaborador escribe en estos
-    // campos (ver bloque de carpetas más abajo, que es el sistema vigente),
-    // pero se deja como red de contención por si algún dato viejo aún los usa.
-    ALL_DOCS.forEach(d => {
-      const arrAntes = Array.isArray(antes[d.key]) ? antes[d.key] : (antes[d.key] ? [antes[d.key]] : []);
-      const arrAhora = Array.isArray(c[d.key]) ? c[d.key] : (c[d.key] ? [c[d.key]] : []);
-      if (arrAhora.length <= arrAntes.length) return; // sin archivos nuevos
-      const metaAhora = Array.isArray(c[d.key+'_meta']) ? c[d.key+'_meta'] : [];
-      for (let i = arrAntes.length; i < arrAhora.length; i++) {
-        const metaItem = metaAhora[i] || {};
-        // Fecha real del hecho: si el documento pide una fecha propia (ej. fecha
-        // del estudio médico, fecha de sanción, rango de vacaciones), esa es la
-        // fecha correcta del evento; si no, se usa cuándo se cargó ese archivo puntual.
-        let fechaReal = metaItem.cargado_en;
-        if (d.askFecha && c[d.key+'_fecha']) fechaReal = c[d.key+'_fecha'];
-        else if (d.askRangoFechas && c[d.key+'_fecha_inicio']) fechaReal = c[d.key+'_fecha_inicio'];
-        registrarEvento({
-          dni, tipo:'Documento cargado', primario:false,
-          detalle: arrAhora.length>1 ? `${d.name} (${i+1}/${arrAhora.length})` : d.name,
-          colaboradorId:c.id, imagen:arrAhora[i], fecha:fechaReal
-        });
-      }
-    });
-    // Carga de un documento individual — sistema VIGENTE de carpetas (📂).
-    // Solo se compara si antes YA existía carpetas[] real: si esta es la
-    // primera vez que aparece (recién migrado desde campos legacy al abrir/
-    // tocar una carpeta), NO se generan eventos, porque esos archivos ya
-    // pueden tener su evento histórico del bloque legacy de arriba — evita
-    // duplicar todo el legajo de golpe el día de la migración.
-    if (Array.isArray(antes.carpetas) && antes.carpetas.length && Array.isArray(c.carpetas)) {
-      const carpMapAntes = new Map(antes.carpetas.map(f => [f.id, f]));
-      c.carpetas.forEach(f => {
-        const fAntes = carpMapAntes.get(f.id);
-        const urlsAntes = fAntes && Array.isArray(fAntes.urls) ? fAntes.urls : [];
-        const urlsAhora = Array.isArray(f.urls) ? f.urls : [];
-        if (urlsAhora.length <= urlsAntes.length) return; // sin archivos nuevos en esta carpeta
-        const metaAhora = Array.isArray(f.meta) ? f.meta : [];
-        for (let i = urlsAntes.length; i < urlsAhora.length; i++) {
-          const metaItem = metaAhora[i] || {};
-          registrarEvento({
-            dni, tipo:'Documento cargado', primario:false,
-            detalle: urlsAhora.length>1 ? `${f.nombre} (${i+1}/${urlsAhora.length})` : f.nombre,
-            colaboradorId:c.id, imagen:urlsAhora[i], fecha:metaItem.cargado_en
-          });
-        }
-      });
-    }
-    // Vencimiento de salud actualizado
-    if ((c.vencimiento_salud||'') !== (antes.vencimiento_salud||'')) {
-      registrarEvento({ dni, tipo:'Vencimiento de salud actualizado', primario:false, detalle:c.vencimiento_salud||'—', colaboradorId:c.id });
-    }
-    // Reincorporación (vuelve de desvinculado a activo) — secundario, no reabre el Ingreso
-    if (!c.desvinculado && antes.desvinculado) {
-      registrarEvento({ dni, tipo:'Reincorporación', primario:false, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), colaboradorId:c.id });
-    }
-  });
-}
-
-// Trae la línea de trazabilidad completa de un DNI, ordenada por fecha
-async function buscarTrazabilidadPorDni(dni) {
-  const dniLimpio = String(dni||'').trim();
-  if (!dniLimpio) return [];
-  const snap = await getDocs(query(collection(db,'trazabilidad'), where('dni','==',dniLimpio)));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() })).sort((a,b) => a.fecha - b.fecha);
-}
 
 /* ══ SELECCIÓN DE CANDIDATOS (ex Portal RRHH, migrado a Firebase) ══ */
 let candidatos = [];
@@ -3711,30 +3369,10 @@ function _buildLocalCardInner(loc, li, mapa, hoy) {
     warn ? `<span class="lb-alert-dot dot-warn">${warn} próx.</span>` : '',
   ].filter(Boolean).join('');
 
-  // Personalización visual del local (color de fondo o imagen de portada)
-  const locDoc  = locales.find(l => l.nombre === loc);
-  const color   = locDoc?.color  || '';
-  const imagen  = locDoc?.imagen || '';
-  let faceCls   = 'lb-face';
-  let faceStyle = '';
-  let bgLayers  = '';
-  if (imagen) {
-    faceCls += ' has-image';
-    bgLayers = `<img class="lb-bg-img" src="${esc(imagen)}" alt="" loading="lazy"><div class="lb-bg-overlay"></div>`;
-  } else if (color) {
-    faceCls += ' has-color';
-    faceStyle = ` style="background:color-mix(in srgb, ${color} 32%, var(--s1));border-color:color-mix(in srgb, ${color} 55%, transparent)"`;
-  }
-  const codeStyle = (color && !imagen) ? ` style="color:color-mix(in srgb, ${color} 75%, white)"` : '';
-
-  return `<div class="${faceCls}"${faceStyle}>
-    ${bgLayers}
+  return `<div class="lb-face">
     <div class="lb-content">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0">
-      <div class="lb-code"${codeStyle}>${code}</div>
-      <button class="lb-edit-btn" onclick="event.stopPropagation();abrirRenombrarLocal('${esc(loc)}')" title="Editar local">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
+      <div class="lb-code">${code}</div>
     </div>
     <div class="lb-name">${esc(loc)}</div>
     <div class="lb-count">${activos} activo${activos!==1?'s':''}${bajas ? ` · <span style="color:var(--muted)">${bajas} de baja</span>` : ''}</div>
@@ -3889,10 +3527,6 @@ function _buildPersonDocs(c) {
     <button class="pba-btn" style="background:var(--i-dim);color:var(--info);border:1px solid rgba(59,125,216,.28)" onclick="abrirEdicionColab('${c.id}');event.stopPropagation()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Editar datos
-    </button>
-    <button class="pba-btn" style="background:var(--amber-glow);color:var(--amber-hi);border:1px solid var(--amber-brd)" onclick="verTrazabilidadDe('${c.dni_nro||''}','${esc(c.nombre)}');event.stopPropagation()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
-      Trazabilidad
     </button>
     <button class="pba-btn amber" onclick="exportarPDF('${c.id}',this);event.stopPropagation()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -6035,146 +5669,6 @@ async function guardarNuevoLocal() {
   finally { btn.disabled=false; btn.textContent='Crear local'; }
 }
 
-/* ══ EDITAR LOCAL (nombre, color, imagen) ═══════════════════════ */
-const LOCAL_COLORS = [
-  { hex:'#c9432f', name:'Rojo'      },
-  { hex:'#d97a1a', name:'Naranja'   },
-  { hex:'#c9a91a', name:'Dorado'    },
-  { hex:'#7fa832', name:'Verde'     },
-  { hex:'#1f9e78', name:'Esmeralda' },
-  { hex:'#1f9ec9', name:'Celeste'   },
-  { hex:'#3b6fd8', name:'Azul'      },
-  { hex:'#7b5fd9', name:'Violeta'   },
-  { hex:'#c9509e', name:'Rosa'      },
-  { hex:'#8a8f9e', name:'Gris'      },
-];
-let _rlColor          = '';   // color elegido (hex) o '' para ninguno
-let _rlImagenActual   = '';   // url ya guardada en el local (si había)
-let _rlImagenDataUrl  = null; // data URL nueva pendiente de subir (si el usuario eligió una)
-let _rlImagenRemovida = false; // true si el usuario sacó la imagen existente
-
-function renderColorSwatches(selected) {
-  const row = document.getElementById('rl-color-row');
-  if (!row) return;
-  row.innerHTML =
-    `<div class="color-swatch cs-none ${!selected?'active':''}" title="Sin color" onclick="setLocalColor('')">✕</div>` +
-    LOCAL_COLORS.map(c => `<div class="color-swatch ${selected===c.hex?'active':''}" style="background:${c.hex};color:${c.hex}" title="${c.name}" onclick="setLocalColor('${c.hex}')"></div>`).join('');
-}
-function setLocalColor(hex) {
-  _rlColor = hex;
-  renderColorSwatches(hex);
-}
-
-function mostrarPreviewImagenLocal(url) {
-  const img = document.getElementById('rl-img-preview-img');
-  const ph  = document.getElementById('rl-img-placeholder');
-  const rm  = document.getElementById('rl-img-remove-btn');
-  if (!img || !ph || !rm) return;
-  if (url) {
-    img.src = url; img.style.display = 'block';
-    ph.style.display = 'none';
-    rm.style.display = 'flex';
-  } else {
-    img.src = ''; img.style.display = 'none';
-    ph.style.display = 'flex';
-    rm.style.display = 'none';
-  }
-}
-/** Lee el archivo elegido, lo recorta al centro (cuadrado) y lo deja listo como data URL. */
-function handleLocalImagePick(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { toast('⚠ Elegí un archivo de imagen'); e.target.value=''; return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      const size   = Math.min(img.width, img.height);
-      const sx     = (img.width  - size) / 2;
-      const sy     = (img.height - size) / 2;
-      const target = 480;
-      const canvas = document.createElement('canvas');
-      canvas.width = target; canvas.height = target;
-      canvas.getContext('2d').drawImage(img, sx, sy, size, size, 0, 0, target, target);
-      _rlImagenDataUrl  = canvas.toDataURL('image/jpeg', 0.85);
-      _rlImagenRemovida = false;
-      mostrarPreviewImagenLocal(_rlImagenDataUrl);
-    };
-    img.onerror = () => toast('⚠ No se pudo leer la imagen');
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-  e.target.value = '';
-}
-function quitarImagenLocal() {
-  _rlImagenDataUrl  = null;
-  _rlImagenRemovida = true;
-  mostrarPreviewImagenLocal('');
-}
-
-function abrirRenombrarLocal(nombreActual) {
-  document.getElementById('rl-original').value = nombreActual;
-  document.getElementById('rl-nombre').value   = nombreActual;
-  document.getElementById('rl-subtitle').textContent = 'Nombre, color e imagen';
-  const localDoc = locales.find(l => l.nombre === nombreActual);
-  _rlColor          = localDoc?.color  || '';
-  _rlImagenActual   = localDoc?.imagen || '';
-  _rlImagenDataUrl  = null;
-  _rlImagenRemovida = false;
-  renderColorSwatches(_rlColor);
-  mostrarPreviewImagenLocal(_rlImagenActual);
-  openSheet('renombrar-local-modal');
-  setTimeout(() => {
-    const inp = document.getElementById('rl-nombre');
-    inp.focus(); inp.select();
-  }, 320);
-}
-async function guardarRenombrarLocal() {
-  const original = document.getElementById('rl-original').value;
-  const nuevo    = document.getElementById('rl-nombre').value.trim().toUpperCase();
-  if (!nuevo) { document.getElementById('rl-nombre').focus(); return; }
-  const localDoc      = locales.find(l => l.nombre === original);
-  const colorActual   = localDoc?.color || '';
-  const nombreCambio  = nuevo !== original;
-  const colorCambio   = _rlColor !== colorActual;
-  const imagenCambio  = !!_rlImagenDataUrl || _rlImagenRemovida;
-  if (!nombreCambio && !colorCambio && !imagenCambio) { closeSheet('renombrar-local-modal'); return; }
-  if (nombreCambio && locales.some(l => l.nombre.toLowerCase() === nuevo.toLowerCase())) {
-    toast('⚠ Ya existe un local con ese nombre'); return;
-  }
-  const btn = document.getElementById('rl-btn');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  try {
-    const update = {};
-    if (nombreCambio) update.nombre = nuevo;
-    if (colorCambio)  update.color  = _rlColor ? _rlColor : deleteField();
-    if (_rlImagenDataUrl) {
-      update.imagen = await subirDataUrlAImgBB(_rlImagenDataUrl);
-    } else if (_rlImagenRemovida) {
-      update.imagen = deleteField();
-    }
-    // 1. Guardar cambios en la colección locales
-    if (localDoc) {
-      await updateDoc(doc(db,'locales',localDoc.id), update);
-    } else {
-      await addDoc(collection(db,'locales'), { nombre: nuevo, at: Date.now(), ...update });
-    }
-    // 2. Si cambió el nombre, actualizar todos los colaboradores de ese local
-    let afectados = [];
-    if (nombreCambio) {
-      const batch = writeBatch(db);
-      afectados = colabs.filter(c => c.local === original);
-      afectados.forEach(c => batch.update(doc(db,'colaboradores',c.id), { local: nuevo }));
-      if (afectados.length) await batch.commit();
-    }
-    closeSheet('renombrar-local-modal');
-    toast(nombreCambio
-      ? `✓ "${original}" renombrado a "${nuevo}" (${afectados.length} colaboradores actualizados)`
-      : `✓ "${original}" actualizado`);
-  } catch(e) { manejarError(e, 'renombrar local'); }
-  finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
-}
-
 /* ══ NUEVO COLABORADOR ══════════════════════════════════════════ */
 // Busca si ya existe un colaborador con ese DNI. Devuelve el colaborador
 // encontrado (activo o desvinculado) o null. Se usa antes de crear un
@@ -6315,7 +5809,7 @@ function buildAlertas() {
     }
 
     // Legajo incompleto — sistema vigente de carpetas (CARPETAS_DEFAULT),
-    // no los campos legacy (ver tieneDocsCompletos, usado también en trazabilidad).
+    // no los campos legacy.
     const carpetas = getCarpetas(c);
     const faltantes = CARPETAS_DEFAULT.filter(d => {
       const f = carpetas.find(x => x.nombre === d.nombre);
@@ -7410,18 +6904,17 @@ function irAColab(id) {
 
 /* ══ NAV DE SECCIONES ═══════════════════════════════════════════ */
 function mostrarSeccion(seccion) {
-  const secciones = { locales:'view-main', seleccion:'view-seleccion', trazabilidad:'view-trazabilidad' };
+  const secciones = { locales:'view-main', seleccion:'view-seleccion' };
   Object.entries(secciones).forEach(([key,elId]) => {
     const el = document.getElementById(elId);
     if (el) el.style.display = (key===seccion) ? '' : 'none';
   });
-  ['locales','seleccion','trazabilidad'].forEach(key=>{
+  ['locales','seleccion'].forEach(key=>{
     document.getElementById('nav-'+key)?.classList.toggle('active', key===seccion);
     document.getElementById('navm-'+key)?.classList.toggle('active', key===seccion);
   });
   document.querySelectorAll('.fab-opt-locales').forEach(el => el.style.display = (seccion==='locales') ? '' : 'none');
   document.querySelectorAll('.fab-opt-seleccion').forEach(el => el.style.display = (seccion==='seleccion') ? '' : 'none');
-  document.getElementById('fab-group').style.display = (seccion==='trazabilidad') ? 'none' : '';
   if (currentLocal && seccion!=='locales') cerrarLocal();
 }
 
@@ -7476,7 +6969,6 @@ async function guardarCandidato() {
       nombre, dni, puesto, local, comentario, estado:'Pendiente',
       historial: [], convertido:false, at: Date.now(),
     });
-    await registrarEvento({ dni, tipo:'Candidatura cargada', primario:true, detalle:`${puesto||''} · ${local||''}`.trim() });
     closeSheet('candidato-modal');
     toast(`✓ ${nombre} agregado como candidato`);
   } catch(e) { manejarError(e, 'guardar candidato'); }
@@ -7491,7 +6983,6 @@ function abrirCandidatoDetalle(id) {
     <div class="cd-row"><b>DNI</b><span>${esc(c.dni||'—')}</span></div>
     <div class="cd-row"><b>Puesto</b><span>${esc(c.puesto||'—')}</span></div>
     <div class="cd-row"><b>Local</b><span>${esc(c.local||'—')}</span></div>
-    <button class="btn btn-ghost" style="margin-bottom:6px" onclick="verTrazabilidadDe('${esc(c.dni)}','${esc(c.nombre)}')">Ver trazabilidad</button>
     <div class="f-field" style="margin-top:10px"><label class="f-label">Notas</label><input class="f-input" id="cd-comentario-input" value="${esc(c.comentario||'')}" placeholder="Agregar comentario…"></div>
     <button class="btn btn-ghost" style="margin-bottom:10px" onclick="guardarComentarioCandidato('${c.id}')">Guardar nota</button>
     ${!c.archivado ? `
@@ -7517,7 +7008,6 @@ async function guardarComentarioCandidato(id) {
   if (!c || nuevo === (c.comentario||'')) return;
   try {
     await updateDoc(doc(db,'candidatos',id), { comentario: nuevo });
-    await registrarEvento({ dni:c.dni, tipo:'Comentario agregado', primario:false, detalle:nuevo, candidatoId:id });
     toast('✓ Nota guardada');
   } catch(e) { manejarError(e, 'guardar comentario del candidato'); }
 }
@@ -7537,7 +7027,6 @@ async function restaurarCandidato(id) {
   if (!c) return;
   try {
     await updateDoc(doc(db,'candidatos',id), { archivado:false });
-    await registrarEvento({ dni:c.dni, tipo:'Restauración desde archivado', primario:false, detalle:`${c.puesto||''} · ${c.local||''}`.trim(), candidatoId:id });
     abrirCandidatoDetalle(id);
     toast('Candidato restaurado');
   } catch(e) { manejarError(e, 'restaurar candidato'); }
@@ -7549,7 +7038,6 @@ async function decidirCandidato(id, estado) {
   try {
     const historial = [...(c.historial||[]), { estado:nuevoEstado, fecha:Date.now() }];
     await updateDoc(doc(db,'candidatos',id), { estado:nuevoEstado, historial });
-    await registrarEvento({ dni:c.dni, tipo:'Decisión del gerente', primario:true, detalle:nuevoEstado, candidatoId:id });
     abrirCandidatoDetalle(id);
     toast(`Candidato marcado como ${nuevoEstado}`);
   } catch(e) { manejarError(e, 'actualizar decisión del candidato'); }
@@ -7570,178 +7058,24 @@ async function convertirEnColaborador(id) {
   } catch(e) { manejarError(e, 'convertir candidato en colaborador'); }
 }
 
-/* ══ TRAZABILIDAD — UI ══════════════════════════════════════════════ */
-const TRAZA_ORDEN = [
-  'Candidatura cargada','Decisión del gerente','Alta como colaborador',
-  'Documentación completa','Cambio de puesto/local','Aumento de remuneración',
-  'Egreso / Desvinculación',
-];
-async function buscarTraza() {
-  const valor = document.getElementById('traza-dni-input').value.trim();
-  const cont = document.getElementById('traza-resultado');
-  if (!valor) { toast('Ingresá un DNI o un nombre'); return; }
-  cont.innerHTML = '<div class="traza-empty">Buscando…</div>';
-  const esNumerico = /^\d+$/.test(valor);
-  try {
-    if (esNumerico) {
-      await ejecutarBusquedaPorDni(valor, cont);
-      return;
-    }
-    // Búsqueda por nombre → buscamos coincidencias entre colaboradores y candidatos
-    const texto = valor.toLowerCase();
-    const matches = [
-      ...colabs.filter(c => (c.nombre||'').toLowerCase().includes(texto) && c.dni_nro).map(c => ({ dni:c.dni_nro, nombre:c.nombre, tipo:'Colaborador' })),
-      ...candidatos.filter(c => (c.nombre||'').toLowerCase().includes(texto) && c.dni).map(c => ({ dni:c.dni, nombre:c.nombre, tipo:'Candidato' })),
-    ];
-    // Deduplicar por DNI
-    const porDni = new Map();
-    matches.forEach(m => { if (!porDni.has(m.dni)) porDni.set(m.dni, m); });
-    const unicos = [...porDni.values()];
-    if (!unicos.length) { cont.innerHTML = `<div class="traza-empty">No encontré a nadie con el nombre "${esc(valor)}".</div>`; return; }
-    if (unicos.length === 1) { await ejecutarBusquedaPorDni(unicos[0].dni, cont); return; }
-    // Varias coincidencias → mostrar para elegir
-    cont.innerHTML = `
-      <div class="traza-empty" style="padding:16px 0 10px">Encontré ${unicos.length} personas con ese nombre — elegí una:</div>
-      <div id="sel-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
-        ${unicos.map(m => `
-          <div class="sel-card" onclick="document.getElementById('traza-dni-input').value='${esc(m.dni)}';buscarTraza()">
-            <div class="sel-card-name">${esc(m.nombre)}</div>
-            <div class="sel-card-sub">DNI ${esc(m.dni)} · ${m.tipo}</div>
-          </div>
-        `).join('')}
-      </div>`;
-  } catch(e) { manejarError(e, 'buscar trazabilidad'); }
-}
-// Colapsa eventos duplicados que quedaron grabados en Firestore por tener
-// varios clientes (pestañas/dispositivos) abiertos al mismo tiempo cuando
-// ocurrió el hecho: mismo tipo + mismo detalle + fecha a menos de 5 minutos
-// de diferencia se consideran el mismo evento y se muestra solo el primero.
-function dedupeEventos(eventos) {
-  const out = [];
-  eventos.forEach(e => {
-    const fE = (typeof e.fecha === 'object' && e.fecha?.seconds) ? e.fecha.seconds*1000 : e.fecha;
-    const dup = out.find(o => {
-      if (o.tipo !== e.tipo || (o.detalle||'') !== (e.detalle||'')) return false;
-      const fO = (typeof o.fecha === 'object' && o.fecha?.seconds) ? o.fecha.seconds*1000 : o.fecha;
-      return Math.abs((fO||0) - (fE||0)) < 5*60*1000;
-    });
-    if (!dup) out.push(e);
-  });
-  return out;
-}
-async function ejecutarBusquedaPorDni(dni, cont) {
-  const eventos = dedupeEventos(await buscarTrazabilidadPorDni(dni));
-  if (!eventos.length) { cont.innerHTML = `<div class="traza-empty">No hay eventos de trazabilidad para el DNI ${esc(dni)}.</div>`; return; }
-  const persona = colabs.find(c=>c.dni_nro===dni) || candidatos.find(c=>c.dni===dni);
-  const egreso = eventos.find(e=>e.tipo==='Egreso / Desvinculación');
-  const tieneEgreso = !!(persona?.desvinculado && (persona?.desvinculado_en || egreso));
-  let fechaEgreso = persona?.desvinculado_en || egreso?.fecha || null;
-  if (fechaEgreso && typeof fechaEgreso === 'object' && fechaEgreso.seconds) fechaEgreso = fechaEgreso.seconds*1000;
-  // Fecha de alta: preferimos c.at del colaborador (fecha real del legajo);
-  // si no está disponible, usamos la fecha del evento "Alta como colaborador"
-  // y, en último caso, la del primer evento registrado (para no dejarlo vacío).
-  const altaEvento = eventos.find(e=>e.tipo==='Alta como colaborador');
-  let fechaAlta = persona?.at || altaEvento?.fecha || eventos[0]?.fecha || null;
-  if (fechaAlta && typeof fechaAlta === 'object' && fechaAlta.seconds) fechaAlta = fechaAlta.seconds*1000;
-  renderTrazaLine(cont, eventos, persona, tieneEgreso ? {fecha:fechaEgreso} : null, fechaAlta);
-}
-function verTrazabilidadDe(dni, nombre) {
-  if (!dni) { toast(`${nombre} todavía no tiene DNI cargado`); return; }
-  document.querySelectorAll('.overlay.open').forEach(el => closeSheet(el.id));
-  mostrarSeccion('trazabilidad');
-  document.getElementById('traza-dni-input').value = dni;
-  buscarTraza();
-}
-let _trazaTooltipData = [];
-function renderTrazaLine(cont, eventos, persona, egreso, fechaAlta) {
-  const primarios = eventos.filter(e=>e.primario);
-  const secundarios = eventos.filter(e=>!e.primario);
-  // Todos los eventos ya vienen ordenados por fecha — armamos la línea
-  // intercalando primarios (puntos grandes) y secundarios (marcas chicas)
-  // en el mismo orden cronológico en el que ocurrieron.
-  const nodos = [];
-  nodos.push({ tipo:'endpoint', label:'Ingreso', fecha:fechaAlta });
-  eventos.forEach(e => {
-    if (e.tipo === 'Egreso / Desvinculación' || e.tipo === 'Alta como colaborador') return; // ya representados en los extremos Ingreso/Egreso
-    nodos.push({ tipo:e.primario ? 'primario' : 'secundario', label:e.tipo, fecha:e.fecha, detalle:e.detalle, imagen:e.imagen });
-  });
-  if (egreso) nodos.push({ tipo:'endpoint', label:'Egreso', fecha:egreso.fecha });
-  _trazaTooltipData = nodos;
-  const html = `
-    <div class="traza-header">
-      <div>
-        <div class="traza-header-name">${esc(persona?.nombre || 'DNI '+eventos[0].dni)}</div>
-        <div class="traza-header-sub">DNI ${esc(eventos[0].dni)} · ${primarios.length} eventos primarios · ${secundarios.length} secundarios</div>
-      </div>
-    </div>
-    <div class="traza-line-wrap">
-      <div class="traza-line">
-        ${nodos.map((n,i) => `
-          <div class="traza-node ${n.tipo==='endpoint'?'endpoint':''} ${n.tipo==='secundario'?'secundario':''}">
-            <div class="traza-node-date">${n.fecha ? new Date(n.fecha).toLocaleDateString('es-AR') : ''}</div>
-            <div class="traza-node-dot" onmouseenter="mostrarTrazaTooltip(event,${i})" onmousemove="moverTrazaTooltip(event)" onmouseleave="ocultarTrazaTooltip()"></div>
-            <div class="traza-node-label">${esc(n.label)}</div>
-          </div>
-          <div class="traza-spacer"></div>
-        `).join('').replace(/<div class="traza-spacer"><\/div>$/,'')}
-      </div>
-    </div>
-    <div class="traza-legend">
-      <div class="traza-legend-item"><span class="traza-legend-dot"></span>Eventos primarios</div>
-      <div class="traza-legend-item"><span class="traza-legend-dot sec"></span>Eventos secundarios — pasá el mouse por un punto para ver el detalle</div>
-    </div>
-    <div style="margin-top:20px">
-      ${eventos.map(e=>`<div class="cd-historial-item"><b style="color:${e.primario?'var(--text)':'var(--muted)'}">${esc(e.tipo)}</b> — ${esc(e.detalle||'')} · ${new Date(e.fecha).toLocaleString('es-AR')}</div>`).join('')}
-    </div>
-  `;
-  cont.innerHTML = html;
-}
-function mostrarTrazaTooltip(ev, idx) {
-  const n = _trazaTooltipData[idx];
-  if (!n) return;
-  const tt = document.getElementById('traza-tooltip');
-  tt.innerHTML = `
-    <div class="tt-tipo">${esc(n.label)}</div>
-    ${n.detalle ? `<div class="tt-detalle">${esc(n.detalle)}</div>` : ''}
-    ${n.fecha ? `<div class="tt-fecha">${new Date(n.fecha).toLocaleString('es-AR')}</div>` : ''}
-    ${n.imagen ? `<img src="${n.imagen}" alt="">` : ''}
-  `;
-  posicionarTrazaTooltip(ev);
-  tt.classList.add('vis');
-}
-function moverTrazaTooltip(ev) { posicionarTrazaTooltip(ev); }
-function posicionarTrazaTooltip(ev) {
-  const tt = document.getElementById('traza-tooltip');
-  const pad = 12;
-  let x = ev.clientX, y = ev.clientY - pad;
-  const w = tt.offsetWidth || 200;
-  x = Math.min(Math.max(x, w/2 + 8), window.innerWidth - w/2 - 8);
-  tt.style.left = x + 'px';
-  tt.style.top  = y + 'px';
-}
-function ocultarTrazaTooltip() {
-  document.getElementById('traza-tooltip').classList.remove('vis');
-}
-
 // Exponer funciones globales para onclick handlers del HTML
 Object.assign(window, {
   abrirAlertas, abrirConfirmDelete, abrirEdicionColab, abrirLocal,
   abrirNuevaCarpeta, abrirNuevoColabDesdeOCR, abrirPlanilla, abrirReemplazo,
-  abrirRenombrarLocal, abrirVistaGlobal, actualizarDiasRango, borrarEstaFoto,
+  abrirVistaGlobal, actualizarDiasRango, borrarEstaFoto,
   capturePhoto, cerrarAlertas, cerrarLocal, cerrarPlanilla, cerrarSearch,
   cerrarVistaGlobal, ciclarEstadoDoc, closeSheet, confirmar, confirmarFecha,
   confirmarFotoPrevia, confirmarRango, descargarFoto, descartarFotoPrevia,
   eliminarCarpeta, exportarPDF, fabAbrirDoc, fabAbrirNuevo, fabAbrirNuevoLocal,
   fabClose, fabToggle, filtrarAlertas, filtrarLocal, guardarEdicionColab,
   guardarNuevaCarpeta, guardarNuevo, guardarNuevoColabOCR, guardarNuevoLocal,
-  guardarRenombrarLocal, handleDoc, handleDocDrop, handleFolder, handleFolderDrop, irAColab,
+  handleDoc, handleDocDrop, handleFolder, handleFolderDrop, irAColab,
   irAPersona, lanzarCamara, lanzarCamaraOCR, ocrConfirmar, ocrSelectCand,
   plSetLocal, plSetSort, prevGoto, reemplazarEstaFoto, rotarPreview,
   seleccionarTipoDoc, setDocFilter, setTip, setVgDoc, setVgFilter,
   stopCamera, toggleColPanel, togglePerson, verFotoFull,
   resolveConfirm, resolveFecha, resolveRango,
   plSaveCell, plAgregarColab,
-  setLocalColor, handleLocalImagePick, quitarImagenLocal,
   abrirNuevaCarpetaLocal, guardarNuevaCarpetaLocal, eliminarCarpetaLocal,
   guardarMetaDoc, filtrarColabListDoc,
   handleLocalFolder, handleLocalFolderDrop, prevLocalGoto,
@@ -7758,10 +7092,8 @@ Object.assign(window, {
   filtrarColabListCampo, editarCampoDraftNombre, editarCampoDraftTipo,
   procesarArchivo, procesarArchivoOCR, filtrarSelectorColab, renderPlanilla, togglePlCol,
   mostrarSeccion, filtrarCandidatos, abrirNuevoCandidato, guardarCandidato,
-  abrirCandidatoDetalle, decidirCandidato, convertirEnColaborador, buscarTraza,
+  abrirCandidatoDetalle, decidirCandidato, convertirEnColaborador,
   guardarComentarioCandidato, archivarCandidato, restaurarCandidato,
-  verTrazabilidadDe, ejecutarBusquedaPorDni,
-  mostrarTrazaTooltip, moverTrazaTooltip, ocultarTrazaTooltip,
   abrirAuditoria, cerrarAuditoria, filtrarAuditoria,
   abrirUsuarioModal, guardarUsuario, fabAbrirNuevoCandidato,
 });

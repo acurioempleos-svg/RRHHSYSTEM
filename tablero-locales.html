@@ -51,6 +51,14 @@
 /* ══ RESET ══════════════════════════════════════════════════════ */
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 html { font-size:16px; overscroll-behavior:none; }
+
+/* ══ SCROLLBAR (paleta de la página) ════════════════════════════ */
+html, * { scrollbar-width:thin; scrollbar-color:var(--b2) var(--s0); }
+*::-webkit-scrollbar { width:8px; height:8px; }
+*::-webkit-scrollbar-track { background:var(--s0); border-radius:8px; }
+*::-webkit-scrollbar-thumb { background:var(--b2); border-radius:8px; border:2px solid var(--s0); }
+*::-webkit-scrollbar-thumb:hover { background:var(--ocean); }
+*::-webkit-scrollbar-corner { background:var(--s0); }
 body {
   font-family:'DM Sans',sans-serif;
   background:var(--bg);
@@ -1789,9 +1797,6 @@ body {
 #planilla-scroll {
   flex:1; overflow:auto;
 }
-#planilla-scroll::-webkit-scrollbar { width:5px; height:5px; }
-#planilla-scroll::-webkit-scrollbar-track { background:var(--s0); }
-#planilla-scroll::-webkit-scrollbar-thumb { background:var(--b2); border-radius:3px; }
 
 #planilla-table {
   border-collapse:separate; border-spacing:0;
@@ -4810,7 +4815,7 @@ function renderLocalCarousel() {
     </div>
     <div class="car-meta">${fechaCarga}${subidoPor}${fotoNum}</div>
     <div class="car-actions">
-      <button class="car-btn" onclick="descargarFoto('${curUrl}','${fname}',${_prevLocalIdx+1})">
+      <button class="car-btn" onclick="descargarFoto(_prevLocalUrls[${_prevLocalIdx}],_localFolderTask?.folderName,${_prevLocalIdx+1})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Descargar
       </button>
@@ -4995,7 +5000,7 @@ function renderCarousel() {
       ${fechaCarga}${subidoPor}${fotoNum}
     </div>
     <div class="car-actions">
-      <button class="car-btn" onclick="descargarFoto('${currentUrl}','${activeTask?.label||'doc'}',${_prevIdx+1})" title="Descargar">
+      <button class="car-btn" onclick="descargarFoto(_prevUrls[${_prevIdx}],activeTask?.label,${_prevIdx+1})" title="Descargar">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Descargar
       </button>
@@ -5162,12 +5167,49 @@ function fmtDateTime(iso) {
          d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
 }
 
-function descargarFoto(url, label, idx) {
-  const a = document.createElement('a');
-  a.href = url;
-  const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
-  a.download = `${label.replace(/\s+/g,'_')}_${idx}.${isPdf ? 'pdf' : 'jpg'}`;
-  a.click();
+async function descargarFoto(url, label, idx) {
+  if (!url) { toast('No hay archivo para descargar'); return; }
+  const base = String(label || 'documento').trim().replace(/[^\w\-áéíóúñÁÉÍÓÚÑ]+/g, '_') + '_' + idx;
+  const extDe = (mime, fallback) => ({ 'application/pdf':'pdf', 'image/png':'png', 'image/webp':'webp', 'image/gif':'gif', 'image/jpeg':'jpg' }[mime] || fallback);
+  const guardar = (href, nombre, liberar) => {
+    const a = document.createElement('a');
+    a.href = href; a.download = nombre; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    if (liberar) setTimeout(() => URL.revokeObjectURL(href), 5000);
+  };
+  const esPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
+  toast('Descargando…');
+  // 1) Bajar el archivo como blob (los links de otro dominio ignoran "download")
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    const ext = extDe(blob.type, esPdf ? 'pdf' : 'jpg');
+    guardar(URL.createObjectURL(blob), base + '.' + ext, true);
+    return;
+  } catch (e) { console.warn('descarga directa falló, pruebo con canvas', e); }
+  // 2) Imágenes: redibujar en canvas
+  if (!esPdf) {
+    try {
+      const blob = await new Promise((resolve, reject) => {
+        const im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = im.naturalWidth; c.height = im.naturalHeight;
+          c.getContext('2d').drawImage(im, 0, 0);
+          c.toBlob(b => b ? resolve(b) : reject(new Error('canvas vacío')), 'image/jpeg', .92);
+        };
+        im.onerror = reject;
+        im.src = url;
+      });
+      guardar(URL.createObjectURL(blob), base + '.jpg', true);
+      return;
+    } catch (e) { console.warn('canvas falló', e); }
+  }
+  // 3) Último recurso: abrir en otra pestaña
+  window.open(url, '_blank', 'noopener');
+  toast('Se abrió el archivo en otra pestaña; desde ahí podés guardarlo');
 }
 
 function reemplazarEstaFoto() {
@@ -6861,15 +6903,33 @@ function renderVgResults() {
   `).join('');
 }
 async function urlToDataURL(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('fetch fallo');
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch fallo');
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    // respaldo: cargar como imagen y pasarla por canvas
+    return await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = () => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = im.naturalWidth; c.height = im.naturalHeight;
+          c.getContext('2d').drawImage(im, 0, 0);
+          resolve(c.toDataURL('image/jpeg', .9));
+        } catch (err) { reject(err); }
+      };
+      im.onerror = () => reject(new Error('imagen no cargó'));
+      im.src = url;
+    });
+  }
 }
 async function exportarPDF(id, btn) {
   const c=getColab(id); if(!c) return;

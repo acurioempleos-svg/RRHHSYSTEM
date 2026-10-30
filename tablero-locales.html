@@ -3194,9 +3194,39 @@ function puestoOptions(selected){
    así que las subidas van a Cloudinary (unsigned upload, plan gratis). */
 const CLOUDINARY_CLOUD_NAME = 'dqar21few';
 const CLOUDINARY_PRESET     = 'rrhhsystem2.0';
+/* ── DRIVE: los archivos se guardan en una carpeta del Drive del dueño ──
+   Pegar entre las comillas el link que da Google Apps Script al implementar.
+   Los archivos viejos (Cloudinary/ImgBB) siguen funcionando con sus links. */
+const DRIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbMAcy65gp6QAY_uMBIUd-yXf7Sd_BxUmgOTtTaCpze6yH1S4i6DCl-XD0zZp6LbnBmQ/exec';
+const DRIVE_CLAVE      = '0c6429696d75ee2e';
+async function subirADrive(dataUrl) {
+  const coma = dataUrl.indexOf(',');
+  const cab  = dataUrl.slice(0, coma);
+  const mime = (/^data:([^;]+);/.exec(cab) || [])[1] || 'image/jpeg';
+  const ext  = mime === 'application/pdf' ? 'pdf' : (mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+  const resp = await fetch(DRIVE_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ clave: DRIVE_CLAVE, name: 'doc_' + Date.now() + '.' + ext, mime, data: dataUrl.slice(coma + 1) })
+  });
+  const r = await resp.json();
+  if (!r.ok || !r.id) throw new Error(r.error || 'No se pudo guardar en Drive');
+  // PDF: link al visor de Drive (el "#.pdf" final sirve para que el programa lo reconozca como PDF)
+  return mime === 'application/pdf'
+    ? `https://drive.google.com/file/d/${r.id}/view#.pdf`
+    : `https://lh3.googleusercontent.com/d/${r.id}`;
+}
 async function subirDataUrlAImgBB(dataUrl, intento = 0) {
   const base64 = dataUrl.split(',')[1];
   if (!base64) throw new Error('Imagen inválida');
+  if (DRIVE_SCRIPT_URL) {
+    // Todo va a Drive. Si falla, se reintenta una vez y luego se muestra el error.
+    try { return await subirADrive(dataUrl); }
+    catch (e) {
+      if (intento === 0) return subirDataUrlAImgBB(dataUrl, 1);
+      throw new Error('No se pudo guardar en Drive: ' + (e.message || e));
+    }
+  }
   try {
     const fd = new FormData();
     fd.append('file', dataUrl);
@@ -5178,6 +5208,12 @@ async function descargarFoto(url, label, idx) {
     if (liberar) setTimeout(() => URL.revokeObjectURL(href), 5000);
   };
   const esPdf = url.startsWith('data:application/pdf') || url.toLowerCase().includes('.pdf');
+  const mDrive = /(?:drive\.google\.com\/file\/d\/|googleusercontent\.com\/d\/)([\w-]+)/.exec(url);
+  if (mDrive) {
+    guardar('https://drive.google.com/uc?export=download&id=' + mDrive[1], base + '.' + (esPdf ? 'pdf' : 'jpg'), false);
+    toast('Descargando…');
+    return;
+  }
   toast('Descargando…');
   // 1) Bajar el archivo como blob (los links de otro dominio ignoran "download")
   try {

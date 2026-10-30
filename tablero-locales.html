@@ -142,38 +142,6 @@ body {
 }
 #notif-badge.vis { display:flex; }
 
-/* ══ NAV DE SECCIONES ═══════════════════════════════════════════ */
-#app-nav {
-  display:flex; gap:2px; background:var(--s1); border:1px solid var(--b1);
-  border-radius:10px; padding:3px; margin:0 8px;
-}
-.app-nav-btn {
-  font-family:'DM Sans',sans-serif; font-size:9.5px; letter-spacing:.05em;
-  background:none; border:none; color:var(--muted); cursor:pointer;
-  padding:7px 11px; border-radius:7px; transition:all var(--t); white-space:nowrap;
-}
-.app-nav-btn:hover { color:var(--text); }
-.app-nav-btn.active { background:var(--amber-glow); color:var(--amber-hi); }
-@media(max-width:760px){
-  #app-nav { display:none; } /* en mobile el nav va abajo, ver #app-nav-mobile */
-}
-#app-nav-mobile {
-  display:none; position:fixed; left:0; right:0; bottom:0; z-index:60;
-  background:var(--s0); border-top:1px solid var(--b1);
-  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
-  gap:4px;
-}
-@media(max-width:760px){
-  #app-nav-mobile { display:flex; }
-  body { padding-bottom:54px; }
-}
-.app-nav-mobile-btn {
-  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
-  background:none; border:none; color:var(--muted); cursor:pointer;
-  padding:5px 2px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:8.5px;
-}
-.app-nav-mobile-btn.active { color:var(--amber-hi); }
-
 /* ══ VISTA PRINCIPAL — LOCALES ══════════════════════════════════ */
 #view-main {
   padding:20px 14px 100px;
@@ -185,44 +153,6 @@ body {
     padding:28px 32px 80px;
   }
 }
-
-/* ══ SELECCIÓN DE CANDIDATOS ═════════════════════════════════════ */
-#view-seleccion { padding:20px 14px 100px; animation:fadeUp .35s ease; }
-@media(min-width:900px){ #view-seleccion { max-width:1400px; margin:0 auto; padding:28px 32px 80px; } }
-.sel-filters { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
-.sel-filt {
-  font-family:'DM Sans',sans-serif; font-size:9px; letter-spacing:.05em;
-  background:var(--s1); border:1px solid var(--b1); color:var(--muted);
-  padding:7px 12px; border-radius:20px; cursor:pointer; transition:all var(--t);
-}
-.sel-filt.active { background:var(--amber-glow); border-color:var(--amber-brd); color:var(--amber-hi); }
-#sel-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
-.sel-card {
-  background:var(--s1); border:1px solid var(--b1); border-radius:var(--r-lg);
-  padding:14px; cursor:pointer; transition:all var(--t);
-}
-.sel-card:hover { border-color:var(--b2); background:var(--s2); }
-.sel-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
-.sel-card-name { font-weight:700; font-size:14px; }
-.sel-card-sub { font-family:'DM Sans',sans-serif; font-size:9.5px; color:var(--muted); margin-top:2px; }
-.status-pill {
-  font-family:'DM Sans',sans-serif; font-size:8px; letter-spacing:.06em; text-transform:uppercase;
-  padding:3px 8px; border-radius:20px; white-space:nowrap;
-}
-.status-pill.Pendiente { background:var(--i-dim); color:var(--info); }
-.status-pill.Aprobado  { background:var(--s-dim); color:var(--success); }
-.status-pill.Rechazado { background:var(--d-dim); color:var(--danger); }
-.sel-empty { text-align:center; color:var(--muted); font-size:12px; padding:60px 20px; }
-.cd-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--b0); font-size:12.5px; }
-.cd-row b { color:var(--muted); font-weight:500; font-size:11px; }
-.decision-actions { display:flex; gap:8px; margin:14px 0; }
-.decision-actions button {
-  flex:1; padding:10px; border-radius:10px; border:1px solid var(--b1); background:var(--s1);
-  color:var(--text); font-family:'DM Sans',sans-serif; font-weight:600; font-size:12px; cursor:pointer; transition:all var(--t);
-}
-.decision-actions button.aprobar.selected { background:var(--s-dim); border-color:var(--s-brd); color:var(--success); }
-.decision-actions button.rechazar.selected { background:var(--d-dim); border-color:var(--d-brd); color:var(--danger); }
-.cd-historial-item { font-size:11.5px; color:var(--muted); padding:6px 0; border-bottom:1px solid var(--b0); }
 
 .view-label {
   font-family:'DM Sans',sans-serif; font-size:9px;
@@ -2045,13 +1975,6 @@ body{
 #notif-badge{ border-color:var(--sand); background:var(--coral); }
 
 /* Navegación de secciones */
-#app-nav{ background:var(--s1); border:2px solid var(--navy); border-radius:999px; padding:3px; }
-.app-nav-btn{ font-family:'Anton',sans-serif; font-size:12px; letter-spacing:1px; text-transform:uppercase; border-radius:999px; color:var(--navy); }
-.app-nav-btn:hover{ color:var(--coral); }
-.app-nav-btn.active{ background:var(--coral); color:#fff; }
-#app-nav-mobile{ background:var(--sand); border-top:2px solid var(--navy); }
-.app-nav-mobile-btn{ font-family:'Anton',sans-serif; letter-spacing:.8px; text-transform:uppercase; font-size:9.5px; color:var(--navy); }
-.app-nav-mobile-btn.active{ color:var(--coral); }
 
 /* Rótulos y contadores */
 .view-label{ font-family:'Anton',sans-serif; font-size:13px; letter-spacing:2px; color:var(--ocean); }
@@ -2062,7 +1985,7 @@ body{
 /* Tarjetas de locales y personas */
 .local-block::before,.local-block::after,
 .person-block::before,.person-block::after{ display:none; }
-.lb-face,.pb-face,.sel-card,.folder-blk,.doc-blk,.alert-item,.org-card,.vg-row{
+.lb-face,.pb-face,.folder-blk,.doc-blk,.alert-item,.org-card,.vg-row{
   border:2px solid var(--navy);
   box-shadow:0 6px 0 rgba(7,32,56,.14),0 12px 22px rgba(11,46,79,.14);
 }
@@ -2079,10 +2002,10 @@ body{
 .lb-bg-img,.lb-bg-overlay{ display:none !important; }
 .lb-face.has-image .lb-count{ color:var(--muted); text-shadow:none; }
 .lb-face.has-image{ background-color:var(--s1); }
-.lb-name,.sel-card-name,.pb-name,.lv-title,#lv-name{ font-family:'Anton',sans-serif; font-weight:400; letter-spacing:.5px; color:var(--navy); }
+.lb-name,.pb-name,.lv-title,#lv-name{ font-family:'Anton',sans-serif; font-weight:400; letter-spacing:.5px; color:var(--navy); }
 .lb-name{ font-size:24px; }
 .lb-face.has-image .lb-name{ color:var(--navy); }
-.sel-card-name,.pb-name{ font-size:17px; }
+.pb-name{ font-size:17px; }
 .lv-title,#lv-name{ font-size:22px; }
 .lb-count{ font-weight:600; font-size:12px; }
 .pb-avatar{ border:2px solid var(--navy); }
@@ -2156,10 +2079,6 @@ body{
     <svg width="15" height="15" viewBox="0 0 24 24"><use href="#ic-back"/></svg>
   </button>
   <div class="logo">GESTIÓN RRHH</div>
-  <div id="app-nav">
-    <button class="app-nav-btn active" id="nav-locales" onclick="mostrarSeccion('locales')">Locales</button>
-    <button class="app-nav-btn" id="nav-seleccion" onclick="mostrarSeccion('seleccion')">Selección</button>
-  </div>
   <div id="gs-wrap">
     <svg width="2" viewBox="0 0 24 24"><use href="#ic-search"/></svg>
     <input id="gs-input" placeholder="Buscar persona, local, DNI…" onfocus="abrirSearch()" readonly>
@@ -2185,12 +2104,6 @@ body{
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     <div id="notif-badge"></div>
   </div>
-</div>
-
-<!-- ══ NAV MOBILE ═══════════════════════════════════════════════ -->
-<div id="app-nav-mobile">
-  <button class="app-nav-mobile-btn active" id="navm-locales" onclick="mostrarSeccion('locales')">🏠<span>Locales</span></button>
-  <button class="app-nav-mobile-btn" id="navm-seleccion" onclick="mostrarSeccion('seleccion')">🧑‍💼<span>Selección</span></button>
 </div>
 
 <!-- ══ VISTA PRINCIPAL ══════════════════════════════════════════ -->
@@ -2248,50 +2161,6 @@ body{
   <div id="desv-scroll" style="display:none"></div>
 </div>
 
-<!-- ══ VISTA SELECCIÓN DE CANDIDATOS ═════════════════════════════ -->
-<div id="view-seleccion" style="display:none">
-  <div class="view-label">Selección de candidatos</div>
-  <div class="sel-filters" id="sel-filters">
-    <button class="sel-filt active" onclick="filtrarCandidatos('Todos',this)">Todos</button>
-    <button class="sel-filt" onclick="filtrarCandidatos('Pendiente',this)">Pendientes</button>
-    <button class="sel-filt" onclick="filtrarCandidatos('Aprobado',this)">Aprobados</button>
-    <button class="sel-filt" onclick="filtrarCandidatos('Rechazado',this)">Rechazados</button>
-  </div>
-  <div id="sel-grid"></div>
-  <div id="sel-empty" class="sel-empty" style="display:none">Todavía no hay candidatos cargados.</div>
-</div>
-
-<!-- Nuevo candidato -->
-<div id="candidato-modal" class="overlay" onclick="if(event.target===this)closeSheet('candidato-modal')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-pill"></div>
-    <div class="sheet-hdr">
-      <div class="sheet-title">Nuevo candidato</div>
-      <div class="sheet-x" onclick="closeSheet('candidato-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
-    </div>
-    <div class="sheet-body">
-      <div class="f-field"><label class="f-label">Nombre y apellido</label><input class="f-input" id="cand-nombre" placeholder="Ej: Juan Pérez"></div>
-      <div class="f-field"><label class="f-label">DNI</label><input class="f-input" id="cand-dni" type="text" inputmode="numeric" placeholder="Ej: 38123456"></div>
-      <div class="f-field"><label class="f-label">Puesto al que aplica</label><select class="f-input" id="cand-puesto"></select></div>
-      <div class="f-field"><label class="f-label">Local</label><select class="f-input" id="cand-local"></select></div>
-      <div class="f-field" style="margin-bottom:14px"><label class="f-label">Comentario (opcional)</label><input class="f-input" id="cand-comentario" placeholder="Notas del selector"></div>
-      <button class="btn btn-amber" id="cand-btn" onclick="guardarCandidato()">Agregar candidato</button>
-    </div>
-  </div>
-</div>
-
-<!-- Ficha de candidato -->
-<div id="candidato-detalle-modal" class="overlay" onclick="if(event.target===this)closeSheet('candidato-detalle-modal')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-pill"></div>
-    <div class="sheet-hdr">
-      <div class="sheet-title" id="cd-nombre">Candidato</div>
-      <div class="sheet-x" onclick="closeSheet('candidato-detalle-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
-    </div>
-    <div class="sheet-body" id="cd-body"></div>
-  </div>
-</div>
-
 <!-- ══ FAB ══════════════════════════════════════════════════════ -->
 <div id="fab-group">
   <div class="fab-opt fab-opt-locales">
@@ -2314,10 +2183,6 @@ body{
         <path d="M8.5 7.5 15.5 10.5M8.5 16.5 15.5 13.5"/>
       </svg>
     </button>
-  </div>
-  <div class="fab-opt fab-opt-seleccion" style="display:none">
-    <span class="fab-lbl">Nuevo candidato</span>
-    <button class="fab-ico fab-ico-user" onclick="fabAbrirNuevoCandidato()">🧑‍💼</button>
   </div>
   <button id="fab" onclick="fabToggle()">
     <svg width="2.5" viewBox="0 0 24 24"><use href="#ic-plus"/></svg>
@@ -3300,14 +3165,6 @@ onSnapshot(query(collection(db,'colaboradores'),orderBy('at','desc')), snap => {
   _renderScheduler.schedule('stats', 'board', 'alertas', 'local');
   _cargaInicialColabs = true;
   _chequearCargaInicial();
-});
-
-/* ══ SELECCIÓN DE CANDIDATOS (ex Portal RRHH, migrado a Firebase) ══ */
-let candidatos = [];
-let _selFiltro = 'Todos';
-onSnapshot(query(collection(db,'candidatos'), orderBy('at','desc')), snap => {
-  candidatos = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-  renderCandidatos();
 });
 
 // Listener de plantillas de carpeta (diseños reutilizables de campos de metadata)
@@ -5186,7 +5043,6 @@ async function confirmarFusion() {
 }
 
 function fabAbrirNuevo() { document.getElementById('fab-group').classList.remove('open'); abrirNuevo(); }
-function fabAbrirNuevoCandidato() { document.getElementById('fab-group').classList.remove('open'); abrirNuevoCandidato(); }
 function fabAbrirDoc()   {
   document.getElementById('fab-group').classList.remove('open');
   activeTask = { id:null, type:'dni_frente', label:'Documento', askFecha:false };
@@ -6902,161 +6758,6 @@ function irAColab(id) {
 }
 
 
-/* ══ NAV DE SECCIONES ═══════════════════════════════════════════ */
-function mostrarSeccion(seccion) {
-  const secciones = { locales:'view-main', seleccion:'view-seleccion' };
-  Object.entries(secciones).forEach(([key,elId]) => {
-    const el = document.getElementById(elId);
-    if (el) el.style.display = (key===seccion) ? '' : 'none';
-  });
-  ['locales','seleccion'].forEach(key=>{
-    document.getElementById('nav-'+key)?.classList.toggle('active', key===seccion);
-    document.getElementById('navm-'+key)?.classList.toggle('active', key===seccion);
-  });
-  document.querySelectorAll('.fab-opt-locales').forEach(el => el.style.display = (seccion==='locales') ? '' : 'none');
-  document.querySelectorAll('.fab-opt-seleccion').forEach(el => el.style.display = (seccion==='seleccion') ? '' : 'none');
-  if (currentLocal && seccion!=='locales') cerrarLocal();
-}
-
-/* ══ CANDIDATOS — UI ═══════════════════════════════════════════════ */
-function renderCandidatos() {
-  const grid = document.getElementById('sel-grid');
-  const empty = document.getElementById('sel-empty');
-  if (!grid) return;
-  const lista = candidatos.filter(c => !c.archivado && (_selFiltro==='Todos' || (c.estado||'Pendiente')===_selFiltro));
-  if (!lista.length) { grid.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display = 'none';
-  grid.innerHTML = lista.map(c => `
-    <div class="sel-card" onclick="abrirCandidatoDetalle('${c.id}')">
-      <div class="sel-card-top">
-        <div>
-          <div class="sel-card-name">${esc(c.nombre||'')}</div>
-          <div class="sel-card-sub">${esc(c.puesto||'')}${c.local ? ' · '+esc(c.local) : ''}</div>
-        </div>
-        <span class="status-pill ${c.estado||'Pendiente'}">${c.estado||'Pendiente'}</span>
-      </div>
-      <div class="sel-card-sub">DNI ${esc(c.dni||'—')}</div>
-    </div>
-  `).join('');
-}
-function filtrarCandidatos(f, btn) {
-  _selFiltro = f;
-  document.querySelectorAll('.sel-filt').forEach(b=>b.classList.remove('active'));
-  btn?.classList.add('active');
-  renderCandidatos();
-}
-function abrirNuevoCandidato() {
-  ['cand-nombre','cand-dni','cand-comentario'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cand-puesto').innerHTML = puestoOptions('');
-  actualizarSelectsLocales();
-  openSheet('candidato-modal');
-  setTimeout(()=>document.getElementById('cand-nombre').focus(),300);
-}
-async function guardarCandidato() {
-  const nombre = document.getElementById('cand-nombre').value.trim().toUpperCase();
-  const dni = document.getElementById('cand-dni').value.trim();
-  const puesto = document.getElementById('cand-puesto').value.trim();
-  const local = document.getElementById('cand-local').value.trim();
-  const comentario = document.getElementById('cand-comentario').value.trim();
-  if (!nombre) { document.getElementById('cand-nombre').focus(); return; }
-  if (!dni)    { toast('El DNI es obligatorio — es el código de seguimiento'); document.getElementById('cand-dni').focus(); return; }
-  if (candidatos.some(x => !x.archivado && x.dni === dni)) { toast('Ya hay un candidato activo con ese DNI'); document.getElementById('cand-dni').focus(); return; }
-  if (colabs.some(x => x.dni_nro === dni && !x.desvinculado)) { toast('Ese DNI ya pertenece a un colaborador activo'); document.getElementById('cand-dni').focus(); return; }
-  const btn = document.getElementById('cand-btn');
-  btn.disabled = true; btn.textContent = 'Guardando…';
-  try {
-    await addDoc(collection(db,'candidatos'), {
-      nombre, dni, puesto, local, comentario, estado:'Pendiente',
-      historial: [], convertido:false, at: Date.now(),
-    });
-    closeSheet('candidato-modal');
-    toast(`✓ ${nombre} agregado como candidato`);
-  } catch(e) { manejarError(e, 'guardar candidato'); }
-  finally { btn.disabled = false; btn.textContent = 'Agregar candidato'; }
-}
-function abrirCandidatoDetalle(id) {
-  const c = candidatos.find(x=>x.id===id);
-  if (!c) return;
-  document.getElementById('cd-nombre').textContent = c.nombre;
-  const puedeConvertir = c.estado==='Aprobado' && !c.convertido;
-  document.getElementById('cd-body').innerHTML = `
-    <div class="cd-row"><b>DNI</b><span>${esc(c.dni||'—')}</span></div>
-    <div class="cd-row"><b>Puesto</b><span>${esc(c.puesto||'—')}</span></div>
-    <div class="cd-row"><b>Local</b><span>${esc(c.local||'—')}</span></div>
-    <div class="f-field" style="margin-top:10px"><label class="f-label">Notas</label><input class="f-input" id="cd-comentario-input" value="${esc(c.comentario||'')}" placeholder="Agregar comentario…"></div>
-    <button class="btn btn-ghost" style="margin-bottom:10px" onclick="guardarComentarioCandidato('${c.id}')">Guardar nota</button>
-    ${!c.archivado ? `
-    <div class="decision-actions">
-      <button class="aprobar${c.estado==='Aprobado'?' selected':''}" onclick="decidirCandidato('${c.id}','Aprobado')">✓ Aprobar</button>
-      <button class="rechazar${c.estado==='Rechazado'?' selected':''}" onclick="decidirCandidato('${c.id}','Rechazado')">✕ Rechazar</button>
-    </div>
-    ${puedeConvertir ? `<button class="btn btn-amber" onclick="convertirEnColaborador('${c.id}')">Convertir en colaborador</button>` : ''}
-    ${c.convertido ? `<div class="sel-card-sub" style="text-align:center;margin-top:6px">Ya convertido en colaborador ✓</div>` : ''}
-    <button class="btn btn-ghost" onclick="archivarCandidato('${c.id}')">Archivar candidato</button>
-    ` : `
-    <div class="sel-card-sub" style="text-align:center;margin:10px 0">Candidato archivado</div>
-    <button class="btn btn-amber" onclick="restaurarCandidato('${c.id}')">Restaurar candidato</button>
-    `}
-    <button class="btn btn-ghost" onclick="closeSheet('candidato-detalle-modal')">Cerrar</button>
-    ${(c.historial||[]).length ? `<div style="margin-top:10px">${c.historial.map(h=>`<div class="cd-historial-item">${esc(h.estado)} · ${new Date(h.fecha).toLocaleString('es-AR')}</div>`).join('')}</div>` : ''}
-  `;
-  openSheet('candidato-detalle-modal');
-}
-async function guardarComentarioCandidato(id) {
-  const c = candidatos.find(x=>x.id===id);
-  const nuevo = document.getElementById('cd-comentario-input').value.trim();
-  if (!c || nuevo === (c.comentario||'')) return;
-  try {
-    await updateDoc(doc(db,'candidatos',id), { comentario: nuevo });
-    toast('✓ Nota guardada');
-  } catch(e) { manejarError(e, 'guardar comentario del candidato'); }
-}
-async function archivarCandidato(id) {
-  const c = candidatos.find(x=>x.id===id);
-  if (!c) return;
-  const ok = await confirmar(`¿Archivar a ${c.nombre}? No aparece más en el listado activo, pero se conserva el registro.`, 'Archivar');
-  if (!ok) return;
-  try {
-    await updateDoc(doc(db,'candidatos',id), { archivado:true });
-    closeSheet('candidato-detalle-modal');
-    toast('Candidato archivado');
-  } catch(e) { manejarError(e, 'archivar candidato'); }
-}
-async function restaurarCandidato(id) {
-  const c = candidatos.find(x=>x.id===id);
-  if (!c) return;
-  try {
-    await updateDoc(doc(db,'candidatos',id), { archivado:false });
-    abrirCandidatoDetalle(id);
-    toast('Candidato restaurado');
-  } catch(e) { manejarError(e, 'restaurar candidato'); }
-}
-async function decidirCandidato(id, estado) {
-  const c = candidatos.find(x=>x.id===id);
-  if (!c) return;
-  const nuevoEstado = c.estado===estado ? 'Pendiente' : estado;
-  try {
-    const historial = [...(c.historial||[]), { estado:nuevoEstado, fecha:Date.now() }];
-    await updateDoc(doc(db,'candidatos',id), { estado:nuevoEstado, historial });
-    abrirCandidatoDetalle(id);
-    toast(`Candidato marcado como ${nuevoEstado}`);
-  } catch(e) { manejarError(e, 'actualizar decisión del candidato'); }
-}
-async function convertirEnColaborador(id) {
-  const c = candidatos.find(x=>x.id===id);
-  if (!c) return;
-  if (!c.local) { toast('Este candidato no tiene local asignado — asignalo antes de convertirlo'); return; }
-  if (avisarDniDuplicado(buscarColabPorDni(c.dni))) return;
-  const ok = await confirmar(`¿Dar de alta a ${c.nombre} como colaborador?`, 'Convertir');
-  if (!ok) return;
-  try {
-    const carpetas = CARPETAS_DEFAULT.map(d => ({ id: uidCarpeta(), nombre: d.nombre, emoji: d.emoji, urls: [], meta: [] }));
-    const ref = await addDoc(collection(db,'colaboradores'), { nombre:c.nombre, dni_nro:c.dni, local:c.local, puesto:c.puesto, remuneracion:null, at: Date.now(), carpetas });
-    await updateDoc(doc(db,'candidatos',id), { convertido:true, colaboradorId:ref.id });
-    closeSheet('candidato-detalle-modal');
-    toast(`✓ ${c.nombre} ahora es colaborador`);
-  } catch(e) { manejarError(e, 'convertir candidato en colaborador'); }
-}
 
 // Exponer funciones globales para onclick handlers del HTML
 Object.assign(window, {
@@ -7091,11 +6792,8 @@ Object.assign(window, {
   agregarCampoForm, quitarCampoForm, guardarPlantillaForm, eliminarPlantilla,
   filtrarColabListCampo, editarCampoDraftNombre, editarCampoDraftTipo,
   procesarArchivo, procesarArchivoOCR, filtrarSelectorColab, renderPlanilla, togglePlCol,
-  mostrarSeccion, filtrarCandidatos, abrirNuevoCandidato, guardarCandidato,
-  abrirCandidatoDetalle, decidirCandidato, convertirEnColaborador,
-  guardarComentarioCandidato, archivarCandidato, restaurarCandidato,
   abrirAuditoria, cerrarAuditoria, filtrarAuditoria,
-  abrirUsuarioModal, guardarUsuario, fabAbrirNuevoCandidato,
+  abrirUsuarioModal, guardarUsuario,
 });
 
 </script>

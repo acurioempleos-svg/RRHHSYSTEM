@@ -1027,13 +1027,6 @@ body {
 }
 #auditoria-btn:hover, #organigrama-btn:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
 
-#usuario-chip {
-  height:34px; border-radius:9px; flex-shrink:0;
-  background:var(--s1); border:1px solid var(--b1);
-  color:var(--muted); cursor:pointer; transition:all var(--t);
-}
-#usuario-chip:hover { border-color:var(--b2); color:var(--text); background:var(--s2); }
-
 /* ── Nombres de locales y colaboradores siempre en mayúscula ── */
 .lb-name, .pb-name, .sr-name, .vg-row-name, .org-person, .csi-name, .pl-name,
 #lv-name, .lv-title, #n-nombre, #nco-nombre, #edit-nombre, #nl-nombre {
@@ -1965,11 +1958,11 @@ body{
 #gs-wrap{ background:var(--paper,#FFFDF7); border:2px solid var(--navy); border-radius:999px; }
 #gs-input{ font-family:'DM Sans',sans-serif; font-size:13px; color:var(--navy); letter-spacing:0; }
 #gs-wrap svg{ color:var(--ocean); }
-#notif-btn,#vista-global-btn,#auditoria-btn,#organigrama-btn,#usuario-chip,#volver-index-btn{
+#notif-btn,#vista-global-btn,#auditoria-btn,#organigrama-btn,#volver-index-btn{
   background:var(--s1); border:2px solid var(--navy); color:var(--navy);
   box-shadow:2px 2px 0 rgba(11,46,79,.25);
 }
-#notif-btn:hover,#vista-global-btn:hover,#auditoria-btn:hover,#organigrama-btn:hover,#usuario-chip:hover,#volver-index-btn:hover{
+#notif-btn:hover,#vista-global-btn:hover,#auditoria-btn:hover,#organigrama-btn:hover,#volver-index-btn:hover{
   background:var(--coral); color:#fff; border-color:var(--navy);
 }
 #notif-badge{ border-color:var(--sand); background:var(--coral); }
@@ -2096,10 +2089,6 @@ body{
   <button id="auditoria-btn" onclick="abrirAuditoria()" title="Auditoría de metadatos" style="margin-right:2px">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M8 11h6M11 8v6" stroke-width="1.5"/></svg>
   </button>
-  <button id="usuario-chip" onclick="abrirUsuarioModal()" title="¿Quién sos? (para registrar quién carga cada documento)" style="margin-right:2px;display:flex;align-items:center;gap:4px;padding:0 8px;width:auto;font-family:'DM Sans',sans-serif;font-size:10px;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span id="usuario-chip-txt">Identificarme</span>
-  </button>
   <div id="notif-btn" onclick="abrirAlertas()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     <div id="notif-badge"></div>
@@ -2207,27 +2196,6 @@ body{
       <button class="af-btn" onclick="filtrarAlertas('info',this)">Info</button>
     </div>
     <div class="alerts-list" id="alerts-list"></div>
-  </div>
-</div>
-
-<!-- ══ IDENTIFICACIÓN DE USUARIO ═══════════════════════════════════ -->
-<div id="usuario-modal" class="overlay" onclick="closeSheet('usuario-modal')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-pill"></div>
-    <div class="sheet-hdr">
-      <div class="sheet-title">¿Quién sos?</div>
-      <div class="sheet-x" onclick="closeSheet('usuario-modal')"><svg viewBox="0 0 12 12"><use href="#ic-x"/></svg></div>
-    </div>
-    <div class="sheet-body">
-      <p style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px">
-        Se guarda en este dispositivo/navegador y queda registrado en cada documento que subas de ahora en más.
-      </p>
-      <div class="f-field" style="margin-bottom:14px">
-        <label class="f-label">Tu nombre</label>
-        <input class="f-input" id="usuario-input" type="text" placeholder="Ej: María" onkeydown="if(event.key==='Enter')guardarUsuario()">
-      </div>
-      <button class="btn btn-primary" style="width:100%" onclick="guardarUsuario()">Guardar</button>
-    </div>
   </div>
 </div>
 
@@ -2837,30 +2805,6 @@ enableIndexedDbPersistence(db).catch(() => {/* multi-tab u otro motivo: sigue an
 const $     = id => document.getElementById(id);
 const showL = (msg) => { const l=$('loading'); if(l) l.style.display='flex'; const t=$('loading-txt'); if(t) t.textContent = msg || 'Cargando…'; };
 const hideL = ()  => { const l=$('loading'); if(l) l.style.display='none'; };
-
-/* ── Identificación liviana del usuario (sin login formal) ──────────
-   Se guarda en localStorage por navegador/dispositivo. Se usa para
-   dejar registrado quién cargó cada documento (campo subido_por). ── */
-let usuarioActual = (localStorage.getItem('bc_usuario') || '').trim();
-function nombreUsuarioTag() { return usuarioActual || null; }
-function abrirUsuarioModal() {
-  $('usuario-input').value = usuarioActual;
-  openSheet('usuario-modal');
-  requestAnimationFrame(() => $('usuario-input')?.focus());
-}
-function guardarUsuario() {
-  const v = ($('usuario-input').value || '').trim();
-  usuarioActual = v;
-  localStorage.setItem('bc_usuario', v);
-  renderUsuarioChip();
-  closeSheet('usuario-modal');
-  toast(v ? `✓ Identificado como ${v}` : 'Identificación borrada');
-}
-function renderUsuarioChip() {
-  const el = $('usuario-chip-txt');
-  if (el) el.textContent = usuarioActual || 'Identificarme';
-}
-renderUsuarioChip();
 
 /* ── Normaliza fechas heterogéneas (ISO string, Firestore Timestamp, Date) ── */
 function normalizarFecha(v) {
@@ -3918,7 +3862,7 @@ async function guardarFotoEnCarpeta(colabId, folderIdx, url, blkEl) {
   if ((folder.urls||[]).length >= 50) { toast('Límite de 50 fotos por carpeta'); return; }
 
   folder.urls = [...(folder.urls||[]), url];
-  folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag() }];
+  folder.meta = [...(folder.meta||[]), { cargado_en: new Date().toISOString(), estado:'ok' }];
 
   // Optimistic local
   const idx = colabs.findIndex(x => x.id === colabId);
@@ -4280,7 +4224,7 @@ async function guardarFotoEnCarpetaLocal(localId, folderIdx, url, metaExtra) {
   if (!folder) return;
   if ((folder.urls || []).length >= 50) { toast('Limite de 50 fotos por carpeta'); return; }
   folder.urls.push(url);
-  folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', subido_por: nombreUsuarioTag(), ...(metaExtra || {}) });
+  folder.meta.push({ cargado_en: new Date().toISOString(), estado: 'ok', ...(metaExtra || {}) });
   const idx  = locales.findIndex(x => x.id === localId);
   const prev = idx !== -1 ? { ...locales[idx] } : null;
   if (idx !== -1) locales[idx] = { ...locales[idx], carpetas };
@@ -4320,9 +4264,6 @@ function renderLocalCarousel() {
   const fechaCarga = meta.cargado_en
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}${meta.estimado?' <em style="opacity:.6;font-style:italic">(estimado)</em>':''}</span></div>`
     : `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val" style="opacity:.6">Sin fecha registrada</span></div>`;
-  const subidoPor = meta.subido_por
-    ? `<div class="car-meta-row"><span class="car-meta-lbl">Por</span><span class="car-meta-val">${esc(meta.subido_por)}</span></div>`
-    : '';
   const fotoNum = hasMulti
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevLocalIdx+1} de ${_prevLocalUrls.length}</span></div>`
     : '';
@@ -4334,7 +4275,7 @@ function renderLocalCarousel() {
         <div class="car-slide-inner" style="transform:translateX(-${_prevLocalIdx*100}%)">${slides}</div>
       </div>
     </div>
-    <div class="car-meta">${fechaCarga}${subidoPor}${fotoNum}</div>
+    <div class="car-meta">${fechaCarga}${fotoNum}</div>
     <div class="car-actions">
       <button class="car-btn" onclick="descargarFoto(_prevLocalUrls[${_prevLocalIdx}],_localFolderTask?.folderName,${_prevLocalIdx+1})">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -4498,9 +4439,6 @@ function renderCarousel() {
   const fechaCarga = meta.cargado_en
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val">${fmtDateTime(meta.cargado_en)}${meta.estimado?' <em style="opacity:.6;font-style:italic">(estimado)</em>':''}</span></div>`
     : `<div class="car-meta-row"><span class="car-meta-lbl">Cargado</span><span class="car-meta-val" style="opacity:.6">Sin fecha registrada</span></div>`;
-  const subidoPor = meta.subido_por
-    ? `<div class="car-meta-row"><span class="car-meta-lbl">Por</span><span class="car-meta-val">${esc(meta.subido_por)}</span></div>`
-    : '';
   const fotoNum = hasMulti
     ? `<div class="car-meta-row"><span class="car-meta-lbl">Foto</span><span class="car-meta-val">${_prevIdx+1} de ${_prevUrls.length}</span></div>`
     : '';
@@ -4518,7 +4456,7 @@ function renderCarousel() {
       ${estadoBadge}
     </div>
     <div class="car-meta">
-      ${fechaCarga}${subidoPor}${fotoNum}
+      ${fechaCarga}${fotoNum}
     </div>
     <div class="car-actions">
       <button class="car-btn" onclick="descargarFoto(_prevUrls[${_prevIdx}],activeTask?.label,${_prevIdx+1})" title="Descargar">
@@ -5406,7 +5344,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
       const folder = carpetas[activeTask.folderIdx];
       if (!folder) return;
       const replaceIdx = activeTask._reemplazarIdx;
-      const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag(), ...(metaExtra||{}) };
+      const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', ...(metaExtra||{}) };
       if (replaceIdx !== undefined && replaceIdx !== null && replaceIdx >= 0) {
         folder.urls[replaceIdx] = urlToSave;
         folder.meta[replaceIdx] = newEntry;
@@ -5430,7 +5368,7 @@ async function subirFotoConfirmada(dataUrl, metaExtra) {
   const metaRaw  = colab ? colab[activeTask.type+'_meta'] : null;
   const metaArr  = Array.isArray(metaRaw) ? [...metaRaw] : (metaRaw ? [metaRaw] : arr.map(()=>({})));
   while (metaArr.length < arr.length) metaArr.push({});
-  const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', subido_por: nombreUsuarioTag(), ...(metaExtra||{}) };
+  const newEntry = { cargado_en: new Date().toISOString(), estado:'ok', ...(metaExtra||{}) };
 
   const replaceIdx = activeTask._reemplazarIdx;
 
@@ -6793,7 +6731,6 @@ Object.assign(window, {
   filtrarColabListCampo, editarCampoDraftNombre, editarCampoDraftTipo,
   procesarArchivo, procesarArchivoOCR, filtrarSelectorColab, renderPlanilla, togglePlCol,
   abrirAuditoria, cerrarAuditoria, filtrarAuditoria,
-  abrirUsuarioModal, guardarUsuario,
 });
 
 </script>

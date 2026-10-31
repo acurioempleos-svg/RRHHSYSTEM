@@ -407,7 +407,7 @@ const DEFAULT_P = {
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
   colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, fechaAlta: true, estado: true, vencDni: true, vencLibreta: true },
   coloresLocal: {},                                                    // color de fondo (#RRGGBB) por local: pinta a sus colaboradores en Empleados y en la planilla de sueldos
-  historialMesesNube: 12,                                              // a la nube (JSONBin) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
+  historialMesesNube: 12,                                              // a la nube (Cloudinary) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
 };
 const COLS_EMP = [                                                     // columnas opcionales de la pestaña Empleados (Legajo y Nombre son fijas)
   { id: 'banco', label: 'Banco' },
@@ -552,21 +552,14 @@ function calcularLiquidacion({ emp, rem, egreso, P }) {
 const KEY = 'rrhh_ciclo_v1';
 const clone = o => JSON.parse(JSON.stringify(o));
 
-/* ================= Nube con JSONBin.io (gratis, cifrada de punta a punta) =================
-   Guarda todos los datos como un "bin" cifrado en tu cuenta de JSONBin.io. Antes de subirlos se
-   cifran en este navegador (AES-256-GCM, clave derivada con PBKDF2) usando la clave que definas
-   en Parámetros: en JSONBin solo queda texto ilegible, aunque alguien tenga la API key.
-   Configuración (una sola vez, ~2 minutos):
-   1. Creá una cuenta gratis en https://jsonbin.io.
-   2. Menú "API Keys" → copiá la clave "X-MASTER-KEY" (NO la "X-ACCESS-KEY").
-   3. Pegá esa clave junto con una clave de cifrado en Parámetros → "Guardado en la nube
-      (JSONBin)" y dejá "ID del bin" vacío la primera vez → "Guardar y conectar". La app crea el
-      bin sola y te muestra su ID.
-   4. En cada otra computadora, pegá la misma X-MASTER-KEY, la misma clave de cifrado y ese ID de
-      bin, para que todas compartan la misma información.
-   Limitaciones: el plan gratis permite 10.000 pedidos por mes (de sobra para un equipo chico).
-   Gana el último que guarda (no hay fusión de cambios) y los cambios de otra computadora pueden
-   tardar hasta 20 s en verse. */
+/* ================= Nube con Cloudinary (gratis, cifrada de punta a punta) =================
+   Guarda todos los datos como un archivo "raw" cifrado en tu cuenta de Cloudinary. Antes de subirlos se
+   cifran en este navegador (AES-256-GCM, clave derivada con PBKDF2) con la clave que definas en
+   Parámetros: en Cloudinary solo queda texto ilegible.
+   Configuración (una sola vez): en Cloudinary → Dashboard copiá Cloud name, API Key y API Secret
+   y pegalos en Parámetros → "Guardado en la nube (Cloudinary)" junto con una clave de cifrado.
+   En cada otra computadora, cargá los mismos 4 datos. Gana el último que guarda (no hay fusión de
+   cambios) y los cambios de otra computadora pueden tardar unos minutos en verse por el caché de la CDN. */
 const localId = uidSync();
 function uidSync() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function setSync(state, txt) { const el = $('#sync'); if (!el) return; el.className = 'sync ' + state; const t = $('#sync-txt'); if (t) t.textContent = txt; }
@@ -586,7 +579,7 @@ async function crDecrypt(env, pass) {
   const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, await crKey(pass, unb64(env.salt)), unb64(env.data));
   return new Uint8Array(pt);
 }
-// Compresión gzip nativa (antes de cifrar / después de descifrar) para entrar en el límite de 100kb de JSONBin free.
+// Compresión gzip nativa (antes de cifrar / después de descifrar) para achicar lo que se sube a la nube.
 async function gzComp(str) {
   const cs = new CompressionStream('gzip');
   const stream = new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(cs);
@@ -597,19 +590,21 @@ async function gzDecomp(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(ds);
   return new TextDecoder().decode(await new Response(stream).arrayBuffer());
 }
-const JB_KEY = 'rrhh_ciclo_jb_cfg', JB_META = 'rrhh_ciclo_jb_meta';
-// Configuración precargada: no hace falta cargar nada en Parámetros en cada computadora.
-const JB_DEFAULT = { apiKey: '$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n', clave: 'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit', binId: '6ab67ab9ac6210605af45cd2' };
+const JB_KEY = 'rrhh_ciclo_cl_cfg', JB_META = 'rrhh_ciclo_cl_meta';
+const CL_FILE = 'rrhh_ciclo_datos.json';                                // nombre del archivo (raw) que se guarda en Cloudinary
+// Configuración precargada (opcional): si completás estos 4 datos no hace falta cargarlos en Parámetros en cada computadora.
+const JB_DEFAULT = { cloud: 'dqar21few', apiKey: '676986277772494', apiSecret: 'GXtIMDiTbraUN7BZTdeQQafvIPo', clave: 'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4' };
 let jbReady = false, jbBusy = false, jbTimer = null, jbPoll = null, jbRev = 0, jbApplyingRemote = false;
+const jbCompleta = c => !!(c && c.cloud && c.apiKey && c.apiSecret && c.clave);
 function jbConfig() {
-  try { const s = JSON.parse(localStorage.getItem(JB_KEY) || 'null'); if (s) return Object.assign({}, JB_DEFAULT, s); } catch (e) {}
-  return Object.assign({}, JB_DEFAULT);
+  try { const s = JSON.parse(localStorage.getItem(JB_KEY) || 'null'); if (s && s.off) return null; if (jbCompleta(s)) return Object.assign({}, JB_DEFAULT, s); } catch (e) {}
+  return jbCompleta(JB_DEFAULT) ? Object.assign({}, JB_DEFAULT) : null;
 }
 function jbMeta() { try { return JSON.parse(localStorage.getItem(JB_META) || '{}') || {}; } catch (e) { return {}; } }
 function setJbMeta(m) { try { localStorage.setItem(JB_META, JSON.stringify(Object.assign(jbMeta(), m))); } catch (e) {} }
 function jbPush() {                                                   // subida con demora de 1,5 s para juntar cambios seguidos
   if (!jbConfig() || jbApplyingRemote) return;
-  jbRev++; setJbMeta({ dirty: true }); setSync('off', 'Cambios sin subir a JSONBin…');
+  jbRev++; setJbMeta({ dirty: true }); setSync('off', 'Cambios sin subir a Cloudinary…');
   clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 1500);
 }
 const historialMesesNube = () => +((S.parametros || {}).historialMesesNube ?? 12);
@@ -618,59 +613,62 @@ function historialParaNube(his) {
   const corte = new Date(); corte.setMonth(corte.getMonth() - n);
   return his.filter(h => h.ts >= corte.toISOString());
 }
+// Cloudinary: subida firmada (SHA-1 de los parámetros + API secret). El archivo ya va cifrado con AES-256-GCM.
+async function clFirmar(params, secret) {
+  const str = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&') + secret;
+  const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
+  return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
 async function jbUpload() {
   const cfg = jbConfig(); if (!cfg) return;
   if (jbBusy) { clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 1500); return; }
-  jbBusy = true; const rev = jbRev; setSync('off', 'Subiendo a JSONBin…');
+  jbBusy = true; const rev = jbRev; setSync('off', 'Subiendo a Cloudinary…');
   try {
     if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
     const stamp = new Date().toISOString();
     const payload = historialMesesNube() ? Object.assign({}, S, { historial: historialParaNube(S.historial) }) : S;
     const env = Object.assign({ v: 2, actualizado: stamp, _local: localId }, await crEncrypt(await gzComp(JSON.stringify(payload)), cfg.clave));
-    if (!cfg.binId) {
-      const r = await fetch('https://api.jsonbin.io/v3/b', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey, 'X-Bin-Name': 'rrhh_ciclo' }, body: JSON.stringify(env) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || ('HTTP ' + r.status));
-      const binId = j.metadata && j.metadata.id;
-      if (!binId) throw new Error('no se pudo crear el bin');
-      cfg.binId = binId;
-      try { localStorage.setItem(JB_KEY, JSON.stringify(cfg)); } catch (e) {}
-      try { renderPar(); } catch (e) {}
-    } else {
-      const r = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cfg.binId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey }, body: JSON.stringify(env) });
-      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.message || ('HTTP ' + r.status)); }
-    }
+    const p = { invalidate: 'true', overwrite: 'true', public_id: CL_FILE, timestamp: Math.floor(Date.now() / 1000) };
+    const fd = new FormData();
+    fd.append('file', new Blob([JSON.stringify(env)], { type: 'application/json' }), CL_FILE);
+    fd.append('api_key', cfg.apiKey);
+    Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+    fd.append('signature', await clFirmar(p, cfg.apiSecret));
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/upload`, { method: 'POST', body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
     jbReady = true;
-    if (rev === jbRev) { setJbMeta({ dirty: false, lastRemote: stamp }); setSync('on', 'Guardado en JSONBin ' + horaAr()); }
+    if (rev === jbRev) { setJbMeta({ dirty: false, lastRemote: stamp }); setSync('on', 'Guardado en Cloudinary ' + horaAr()); }
     else { setJbMeta({ lastRemote: stamp }); clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 300); }
-  } catch (e) { setSync('err', ('JSONBin: ' + (e.message || 'no se pudo subir') + ' (quedó guardado en este navegador)').slice(0, 140)); }
+  } catch (e) { setSync('err', ('Cloudinary: ' + (e.message || 'no se pudo subir') + ' (quedó guardado en este navegador)').slice(0, 140)); }
   finally { jbBusy = false; }
 }
 // mode: 'first' (al abrir/conectar), 'auto' (sondeo periódico), 'force' (botón "Traer ahora")
 async function jbPull(mode = 'auto') {
   const cfg = jbConfig(); if (!cfg || jbBusy) return;
-  if (!cfg.binId) {
-    jbReady = true;
-    if (S.empleados.length) jbPush(); else setSync('on', 'Conectado a JSONBin (todavía no hay datos en la nube)');
-    return;
-  }
   const meta = jbMeta();
   if (mode === 'auto' && meta.dirty) return;
   try {
-    const r = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(cfg.binId)}/latest`, { headers: { 'X-Master-Key': cfg.apiKey, 'X-Bin-Meta': 'false' }, cache: 'no-store' });
-    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.message || ('HTTP ' + r.status)); }
+    const r = await fetch(`https://res.cloudinary.com/${encodeURIComponent(cfg.cloud)}/raw/upload/${CL_FILE}?_=${Date.now()}`, { cache: 'no-store' });
+    if (r.status === 404) {                                           // todavía no hay archivo en la nube
+      jbReady = true;
+      if (mode === 'force') toast('Todavía no hay datos en la nube.');
+      if (S.empleados.length) jbPush(); else setSync('on', 'Conectado a Cloudinary (todavía no hay datos en la nube)');
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const env = await r.json();
     jbReady = true;
     const propio = env._local === localId;
     const viejo = mode !== 'force' && env.actualizado && meta.lastRemote && env.actualizado <= meta.lastRemote;
-    if (propio || viejo) { setSync('on', 'Sincronizado con JSONBin'); return; }
+    if (propio || viejo) { setSync('on', 'Sincronizado con Cloudinary'); return; }
     let data;
     try {
       const pt = await crDecrypt(env, cfg.clave);
       const txt = (env.v >= 2) ? await gzDecomp(pt) : new TextDecoder().decode(pt);
       data = JSON.parse(txt);
-    } catch (e) { setSync('err', 'JSONBin: clave incorrecta o datos dañados'); return; }
-    if (!data || !Array.isArray(data.empleados)) { setSync('err', 'JSONBin: los datos de la nube no tienen el formato esperado'); return; }
+    } catch (e) { setSync('err', 'Cloudinary: clave incorrecta o datos dañados'); return; }
+    if (!data || !Array.isArray(data.empleados)) { setSync('err', 'Cloudinary: los datos de la nube no tienen el formato esperado'); return; }
     if (mode === 'auto' && document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;   // no pisar lo que se está tipeando
     const sinSync = !meta.lastRemote && S.empleados.length > 0;
     if (mode === 'force') {
@@ -691,14 +689,14 @@ async function jbPull(mode = 'auto') {
       go(UI.tab); paintRespaldo();
     } finally { jbApplyingRemote = false; }
     setJbMeta({ lastRemote: env.actualizado, dirty: false });
-    setSync('on', 'Sincronizado con JSONBin'); toast('Datos actualizados desde la nube');
-  } catch (e) { setSync('err', ('JSONBin: no se pudo leer (' + (e.message || 'sin conexión') + ')').slice(0, 140)); }
+    setSync('on', 'Sincronizado con Cloudinary'); toast('Datos actualizados desde la nube');
+  } catch (e) { setSync('err', ('Cloudinary: no se pudo leer (' + (e.message || 'sin conexión') + ')').slice(0, 140)); }
 }
 function jbInit() {
   clearInterval(jbPoll);
   const cfg = jbConfig();
-  if (!cfg || !cfg.apiKey || !cfg.clave) return;
-  setSync('off', 'Conectando con JSONBin…');
+  if (!cfg) return;
+  setSync('off', 'Conectando con Cloudinary…');
   jbPull('first').then(() => { if (jbMeta().dirty) jbPush(); });
   jbPoll = setInterval(() => { if (!document.hidden) jbPull('auto'); }, 20000);
 }
@@ -707,7 +705,7 @@ window.addEventListener('resize', () => { if (UI.tab === 'emp' && !UI.detail) aj
 function setHH() { const h = document.querySelector('header'); if (h) document.documentElement.style.setProperty('--hh', h.offsetHeight + 'px'); }
 setHH();
 function jbDisconnect() {
-  try { localStorage.setItem(JB_KEY, JSON.stringify({ apiKey: '' })); localStorage.removeItem(JB_META); } catch (e) {}
+  try { localStorage.setItem(JB_KEY, JSON.stringify({ off: true })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
 const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
@@ -1849,22 +1847,24 @@ function renderPar() {
     <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
   </form>
   <form class="card" onsubmit="return false">
-    <h2>Guardado en la nube (JSONBin) <span class="sync ${jbReady ? 'on' : 'off'}" style="margin-left:6px;font-size:13px;font-weight:400"><span class="dot"></span>${jbReady ? 'Conectado' : (jbc.apiKey ? 'Sin conectar' : 'Sin configurar')}</span></h2>
-    <p class="muted" style="margin-top:0">Guarda una copia <b>cifrada</b> de todos los datos en tu cuenta de JSONBin.io y la trae en cualquier computadora donde cargues esta misma configuración, para que varias personas compartan el mismo legajo. El cifrado se hace en este navegador con la clave que elijas: en JSONBin solo queda texto ilegible. <b>Si perdés la clave, los datos de la nube no se pueden recuperar</b>, así que seguí exportando respaldos. Si varias personas guardan a la vez, gana el último que guarda, y ver los cambios de otra computadora puede tardar hasta 20 segundos.</p>
+    <h2>Guardado en la nube (Cloudinary) <span class="sync ${jbReady ? 'on' : 'off'}" style="margin-left:6px;font-size:13px;font-weight:400"><span class="dot"></span>${jbReady ? 'Conectado' : (jbc.apiKey ? 'Sin conectar' : 'Sin configurar')}</span></h2>
+    <p class="muted" style="margin-top:0">Guarda una copia <b>cifrada</b> de todos los datos en tu cuenta de Cloudinary y la trae en cualquier computadora donde cargues esta misma configuración, para que varias personas compartan el mismo legajo. El cifrado se hace en este navegador con la clave que elijas: en Cloudinary solo queda texto ilegible. <b>Si perdés la clave, los datos de la nube no se pueden recuperar</b>, así que seguí exportando respaldos. Si varias personas guardan a la vez, gana el último que guarda, y ver los cambios de otra computadora puede tardar unos minutos.</p>
     <div class="frm">
-      <label class="fld"><span>X-MASTER-KEY de JSONBin</span><input type="password" id="jb-key" value="${esc(jbc.apiKey || '')}" autocomplete="off"></label>
-      <label class="fld"><span>Clave de cifrado (mín. 8 caracteres)</span><input type="password" id="jb-clave" value="${esc(jbc.clave || '')}" autocomplete="off"></label>
-      ${txt('jb-bin', 'ID del bin (vacío la primera vez)', jbc.binId)}
+      ${txt('cl-cloud', 'Cloud name', jbc.cloud)}
+      <label class="fld"><span>API Key</span><input type="text" id="cl-key" value="${esc(jbc.apiKey || '')}" autocomplete="off"></label>
+      <label class="fld"><span>API Secret</span><input type="password" id="cl-secret" value="${esc(jbc.apiSecret || '')}" autocomplete="off"></label>
+      <label class="fld"><span>Clave de cifrado (mín. 8 caracteres)</span><input type="password" id="cl-clave" value="${esc(jbc.clave || '')}" autocomplete="off"></label>
       ${num('par-histmeses', 'Historial que se sube a la nube (meses)', P.historialMesesNube ?? 12, 'step="1" min="0"')}
     </div>
     <p class="muted" id="jb-tam" style="margin:6px 0 0">Historial guardado: ${S.historial.length} registros (${historialParaNube(S.historial).length} entran en lo que se sube a la nube). <button class="btn sm" type="button" data-act="jbTamano" style="margin-left:6px">Calcular tamaño</button></p>
-    <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Cómo configurar JSONBin (una sola vez)</summary>
+    <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Cómo configurar Cloudinary (una sola vez)</summary>
       <ol style="margin:8px 0 0;padding-left:20px">
-        <li>Creá una cuenta gratis en <b>jsonbin.io</b>.</li>
-        <li>Menú <b>API Keys</b> → copiá la clave <b>X-MASTER-KEY</b> (no la "X-ACCESS-KEY").</li>
-        <li>Pegala acá junto con una clave de cifrado y dejá "ID del bin" vacío → "Guardar y conectar". La app crea el bin sola y el ID va a aparecer en este mismo campo.</li>
-        <li>En cada otra computadora, pegá la misma X-MASTER-KEY, la misma clave de cifrado, y el ID del bin que apareció acá.</li>
+        <li>Creá una cuenta gratis en <b>cloudinary.com</b>.</li>
+        <li>En el Dashboard (Product Environment Credentials) copiá <b>Cloud name</b>, <b>API Key</b> y <b>API Secret</b>.</li>
+        <li>Pegalos acá junto con una clave de cifrado → "Guardar y conectar". La primera vez se sube lo que hay en este navegador.</li>
+        <li>En cada otra computadora, cargá los mismos 4 datos.</li>
       </ol>
+      <p style="margin:8px 0 0"><b>Ojo:</b> el API Secret queda guardado en este navegador y permite administrar tu cuenta de Cloudinary; usá una cuenta dedicada y no compartas el archivo con esos datos cargados. Los datos igual quedan ilegibles sin la clave de cifrado.</p>
     </details>
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn primary" type="button" data-act="jbConectar">Guardar y conectar</button>
@@ -3016,21 +3016,21 @@ const ACT = {
     try {
       const full = await gzComp(JSON.stringify(S)), nube = await gzComp(JSON.stringify(Object.assign({}, S, { historial: historialParaNube(S.historial) })));
       const kb = n => (n / 1024).toFixed(1) + ' KB';
-      $('#jb-tam').innerHTML = `Comprimido: ${kb(full.length)} completo, ${kb(nube.length)} lo que se sube a la nube (el límite gratis de JSONBin es 100 KB por bin, ya cifrado). <button class="btn sm" type="button" data-act="jbTamano" style="margin-left:6px">Recalcular</button>`;
+      $('#jb-tam').innerHTML = `Comprimido: ${kb(full.length)} completo, ${kb(nube.length)} lo que se sube a la nube (el límite gratis de Cloudinary para archivos es 10 MB, así que sobra). <button class="btn sm" type="button" data-act="jbTamano" style="margin-left:6px">Recalcular</button>`;
     } catch (e) { toast('No se pudo calcular el tamaño.'); b.disabled = false; b.textContent = 'Calcular tamaño'; }
   },
   jbConectar: () => {
     const v = id => $('#' + id).value.trim();
-    const cfg = { apiKey: v('jb-key'), clave: $('#jb-clave').value, binId: v('jb-bin') };
-    if (!cfg.apiKey || !cfg.clave) { toast('Completá la X-MASTER-KEY y la clave de cifrado.'); return; }
+    const cfg = { cloud: v('cl-cloud'), apiKey: v('cl-key'), apiSecret: v('cl-secret'), clave: $('#cl-clave').value };
+    if (!cfg.cloud || !cfg.apiKey || !cfg.apiSecret || !cfg.clave) { toast('Completá Cloud name, API Key, API Secret y la clave de cifrado.'); return; }
     if (cfg.clave.length < 8) { toast('La clave de cifrado debe tener al menos 8 caracteres.'); return; }
     if (!window.crypto || !crypto.subtle) { toast('Este navegador no permite cifrar. Abrí el archivo desde https o localhost.'); return; }
-    try { localStorage.setItem(JB_KEY, JSON.stringify(cfg)); } catch (e) { toast('No se pudo guardar la configuración en este navegador.'); return; }
-    jbReady = false; jbInit(); renderPar(); toast('Conectando con JSONBin…');
+    try { localStorage.setItem(JB_KEY, JSON.stringify(cfg)); localStorage.removeItem(JB_META); } catch (e) { toast('No se pudo guardar la configuración en este navegador.'); return; }
+    jbReady = false; jbInit(); renderPar(); toast('Conectando con Cloudinary…');
   },
   jbSubir: () => { if (!confirm('Se van a reemplazar los datos de la nube por los de este navegador. ¿Continuar?')) return; jbPush(); clearTimeout(jbTimer); jbUpload(); },
   jbTraer: () => { jbPull('force'); },
-  jbDesconectar: () => { jbDisconnect(); renderPar(); toast('JSONBin desconectado (los datos de la nube no se borran)'); },
+  jbDesconectar: () => { jbDisconnect(); renderPar(); toast('Cloudinary desconectado (los datos de la nube no se borran)'); },
   export: () => {
     S.lastExport = new Date().toISOString(); save(); paintRespaldo();
     const a = document.createElement('a');

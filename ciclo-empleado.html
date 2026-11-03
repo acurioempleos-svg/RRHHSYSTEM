@@ -1830,7 +1830,8 @@ function mailDest() {
 function mailBody() {
   const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
   let body = M.cuerpo || '';
-  if (docs.length) body += (body ? '\n\n' : '') + 'Adjuntos:\n' + docs.map(x => '- ' + x.name()).join('\n');
+  const nom = docs.map(x => x.name()).concat((M.propios || []).map(f => f.name));
+  if (nom.length) body += (body ? '\n\n' : '') + 'Adjuntos:\n' + nom.map(n => '- ' + n).join('\n');
   return body;
 }
 function gmailUrl() {
@@ -1986,6 +1987,7 @@ function renderCor() {
     <div class="card"><h3>${st(4)}Enviar</h3>
       <div id="mc-resumen" style="font-size:14px;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="button" data-act="mcMailto">Abrir correo + archivos (mailto)</button>
         <button class="btn primary" type="button" data-act="mcGapi" data-send="0">Crear borrador en Gmail</button>
         <button class="btn primary" type="button" data-act="mcGapi" data-send="1">Enviar por Gmail</button>
         <button class="btn" type="button" data-act="mcEml">Descargar correo con adjuntos (.eml)</button>
@@ -2005,6 +2007,10 @@ function renderCor() {
   </div>`;
   paintMailLista(); paintMailGen([]); paintMailPropios();
 }
+document.addEventListener('dragstart', e => {
+  const t = e.target.closest && e.target.closest('[data-mcdrag]'); if (!t) return;
+  const x = (UI.mail.drag || [])[+t.dataset.mcdrag]; if (x) e.dataTransfer.setData('DownloadURL', `${x.mime}:${x.name}:${x.url}`);
+});
 document.addEventListener('input', e => {
   const t = e.target; if (!t.closest || !t.closest('#v-cor') || !t.dataset.mc) return;
   const M = UI.mail, k = t.dataset.mc;
@@ -2994,6 +3000,14 @@ const ACT = {
   mcQuitar: () => { UI.mail.sel.clear(); paintMailLista(); },
   mcCopiar: async () => { const d = mailDest(); if (!d.all.length) return toast('No hay destinatarios para copiar.'); try { await navigator.clipboard.writeText(d.all.join('; ')); toast('Destinatarios copiados'); } catch (e) { toast('No se pudo copiar. Seleccioná y copiá a mano.'); } },
   mcInformeMedida: () => dlgEmpInforme(),
+  mcMailto: async b => {
+    const d = mailDest(); if (!d.all.length && !confirm('No elegiste destinatarios. ¿Abrir el correo igual?')) return;
+    const f = await mailReunir(b); if (!f) return;
+    const M = UI.mail; M.drag = f.map(x => ({ name: x.name, mime: mimeDe(x), url: URL.createObjectURL(x.blob) }));
+    M.drag.forEach(x => { const a = document.createElement('a'); a.href = x.url; a.download = x.name; document.body.appendChild(a); a.click(); a.remove(); });
+    mcMsg(`Se descargaron ${f.length} archivo${f.length === 1 ? '' : 's'} y se abre tu correo. Arrastrá cada uno desde acá al mensaje (o desde Descargas):<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${M.drag.map((x, i) => `<span class="chip" draggable="true" data-mcdrag="${i}" style="cursor:grab">${esc(x.name)}</span>`).join('')}</div>`);
+    setTimeout(() => { window.location.href = mailUrl(); }, 400);
+  },
   mcQuitarPropio: b => { UI.mail.propios.splice(+b.dataset.i, 1); paintMailPropios(); paintMailResumen(); },
   mcEml: async b => {
     const f = await mailReunir(b); if (!f) return;

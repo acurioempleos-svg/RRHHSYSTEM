@@ -1802,6 +1802,13 @@ function paintHist() {
    por eso los documentos se generan y descargan primero, y el usuario los arrastra al correo. */
 UI.mail = { sel: new Set(), q: '', local: '', est: 'nomina', extra: '', modo: 'auto', asunto: '', cuerpo: '', docs: new Set(),
   liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7), hxHasta: today().slice(0, 7), plMes: today().slice(0, 7), gen: [] };
+/* Captura de archivos: mientras UI.mailCap sea un array, las descargas que generan los informes (PDF y Excel) no bajan a Descargas: se guardan en memoria para compartirlas con Web Share. */
+const MAILBLOBS = new Map(), _cOM = URL.createObjectURL.bind(URL);
+URL.createObjectURL = function (o) { const u = _cOM(o); if (o instanceof Blob) MAILBLOBS.set(u, o); return u; };
+const _aClick = HTMLAnchorElement.prototype.click, _aDisp = HTMLAnchorElement.prototype.dispatchEvent;
+const mailTomar = a => { if (!UI.mailCap || !a.download) return false; const b = MAILBLOBS.get(a.href); if (!b) return false; UI.mailCap.push({ name: a.download, blob: b }); return true; };
+HTMLAnchorElement.prototype.click = function () { if (mailTomar(this)) return; return _aClick.call(this); };
+HTMLAnchorElement.prototype.dispatchEvent = function (ev) { if (ev && ev.type === 'click' && mailTomar(this)) return true; return _aDisp.call(this, ev); };
 const MAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const mailLc = e => (e.local || '').trim() || 'Sin local';
 function mailCands() {
@@ -1926,6 +1933,7 @@ function renderCor() {
     <div class="card"><h3>Enviar</h3>
       <div id="mc-resumen" style="font-size:14px;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcGenerar">1. Descargar documentos</button><button class="btn primary" type="button" data-act="mcAbrir">2. Abrir correo</button><button class="btn primary" type="button" data-act="mcGmail">2. Abrir en Gmail</button><button class="btn sm" type="button" data-act="mcCopiarTexto">Copiar asunto y texto</button></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><strong>Con adjuntos de verdad</strong><p class="muted" style="margin:4px 0 8px">Prepara los archivos en memoria y los pasa al menú Compartir del navegador (Correo, Outlook, Gmail, WhatsApp…), que sí los adjunta. El menú no carga los destinatarios: usá "Copiar destinatarios" y pegalos. Funciona en Chrome/Edge y Safari; en Firefox de escritorio no.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcPreparar">A. Preparar adjuntos</button><button class="btn primary" type="button" data-act="mcCompartir">B. Compartir con adjuntos</button></div></div>
       <p class="muted" style="margin:10px 0 0">"Abrir correo" usa el programa de correo de tu computadora (mailto). Si no pasa nada, es que tu navegador no tiene uno asociado: usá "Abrir en Gmail", que abre el redactor en la web.</p>
       <div class="mc-gen" id="mc-gen"></div>
     </div>
@@ -2892,6 +2900,30 @@ function validarLegajo(d, prev) {
 }
 
 const ACT = {
+  mcPreparar: async b => {
+    const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
+    if (!docs.length) { toast('Tildá al menos un documento.'); return; }
+    const t = b.textContent, fail = []; b.disabled = true; M.files = []; UI.mailCap = M.files;
+    try {
+      for (const x of docs) {
+        b.textContent = `Preparando ${x.label}…`;
+        try { if (await x.run() === false) fail.push(x); }
+        catch (e) { console.error(e); toast(e.message || 'No se pudo generar ' + x.label); fail.push(x); }
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } finally { UI.mailCap = null; b.disabled = false; b.textContent = t; }
+    const el = $('#mc-gen');
+    if (el) el.innerHTML = (M.files.length ? `<div style="color:var(--ok)">Listos para compartir (${M.files.length}): ${M.files.map(f => esc(f.name)).join(', ')}. Ahora tocá "Compartir con adjuntos".</div>` : '')
+      + (fail.length ? `<div style="color:var(--danger)">No se pudieron preparar: ${fail.map(x => esc(x.label + ' (' + x.fmt + ')')).join(', ')}.</div>` : '');
+  },
+  mcCompartir: async () => {
+    const M = UI.mail;
+    if (!(M.files || []).length) { toast('Primero tocá "Preparar adjuntos".'); return; }
+    const files = M.files.map(f => new File([f.blob], f.name, { type: f.blob.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }));
+    if (!navigator.canShare || !navigator.canShare({ files })) { toast('Este navegador no permite compartir archivos. Usá "Descargar documentos" y adjuntalos a mano.'); return; }
+    try { await navigator.share({ files, title: M.asunto || 'Documentos de RR.HH.', text: M.cuerpo || '' }); }
+    catch (e) { if (e && e.name !== 'AbortError') toast('No se pudo compartir: ' + (e.message || 'error')); }
+  },
   mcMarcar: () => { const M = UI.mail; mailCands().forEach(e => { if ((e.email || '').trim()) M.sel.add(e.id); }); paintMailLista(); },
   mcQuitar: () => { UI.mail.sel.clear(); paintMailLista(); },
   mcCopiar: async () => { const d = mailDest(); if (!d.all.length) return toast('No hay destinatarios para copiar.'); try { await navigator.clipboard.writeText(d.all.join('; ')); toast('Destinatarios copiados'); } catch (e) { toast('No se pudo copiar. Seleccioná y copiá a mano.'); } },

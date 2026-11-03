@@ -1817,10 +1817,22 @@ function mailDest() {
   const modo = M.modo === 'auto' ? (all.length > 1 ? 'bcc' : 'to') : M.modo;
   return { all, sinMail, invalid, modo };
 }
-function mailUrl() {
-  const M = UI.mail, d = mailDest(), docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
+function mailBody() {
+  const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
   let body = M.cuerpo || '';
   if (docs.length) body += (body ? '\n\n' : '') + 'Adjuntos:\n' + docs.map(x => '- ' + x.name()).join('\n');
+  return body;
+}
+function gmailUrl() {
+  const M = UI.mail, d = mailDest(), body = mailBody(), enc = encodeURIComponent, q = ['view=cm', 'fs=1'];
+  if (d.all.length) q.push({ to: 'to', cc: 'cc', bcc: 'bcc' }[d.modo] + '=' + enc(d.all.join(',')));
+  if (M.asunto) q.push('su=' + enc(M.asunto));
+  if (body) q.push('body=' + enc(body));
+  return 'https://mail.google.com/mail/?' + q.join('&');
+}
+function mailUrl() {
+  const M = UI.mail, d = mailDest();
+  const body = mailBody();
   const enc = t => encodeURIComponent(String(t).replace(/\r?\n/g, '\r\n')), list = d.all.join(','), q = [];
   if (d.modo !== 'to' && list) q.push(d.modo + '=' + enc(list));
   if (M.asunto) q.push('subject=' + enc(M.asunto));
@@ -1913,7 +1925,8 @@ function renderCor() {
     </div>
     <div class="card"><h3>Enviar</h3>
       <div id="mc-resumen" style="font-size:14px;margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcGenerar">1. Descargar documentos</button><button class="btn primary" type="button" data-act="mcAbrir">2. Abrir correo</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcGenerar">1. Descargar documentos</button><button class="btn primary" type="button" data-act="mcAbrir">2. Abrir correo</button><button class="btn primary" type="button" data-act="mcGmail">2. Abrir en Gmail</button><button class="btn sm" type="button" data-act="mcCopiarTexto">Copiar asunto y texto</button></div>
+      <p class="muted" style="margin:10px 0 0">"Abrir correo" usa el programa de correo de tu computadora (mailto). Si no pasa nada, es que tu navegador no tiene uno asociado: usá "Abrir en Gmail", que abre el redactor en la web.</p>
       <div class="mc-gen" id="mc-gen"></div>
     </div>
    </div>
@@ -2899,7 +2912,16 @@ const ACT = {
     const d = mailDest(), url = mailUrl();
     if (!d.all.length && !confirm('No elegiste destinatarios. ¿Abrir el correo igual?')) return;
     if (url.length > 1900 && !confirm(`El enlace del correo es largo (${url.length} caracteres) y algunos programas de correo lo cortan. Conviene usar menos destinatarios o copiarlos con "Copiar destinatarios". ¿Abrir igual?`)) return;
-    const a = document.createElement('a'); a.href = url; document.body.appendChild(a); a.click(); a.remove();
+    window.location.href = url;
+  },
+  mcGmail: () => {
+    const d = mailDest(), url = gmailUrl();
+    if (!d.all.length && !confirm('No elegiste destinatarios. ¿Abrir Gmail igual?')) return;
+    if (!window.open(url, '_blank', 'noopener')) toast('El navegador bloqueó la ventana. Permití ventanas emergentes para esta página.');
+  },
+  mcCopiarTexto: async () => {
+    const M = UI.mail, t = (M.asunto ? 'Asunto: ' + M.asunto + '\n\n' : '') + mailBody();
+    try { await navigator.clipboard.writeText(t); toast('Asunto y texto copiados'); } catch (e) { toast('No se pudo copiar.'); }
   },
   repAbrir: () => go('rep'),
   repVolver: () => go('par'),

@@ -315,6 +315,19 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
 .llres[open]>summary::before{transform:rotate(90deg)}
 @media(max-width:760px){#ll-res .tablewrap{overflow-x:auto}#ll-res .llgrid{table-layout:auto}}
 
+
+/* Correo (mailto) */
+.mc-box{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.mc-row{display:grid;grid-template-columns:auto minmax(150px,1.2fr) minmax(0,1fr) minmax(0,1.2fr);gap:10px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px}
+.mc-row:last-child{border-bottom:0}.mc-row:hover{background:#F1F4F3}
+.mc-row.mc-no{opacity:.55;cursor:default}.mc-row.mc-no:hover{background:#fff}
+.mc-m{overflow-wrap:anywhere}
+.mc-grp{margin-bottom:14px}.mc-grp h3{margin:0 0 6px}
+.mc-doc{display:flex;gap:8px;align-items:center;margin:5px 0;cursor:pointer}
+.mc-par{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:6px 0 10px 26px}.mc-par .fld{min-width:130px}
+.mc-gen{margin-top:10px;font-size:13.5px}
+@media(max-width:640px){.mc-row{grid-template-columns:auto 1fr}.mc-row .muted,.mc-row .mc-m{grid-column:2}}
+
 /* Reporte semanal (formulario) */
 .rep-wrap{max-width:860px;margin:0 auto}
 .rep-hero{position:relative;background:var(--ink);color:#fff;border-radius:var(--r) var(--r) 0 0;padding:22px 26px 20px;display:flex;gap:16px;align-items:center;border-bottom:4px solid var(--accent);margin-bottom:18px}
@@ -347,6 +360,7 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
     <button data-act="tab" data-tab="est">Historial y estadística</button>
+    <button data-act="tab" data-tab="cor">Correo</button>
     <button data-act="tab" data-tab="par">Parámetros</button>
   </nav>
   <div class="hdr-right">
@@ -361,6 +375,7 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
   <section class="view" id="v-ale" hidden></section>
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
+  <section class="view" id="v-cor" hidden></section>
   <section class="view" id="v-par" hidden></section>
   <section class="view" id="v-rep" hidden></section>
 </main>
@@ -1038,7 +1053,7 @@ function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === (tab === 'rep' ? 'par' : tab) ? 'page' : 'false'));
-  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar, rep: renderRep })[tab]();
+  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar, rep: renderRep, cor: renderCor })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -1781,6 +1796,137 @@ function paintHist() {
     ? `<table style="margin-top:12px"><thead><tr><th>Fecha</th><th>Empleado</th><th>Movimiento</th></tr></thead><tbody>${todos.slice(0, 300).map(h => `<tr><td style="white-space:nowrap">${new Date(h.ts).toLocaleString('es-AR')}</td><td>${esc(nom(h.empleadoId))}</td><td>${esc(h.texto)}</td></tr>`).join('')}</tbody></table>${todos.length > 300 ? `<p class="muted" style="padding:0 18px 14px">Se muestran los últimos 300 de ${todos.length}.</p>` : ''}`
     : '<p class="empty">Todavía no hay movimientos registrados.</p>';
 }
+
+/* ================= Correo (mailto) =================
+   mailto abre el programa de correo del usuario con destinatarios, asunto y texto, pero NO puede adjuntar archivos:
+   por eso los documentos se generan y descargan primero, y el usuario los arrastra al correo. */
+UI.mail = { sel: new Set(), q: '', local: '', est: 'nomina', extra: '', modo: 'auto', asunto: '', cuerpo: '', docs: new Set(),
+  liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7), hxHasta: today().slice(0, 7), plMes: today().slice(0, 7), gen: [] };
+const MAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
+const mailLc = e => (e.local || '').trim() || 'Sin local';
+function mailCands() {
+  const M = UI.mail, q = stripAcc(M.q || '').toLowerCase(), ests = M.est === 'todos' ? null : ['activo', 'licencia'];
+  return S.empleados.filter(e => (!ests || ests.includes(e.estado)) && (!M.local || mailLc(e) === M.local)
+    && (!q || stripAcc(`${e.apellido} ${e.nombre} ${e.dni} ${e.legajo} ${e.email || ''}`).toLowerCase().includes(q))).sort(ordenNomina());
+}
+function mailDest() {
+  const M = UI.mail, seen = new Set(), all = [], sinMail = [], invalid = [];
+  const add = a => { const k = a.toLowerCase(); if (!seen.has(k)) { seen.add(k); all.push(a); } };
+  S.empleados.filter(e => M.sel.has(e.id)).forEach(e => { const m = (e.email || '').trim(); if (!m) sinMail.push(e); else if (!MAIL_RE.test(m)) invalid.push(m); else add(m); });
+  (M.extra || '').split(/[\s,;]+/).filter(Boolean).forEach(a => { if (MAIL_RE.test(a)) add(a); else invalid.push(a); });
+  const modo = M.modo === 'auto' ? (all.length > 1 ? 'bcc' : 'to') : M.modo;
+  return { all, sinMail, invalid, modo };
+}
+function mailUrl() {
+  const M = UI.mail, d = mailDest(), docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
+  let body = M.cuerpo || '';
+  if (docs.length) body += (body ? '\n\n' : '') + 'Adjuntos:\n' + docs.map(x => '- ' + x.name()).join('\n');
+  const enc = t => encodeURIComponent(String(t).replace(/\r?\n/g, '\r\n')), list = d.all.join(','), q = [];
+  if (d.modo !== 'to' && list) q.push(d.modo + '=' + enc(list));
+  if (M.asunto) q.push('subject=' + enc(M.asunto));
+  if (body) q.push('body=' + enc(body));
+  return 'mailto:' + (d.modo === 'to' ? list : '') + (q.length ? '?' + q.join('&') : '');
+}
+const liqOvMail = () => { const M = UI.mail, t = M.liqTipo; return { tipo: t, estados: t === 'pagada' ? ['pagada', 'cerrada'] : [t], desde: M.liqDesde || '', hasta: M.liqHasta || '', campo: 'egreso' }; };
+async function conLiqLimpio(fn) {   // las liquidaciones del correo no heredan los filtros de la pestaña Liquidación
+  const bak = UI.ll; UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
+  try {
+    const ov = liqOvMail(), f = liqFilas(ov);
+    if (!f.length) { toast('No hay liquidaciones con esa selección.'); return false; }
+    return await fn(f, ov);
+  } finally { UI.ll = bak; }
+}
+async function conNomina(fn) {      // nómina = activos y en licencia, sin los filtros de pantalla
+  const bak = UI.rowsVis; UI.rowsVis = enNomina().slice().sort(ordenNomina());
+  try { if (!UI.rowsVis.length) { toast('No hay empleados en nómina.'); return false; } return await fn(); } finally { UI.rowsVis = bak; }
+}
+const MAIL_DOCS = [
+  { id: 'empPdf', grp: 'Empleados', label: 'Nómina de colaboradores', fmt: 'PDF', name: () => `empleados-${today()}.pdf`, run: () => conNomina(() => pdfEmpleados()) },
+  { id: 'empXlsx', grp: 'Empleados', label: 'Nómina de colaboradores', fmt: 'Excel', name: () => `empleados-${today()}.xlsx`, run: () => conNomina(async () => { await ACT.empXlsx(); return true; }) },
+  { id: 'altasPdf', grp: 'Empleados', label: 'Informe de altas', fmt: 'PDF', name: () => `informe-altas-${today()}.pdf`, run: () => pdfAltas() },
+  { id: 'estPdf', grp: 'Estadística', label: 'Informe de estadística', fmt: 'PDF', name: () => `estadistica-${today()}.pdf`, run: () => { renderEst(); return pdfEst(); } },
+  { id: 'estXlsx', grp: 'Estadística', label: 'Estadística', fmt: 'Excel', name: () => `estadistica-${today()}.xlsx`, run: async () => { renderEst(); if (!estSecs().length) { toast('No hay datos de estadística.'); return false; } await ACT.estXlsx(); return true; } },
+  { id: 'liqPdf', grp: 'Liquidaciones', label: 'Informe de liquidaciones', fmt: 'PDF', name: () => `liquidaciones-${INF_ARCH[UI.mail.liqTipo]}-${today()}.pdf`, run: () => conLiqLimpio((f, ov) => pdfLiq(f, ov)) },
+  { id: 'liqXlsx', grp: 'Liquidaciones', label: 'Informe de liquidaciones', fmt: 'Excel', name: () => `liquidaciones-${INF_ARCH[UI.mail.liqTipo]}-${today()}.xlsx`, run: () => conLiqLimpio(async (f, ov) => { await ACT.llXlsxGo(f, ov); return true; }) },
+  { id: 'plaXlsx', grp: 'Liquidaciones', label: 'Planilla de sueldos', fmt: 'Excel', name: () => { const m = +(UI.mail.plMes || today().slice(0, 7)).slice(5, 7) || 1; return `SUELDO_${MESES_ES[m - 1]}.xlsx`; }, run: async () => { const m = UI.mail.plMes; if (!/^\d{4}-\d{2}$/.test(m)) { toast('Elegí el mes de la planilla.'); return false; } await descargarPlanilla(m); return true; } },
+  { id: 'hxPdf', grp: 'Horas extra', label: 'Informe de horas extra', fmt: 'PDF', name: () => { const M = UI.mail; return `horas-extra-${M.hxDesde}${M.hxDesde === M.hxHasta ? '' : '_a_' + M.hxHasta}.pdf`; }, run: () => {
+      const M = UI.mail; if (!M.hxDesde || !M.hxHasta || M.hxDesde > M.hxHasta) { toast('Revisá los meses del informe de horas extra.'); return false; }
+      const locs = [...new Set([...ordenLocales(), ...S.empleados.map(mailLc)])];
+      return pdfHsExtra({ locs, todosLocs: true, ids: null, desde: M.hxDesde, hasta: M.hxHasta }); } },
+  { id: 'repPdf', grp: 'Reporte semanal', label: 'Reporte semanal de novedades', fmt: 'PDF', name: () => `reporte-semanal-rrhh-${today()}.pdf`, run: () => pdfReporte() },
+];
+function paintMailLista() {
+  const box = $('#mc-lista'); if (!box) return; const M = UI.mail, rows = mailCands();
+  box.innerHTML = rows.length ? rows.map(e => { const m = (e.email || '').trim();
+    return `<label class="mc-row${m ? '' : ' mc-no'}"><input type="checkbox" data-mc="emp" data-id="${e.id}" ${M.sel.has(e.id) ? 'checked' : ''} ${m ? '' : 'disabled'}><span><b>${esc(e.apellido)}, ${esc(e.nombre)}</b></span><span class="muted">${esc([(e.local || '').trim(), e.puesto].filter(Boolean).join(' · '))}</span><span class="mc-m ${m ? '' : 'muted'}">${m ? esc(m) : 'Sin email cargado'}</span></label>`; }).join('')
+    : '<p class="empty">Ningún empleado coincide con la búsqueda.</p>';
+  paintMailResumen();
+}
+function paintMailResumen() {
+  const el = $('#mc-resumen'); if (!el) return; const M = UI.mail, d = mailDest(), url = mailUrl(), nd = M.docs.size;
+  const modoTxt = { to: 'Para', cc: 'CC', bcc: 'CCO' }[d.modo];
+  const av = [];
+  if (d.sinMail.length) av.push(`${d.sinMail.length} seleccionado${d.sinMail.length === 1 ? '' : 's'} sin email cargado (se omiten): ${d.sinMail.slice(0, 5).map(e => esc(e.apellido)).join(', ')}${d.sinMail.length > 5 ? '…' : ''}.`);
+  if (d.invalid.length) av.push(`Direcciones que no parecen válidas (se omiten): ${d.invalid.slice(0, 5).map(esc).join(', ')}${d.invalid.length > 5 ? '…' : ''}.`);
+  if (url.length > 1900) av.push(`El enlace del correo mide ${url.length} caracteres: algunos programas lo cortan. Usá menos destinatarios o "Copiar destinatarios" y pegalos a mano.`);
+  el.innerHTML = `<b>${d.all.length}</b> destinatario${d.all.length === 1 ? '' : 's'} (${modoTxt}) · <b>${nd}</b> documento${nd === 1 ? '' : 's'} tildado${nd === 1 ? '' : 's'}${av.length ? `<div style="color:var(--signal);margin-top:4px">${av.map(a => `<div>${a}</div>`).join('')}</div>` : ''}`;
+}
+function paintMailGen(fail) {
+  const el = $('#mc-gen'); if (!el) return; const M = UI.mail;
+  el.innerHTML = (M.gen.length ? `<div style="color:var(--ok)">Descargados: ${M.gen.map(esc).join(', ')}. Ahora tocá "Abrir correo" y arrastrá esos archivos (están en tu carpeta de Descargas) al mensaje.</div>` : '')
+    + ((fail || []).length ? `<div style="color:var(--danger)">No se pudieron generar: ${fail.map(x => esc(x.label + ' (' + x.fmt + ')')).join(', ')}.</div>` : '');
+}
+function renderCor() {
+  const M = UI.mail, locs = ordenLocales();
+  const dc = id => { const x = MAIL_DOCS.find(y => y.id === id); return `<label class="mc-doc"><input type="checkbox" data-mc="doc" data-id="${id}" ${M.docs.has(id) ? 'checked' : ''}><span>${esc(x.label)}</span><span class="chip">${x.fmt}</span></label>`; };
+  const mi = (k, label, type, v) => `<label class="fld"><span>${label}</span><input type="${type}" data-mc="${k}" value="${esc(v)}"></label>`;
+  $('#v-cor').innerHTML = `<h2>Correo</h2>
+  <p class="muted" style="margin-top:0">Elegí destinatarios y documentos y se abre tu programa de correo con todo cargado (mailto). Un mailto <b>no puede adjuntar archivos</b>: por eso primero se descargan los documentos y después los arrastrás al mensaje. Los destinatarios salen de los emails cargados en cada legajo.</p>
+  <div class="cols">
+   <div class="stack">
+    <div class="card"><h3>Destinatarios</h3>
+      <div class="bar" style="margin-bottom:8px">
+        <input type="search" data-mc="q" placeholder="Buscar por nombre, DNI, legajo o email" value="${esc(M.q)}" aria-label="Buscar destinatario">
+        <select data-mc="local" aria-label="Filtrar por local" style="max-width:180px"><option value="">Todos los locales</option>${locs.map(l => `<option value="${esc(l)}" ${M.local === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        <select data-mc="est" aria-label="Personal" style="max-width:190px"><option value="nomina" ${M.est === 'nomina' ? 'selected' : ''}>En nómina</option><option value="todos" ${M.est === 'todos' ? 'selected' : ''}>Todo el personal</option></select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"><button class="btn sm" type="button" data-act="mcMarcar">Marcar los visibles</button><button class="btn sm" type="button" data-act="mcQuitar">Quitar todos</button><button class="btn sm" type="button" data-act="mcCopiar">Copiar destinatarios</button></div>
+      <div class="mc-box" id="mc-lista"></div>
+      <label class="fld" style="margin-top:10px"><span>Otras direcciones (separadas por coma, punto y coma o espacio)</span><input type="text" data-mc="extra" value="${esc(M.extra)}" placeholder="nombre@dominio.com"></label>
+      <label class="fld" style="margin-top:10px;max-width:420px"><span>Poner los destinatarios en</span><select data-mc="modo"><option value="auto" ${M.modo === 'auto' ? 'selected' : ''}>Automático (Para si es uno solo, CCO si son varios)</option><option value="to" ${M.modo === 'to' ? 'selected' : ''}>Para (todos ven las direcciones)</option><option value="cc" ${M.modo === 'cc' ? 'selected' : ''}>CC</option><option value="bcc" ${M.modo === 'bcc' ? 'selected' : ''}>CCO (copia oculta)</option></select></label>
+    </div>
+    <div class="card"><h3>Mensaje</h3>
+      ${mi('asunto', 'Asunto', 'text', M.asunto)}
+      <label class="fld" style="margin-top:10px"><span>Texto del mensaje</span><textarea data-mc="cuerpo" rows="7">${esc(M.cuerpo)}</textarea></label>
+      <p class="muted" style="margin:6px 0 0">Si tildás documentos, al final del texto se agrega la lista de adjuntos.</p>
+    </div>
+   </div>
+   <div class="stack">
+    <div class="card"><h3>Documentos para adjuntar</h3>
+      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Empleados</h3>${dc('empPdf')}${dc('empXlsx')}${dc('altasPdf')}<button class="btn sm" type="button" data-act="mcInformeMedida" style="margin:4px 0 0 26px">Informe de empleados a medida…</button><div class="muted" style="margin-left:26px;font-size:12.5px">Se descarga al confirmar; después adjuntalo a mano.</div></div>
+      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Estadística</h3>${dc('estPdf')}${dc('estXlsx')}</div>
+      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Liquidaciones y sueldos</h3>${dc('liqPdf')}${dc('liqXlsx')}
+        <div class="mc-par"><label class="fld"><span>Liquidaciones</span><select data-mc="liqTipo"><option value="borrador" ${M.liqTipo === 'borrador' ? 'selected' : ''}>Borradores</option><option value="aprobada" ${M.liqTipo === 'aprobada' ? 'selected' : ''}>Aprobadas (sin pagar)</option><option value="pagada" ${M.liqTipo === 'pagada' ? 'selected' : ''}>Pagadas</option></select></label>${mi('liqDesde', 'Egreso desde', 'date', M.liqDesde)}${mi('liqHasta', 'Egreso hasta', 'date', M.liqHasta)}</div>
+        ${dc('plaXlsx')}<div class="mc-par">${mi('plMes', 'Mes de la planilla', 'month', M.plMes)}</div></div>
+      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Horas extra</h3>${dc('hxPdf')}<div class="mc-par">${mi('hxDesde', 'Mes desde', 'month', M.hxDesde)}${mi('hxHasta', 'Mes hasta', 'month', M.hxHasta)}</div></div>
+      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Reporte semanal</h3>${dc('repPdf')}</div>
+    </div>
+    <div class="card"><h3>Enviar</h3>
+      <div id="mc-resumen" style="font-size:14px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcGenerar">1. Descargar documentos</button><button class="btn primary" type="button" data-act="mcAbrir">2. Abrir correo</button></div>
+      <div class="mc-gen" id="mc-gen"></div>
+    </div>
+   </div>
+  </div>`;
+  paintMailLista(); paintMailGen([]);
+}
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.closest || !t.closest('#v-cor') || !t.dataset.mc) return;
+  const M = UI.mail, k = t.dataset.mc;
+  if (k === 'emp') { if (t.checked) M.sel.add(t.dataset.id); else M.sel.delete(t.dataset.id); paintMailResumen(); }
+  else if (k === 'doc') { if (t.checked) M.docs.add(t.dataset.id); else M.docs.delete(t.dataset.id); paintMailResumen(); }
+  else if (k in M) { M[k] = t.value; if (k === 'q' || k === 'local' || k === 'est') paintMailLista(); else paintMailResumen(); }
+});
 
 /* ================= Parámetros ================= */
 function renderPar() {
@@ -2733,6 +2879,28 @@ function validarLegajo(d, prev) {
 }
 
 const ACT = {
+  mcMarcar: () => { const M = UI.mail; mailCands().forEach(e => { if ((e.email || '').trim()) M.sel.add(e.id); }); paintMailLista(); },
+  mcQuitar: () => { UI.mail.sel.clear(); paintMailLista(); },
+  mcCopiar: async () => { const d = mailDest(); if (!d.all.length) return toast('No hay destinatarios para copiar.'); try { await navigator.clipboard.writeText(d.all.join('; ')); toast('Destinatarios copiados'); } catch (e) { toast('No se pudo copiar. Seleccioná y copiá a mano.'); } },
+  mcInformeMedida: () => dlgEmpInforme(),
+  mcGenerar: async b => {
+    const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
+    if (!docs.length) { toast('Tildá al menos un documento.'); return; }
+    const t = b.textContent, fail = []; b.disabled = true; M.gen = [];
+    for (const x of docs) {
+      b.textContent = `Generando ${x.label}…`;
+      try { if (await x.run() !== false) M.gen.push(x.name()); else fail.push(x); }
+      catch (e) { console.error(e); toast(e.message || 'No se pudo generar ' + x.label); fail.push(x); }
+      await new Promise(r => setTimeout(r, 600));
+    }
+    b.disabled = false; b.textContent = t; paintMailGen(fail); paintMailResumen();
+  },
+  mcAbrir: () => {
+    const d = mailDest(), url = mailUrl();
+    if (!d.all.length && !confirm('No elegiste destinatarios. ¿Abrir el correo igual?')) return;
+    if (url.length > 1900 && !confirm(`El enlace del correo es largo (${url.length} caracteres) y algunos programas de correo lo cortan. Conviene usar menos destinatarios o copiarlos con "Copiar destinatarios". ¿Abrir igual?`)) return;
+    const a = document.createElement('a'); a.href = url; document.body.appendChild(a); a.click(); a.remove();
+  },
   repAbrir: () => go('rep'),
   repVolver: () => go('par'),
   repAdd: b => { const R = repData(), k = b.dataset.k, l = +b.dataset.l; (k === 'ges' ? R.ges : R.locales[l][k]).push(''); save(); repRefrescar(`textarea[data-rep="${k}"]` + (k === 'ges' ? '' : `[data-l="${l}"]`)); },
@@ -3101,7 +3269,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.ma
 const UC_EXCLUDE = new Set(['email', 'date', 'month', 'number', 'search', 'password', 'checkbox', 'radio', 'file', 'color', 'time', 'datetime-local', 'range', 'url']);
 document.addEventListener('input', e => {
   const t = e.target;
-  if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly && !(t.closest && t.closest('#v-rep'))) {
+  if ((t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !UC_EXCLUDE.has(t.type))) && !t.readOnly && !(t.closest && t.closest('#v-rep, #v-cor'))) {
     const up = t.value.toUpperCase();
     if (up !== t.value) { const p = t.selectionStart, q = t.selectionEnd; t.value = up; t.setSelectionRange(p, q); }
   }

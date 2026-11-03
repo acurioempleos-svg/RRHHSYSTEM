@@ -124,16 +124,16 @@ body::before {
 .bc-status-dot.connected { background: var(--bc-success); }
 .bc-status-dot.error     { background: var(--bc-danger); }
 
-/* ─── HOME OVERRIDES (dark theme) ──────────────────────────────────────────────── */
+/* ─── HOME OVERRIDES (light theme) ─────────────────────────────────────────────── */
 :root {
-  --bg:         #0d0f14;
-  --surface:    #13161e;
-  --surface2:   #1a1e28;
-  --border:     rgba(255,255,255,0.07);
-  --border-hi:  rgba(255,255,255,0.14);
-  --text:       #eef0f5;
-  --muted:      #7a8098;
-  --faint:      #3d4257;
+  --bg:         #f7f8fa;
+  --surface:    #ffffff;
+  --surface2:   #f0f2f5;
+  --border:     rgba(17,24,39,0.09);
+  --border-hi:  rgba(17,24,39,0.18);
+  --text:       #111827;
+  --muted:      #6b7280;
+  --faint:      #9ca3af;
   --amber:      #d97706;
   --amber-hi:   #f59e0b;
   --amber-dim:  rgba(217,119,6,0.12);
@@ -480,10 +480,15 @@ body::before {
    CLIMA · FONDO ANIMADO CÓMICO
    ═══════════════════════════════════════════════════════════════ */
 .mod-card {
-  background: rgba(19,22,30,0.78);
+  background: rgba(255,255,255,0.82);
+  box-shadow: var(--bc-shadow-sm);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
+.ambient { opacity: 0.10; }
+
+/* chip flotante (sin topbar) */
+#weather-chip { position: fixed; top: 16px; right: 20px; z-index: 60; box-shadow: var(--bc-shadow-sm); }
 
 #weather-bg {
   position: fixed; inset: 0; z-index: 0;
@@ -499,7 +504,7 @@ body::before {
 #weather-bg.scene-snow    { background: linear-gradient(180deg, rgba(147,197,253,.12), transparent 65%); }
 #weather-bg.scene-fog     { background: linear-gradient(180deg, rgba(203,213,225,.08), transparent 65%); }
 #weather-bg.is-night::before {
-  content: ''; position: absolute; inset: 0; background: rgba(2,6,23,.38);
+  content: ''; position: absolute; inset: 0; background: rgba(30,41,90,.10);
 }
 
 .wx-item { position: absolute; line-height: 1; user-select: none; will-change: transform; }
@@ -512,20 +517,20 @@ body::before {
 .wx-moon { top: 70px; right: 8%; font-size: 84px;
            filter: drop-shadow(0 0 30px rgba(226,232,240,.35));
            animation: wxSun 6s ease-in-out infinite; }
-.wx-star { background: #fff; border-radius: 50%;
+.wx-star { background: #475569; border-radius: 50%;
            animation: wxTwinkle var(--dur,3s) ease-in-out var(--delay,0s) infinite; }
 
 /* nubes con cara */
 .wx-cloud { left: 0; width: 7em; height: 2.5em; border-radius: 2.5em;
-            background: #cbd5e1; opacity: .3;
+            background: #94a3b8; opacity: .38;
             animation: wxCross var(--dur,80s) linear var(--delay,0s) infinite; }
 .wx-cloud::before, .wx-cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
 .wx-cloud::before { width: 3em; height: 3em; top: -1.4em; left: 1em; }
 .wx-cloud::after  { width: 4em; height: 4em; top: -2em;   right: 1em; }
 .wx-cloud .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
                   font-family: var(--bc-font-mono); font-size: 1.1em; color: #0f172a; z-index: 1; }
-.wx-cloud.gray { background: #94a3b8; opacity: .28; }
-.wx-cloud.dark { background: #64748b; opacity: .5; }
+.wx-cloud.gray { background: #64748b; opacity: .3; }
+.wx-cloud.dark { background: #475569; opacity: .42; }
 
 /* movimientos */
 .wx-rise  { bottom: -60px; left: 0; opacity: 0;
@@ -544,10 +549,10 @@ body::before {
 /* lluvia, tormenta, niebla */
 .wx-drop { width: 2px; border-radius: 2px; --dx: -40px;
            background: linear-gradient(to bottom, transparent, rgba(125,170,255,.75)); }
-.wx-flash{ inset: 0; background: #fff; opacity: 0; animation: wxFlash 7s linear infinite; }
+.wx-flash{ inset: 0; background: #fde68a; opacity: 0; animation: wxFlash 7s linear infinite; }
 .wx-bolt { opacity: 0; animation: wxBolt var(--dur,6s) linear var(--delay,0s) infinite; }
 .wx-fogblob { border-radius: 50%; filter: blur(18px);
-              background: radial-gradient(closest-side, rgba(226,232,240,.35), transparent);
+              background: radial-gradient(closest-side, rgba(100,116,139,.28), transparent);
               animation: wxDrift var(--dur,20s) ease-in-out var(--delay,0s) infinite alternate; }
 
 @keyframes wxSun     { 0%{transform:translateY(0) rotate(-6deg) scale(1)} 100%{transform:translateY(-14px) rotate(6deg) scale(1.05)} }
@@ -589,12 +594,8 @@ body::before {
 
 <div id="wrapper">
 
-<!-- ══ BC TOPBAR ══════════════════════════════════════════════════ -->
-<nav id="bc-topbar">
-  <div class="bc-logo-mark">BC</div>
-  <div class="bc-topbar-brand">BC <span>Gestión</span></div>
-  <div class="bc-topbar-right"><div id="weather-chip" class="wx-chip" hidden></div></div>
-</nav>
+<!-- Chip de clima (flotante) -->
+<div id="weather-chip" class="wx-chip" hidden></div>
 
   <!-- HERO -->
   <header id="hero">
@@ -609,32 +610,11 @@ body::before {
   <!-- MODULES GRID -->
   <div id="modules">
 
-    <!-- Módulo: Gestión de Documentos -->
-    <a class="mod-card amber" href="docs.html" id="card-docs">
-      <div class="card-top">
-        <div class="card-icon">📄</div>
-        <div class="card-badge">Módulo 1</div>
-      </div>
-      <div class="card-title">Gestión de<br>Documentos</div>
-      <div class="card-desc">
-        Generación y firma de recibos, acuerdos y comunicaciones para el personal.
-      </div>
-      <div class="card-features">
-        <span class="card-feat">Generación PDF</span>
-        <span class="card-feat">Firma digital</span>
-        <span class="card-feat">Plantillas</span>
-      </div>
-      <div class="card-cta">
-        <span class="card-cta-text">Abrir módulo</span>
-        <div class="card-arrow">→</div>
-      </div>
-    </a>
-
     <!-- Módulo: Indumentaria -->
     <a class="mod-card purple" href="indumentaria.html" id="card-indum">
       <div class="card-top">
         <div class="card-icon">🧥</div>
-        <div class="card-badge">Módulo 2</div>
+        <div class="card-badge">Módulo 1</div>
       </div>
       <div class="card-title">Indumentaria</div>
       <div class="card-desc">
@@ -656,7 +636,7 @@ body::before {
     <a class="mod-card blue" href="tablero-locales.html" id="card-tablero">
       <div class="card-top">
         <div class="card-icon">🏢</div>
-        <div class="card-badge">Módulo 3</div>
+        <div class="card-badge">Módulo 2</div>
       </div>
       <div class="card-title">Tablero de<br>Locales</div>
       <div class="card-desc">
@@ -678,7 +658,7 @@ body::before {
     <a class="mod-card green" href="ciclo-empleado.html" id="card-ciclo">
       <div class="card-top">
         <div class="card-icon">🔄</div>
-        <div class="card-badge">Módulo 4</div>
+        <div class="card-badge">Módulo 3</div>
       </div>
       <div class="card-title">Ciclo del<br>Empleado</div>
       <div class="card-desc">
@@ -700,7 +680,7 @@ body::before {
     <a class="mod-card orange" href="recursos.html" id="card-recursos">
       <div class="card-top">
         <div class="card-icon">📚</div>
-        <div class="card-badge">Módulo 5</div>
+        <div class="card-badge">Módulo 4</div>
       </div>
       <div class="card-title">Recursos</div>
       <div class="card-desc">
@@ -720,7 +700,7 @@ body::before {
     <div class="mod-card green disabled under-construction" id="card-icheck" aria-disabled="true" tabindex="-1">
       <div class="card-top">
         <div class="card-icon">🕐</div>
-        <div class="card-badge">Módulo 6</div>
+        <div class="card-badge">Módulo 5</div>
       </div>
       <div class="card-title">iCheck<br>Asistencia</div>
       <div class="card-desc">

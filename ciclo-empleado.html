@@ -326,6 +326,9 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
 .mc-doc{display:flex;gap:8px;align-items:center;margin:5px 0;cursor:pointer}
 .mc-par{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:6px 0 10px 26px}.mc-par .fld{min-width:130px}
 .mc-gen{margin-top:10px;font-size:13.5px}
+.mc-det{border:1px solid var(--line);border-radius:var(--r);margin:6px 0;background:#fff}.mc-det>summary{cursor:pointer;padding:8px 12px;font-weight:600;font-size:13.5px}.mc-det>div{padding:2px 12px 10px}
+.mc-step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;margin-right:8px}
+.mc-prop{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13.5px;padding:3px 0}
 @media(max-width:640px){.mc-row{grid-template-columns:auto 1fr}.mc-row .muted,.mc-row .mc-m{grid-column:2}}
 
 /* Reporte semanal (formulario) */
@@ -1801,7 +1804,7 @@ function paintHist() {
    mailto abre el programa de correo del usuario con destinatarios, asunto y texto, pero NO puede adjuntar archivos:
    por eso los documentos se generan y descargan primero, y el usuario los arrastra al correo. */
 UI.mail = { sel: new Set(), q: '', local: '', est: 'nomina', extra: '', modo: 'auto', asunto: '', cuerpo: '', docs: new Set(),
-  liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7), hxHasta: today().slice(0, 7), plMes: today().slice(0, 7), gen: [] };
+  liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7), hxHasta: today().slice(0, 7), plMes: today().slice(0, 7), gen: [], propios: [] };
 /* Captura de archivos: mientras UI.mailCap sea un array, las descargas que generan los informes (PDF y Excel) no bajan a Descargas: se guardan en memoria para compartirlas con Web Share. */
 const MAILBLOBS = new Map(), _cOM = URL.createObjectURL.bind(URL);
 URL.createObjectURL = function (o) { const u = _cOM(o); if (o instanceof Blob) MAILBLOBS.set(u, o); return u; };
@@ -1882,28 +1885,78 @@ function paintMailLista() {
   paintMailResumen();
 }
 function paintMailResumen() {
-  const el = $('#mc-resumen'); if (!el) return; const M = UI.mail, d = mailDest(), url = mailUrl(), nd = M.docs.size;
+  const el = $('#mc-resumen'); if (!el) return; const M = UI.mail, d = mailDest(), url = mailUrl(), nd = M.docs.size + M.propios.length;
   const modoTxt = { to: 'Para', cc: 'CC', bcc: 'CCO' }[d.modo];
   const av = [];
   if (d.sinMail.length) av.push(`${d.sinMail.length} seleccionado${d.sinMail.length === 1 ? '' : 's'} sin email cargado (se omiten): ${d.sinMail.slice(0, 5).map(e => esc(e.apellido)).join(', ')}${d.sinMail.length > 5 ? '…' : ''}.`);
   if (d.invalid.length) av.push(`Direcciones que no parecen válidas (se omiten): ${d.invalid.slice(0, 5).map(esc).join(', ')}${d.invalid.length > 5 ? '…' : ''}.`);
-  if (url.length > 1900) av.push(`El enlace del correo mide ${url.length} caracteres: algunos programas lo cortan. Usá menos destinatarios o "Copiar destinatarios" y pegalos a mano.`);
-  el.innerHTML = `<b>${d.all.length}</b> destinatario${d.all.length === 1 ? '' : 's'} (${modoTxt}) · <b>${nd}</b> documento${nd === 1 ? '' : 's'} tildado${nd === 1 ? '' : 's'}${av.length ? `<div style="color:var(--signal);margin-top:4px">${av.map(a => `<div>${a}</div>`).join('')}</div>` : ''}`;
+  el.innerHTML = `<b>${d.all.length}</b> destinatario${d.all.length === 1 ? '' : 's'} (${modoTxt}) · <b>${nd}</b> adjunto${nd === 1 ? '' : 's'}${av.length ? `<div style="color:var(--signal);margin-top:4px">${av.map(a => `<div>${a}</div>`).join('')}</div>` : ''}`;
 }
 function paintMailGen(fail) {
   const el = $('#mc-gen'); if (!el) return; const M = UI.mail;
   el.innerHTML = (M.gen.length ? `<div style="color:var(--ok)">Descargados: ${M.gen.map(esc).join(', ')}. Ahora tocá "Abrir correo" y arrastrá esos archivos (están en tu carpeta de Descargas) al mensaje.</div>` : '')
     + ((fail || []).length ? `<div style="color:var(--danger)">No se pudieron generar: ${fail.map(x => esc(x.label + ' (' + x.fmt + ')')).join(', ')}.</div>` : '');
 }
+/* ---- Envío con adjuntos reales: .eml (borrador) y API de Gmail ---- */
+const GCID = () => { try { return localStorage.getItem('rrhh_gcid') || ''; } catch (e) { return ''; } };
+const mcMsg = (h, ok = true) => { const el = $('#mc-gen'); if (el) el.innerHTML = `<div style="color:var(${ok ? '--ok' : '--danger'})">${h}</div>`; };
+const mcB64 = bl => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(r.error); r.readAsDataURL(bl); });
+const wrap76 = s => (s.match(/.{1,76}/g) || ['']).join('\r\n') + '\r\n';
+const encW = t => /^[\x20-\x7E]*$/.test(t) ? t : '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(t))) + '?=';
+const mimeDe = f => f.blob.type || ({ pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })[(f.name.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
+async function mailMime(files, draft) {
+  const M = UI.mail, d = mailDest(), bd = 'rrhh' + Date.now().toString(36), H = [];
+  if (draft) H.push('X-Unsent: 1');
+  if (d.all.length) H.push({ to: 'To', cc: 'Cc', bcc: 'Bcc' }[d.modo] + ': ' + d.all.join(', '));
+  H.push('Subject: ' + encW(M.asunto || ''), 'MIME-Version: 1.0', `Content-Type: multipart/mixed; boundary="${bd}"`);
+  const parts = [H.join('\r\n') + `\r\n\r\n--${bd}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n` + wrap76(btoa(unescape(encodeURIComponent(M.cuerpo || ''))))];
+  for (const f of files) parts.push(`--${bd}\r\nContent-Type: ${mimeDe(f)}; name="${encW(f.name)}"\r\nContent-Disposition: attachment; filename="${encW(f.name)}"\r\nContent-Transfer-Encoding: base64\r\n\r\n` + wrap76(await mcB64(f.blob)));
+  parts.push(`--${bd}--\r\n`);
+  return new Blob(parts, { type: 'message/rfc822' });
+}
+async function mailReunir(b) {   // genera los documentos tildados (en memoria) + suma los archivos propios
+  const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id)), files = [], fail = [], t = b && b.textContent;
+  if (!docs.length && !M.propios.length) { toast('Tildá un documento o sumá un archivo tuyo.'); return null; }
+  if (b) b.disabled = true; UI.mailCap = files;
+  try {
+    for (const x of docs) {
+      if (b) b.textContent = `Preparando ${x.label}…`;
+      try { if (await x.run() === false) fail.push(x); } catch (e) { console.error(e); toast(e.message || 'No se pudo generar ' + x.label); fail.push(x); }
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } finally { UI.mailCap = null; if (b) { b.disabled = false; b.textContent = t; } }
+  if (fail.length && !confirm(`No se pudo generar: ${fail.map(x => x.label + ' (' + x.fmt + ')').join(', ')}. ¿Seguir sin eso?`)) return null;
+  M.propios.forEach(f => files.push({ name: f.name, blob: f }));
+  if (!files.length) return null;
+  const mb = files.reduce((s, f) => s + f.blob.size, 0) / 1048576;
+  if (mb > 24) { toast(`Los adjuntos pesan ${mb.toFixed(1)} MB y el límite de los correos es ~25 MB. Sacá alguno.`); return null; }
+  return files;
+}
+function gmailToken() {
+  return new Promise((res, rej) => {
+    const go = () => { try { google.accounts.oauth2.initTokenClient({ client_id: GCID(), scope: 'https://www.googleapis.com/auth/gmail.compose',
+      callback: r => r.access_token ? res(r.access_token) : rej(new Error(r.error_description || r.error || 'Sin autorización')),
+      error_callback: e => rej(new Error(e.message || e.type || 'Autorización cancelada')) }).requestAccessToken(); } catch (e) { rej(e); } };
+    if (window.google && google.accounts && google.accounts.oauth2) return go();
+    const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.onload = go;
+    s.onerror = () => rej(new Error('No se pudo cargar el acceso de Google (¿sin internet?).')); document.head.appendChild(s);
+  });
+}
+function paintMailPropios() {
+  const el = $('#mc-propios'); if (!el) return;
+  el.innerHTML = UI.mail.propios.map((f, i) => `<div class="mc-prop"><span>${esc(f.name)} <span class="muted">(${Math.max(1, Math.round(f.size / 1024))} KB)</span></span><button class="btn sm" type="button" data-act="mcQuitarPropio" data-i="${i}">Quitar</button></div>`).join('');
+}
 function renderCor() {
   const M = UI.mail, locs = ordenLocales();
   const dc = id => { const x = MAIL_DOCS.find(y => y.id === id); return `<label class="mc-doc"><input type="checkbox" data-mc="doc" data-id="${id}" ${M.docs.has(id) ? 'checked' : ''}><span>${esc(x.label)}</span><span class="chip">${x.fmt}</span></label>`; };
   const mi = (k, label, type, v) => `<label class="fld"><span>${label}</span><input type="${type}" data-mc="${k}" value="${esc(v)}"></label>`;
+  const det = (t, ids, extra = '') => `<details class="mc-det" ${ids.some(i => M.docs.has(i)) ? 'open' : ''}><summary>${t}</summary><div>${ids.map(dc).join('')}${extra}</div></details>`;
+  const st = n => `<span class="mc-step">${n}</span>`;
   $('#v-cor').innerHTML = `<h2>Correo</h2>
-  <p class="muted" style="margin-top:0">Elegí destinatarios y documentos y se abre tu programa de correo con todo cargado (mailto). Un mailto <b>no puede adjuntar archivos</b>: por eso primero se descargan los documentos y después los arrastrás al mensaje. Los destinatarios salen de los emails cargados en cada legajo.</p>
+  <p class="muted" style="margin-top:0">Seguí los 4 pasos: destinatarios, mensaje, adjuntos y envío. Los archivos se adjuntan de verdad (no hay que arrastrar nada).</p>
   <div class="cols">
    <div class="stack">
-    <div class="card"><h3>Destinatarios</h3>
+    <div class="card"><h3>${st(1)}Destinatarios</h3>
       <div class="bar" style="margin-bottom:8px">
         <input type="search" data-mc="q" placeholder="Buscar por nombre, DNI, legajo o email" value="${esc(M.q)}" aria-label="Buscar destinatario">
         <select data-mc="local" aria-label="Filtrar por local" style="max-width:180px"><option value="">Todos los locales</option>${locs.map(l => `<option value="${esc(l)}" ${M.local === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
@@ -1914,38 +1967,51 @@ function renderCor() {
       <label class="fld" style="margin-top:10px"><span>Otras direcciones (separadas por coma, punto y coma o espacio)</span><input type="text" data-mc="extra" value="${esc(M.extra)}" placeholder="nombre@dominio.com"></label>
       <label class="fld" style="margin-top:10px;max-width:420px"><span>Poner los destinatarios en</span><select data-mc="modo"><option value="auto" ${M.modo === 'auto' ? 'selected' : ''}>Automático (Para si es uno solo, CCO si son varios)</option><option value="to" ${M.modo === 'to' ? 'selected' : ''}>Para (todos ven las direcciones)</option><option value="cc" ${M.modo === 'cc' ? 'selected' : ''}>CC</option><option value="bcc" ${M.modo === 'bcc' ? 'selected' : ''}>CCO (copia oculta)</option></select></label>
     </div>
-    <div class="card"><h3>Mensaje</h3>
+    <div class="card"><h3>${st(2)}Mensaje</h3>
       ${mi('asunto', 'Asunto', 'text', M.asunto)}
       <label class="fld" style="margin-top:10px"><span>Texto del mensaje</span><textarea data-mc="cuerpo" rows="7">${esc(M.cuerpo)}</textarea></label>
-      <p class="muted" style="margin:6px 0 0">Si tildás documentos, al final del texto se agrega la lista de adjuntos.</p>
     </div>
    </div>
    <div class="stack">
-    <div class="card"><h3>Documentos para adjuntar</h3>
-      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Empleados</h3>${dc('empPdf')}${dc('empXlsx')}${dc('altasPdf')}<button class="btn sm" type="button" data-act="mcInformeMedida" style="margin:4px 0 0 26px">Informe de empleados a medida…</button><div class="muted" style="margin-left:26px;font-size:12.5px">Se descarga al confirmar; después adjuntalo a mano.</div></div>
-      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Estadística</h3>${dc('estPdf')}${dc('estXlsx')}</div>
-      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Liquidaciones y sueldos</h3>${dc('liqPdf')}${dc('liqXlsx')}
-        <div class="mc-par"><label class="fld"><span>Liquidaciones</span><select data-mc="liqTipo"><option value="borrador" ${M.liqTipo === 'borrador' ? 'selected' : ''}>Borradores</option><option value="aprobada" ${M.liqTipo === 'aprobada' ? 'selected' : ''}>Aprobadas (sin pagar)</option><option value="pagada" ${M.liqTipo === 'pagada' ? 'selected' : ''}>Pagadas</option></select></label>${mi('liqDesde', 'Egreso desde', 'date', M.liqDesde)}${mi('liqHasta', 'Egreso hasta', 'date', M.liqHasta)}</div>
-        ${dc('plaXlsx')}<div class="mc-par">${mi('plMes', 'Mes de la planilla', 'month', M.plMes)}</div></div>
-      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Horas extra</h3>${dc('hxPdf')}<div class="mc-par">${mi('hxDesde', 'Mes desde', 'month', M.hxDesde)}${mi('hxHasta', 'Mes hasta', 'month', M.hxHasta)}</div></div>
-      <div class="mc-grp"><h3 style="font-size:13px;color:var(--muted)">Reporte semanal</h3>${dc('repPdf')}</div>
+    <div class="card"><h3>${st(3)}Adjuntos</h3>
+      <details class="mc-det" open><summary>Mis archivos (de la computadora)</summary><div>
+        <input type="file" multiple data-mc="files" aria-label="Elegir archivos para adjuntar"><div id="mc-propios" style="margin-top:6px"></div>
+        <div class="muted" style="font-size:12.5px">Cualquier archivo: PDF, Word, Excel, fotos…</div></div></details>
+      ${det('Empleados', ['empPdf', 'empXlsx', 'altasPdf'], `<button class="btn sm" type="button" data-act="mcInformeMedida" style="margin:4px 0 0 26px">Informe de empleados a medida…</button><div class="muted" style="margin-left:26px;font-size:12.5px">Se descarga al confirmar; después sumalo en "Mis archivos".</div>`)}
+      ${det('Estadística', ['estPdf', 'estXlsx'])}
+      ${det('Liquidaciones y sueldos', ['liqPdf', 'liqXlsx', 'plaXlsx'], `<div class="mc-par"><label class="fld"><span>Liquidaciones</span><select data-mc="liqTipo"><option value="borrador" ${M.liqTipo === 'borrador' ? 'selected' : ''}>Borradores</option><option value="aprobada" ${M.liqTipo === 'aprobada' ? 'selected' : ''}>Aprobadas (sin pagar)</option><option value="pagada" ${M.liqTipo === 'pagada' ? 'selected' : ''}>Pagadas</option></select></label>${mi('liqDesde', 'Egreso desde', 'date', M.liqDesde)}${mi('liqHasta', 'Egreso hasta', 'date', M.liqHasta)}</div><div class="mc-par">${mi('plMes', 'Mes de la planilla', 'month', M.plMes)}</div>`)}
+      ${det('Horas extra', ['hxPdf'], `<div class="mc-par">${mi('hxDesde', 'Mes desde', 'month', M.hxDesde)}${mi('hxHasta', 'Mes hasta', 'month', M.hxHasta)}</div>`)}
+      ${det('Reporte semanal', ['repPdf'])}
     </div>
-    <div class="card"><h3>Enviar</h3>
+    <div class="card"><h3>${st(4)}Enviar</h3>
       <div id="mc-resumen" style="font-size:14px;margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcGenerar">1. Descargar documentos</button><button class="btn primary" type="button" data-act="mcAbrir">2. Abrir correo</button><button class="btn primary" type="button" data-act="mcGmail">2. Abrir en Gmail</button><button class="btn sm" type="button" data-act="mcCopiarTexto">Copiar asunto y texto</button></div>
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><strong>Con adjuntos de verdad</strong><p class="muted" style="margin:4px 0 8px">Prepara los archivos en memoria y los pasa al menú Compartir del navegador (Correo, Outlook, Gmail, WhatsApp…), que sí los adjunta. El menú no carga los destinatarios: usá "Copiar destinatarios" y pegalos. Funciona en Chrome/Edge y Safari; en Firefox de escritorio no.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-act="mcPreparar">A. Preparar adjuntos</button><button class="btn primary" type="button" data-act="mcCompartir">B. Compartir con adjuntos</button></div></div>
-      <p class="muted" style="margin:10px 0 0">"Abrir correo" usa el programa de correo de tu computadora (mailto). Si no pasa nada, es que tu navegador no tiene uno asociado: usá "Abrir en Gmail", que abre el redactor en la web.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="button" data-act="mcGapi" data-send="0">Crear borrador en Gmail</button>
+        <button class="btn primary" type="button" data-act="mcGapi" data-send="1">Enviar por Gmail</button>
+        <button class="btn" type="button" data-act="mcEml">Descargar correo con adjuntos (.eml)</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12.5px"><b>Gmail</b>: queda en tus Borradores (o se envía directo) con todo adjunto; requiere la conexión de abajo y abrir la app desde una dirección https. <b>.eml</b>: funciona sin configurar nada; al hacerle doble clic se abre en Outlook, Thunderbird o tu programa de correo con destinatarios, texto y adjuntos ya cargados.</p>
+      <details class="mc-det" id="mc-cfg"><summary>Conectar con Gmail (una sola vez por computadora)</summary><div>
+        <label class="fld"><span>Client ID de Google</span><input type="text" data-mc="gcid" value="${esc(GCID())}" placeholder="123456-abc.apps.googleusercontent.com"></label>
+        <p class="muted" style="font-size:12.5px;margin:6px 0 0">En console.cloud.google.com: crear proyecto → habilitar Gmail API → pantalla de consentimiento (Externo; agregá tu mail como usuario de prueba) → Credenciales → ID de cliente OAuth "Aplicación web" → en Orígenes autorizados poné la dirección https donde abrís esta app. Pegá el ID acá.</p></div></details>
+      <details class="mc-det"><summary>Otras opciones</summary><div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:6px">
+        <button class="btn sm" type="button" data-act="mcGenerar">Descargar documentos sueltos</button>
+        <button class="btn sm" type="button" data-act="mcPreparar">Compartir: A. Preparar</button><button class="btn sm" type="button" data-act="mcCompartir">Compartir: B. Menú del navegador</button>
+        <button class="btn sm" type="button" data-act="mcAbrir">Abrir correo (sin adjuntos)</button><button class="btn sm" type="button" data-act="mcGmail">Gmail web (sin adjuntos)</button>
+        <button class="btn sm" type="button" data-act="mcCopiarTexto">Copiar asunto y texto</button></div></details>
       <div class="mc-gen" id="mc-gen"></div>
     </div>
    </div>
   </div>`;
-  paintMailLista(); paintMailGen([]);
+  paintMailLista(); paintMailGen([]); paintMailPropios();
 }
 document.addEventListener('input', e => {
   const t = e.target; if (!t.closest || !t.closest('#v-cor') || !t.dataset.mc) return;
   const M = UI.mail, k = t.dataset.mc;
   if (k === 'emp') { if (t.checked) M.sel.add(t.dataset.id); else M.sel.delete(t.dataset.id); paintMailResumen(); }
   else if (k === 'doc') { if (t.checked) M.docs.add(t.dataset.id); else M.docs.delete(t.dataset.id); paintMailResumen(); }
+  else if (k === 'gcid') { try { localStorage.setItem('rrhh_gcid', t.value.trim()); } catch (e) {} }
+  else if (k === 'files') { M.propios.push(...t.files); t.value = ''; paintMailPropios(); paintMailResumen(); }
   else if (k in M) { M[k] = t.value; if (k === 'q' || k === 'local' || k === 'est') paintMailLista(); else paintMailResumen(); }
 });
 
@@ -2918,8 +2984,8 @@ const ACT = {
   },
   mcCompartir: async () => {
     const M = UI.mail;
-    if (!(M.files || []).length) { toast('Primero tocá "Preparar adjuntos".'); return; }
-    const files = M.files.map(f => new File([f.blob], f.name, { type: f.blob.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }));
+    if (!(M.files || []).length && !M.propios.length) { toast('Primero tocá "Preparar".'); return; }
+    const files = (M.files || []).concat(M.propios.map(f => ({ name: f.name, blob: f }))).map(f => new File([f.blob], f.name, { type: f.blob.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') }));
     if (!navigator.canShare || !navigator.canShare({ files })) { toast('Este navegador no permite compartir archivos. Usá "Descargar documentos" y adjuntalos a mano.'); return; }
     try { await navigator.share({ files, title: M.asunto || 'Documentos de RR.HH.', text: M.cuerpo || '' }); }
     catch (e) { if (e && e.name !== 'AbortError') toast('No se pudo compartir: ' + (e.message || 'error')); }
@@ -2928,6 +2994,30 @@ const ACT = {
   mcQuitar: () => { UI.mail.sel.clear(); paintMailLista(); },
   mcCopiar: async () => { const d = mailDest(); if (!d.all.length) return toast('No hay destinatarios para copiar.'); try { await navigator.clipboard.writeText(d.all.join('; ')); toast('Destinatarios copiados'); } catch (e) { toast('No se pudo copiar. Seleccioná y copiá a mano.'); } },
   mcInformeMedida: () => dlgEmpInforme(),
+  mcQuitarPropio: b => { UI.mail.propios.splice(+b.dataset.i, 1); paintMailPropios(); paintMailResumen(); },
+  mcEml: async b => {
+    const f = await mailReunir(b); if (!f) return;
+    const bl = await mailMime(f, true), a = document.createElement('a');
+    a.href = URL.createObjectURL(bl); a.download = `correo-${today()}.eml`; document.body.appendChild(a); a.click(); a.remove();
+    mcMsg(`Descargado correo-${today()}.eml con ${f.length} adjunto${f.length === 1 ? '' : 's'}. Hacele doble clic: se abre en tu programa de correo (Outlook, Thunderbird…) con todo cargado. Para Gmail web usá "Crear borrador en Gmail".`);
+  },
+  mcGapi: async b => {
+    const send = b.dataset.send === '1', cfg = $('#mc-cfg');
+    if (!GCID()) { toast('Primero pegá el Client ID de Google.'); if (cfg) cfg.open = true; return; }
+    if (location.protocol === 'file:') { alert('Gmail directo no funciona con la app abierta desde un archivo del disco: Google exige una dirección https. Usá "Descargar correo con adjuntos (.eml)" o abrí la app desde tu sitio https.'); return; }
+    const d = mailDest();
+    if (send && !d.all.length) { toast('No hay destinatarios.'); return; }
+    if (send && !confirm(`Se enviará AHORA a ${d.all.length} destinatario${d.all.length === 1 ? '' : 's'} con los adjuntos. ¿Enviar?`)) return;
+    const t = b.textContent, f = await mailReunir(b); if (!f) return;
+    b.disabled = true; b.textContent = 'Conectando con Gmail…';
+    try {
+      const tk = await gmailToken(); b.textContent = 'Subiendo adjuntos…';
+      const r = await fetch('https://gmail.googleapis.com/upload/gmail/v1/users/me/' + (send ? 'messages/send' : 'drafts') + '?uploadType=media', { method: 'POST', headers: { Authorization: 'Bearer ' + tk, 'Content-Type': 'message/rfc822' }, body: await mailMime(f, false) });
+      if (!r.ok) { let m = 'error ' + r.status; try { m = (await r.json()).error.message; } catch (e) {} throw new Error(m); }
+      mcMsg(send ? 'Correo enviado con los adjuntos.' : 'Borrador creado con los adjuntos. <a href="https://mail.google.com/mail/#drafts" target="_blank" rel="noopener">Abrir Borradores de Gmail</a>');
+    } catch (e) { console.error(e); mcMsg('No se pudo usar Gmail: ' + esc(e.message || 'error'), false); }
+    finally { b.disabled = false; b.textContent = t; }
+  },
   mcGenerar: async b => {
     const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
     if (!docs.length) { toast('Tildá al menos un documento.'); return; }

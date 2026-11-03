@@ -584,6 +584,62 @@ body::before {
   #weather-bg .wx-item:not(.wx-keep) { display: none; }
   #weather-bg .wx-keep { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MASCOTA + OBRERO DE iCHECK
+   ═══════════════════════════════════════════════════════════════ */
+#mascot { position: fixed; bottom: 6px; left: 0; z-index: 40; font-size: 44px; line-height: 1;
+          cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; will-change: transform; }
+#mascot .m-flip { display: block; }
+#mascot canvas { display: block; image-rendering: pixelated; }
+#mascot .m-bubble {
+  position: absolute; bottom: calc(100% + 6px); left: 50%;
+  transform: translateX(calc(-50% + var(--shift, 0px))) translateY(6px);
+  width: max-content; max-width: 210px;
+  font-family: var(--bc-font-mono); font-size: 11px; line-height: 1.4; color: var(--text);
+  background: #fff; border: 1px solid var(--border-hi); border-radius: 10px;
+  padding: 7px 10px; box-shadow: var(--bc-shadow); text-align: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+}
+#mascot .m-bubble.show { opacity: 1; transform: translateX(calc(-50% + var(--shift, 0px))) translateY(0); }
+#mascot .m-bubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  width: 8px; height: 8px; background: #fff;
+  border-right: 1px solid var(--border-hi); border-bottom: 1px solid var(--border-hi);
+  transform: translate(calc(-50% - var(--shift, 0px)), -4px) rotate(45deg);
+}
+
+.mod-card.under-construction { pointer-events: auto; cursor: pointer; }
+.mod-card.under-construction:hover { transform: none; }
+.mod-card.under-construction:hover .card-arrow { transform: none; }
+.mod-card.shake { animation: mCardShake .4s ease; }
+.card-icon.sprite { width: auto; height: auto; background: none; border: none; border-radius: 0; overflow: visible; }
+.card-icon.sprite canvas { display: block; image-rendering: pixelated; }
+.mod-card.under-construction { opacity: 1; filter: none; }
+.mod-card.under-construction .card-title,
+.mod-card.under-construction .card-desc,
+.mod-card.under-construction .card-features,
+.mod-card.under-construction .card-cta { opacity: .55; filter: grayscale(.7); }
+
+#uc-toast {
+  position: fixed; left: 50%; bottom: 96px; z-index: 80; max-width: min(90vw, 420px);
+  transform: translateX(-50%) translateY(16px);
+  background: #111827; color: #fff; text-align: center;
+  font-family: var(--bc-font-mono); font-size: 12px; line-height: 1.5;
+  padding: 12px 16px; border-radius: 12px; box-shadow: var(--bc-shadow);
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease;
+}
+#uc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@keyframes mWalk      { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-6px) rotate(4deg)} }
+@keyframes mScare     { 0%,100%{transform:translate(0,-10px) rotate(-8deg)} 50%{transform:translate(2px,-18px) rotate(8deg)} }
+@keyframes mHammer    { 0%,100%{transform:rotate(-35deg)} 50%{transform:rotate(35deg)} }
+@keyframes mCardShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
+
+@media (max-width: 640px) { #mascot { font-size: 36px; } }
+@media (prefers-reduced-motion: reduce) {
+  #mascot .m-body.walking, #mascot .m-body.scared, .worker .hammer { animation: none; }
+}
 </style>
 </head>
 <body>
@@ -699,7 +755,7 @@ body::before {
     <!-- Módulo: iCheck — Control de Asistencia (EN CONSTRUCCIÓN / BLOQUEADO) -->
     <div class="mod-card green disabled under-construction" id="card-icheck" aria-disabled="true" tabindex="-1">
       <div class="card-top">
-        <div class="card-icon">🕐</div>
+        <div class="card-icon sprite" id="worker-sprite"></div>
         <div class="card-badge">Módulo 5</div>
       </div>
       <div class="card-title">iCheck<br>Asistencia</div>
@@ -877,6 +933,7 @@ document.querySelectorAll('.mod-card').forEach(card => {
     bg.innerHTML = '';
     const cls = d.scene === 'downpour' ? 'rain' : d.scene;
     bg.className = 'scene-' + cls + (d.day ? '' : ' is-night');
+    window.__bcWx = d;   // la mascota lee el clima de acá
 
     switch (d.scene) {
       case 'clear':    d.day ? (sun(false), floaters()) : night(); break;
@@ -941,6 +998,438 @@ document.querySelectorAll('.mod-card').forEach(card => {
   const go = () => load().then(render);
   go();
   if (!new URLSearchParams(location.search).get('clima')) setInterval(go, 15 * 60 * 1000);
+})();
+</script>
+<!-- Mascota y toast -->
+<div id="mascot" aria-hidden="true">
+  <div class="m-bubble"></div>
+  <span class="m-flip"></span>
+</div>
+<div id="uc-toast" role="status" aria-live="polite"></div>
+
+<script>
+// ─── SPRITES 8-BIT (dibujados a mano, pixel por pixel) ───────────
+// Cada personaje se dibuja con rectángulos de 1 píxel lógico sobre un canvas
+// chiquito; después se agranda con image-rendering: pixelated.
+// El contorno oscuro se genera automáticamente alrededor de la silueta.
+const PX = (function () {
+  const OUT = '#14121f';
+
+  function ctxOf(c) { return c.getContext('2d', { willReadFrequently: true }); }
+
+  function make(W, H, scale) {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    c.style.width = (W * scale) + 'px';
+    c.style.height = (H * scale) + 'px';
+    c.style.imageRendering = 'pixelated';
+    c.style.display = 'block';
+    return c;
+  }
+
+  // contorno de 1px alrededor de todo lo dibujado
+  function outline(ctx, W, H) {
+    const d = ctx.getImageData(0, 0, W, H).data;
+    const A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    const t = tmp.getContext('2d');
+    t.fillStyle = OUT;
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++)
+        if (!A(x, y) && (A(x - 1, y) || A(x + 1, y) || A(x, y - 1) || A(x, y + 1))) t.fillRect(x, y, 1, 1);
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.drawImage(tmp, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function shadow(ctx, x, y, w) {
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = 'rgba(0,0,0,.16)';
+    ctx.fillRect(x, y, w, 1);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  return { make, outline, shadow, ctxOf };
+})();
+
+// ═════════════════════════════════════════════════════════════════
+// COCINERO — 34×46 px · f: 0-3 caminando, 4 quieto · scared: susto
+// ═════════════════════════════════════════════════════════════════
+function drawCook(ctx, f, scared, steam) {
+  const W = 34, H = 46, OY = 2;
+  ctx.clearRect(0, 0, W, H);
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
+
+  const WH = '#ffffff', W2 = '#dde2ea', W3 = '#b4bcc9';
+  const SK = '#f4bc8a', SKS = '#d9935f', CH = '#e9806e';
+  const HAIR = '#4a2c17', HAIRH = '#7a4a26', EYE = '#161616';
+  const RED = '#d62839', REDD = '#97192a';
+  const SIL = '#c7cfdb', SILL = '#eef2f7', SILD = '#98a2b3';
+
+  const by = scared ? -1 : ((f === 1 || f === 3) ? -1 : 0);   // rebote del cuerpo
+
+  // ── piernas: pantalón a cuadros + zuecos ──
+  const STR = [[-2, 1, 2, 0], [0, 0, 0, 0], [2, 0, -2, 1], [0, 0, 0, 0], [0, 0, 0, 0]];
+  const [lo, ll, ro, rl] = scared ? [-2, 1, 2, 1] : STR[f];
+  function leg(x0, lift) {
+    for (let y = 35; y < 40 - lift; y++)
+      for (let x = x0; x < x0 + 5; x++)
+        R(x, y, 1, 1, (((x >> 1) + (y >> 1)) & 1) ? '#343a46' : '#eceff4');
+    R(x0 - 1, 40 - lift, 7, 3, '#232331');        // zueco
+    R(x0 + 3, 40 - lift, 3, 1, '#4d4d68');        // brillo punta
+    R(x0 - 1, 42 - lift, 7, 1, '#0d0d16');        // suela
+  }
+  leg(10 + lo, ll);
+  leg(17 + ro, rl);
+  R(9, 34, 13, 1, '#2a2d3a');                      // cintura
+
+  // ── chaqueta blanca cruzada ──
+  const T = 24 + by;
+  R(7, T, 15, 34 - T, WH);
+  R(19, T, 3, 34 - T, W2);
+  R(7, 33, 15, 1, W3);
+  R(14, T, 1, 34 - T, W3);
+  [[11, 3], [11, 6], [17, 3], [17, 6]].forEach(([x, y]) => R(x, T + y, 1, 1, '#2f3e63'));
+  R(9, T + 4, 2, 2, RED); R(9, T + 4, 1, 1, '#ffd166');     // parche del local
+
+  // ── pañuelo rojo ──
+  R(10, 22 + by, 9, 2, RED); R(10, 23 + by, 9, 1, REDD);
+  R(13, 24 + by, 3, 2, REDD); R(12, 26 + by, 2, 1, RED); R(15, 26 + by, 2, 1, RED);
+
+  // ── brazo izquierdo ──
+  if (scared) {
+    R(3, 16 + by, 4, 10, WH); R(3, 16 + by, 1, 10, W2); R(3, 16 + by, 4, 1, W3);
+    R(3, 13 + by, 4, 3, SK); R(3, 12 + by, 1, 1, SK); R(5, 12 + by, 1, 1, SK); R(6, 12 + by, 1, 1, SK);
+  } else {
+    const ax = [1, 0, -1, 0, 0][f];
+    R(4 + ax, 24 + by, 4, 8, WH); R(4 + ax, 24 + by, 1, 8, W2); R(4 + ax, 31 + by, 4, 1, W3);
+    R(4 + ax, 32 + by, 4, 3, SK); R(4 + ax, 34 + by, 4, 1, SKS);
+  }
+
+  // ── cabeza ──
+  R(8, 15 + by, 1, 3, SKS); R(20, 15 + by, 1, 3, SKS);           // orejas
+  R(9, 11 + by, 11, 11, SK); R(10, 21 + by, 9, 1, SKS);          // cara
+  R(9, 11 + by, 1, 4, HAIR); R(19, 11 + by, 1, 4, HAIR);         // patillas
+  const brow = scared ? 12 + by : 13 + by;
+  R(10, brow, 3, 1, HAIR); R(16, brow, 3, 1, HAIR);              // cejas
+  if (scared) {
+    R(10, 13 + by, 4, 5, SKS); R(11, 14 + by, 2, 3, '#fff'); R(12, 15 + by, 1, 2, EYE);
+    R(15, 13 + by, 4, 5, SKS); R(16, 14 + by, 2, 3, '#fff'); R(17, 15 + by, 1, 2, EYE);
+  } else {
+    R(11, 14 + by, 2, 3, EYE); R(16, 14 + by, 2, 3, EYE);
+    R(11, 14 + by, 1, 1, '#fff'); R(16, 14 + by, 1, 1, '#fff');
+  }
+  R(10, 18 + by, 2, 1, CH); R(17, 18 + by, 2, 1, CH);            // cachetes
+  R(14, 16 + by, 2, 2, SKS);                                      // nariz
+  R(11, 19 + by, 8, 2, HAIR); R(10, 20 + by, 1, 1, HAIR); R(19, 20 + by, 1, 1, HAIR); R(12, 19 + by, 2, 1, HAIRH); // bigote
+  if (scared) R(13, 21 + by, 3, 2, '#5b1a1a'); else R(13, 21 + by, 3, 1, '#8b2c2c');                              // boca
+
+  // ── brazo derecho ──
+  if (scared) {
+    R(22, 16 + by, 4, 10, WH); R(25, 16 + by, 1, 10, W2); R(22, 16 + by, 4, 1, W3);
+    R(22, 13 + by, 4, 3, SK); R(22, 12 + by, 1, 1, SK); R(24, 12 + by, 1, 1, SK); R(25, 12 + by, 1, 1, SK);
+  } else {
+    R(22, 24 + by, 4, 4, WH); R(22, 24 + by, 4, 1, W3);
+    R(24, 19 + by, 3, 8, WH); R(26, 19 + by, 1, 8, W2); R(24, 19 + by, 3, 1, W3);
+    R(24, 16 + by, 3, 3, SK); R(27, 17 + by, 1, 2, SK);           // mano + pulgar
+    R(22, 14 + by, 10, 2, '#b8c1cf'); R(22, 15 + by, 10, 1, SILD); // bandeja
+    R(26, 6 + by, 1, 2, SILD);                                    // cloche
+    R(25, 8 + by, 3, 1, SILL);
+    R(24, 9 + by, 5, 1, SILL);
+    R(23, 10 + by, 7, 4, SIL);
+    R(24, 10 + by, 2, 3, '#ffffff');
+    R(28, 10 + by, 2, 4, SILD);
+  }
+
+  // ── gorro de chef ──
+  const hy = scared ? by - 2 : by;
+  R(10, 1 + hy, 9, 2, WH);
+  R(8, 3 + hy, 13, 5, WH);
+  R(18, 3 + hy, 3, 5, W2);
+  R(12, 3 + hy, 1, 5, W2); R(15, 3 + hy, 1, 5, W2);
+  R(8, 8 + hy, 13, 1, W2);
+  R(9, 9 + hy, 11, 2, '#eef0f4'); R(9, 10 + hy, 11, 1, W3);
+
+  // ── extras del susto ──
+  if (scared) {
+    R(6, 12 + by, 1, 2, '#7ec8ff'); R(22, 9 + by, 1, 2, '#7ec8ff');     // sudor
+    R(1, 0, 2, 5, RED); R(1, 6, 2, 2, RED);                              // !
+    R(27, 1, 4, 1, SILL); R(26, 2, 6, 3, SIL); R(26, 2, 1, 3, '#fff'); R(25, 5, 8, 1, SILD); // cloche volando
+  }
+
+  PX.outline(ctx, W, H);
+
+  if (!scared) {                       // vapor del plato (sin contorno)
+    ctx.fillStyle = '#aab6c8';
+    const P = steam ? [[25, 4], [27, 2], [26, 0]] : [[26, 4], [24, 2], [27, 1]];
+    P.forEach(([x, y]) => ctx.fillRect(x, y + by + OY, 1, 2));
+  }
+  PX.shadow(ctx, 6, H - 1, 19);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// OBRERO — 52×46 px · frame: 'up' | 'mid' | 'hit' · spark: chispas
+// ═════════════════════════════════════════════════════════════════
+function drawWorker(ctx, frame, spark) {
+  const W = 52, H = 46, OY = 2;
+  ctx.clearRect(0, 0, W, H);
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
+
+  const SK = '#e8ae80', SKS = '#c98558', HAIR = '#3b2a1c', EYE = '#161616';
+  const YEL = '#f5c518', YELH = '#fff1a8', YELD = '#d9a406';
+  const ORG = '#ff7f11', ORGD = '#e06a00';
+  const BLU = '#2f5fb3', BLUD = '#264d94';
+  const JEA = '#3f6ab8', JEAD = '#2f5496', JEAH = '#5b88d6';
+  const BOOT = '#7a4b25', GLV = '#c08a4b', WOOD = '#8b5a2b', WOODH = '#a9713a', STEEL = '#a5adbb';
+  const dx = frame === 'hit' ? 1 : 0;                 // se inclina al pegar
+
+  // ── cartel de peligro + poste ──
+  for (let y = 19; y <= 31; y++)
+    for (let x = 40; x <= 49; x++)
+      R(x, y, 1, 1, (((x - y) % 6 + 6) % 6 < 3) ? '#2a2a2a' : YEL);
+  R(40, 19, 10, 1, '#2a2a2a'); R(40, 31, 10, 1, '#2a2a2a');
+  [[41, 20], [48, 20], [41, 30], [48, 30]].forEach(([x, y]) => R(x, y, 1, 1, '#cfd4dc'));
+  R(43, 32, 4, 10, WOOD); R(43, 32, 1, 10, WOODH); R(46, 32, 1, 10, '#6b4423');
+  R(40, 42, 11, 1, '#8a6a3a');
+  // clavo
+  if (frame === 'hit') R(39, 23, 1, 3, '#cfd4dc');
+  else { R(36, 24, 4, 1, '#9aa2ae'); R(35, 23, 1, 3, '#cfd4dc'); }
+
+  // ── piernas + botas de seguridad ──
+  R(10, 34, 5, 6, JEA); R(16, 34, 5, 6, JEA); R(9, 34, 12, 1, JEAD);
+  R(11, 35, 1, 4, JEAH); R(17, 35, 1, 4, JEAH);
+  R(10, 38, 5, 1, JEAD); R(16, 38, 5, 1, JEAD);
+  R(9, 39, 7, 3, BOOT); R(16, 39, 7, 3, BOOT);
+  R(10, 39, 3, 1, '#4a2c14'); R(17, 39, 3, 1, '#4a2c14');
+  R(14, 40, 2, 2, '#c5c9d0'); R(21, 40, 2, 2, '#c5c9d0');       // punteras de acero
+  R(9, 42, 7, 1, '#2a1a0e'); R(16, 42, 7, 1, '#2a1a0e');
+
+  // ── torso: camisa azul + chaleco naranja reflectivo ──
+  R(8 + dx, 22, 14, 11, BLU);
+  R(9 + dx, 22, 12, 11, ORG);
+  R(13 + dx, 22, 4, 1, BLU); R(14 + dx, 23, 2, 4, BLU);
+  R(19 + dx, 22, 2, 11, ORGD);
+  R(15 + dx, 27, 1, 6, '#9a4a00');
+  R(9 + dx, 28, 12, 1, '#f5f5f5'); R(9 + dx, 29, 12, 1, '#b8bfca');
+  R(9 + dx, 31, 12, 1, '#f5f5f5'); R(9 + dx, 32, 12, 1, '#b8bfca');
+  R(9 + dx, 33, 12, 1, '#5b3a1a'); R(14 + dx, 33, 3, 1, YEL);   // cinturón
+  R(18, 34, 3, 3, WOOD); R(18, 34, 3, 1, '#6b4423');            // bolsillo de herramientas
+
+  // ── brazo izquierdo ──
+  R(6 + dx, 23, 3, 9, BLU); R(6 + dx, 23, 1, 9, BLUD);
+  R(6 + dx, 32, 3, 3, GLV); R(6 + dx, 34, 3, 1, '#a8733a');
+
+  // ── cabeza ──
+  R(13 + dx, 20, 5, 2, SKS);                                    // cuello
+  R(10 + dx, 11, 10, 9, SK);
+  R(9 + dx, 14, 1, 3, SKS); R(20 + dx, 14, 1, 3, SKS);          // orejas
+  R(20 + dx, 11, 1, 1, '#374151'); R(20 + dx, 12, 1, 2, '#f59e0b'); // lápiz en la oreja
+  R(11 + dx, 13, 4, 1, HAIR); R(16 + dx, 13, 4, 1, HAIR);       // cejas
+  R(12 + dx, 14, 2, 2, EYE); R(17 + dx, 14, 2, 2, EYE);
+  R(12 + dx, 14, 1, 1, '#fff'); R(17 + dx, 14, 1, 1, '#fff');
+  R(15 + dx, 15, 2, 3, SKS);                                     // nariz
+  for (let y = 17; y <= 19; y++)                                  // barba de dos días
+    for (let x = 11; x <= 18; x++) if ((x + y) % 2 === 0) R(x + dx, y, 1, 1, '#7a6652');
+  R(14 + dx, 19, 3, 1, '#7b2d26');                               // boca
+
+  // ── casco amarillo ──
+  R(9 + dx, 5, 12, 5, YEL);
+  R(11 + dx, 3, 8, 2, YEL);
+  R(13 + dx, 2, 4, 1, YEL);
+  R(14 + dx, 3, 2, 6, '#ffd84d');
+  R(11 + dx, 4, 2, 2, YELH);
+  R(19 + dx, 5, 2, 5, YELD);
+  R(8 + dx, 9, 15, 2, YELD); R(8 + dx, 9, 15, 1, '#eab308');
+
+  // ── brazo derecho + martillo ──
+  if (frame === 'up') {
+    R(20 + dx, 23, 4, 3, BLU);
+    R(23, 17, 3, 8, BLU); R(23, 17, 1, 8, BLUD);
+    R(23, 14, 4, 4, GLV); R(23, 14, 4, 1, '#a8733a');
+    R(24, 6, 2, 8, WOOD); R(24, 6, 1, 8, WOODH);
+    R(21, 3, 9, 3, STEEL); R(21, 3, 9, 1, '#e5e9f0'); R(21, 5, 9, 1, '#6b7483'); R(30, 4, 1, 2, STEEL);
+  } else if (frame === 'mid') {
+    R(20 + dx, 23, 4, 3, BLU);
+    R(21, 24, 8, 3, BLU); R(21, 24, 8, 1, BLUD);
+    R(29, 23, 4, 4, GLV);
+    R(30, 14, 2, 9, WOOD); R(30, 14, 1, 9, WOODH);
+    R(27, 11, 8, 3, STEEL); R(27, 11, 8, 1, '#e5e9f0'); R(27, 13, 8, 1, '#6b7483');
+  } else {
+    R(21, 23, 4, 3, BLU);
+    R(22, 24, 8, 3, BLU); R(22, 24, 8, 1, BLUD);
+    R(30, 23, 3, 4, GLV);
+    R(32, 24, 4, 2, WOOD); R(32, 24, 4, 1, WOODH);
+    R(36, 21, 3, 8, STEEL); R(36, 21, 1, 8, '#e5e9f0'); R(38, 21, 1, 8, '#6b7483');
+  }
+
+  PX.outline(ctx, W, H);
+
+  if (frame === 'hit') {               // chispas del golpe
+    const S = spark
+      ? [[40, 21, '#ffffff'], [42, 23, '#ff6b00'], [41, 26, '#ffffff'], [44, 22, '#ffd84d'], [39, 20, '#ff6b00']]
+      : [[41, 22, '#ffffff'], [43, 24, '#ff6b00'], [40, 27, '#ffd84d'], [45, 21, '#ffffff']];
+    S.forEach(([x, y, c]) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, 1, 1); });
+  }
+  PX.shadow(ctx, 6, H - 1, 18);
+  PX.shadow(ctx, 40, H - 1, 11);
+}
+</script>
+<script>
+// ─── MASCOTA: cocinero 8-bit que pasea y comenta el clima ────────
+(function () {
+  'use strict';
+  const m = document.getElementById('mascot');
+  if (!m) return;
+  const flip = m.querySelector('.m-flip');
+  const bub  = m.querySelector('.m-bubble');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rnd  = (a, b) => a + Math.random() * (b - a);
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+
+  const S = window.innerWidth < 640 ? 2 : 3;          // escala del sprite
+  const cv = PX.make(34, 46, S);
+  flip.appendChild(cv);
+  const ctx = PX.ctxOf(cv);
+  const SW = 34 * S;
+
+  let key = '';
+  function paint(f, scared, steam) {
+    const k = f + '|' + scared + '|' + steam;
+    if (k === key) return;
+    key = k;
+    drawCook(ctx, f, scared, steam);
+  }
+
+  const LINES = {
+    generic:  ['¿Alguien vio mi delantal?', 'Mesa 7 pidió la cuenta... hace 20 minutos', 'Yo no fui, fue el de la barra',
+               '¿Esto era horario corrido?', 'Los lunes son un estado mental', 'Che, ¿y la propina?',
+               'Marchando un mate para RRHH ☕'],
+    clear:    ['Con este solcito la terraza explota', 'Me olvidé el protector, ¡ayuda!', 'Hoy hasta el hielo se rinde'],
+    partly:   ['Ni sol ni lluvia: día de dudas', 'Entre sol y nubes, como mi humor'],
+    overcast: ['Cielo gris: ideal para un caldito', 'Hoy no sonríe ni la nube'],
+    fog:      ['No veo ni la carta...', 'Escucho ruidos... ¿será el fantasma? 👻'],
+    drizzle:  ['Garúa: la peor, ni paraguas ni nada'],
+    rain:     ['Con esta lluvia nadie viene... ¿pido el día?', 'Se inundó la vereda del local'],
+    downpour: ['¡Llueven gatos y perros! Yo no los lavo', 'Che, ¿alguien tiene un bote?'],
+    thunder:  ['¡Se cortó la luz! ¿Quién desenchufó el horno?', 'Nadie toque el microondas'],
+    snow:     ['¿Nieve? Aviso que no tengo campera', 'Mi delantal no abriga nada'],
+    night:    ['¿Todavía están acá? Yo ya me fui', 'Hora de cerrar caja'],
+    wind:     ['¡Se me vuela el gorro!', 'Agarrate de la bandeja, que vuela todo']
+  };
+  const SCARE = ['¡AAAH!', '¡Casi se me cae la bandeja! 🍽️', '¡Yo no fui!',
+                 '¡Ey! Manos quietas, que estoy en horario', '¡Me asustaste, che!'];
+
+  function lines() {
+    const d = window.__bcWx || {};
+    let a = LINES.generic.slice();
+    if (LINES[d.scene]) a = a.concat(LINES[d.scene]);
+    if (d.day === false) a = a.concat(LINES.night);
+    if (d.wind >= 30) a = a.concat(LINES.wind);
+    return a;
+  }
+
+  let x = rnd(0, Math.max(100, window.innerWidth - SW - 20));
+  let dir = Math.random() < .5 ? -1 : 1;
+  let mode = 'walk', left = 3, animT = 0, runT = 0, bubTimer = null;
+  let last = performance.now();
+
+  function setDir(d) { dir = d; flip.style.transform = d < 0 ? 'scaleX(-1)' : 'none'; }
+
+  function say(text, ms) {
+    bub.textContent = text;
+    bub.style.setProperty('--shift', '0px');
+    bub.classList.add('show');
+    // mantener el globito dentro de la pantalla
+    const c = x + SW / 2, bw = bub.offsetWidth;
+    let shift = 0;
+    if (c - bw / 2 < 8) shift = 8 - (c - bw / 2);
+    else if (c + bw / 2 > window.innerWidth - 8) shift = (window.innerWidth - 8) - (c + bw / 2);
+    bub.style.setProperty('--shift', shift + 'px');
+    clearTimeout(bubTimer);
+    bubTimer = setTimeout(() => bub.classList.remove('show'), ms || 3500);
+  }
+
+  if (reduce) {                       // sin animación: quieto, habla al click
+    x = 16; m.style.transform = 'translateX(16px)';
+    paint(4, false, 0);
+    m.addEventListener('click', () => say(pick(lines())));
+    return;
+  }
+
+  m.addEventListener('click', () => {
+    say(pick(SCARE), 2200);
+    mode = 'run'; left = 1.8; runT = 0;
+    setDir(Math.random() < .5 ? -1 : 1);
+  });
+
+  function tick(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    left -= dt;
+    const steam = Math.floor(now / 350) % 2;
+
+    if (mode === 'walk' || mode === 'run') {
+      const run = mode === 'run';
+      if (run) runT += dt;
+      animT += dt;
+      x += dir * (run ? 240 : 45) * dt;
+      const max = Math.max(0, window.innerWidth - SW);
+      if (x < 0) { x = 0; setDir(1); } else if (x > max) { x = max; setDir(-1); }
+      m.style.transform = 'translateX(' + x + 'px)';
+      const scared = run && runT < .7;                       // primero el susto, después sale corriendo
+      paint(Math.floor(animT / (run ? .08 : .17)) % 4, scared, steam);
+      if (left <= 0) {
+        if (run) { mode = 'walk'; left = rnd(5, 10); }
+        else { mode = 'talk'; left = 3.6; say(pick(lines())); }
+      }
+    } else {                                                  // talk: quieto
+      paint(4, false, steam);
+      if (left <= 0) {
+        mode = 'walk'; left = rnd(6, 12);
+        if (Math.random() < .4) setDir(-dir);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  setDir(dir);
+  requestAnimationFrame(tick);
+})();
+
+// ─── iCHECK: obrero 8-bit martillando + chistes al click ─────────
+(function () {
+  'use strict';
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const host = document.getElementById('worker-sprite');
+  if (host) {
+    const cv = PX.make(52, 46, 2);
+    host.appendChild(cv);
+    const ctx = PX.ctxOf(cv);
+    const SEQ = [['up', 0], ['mid', 0], ['hit', 0], ['hit', 1], ['mid', 0], ['up', 0]];
+    let i = 0;
+    const paint = () => drawWorker(ctx, SEQ[i][0], SEQ[i][1]);
+    paint();
+    if (!reduce) setInterval(() => { i = (i + 1) % SEQ.length; paint(); }, 150);
+  }
+
+  const card = document.getElementById('card-icheck');
+  const toast = document.getElementById('uc-toast');
+  if (!card || !toast) return;
+  const MSG = [
+    '🚧 Lisandro está en eso... (spoiler: no es tan rápido)',
+    '👷 "Queda para mañana" — dijo hace tres semanas',
+    '🔨 Estamos clavando el último clavo. Hace una hora.',
+    '☕ El desarrollador salió por un cafecito',
+    '🧱 Faltan el techo y las paredes. Pero el cartel está lindo.',
+    '🔒 Módulo en obra: prohibido el paso, salvo que seas Diego'
+  ];
+  let i = Math.floor(Math.random() * MSG.length), t = null;
+  card.addEventListener('click', () => {
+    toast.textContent = MSG[i++ % MSG.length];
+    toast.classList.add('show');
+    card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    clearTimeout(t);
+    t = setTimeout(() => toast.classList.remove('show'), 3000);
+  });
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

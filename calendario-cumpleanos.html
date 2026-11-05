@@ -963,13 +963,14 @@ const DEFAULT_CUMPLE = { barra: {}, tanta: {}, lamar: {}, itc: {} };   // sin no
 let cumpleData = JSON.parse(JSON.stringify(DEFAULT_CUMPLE));
 
 /* ============ CONEXIÓN CON "CICLO DEL EMPLEADO" (solo lectura) ============
-   Lee los datos que guarda la app Ciclo del empleado (JSONBin, cifrados) y arma los cumpleaños
+   Lee los datos que guarda la app Ciclo del empleado (Cloudinary, cifrados) y arma los cumpleaños
    automáticamente: aparecen los colaboradores en estado Activo o En licencia con fecha de
    nacimiento cargada, y desaparecen apenas pasan a Egreso / Liquidado / Archivado o se eliminan.
-   Esta página NUNCA escribe en el bin del ciclo. */
-const CICLO_BIN_ID = '6ab67ab9ac6210605af45cd2';
-const CICLO_CLAVE  = 'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit';
-const CICLO_KEYS   = [JSONBIN_API_KEY, JSONBIN_API_KEY.replace(/\.$/, '')];   // por si la clave se copió con o sin el punto final
+   Esta página NUNCA escribe en los datos del ciclo. */
+// El Ciclo guarda en Cloudinary (archivo "raw" cifrado). Para leerlo solo hacen falta el cloud name y la clave de cifrado.
+const CICLO_CLOUD  = 'dqar21few';
+const CICLO_FILE   = 'rrhh_ciclo_datos.json';
+const CICLO_CLAVE  = 'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4';
 const ESTADOS_QUE_CUMPLEN = ['activo', 'licencia'];
 // Local del ciclo → pestaña del calendario. Se evalúa en orden; el primero que coincide gana.
 const LOCAL_MAP = [
@@ -997,15 +998,9 @@ async function _gunzip(bytes){
   return new TextDecoder().decode(await new Response(stream).arrayBuffer());
 }
 async function fetchCicloEnvelope(){
-  let lastErr;
-  for(const key of CICLO_KEYS){
-    try{
-      const r = await fetch('https://api.jsonbin.io/v3/b/' + CICLO_BIN_ID + '/latest', { headers:{ 'X-Master-Key': key, 'X-Bin-Meta':'false' }, cache:'no-store' });
-      if(r.ok) return await r.json();
-      lastErr = new Error('HTTP ' + r.status);
-    }catch(e){ lastErr = e; }
-  }
-  throw lastErr || new Error('sin respuesta');
+  const r = await fetch('https://res.cloudinary.com/' + encodeURIComponent(CICLO_CLOUD) + '/raw/upload/' + CICLO_FILE + '?_=' + Date.now(), { cache:'no-store' });
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
 }
 
 const _norm = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -1032,8 +1027,8 @@ async function loadCiclo(){
     if(!window.crypto || !crypto.subtle) throw new Error('el navegador no permite descifrar (abrí el archivo desde https o localhost)');
     let env, pt, data;
     try{ env = await fetchCicloEnvelope(); }
-    catch(e){ throw new Error('no se pudo leer el bin del ciclo (' + (e.message || e) + '). ' + (/401|403/.test(e.message) ? 'La API key no tiene acceso.' : /404/.test(e.message) ? 'El ID del bin no existe.' : 'Revisá la conexión.')); }
-    if(!env || !env.data || !env.iv || !env.salt) throw new Error('el bin no tiene datos cifrados del ciclo (¿el ciclo ya guardó en la nube?)');
+    catch(e){ throw new Error('no se pudo leer el archivo del ciclo en Cloudinary (' + (e.message || e) + '). ' + (/404/.test(e.message) ? 'Todavía no hay datos en la nube: abrí el Ciclo y esperá a que sincronice.' : 'Revisá la conexión.')); }
+    if(!env || !env.data || !env.iv || !env.salt) throw new Error('el archivo no tiene datos cifrados del ciclo (¿el ciclo ya guardó en la nube?)');
     try{ pt = await _cDecrypt(env); }
     catch(e){ throw new Error('la clave de cifrado no coincide con la del ciclo'); }
     try{ data = JSON.parse(env.v >= 2 ? await _gunzip(pt) : new TextDecoder().decode(pt)); }

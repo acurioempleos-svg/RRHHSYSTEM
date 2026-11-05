@@ -597,6 +597,7 @@ body::before {
 .mod-card.under-construction:hover .card-arrow { transform: none; }
 .mod-card.shake { animation: mCardShake .4s ease; }
 .card-icon.sprite { width: auto; height: auto; background: none; border: none; border-radius: 0; overflow: visible; }
+.card-icon.sprite.char { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .card-icon.sprite canvas { display: block; image-rendering: pixelated; }
 .mod-card.under-construction { opacity: 1; filter: none; }
 .mod-card.under-construction .card-title,
@@ -649,33 +650,11 @@ body::before {
   <!-- MODULES GRID -->
   <div id="modules">
 
-    <!-- Módulo: Indumentaria -->
-    <a class="mod-card purple" href="indumentaria.html" id="card-indum">
-      <div class="card-top">
-        <div class="card-icon">🧥</div>
-        <div class="card-badge">Módulo 1</div>
-      </div>
-      <div class="card-title">Indumentaria</div>
-      <div class="card-desc">
-        Stock de ropa por local y registro de entregas por empleado en toda la red.
-      </div>
-      <div class="card-features">
-        <span class="card-feat">Stock por talle</span>
-        <span class="card-feat">Entregas</span>
-        <span class="card-feat">Multi-local</span>
-        <span class="card-feat">Vencimientos</span>
-      </div>
-      <div class="card-cta">
-        <span class="card-cta-text">Abrir módulo</span>
-        <div class="card-arrow">→</div>
-      </div>
-    </a>
-
     <!-- Módulo: Tablero de Locales -->
     <a class="mod-card blue" href="tablero-locales.html" id="card-tablero">
       <div class="card-top">
-        <div class="card-icon">🏢</div>
-        <div class="card-badge">Módulo 2</div>
+        <div class="card-icon sprite char" id="char-tablero" role="button" tabindex="0" aria-label="Tocá a la chica" title="¡Tocala!"></div>
+        <div class="card-badge">Módulo 1</div>
       </div>
       <div class="card-title">Tablero de<br>Locales</div>
       <div class="card-desc">
@@ -696,8 +675,8 @@ body::before {
     <!-- Módulo: Ciclo del empleado -->
     <a class="mod-card green" href="ciclo-empleado.html" id="card-ciclo">
       <div class="card-top">
-        <div class="card-icon">🔄</div>
-        <div class="card-badge">Módulo 3</div>
+        <div class="card-icon sprite char" id="char-ciclo" role="button" tabindex="0" aria-label="Tocá al administrativo" title="¡Tocalo!"></div>
+        <div class="card-badge">Módulo 2</div>
       </div>
       <div class="card-title">Ciclo del<br>Empleado</div>
       <div class="card-desc">
@@ -718,8 +697,8 @@ body::before {
     <!-- Módulo: Recursos -->
     <a class="mod-card orange" href="recursos.html" id="card-recursos">
       <div class="card-top">
-        <div class="card-icon">📚</div>
-        <div class="card-badge">Módulo 4</div>
+        <div class="card-icon sprite char" id="char-recursos" role="button" tabindex="0" aria-label="Tocá la impresora" title="¡Tocala!"></div>
+        <div class="card-badge">Módulo 3</div>
       </div>
       <div class="card-title">Recursos</div>
       <div class="card-desc">
@@ -739,7 +718,7 @@ body::before {
     <div class="mod-card green disabled under-construction" id="card-icheck" aria-disabled="true" tabindex="-1">
       <div class="card-top">
         <div class="card-icon sprite" id="worker-sprite"></div>
-        <div class="card-badge">Módulo 5</div>
+        <div class="card-badge">Módulo 4</div>
       </div>
       <div class="card-title">iCheck<br>Asistencia</div>
       <div class="card-desc">
@@ -1796,6 +1775,252 @@ function drawWorker(ctx, frame, spark) {
     clearTimeout(t);
     t = setTimeout(() => toast.classList.remove('show'), 3000);
   });
+})();
+</script>
+<script>
+// ─── PERSONAJES DE LAS TARJETAS (8-bit, tocalos y reaccionan) ────
+(function () {
+  'use strict';
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const TICK = 120;
+
+  function mount(id, W, H, scale, draw, dur, update) {
+    const host = document.getElementById(id);
+    if (!host) return;
+    const cv = PX.make(W, H, scale);
+    host.appendChild(cv);
+    const ctx = PX.ctxOf(cv);
+    const st = { t: 0, active: false, at: 0, dur: dur };
+    const paint = () => { if (update) update(st); draw(ctx, st); };
+    paint();
+    if (!reduce) setInterval(() => {
+      st.t++;
+      if (st.active && ++st.at > dur) { st.active = false; st.at = 0; }
+      paint();
+    }, TICK);
+    host.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); host.click(); } });
+    host.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();          // tocar al personaje no abre el módulo
+      st.active = true; st.at = 0;
+      if (reduce) { st.at = Math.floor(dur * .85); paint(); setTimeout(() => { st.active = false; paint(); }, 1800); }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // IMPRESORA AGOTADA — al tocarla imprime hojas a lo loco
+  // ═══════════════════════════════════════════════════════════════
+  function updatePrinter(st) {
+    const P = st.papers = st.papers || [];
+    if (st.active && P.length < 10) {
+      P.push({ id: st.t, x: 33, y: 10, vx: 1 + Math.random() * 2, vy: -(2 + Math.random() * 1.8) });
+      if (Math.random() < .7) P.push({ id: st.t + 1, x: 33, y: 10, vx: -(1 + Math.random() * 2), vy: -(2 + Math.random() * 1.8) });
+    }
+    P.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .7; });
+    st.papers = P.filter(p => p.y < 46 && p.x > -10 && p.x < 74);
+  }
+  function drawPrinter(ctx, st) {
+    const W = 72, H = 48, OY = 2, BX = 14;
+    ctx.clearRect(0, 0, W, H);
+    const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x + BX, y + OY, w, h); };
+    const RAW = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y) + OY, w, h); };
+    const busy = st.active, t = st.t;
+    const ox = busy ? ((t % 2) ? 1 : -1) : 0;
+    const oy = (!busy && Math.floor(t / 6) % 2) ? 1 : 0;           // respira cansada
+    const BODY = '#cfd5df', TOP = '#e8ecf3', SH = '#98a1b1', DK = '#2e3445', K = '#161616';
+
+    // hoja en la bandeja de entrada
+    R(12 + ox, 4 + oy, 18, 10, '#fff'); R(14 + ox, 6 + oy, 12, 1, '#c9ced9'); R(14 + ox, 8 + oy, 9, 1, '#c9ced9');
+    // cuerpo
+    R(6 + ox, 14 + oy, 33, 20, BODY); R(6 + ox, 13 + oy, 33, 2, TOP); R(6 + ox, 31 + oy, 33, 3, SH);
+    R(8 + ox, 34 + oy, 29, 2, '#7d8696'); R(9 + ox, 36 + oy, 4, 2, DK); R(32 + ox, 36 + oy, 4, 2, DK);
+    // luz de estado
+    R(35 + ox, 16 + oy, 2, 2, busy ? (t % 2 ? '#46e06a' : '#2b7a3f') : '#d62839');
+    // ojos
+    R(12 + ox, 18 + oy, 7, 6, '#fff'); R(26 + ox, 18 + oy, 7, 6, '#fff');
+    if (busy) {                                                   // ojos desorbitados
+      const C = [[0, 0], [2, 0], [2, 2], [0, 2]][t % 4];
+      R(12 + ox, 17 + oy, 7, 1, '#fff'); R(26 + ox, 17 + oy, 7, 1, '#fff');
+      R(14 + ox + C[0], 19 + oy + C[1], 3, 3, K); R(28 + ox + C[0], 19 + oy + C[1], 3, 3, K);
+      R(19 + ox, 27 + oy, 7, 4, K); R(21 + ox, 29 + oy, 3, 2, '#ff6b8a');       // boca abierta
+    } else {                                                      // ojos de cansada
+      R(14 + ox, 22 + oy, 3, 2, K); R(28 + ox, 22 + oy, 3, 2, K);
+      R(12 + ox, 18 + oy, 7, 4, BODY); R(26 + ox, 18 + oy, 7, 4, BODY);
+      R(12 + ox, 21 + oy, 7, 1, K); R(26 + ox, 21 + oy, 7, 1, K);
+      R(12 + ox, 24 + oy, 7, 1, '#8b7ab8'); R(26 + ox, 24 + oy, 7, 1, '#8b7ab8');    // ojeras
+      R(19 + ox, 28 + oy, 7, 1, K); R(18 + ox, 29 + oy, 1, 1, K); R(26 + ox, 29 + oy, 1, 1, K);
+    }
+    // ranura + hoja colgando
+    R(11 + ox, 30 + oy, 23, 1, '#1c1f2a');
+    const h = busy ? 4 + (t % 4) * 3 : 8;
+    R(15 + ox, 31 + oy, 13, h, '#fff'); R(17 + ox, 33 + oy, 9, 1, '#c9ced9');
+    if (h > 5) R(17 + ox, 35 + oy, 6, 1, '#c9ced9');
+    if (!busy) R(15 + ox, 38 + oy, 13, 1, '#e2e5ec');
+    // gota de sudor y suspiro
+    if (!busy) {
+      R(41, 14 + (t % 8), 1, 2, '#7ec8ff');
+      if (t % 12 < 6) R(2, 9 - (t % 6), 3, 2, '#c7cdd8');
+    }
+    // hojas volando
+    (st.papers || []).forEach(p => {
+      const a = (p.id + t) % 2;
+      RAW(p.x - BX, p.y - OY + OY, a ? 9 : 6, a ? 6 : 9, '#fff');
+      RAW(p.x - BX + 1, p.y - OY + OY + 1, a ? 6 : 3, 1, '#c9ced9');
+    });
+    PX.outline(ctx, W, H);
+    PX.shadow(ctx, BX + 6, H - 1, 33);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CHICA ENOJADA — al tocarla organiza los papeles en carpetas
+  // ═══════════════════════════════════════════════════════════════
+  const FLOOR = [[25, 43], [32, 41], [37, 44], [28, 45], [19, 45]];
+  const FOLD = ['#e45858', '#f2b134', '#4a7bd0', '#58b368', '#9b6bd6'];
+  function drawGirl(ctx, st) {
+    const W = 64, H = 48, OY = 2;
+    ctx.clearRect(0, 0, W, H);
+    const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
+    const act = st.active, t = st.t, at = st.at;
+    const SK = '#f4bc8a', SKS = '#d9935f', HAIR = '#2b1b17', HAIRH = '#4a2f26', BL = '#d6537a', BLD = '#b23d62', SKT = '#475569', K = '#161616', RED = '#d62839';
+
+    // armario con rack de carpetas
+    R(42, 26, 18, 16, '#8a96ad'); R(42, 26, 18, 2, '#aab4c8'); R(44, 30, 14, 5, '#a3aec3'); R(44, 37, 14, 4, '#a3aec3');
+    R(49, 32, 4, 1, K); R(49, 38, 4, 1, K); R(42, 40, 18, 2, '#6c7790');
+    R(43, 25, 16, 1, '#6c7790');
+
+    // papeles: en el piso o volando a su carpeta
+    FLOOR.forEach(([fx, fy], k) => {
+      const p = act ? clamp((at - (3 + k * 4)) / 4, 0, 1) : 0;
+      if (p >= 1) {
+        R(44 + k * 3, 17, 2, 8, FOLD[k]); R(44 + k * 3, 16, 2, 1, '#fff');
+      } else if (p > 0) {
+        const x = lerp(fx, 43 + k * 3, p), y = lerp(fy, 12, p) - Math.sin(Math.PI * p) * 10;
+        R(Math.round(x), Math.round(y), 7, 5, '#fff'); R(Math.round(x) + 1, Math.round(y) + 1, 4, 1, '#c9ced9');
+      } else {
+        R(fx, fy, 8, 2, '#fff'); R(fx, fy + 2, 8, 1, '#c9ced9');
+      }
+    });
+
+    // pelo atrás + cuerpo
+    R(8, 8, 3, 16, HAIR); R(23, 8, 3, 16, HAIR);
+    R(14, 20, 4, 3, SKS);
+    R(10, 22, 14, 10, BL); R(14, 22, 6, 2, '#fff'); R(10, 31, 14, 1, BLD);
+    R(9, 31, 16, 6, SKT); R(9, 36, 16, 1, '#334155');
+    R(12, 37, 4, 5, SK); R(11, 42, 6, 2, '#2a2a2a');
+    const tap = !act && (t % 2);
+    R(18, 37 - (tap ? 1 : 0), 4, 5, SK); R(17, 42 - (tap ? 1 : 0), 6, 2, '#2a2a2a');
+
+    // cabeza
+    R(11, 9, 12, 11, SK);
+    R(10, 6, 14, 5, HAIR); R(11, 9, 12, 2, HAIR); R(13, 7, 5, 1, HAIRH);
+    R(14, 3, 6, 4, HAIR); R(15, 3, 3, 1, HAIRH);                         // rodete
+    if (!act) {
+      R(12, 12, 2, 1, K); R(14, 13, 2, 1, K); R(20, 12, 2, 1, K); R(18, 13, 2, 1, K);
+      R(13, 14, 2, 2, K); R(19, 14, 2, 2, K);
+      R(11, 17, 2, 2, '#ff6b6b'); R(21, 17, 2, 2, '#ff6b6b');
+      R(15, 18, 3, 1, K); R(14, 19, 1, 1, K); R(18, 19, 1, 1, K);
+    } else {
+      R(12, 12, 3, 1, HAIR); R(19, 12, 3, 1, HAIR);
+      R(13, 14, 2, 2, K); R(19, 14, 2, 2, K); R(13, 14, 1, 1, '#fff'); R(19, 14, 1, 1, '#fff');
+      R(11, 17, 2, 2, '#f7a0a0'); R(21, 17, 2, 2, '#f7a0a0');
+      R(14, 17, 1, 1, '#8b2c2c'); R(15, 18, 3, 1, '#8b2c2c'); R(18, 17, 1, 1, '#8b2c2c');
+    }
+
+    // brazo izquierdo con la pila de papeles
+    R(7, 24, 4, 5, BL); R(5, 28, 4, 3, SK);
+    if (!act) {
+      R(1, 17, 9, 11, '#fff'); R(3, 15, 7, 3, '#e8ebf2'); R(0, 22, 3, 4, '#fff'); R(8, 19, 4, 3, '#e8ebf2');
+      R(3, 20, 5, 1, '#c9ced9'); R(3, 23, 4, 1, '#c9ced9');
+    } else {
+      R(1, 18, 9, 10, '#fff'); R(1, 18, 9, 2, '#4a7bd0'); R(3, 22, 5, 1, '#c9ced9'); R(3, 24, 4, 1, '#c9ced9');
+    }
+    // brazo derecho
+    if (!act) {
+      R(24, 24, 4, 5, BL); R(25 + (t % 2), 19, 3, 4, SK);                // puño temblando
+    } else {
+      R(24, 24, 6, 4, BL); R(30, 23 + (t % 2), 3, 3, SK);
+    }
+
+    // extras: enojo / felicidad
+    if (!act) {
+      if (t % 4 < 2) { R(25, 3, 2, 1, RED); R(24, 4, 1, 2, RED); R(27, 4, 1, 2, RED); R(25, 6, 2, 1, RED); }
+      R(10, 1 + (t % 3 === 0 ? 1 : 0), 3, 2, '#dfe4ee'); R(21, 2 - (t % 3 === 1 ? 1 : 0), 3, 2, '#dfe4ee');
+    } else if (at >= 22) {
+      [[50, 8], [56, 12], [46, 6]].forEach(([x, y], i) => { if ((t + i) % 2) { R(x, y - 1, 1, 3, '#ffd84d'); R(x - 1, y, 3, 1, '#ffd84d'); } });
+    }
+    PX.outline(ctx, W, H);
+    PX.shadow(ctx, 8, H - 1, 18);
+    PX.shadow(ctx, 42, H - 1, 18);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ADMINISTRATIVO — boludea con el celu; al tocarlo carga datos
+  // ═══════════════════════════════════════════════════════════════
+  function drawAdmin(ctx, st) {
+    const W = 54, H = 46, OY = 2;
+    ctx.clearRect(0, 0, W, H);
+    const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
+    const act = st.active, t = st.t, at = st.at, prog = clamp(at / 22, 0, 1), done = act && at >= 22;
+    const SK = '#e8ae80', SKS = '#c98558', HAIR = '#3b2a1c', K = '#161616', SHIRT = '#9fc3ee', SHD = '#7aa6d8', GREEN = '#46e06a';
+    const hy = act ? 0 : 2;                                          // encorvado cuando boludea
+
+    // silla + escritorio
+    R(5, 16, 16, 16, '#3b4a63');
+    R(0, 32, 54, 3, '#9a6a3a'); R(0, 35, 54, 1, '#6b4423'); R(2, 36, 4, 9, '#6b4423'); R(47, 36, 4, 9, '#6b4423');
+
+    // monitor
+    R(32, 31, 12, 1, '#555b6b'); R(36, 26, 4, 6, '#555b6b');
+    R(27, 8, 24, 18, '#2b2f3a'); R(29, 10, 20, 14, act ? '#0b1220' : '#0b1a2e');
+    if (!act) {                                                      // protector de pantalla rebotando
+      const px = Math.abs(((t * 1) % 34) - 17), py = Math.abs(((t * 0.6 | 0) % 18) - 9);
+      R(29 + clamp(px, 0, 16), 10 + clamp(py, 0, 10), 3, 3, '#4fd1ff');
+    } else if (!done) {
+      for (let i = 0; i < 3; i++) {
+        const w = clamp(Math.round((prog * 4 - i * 0.9) * 10), 0, 14);
+        R(31, 12 + i * 3, 3, 2, '#7aa6d8'); R(35, 12 + i * 3, w, 2, GREEN);
+      }
+      R(31, 22, 16, 1, '#334155'); R(31, 22, Math.floor(16 * prog), 1, GREEN);
+    } else {                                                         // listo: tilde verde
+      [[33, 17], [35, 19], [37, 17], [39, 15], [41, 13]].forEach(([x, y]) => R(x, y, 2, 2, GREEN));
+    }
+
+    // cuerpo
+    R(14, 19 + hy, 3, 3, SKS);
+    R(8, 22, 14, 10, SHIRT); R(13, 22, 4, 2, '#fff'); R(14, 23, 2, 8, '#d62839'); R(8, 22, 14, 1, SHD);
+    // cabeza
+    R(10, 8 + hy, 11, 11, SK);
+    R(9, 5 + hy, 13, 4, HAIR); R(9, 7 + hy, 2, 5, HAIR); R(20, 7 + hy, 2, 5, HAIR); R(12, 5 + hy, 4, 1, '#5a3f28');
+    R(11, 11 + hy, 5, 4, '#1c2540'); R(17, 11 + hy, 5, 4, '#1c2540'); R(16, 12 + hy, 1, 1, '#1c2540');
+    R(12, 12 + hy, 3, 2, '#fff'); R(18, 12 + hy, 3, 2, '#fff');
+    if (act) { R(14, 12 + hy, 1, 1, K); R(20, 12 + hy, 1, 1, K); } else { R(14, 13 + hy, 1, 1, K); R(20, 13 + hy, 1, 1, K); }
+    if (done) { R(13, 16 + hy, 1, 1, '#8b2c2c'); R(14, 17 + hy, 5, 1, '#8b2c2c'); R(19, 16 + hy, 1, 1, '#8b2c2c'); }
+    else if (act) R(14, 17 + hy, 4, 1, '#8b2c2c');
+    else { R(14, 17 + hy, 4, 1, '#8b2c2c'); R(18, 16 + hy, 1, 1, '#8b2c2c'); }
+
+    const SH2 = SHIRT;
+    if (!act) {                                                      // el celu
+      R(5, 25, 4, 7, SH2); R(4, 30, 5, 2, SK);                       // brazo apoyado
+      R(20, 24, 5, 4, SH2); R(23, 19, 3, 6, SH2); R(23, 17, 4, 3, SK);
+      R(24, 7, 5, 10, '#2a2a35');
+      const g = ['#7fd4ff', '#ff9ad5', '#ffe27a'][Math.floor(t / 3) % 3];
+      R(25, 8, 3, 8, g);
+      const hx = 22 + ((t >> 1) % 3), hyy = 5 - (t % 5);              // corazoncitos
+      if (hyy >= 0) { R(hx, hyy, 1, 1, '#ff5a7a'); R(hx + 2, hyy, 1, 1, '#ff5a7a'); R(hx, hyy + 1, 3, 1, '#ff5a7a'); R(hx + 1, hyy + 2, 1, 1, '#ff5a7a'); }
+    } else {                                                         // tipeando
+      R(1, 30, 7, 2, '#2a2a35'); R(2, 30, 5, 1, '#7fd4ff');          // celu dejado de lado
+      R(18, 30, 14, 2, '#d5dae5'); R(19, 30, 12, 1, '#98a2b3');
+      R(8, 24, 3, 4, SH2); R(11, 27, 7, 3, SH2); R(18, 27 + (t % 2), 3, 3, SK);
+      R(20, 24, 3, 3, SH2); R(21, 27, 3, 2, SH2); R(24, 27 + ((t + 1) % 2), 3, 3, SK);
+      if (!done && t % 2) R(22 + (t % 5) * 2, 29, 2, 1, '#fff');      // teclas
+    }
+    PX.outline(ctx, W, H);
+    PX.shadow(ctx, 0, H - 1, 54);
+  }
+
+  mount('char-recursos', 72, 48, 2, drawPrinter, 26, updatePrinter);
+  mount('char-tablero', 64, 48, 2, drawGirl, 30);
+  mount('char-ciclo', 54, 46, 2, drawAdmin, 26);
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

@@ -624,6 +624,59 @@ body::before {
 @media (prefers-reduced-motion: reduce) {
   #mascot .m-body.walking, #mascot .m-body.scared, .worker .hammer { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   TAREAS DEL EQUIPO
+   ═══════════════════════════════════════════════════════════════ */
+#tasks { margin-top: 36px; opacity: 0; animation: fadeUp 0.5s ease 0.5s forwards; }
+.tk-panel { background: rgba(255,255,255,0.86); border: 1px solid var(--border); border-radius: 16px; padding: 22px; box-shadow: var(--bc-shadow-sm); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.tk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.tk-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+.tk-count { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .1em; color: var(--amber); background: var(--amber-dim); border: 1px solid rgba(217,119,6,.25); padding: 3px 9px; border-radius: 20px; }
+.tk-count[hidden] { display: none; }
+.tk-me { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.tk-me select, .tk-form select, .tk-form input[type=date] {
+  font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border-hi); border-radius: 8px; padding: 7px 10px; outline: none;
+}
+.tk-me select:focus, .tk-form select:focus, .tk-form input:focus, .tk-input:focus { border-color: var(--amber); }
+.tk-form { display: flex; flex-direction: column; gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.tk-input-wrap { position: relative; }
+.tk-input { width: 100%; font-family: 'Syne', sans-serif; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border-hi); border-radius: 10px; padding: 12px 14px; outline: none; resize: none; min-height: 48px; }
+.tk-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tk-row label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.tk-add { margin-left: auto; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: #fff; background: var(--amber); border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer; transition: background var(--t), transform var(--t); }
+.tk-add:hover { background: #b45309; } .tk-add:active { transform: scale(.97); }
+.tk-hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint); }
+.tk-hint b { color: var(--amber); font-weight: 500; }
+.tk-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; background: #fff; border: 1px solid var(--border-hi); border-radius: 10px; box-shadow: var(--bc-shadow); overflow: hidden; }
+.tk-menu[hidden] { display: none; }
+.tk-opt { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.tk-opt small { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint); margin-left: auto; }
+.tk-opt.on, .tk-opt:hover { background: var(--amber-dim); }
+.tk-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.tk-tab { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; cursor: pointer; letter-spacing: .04em; }
+.tk-tab.on { color: var(--amber); border-color: rgba(217,119,6,.4); background: var(--amber-dim); }
+.tk-list { display: flex; flex-direction: column; gap: 8px; }
+.tk-item { display: flex; align-items: flex-start; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.tk-item.done .tk-text { text-decoration: line-through; color: var(--faint); }
+.tk-check { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; accent-color: var(--green); cursor: pointer; }
+.tk-body { flex: 1; min-width: 0; }
+.tk-text { font-size: 14px; font-weight: 600; line-height: 1.45; word-wrap: break-word; }
+.tk-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; letter-spacing: .03em; }
+.tk-meta .late { color: #dc2626; }
+.tk-del { background: none; border: none; color: var(--faint); font-size: 16px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.tk-del:hover { color: #dc2626; background: rgba(220,38,38,.08); }
+.tk-chip { display: inline-flex; align-items: center; gap: 4px; font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; text-decoration: none; color: var(--amber); background: var(--amber-dim); border: 1px solid rgba(217,119,6,.3); border-radius: 6px; padding: 0 7px; margin: 0 1px; }
+a.tk-chip:hover { background: var(--amber); color: #fff; }
+.tk-chip.green { color: #059669; background: rgba(5,150,105,.1); border-color: rgba(5,150,105,.3); }
+.tk-chip.blue { color: #2563eb; background: rgba(37,99,235,.1); border-color: rgba(37,99,235,.3); }
+.tk-chip.orange { color: #ea580c; background: rgba(234,88,12,.1); border-color: rgba(234,88,12,.3); }
+a.tk-chip.green:hover { background: #059669; color:#fff; } a.tk-chip.blue:hover { background: #2563eb; color:#fff; } a.tk-chip.orange:hover { background: #ea580c; color:#fff; }
+.tk-chip.off { opacity: .6; cursor: not-allowed; }
+.tk-empty { text-align: center; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--faint); padding: 22px 0; }
+.tk-sync { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint); margin-top: 12px; text-align: right; }
+@media (max-width: 640px) { .tk-add { width: 100%; margin-left: 0; } .tk-panel { padding: 16px; } }
 </style>
 </head>
 <body>
@@ -737,6 +790,40 @@ body::before {
     </div>
 
   </div>
+
+
+  <!-- TAREAS DEL EQUIPO -->
+  <section id="tasks">
+    <div class="section-label" style="opacity:1;animation:none">— tareas del equipo</div>
+    <div class="tk-panel">
+      <div class="tk-head">
+        <div class="tk-title">Tareas <span class="tk-count" id="tk-count" hidden></span></div>
+        <div class="tk-me">Soy <select id="tk-me"></select></div>
+      </div>
+
+      <div class="tk-form">
+        <div class="tk-input-wrap">
+          <textarea class="tk-input" id="tk-input" rows="2" placeholder="Escribí una tarea… usá @ para mencionar un módulo"></textarea>
+          <div class="tk-menu" id="tk-menu" hidden></div>
+        </div>
+        <div class="tk-row">
+          <label>Para <select id="tk-to"></select></label>
+          <label>Vence <input type="date" id="tk-due"></label>
+          <button class="tk-add" id="tk-add" type="button">Agregar tarea</button>
+        </div>
+        <div class="tk-hint">Tip: escribí <b>@</b> para elegir un módulo (@tablero, @ciclo, @recursos…) y la tarea te lleva directo.</div>
+      </div>
+
+      <div class="tk-tabs" id="tk-tabs">
+        <button class="tk-tab on" data-tab="mine" type="button">Para mí</button>
+        <button class="tk-tab" data-tab="sent" type="button">Que asigné</button>
+        <button class="tk-tab" data-tab="all" type="button">Todas</button>
+        <button class="tk-tab" data-tab="done" type="button">Hechas</button>
+      </div>
+      <div class="tk-list" id="tk-list"></div>
+      <div class="tk-sync" id="tk-sync"></div>
+    </div>
+  </section>
 
   <!-- FOOTER -->
   <footer id="footer">
@@ -2021,6 +2108,177 @@ function drawWorker(ctx, frame, spark) {
   mount('char-recursos', 72, 48, 2, drawPrinter, 26, updatePrinter);
   mount('char-tablero', 64, 48, 2, drawGirl, 30);
   mount('char-ciclo', 54, 46, 2, drawAdmin, 26);
+})();
+</script>
+<script>
+// ─── TAREAS DEL EQUIPO ───────────────────────────────────────────
+// Para que las tareas se compartan entre usuarios/dispositivos, pegá acá la URL
+// de tu Firebase Realtime Database (ej: 'https://tu-proyecto-default-rtdb.firebaseio.com').
+// Si queda vacío, las tareas se guardan solo en este navegador (localStorage).
+(function () {
+  'use strict';
+  const FIREBASE_DB_URL = '';
+  const USERS = ['Lisandro', 'María', 'Valentín'];          // editá acá los usuarios
+  const MODS = [
+    { slug: 'tablero',  name: 'Tablero de Locales', href: 'tablero-locales.html', color: 'blue',   icon: '📋' },
+    { slug: 'ciclo',    name: 'Ciclo del Empleado', href: 'ciclo-empleado.html',  color: 'green',  icon: '🔄' },
+    { slug: 'recursos', name: 'Recursos',           href: 'recursos.html',        color: 'orange', icon: '🖨️' },
+    { slug: 'icheck',   name: 'iCheck Asistencia',  href: null,                   color: 'green',  icon: '🚧' }
+  ];
+  const $ = id => document.getElementById(id);
+  const meSel = $('tk-me'), toSel = $('tk-to'), input = $('tk-input'), menu = $('tk-menu'),
+        dueIn = $('tk-due'), list = $('tk-list'), countEl = $('tk-count'), syncEl = $('tk-sync');
+  if (!list) return;
+
+  const LS_TASKS = 'bc_tareas_v1', LS_ME = 'bc_tareas_me';
+  let tasks = {}, tab = 'mine', me = USERS[0];
+  try { me = localStorage.getItem(LS_ME) || USERS[0]; } catch (e) {}
+  if (!USERS.includes(me)) me = USERS[0];
+
+  USERS.forEach(u => { meSel.add(new Option(u, u)); toSel.add(new Option(u, u)); });
+  meSel.value = me; toSel.value = me;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ── almacenamiento ──
+  const remote = !!FIREBASE_DB_URL;
+  const base = FIREBASE_DB_URL.replace(/\/$/, '');
+  async function load() {
+    if (remote) {
+      try {
+        const r = await fetch(base + '/tareas.json');
+        tasks = (await r.json()) || {};
+        syncEl.textContent = '● sincronizado · ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) { syncEl.textContent = '⚠ sin conexión con la base'; }
+    } else {
+      try { tasks = JSON.parse(localStorage.getItem(LS_TASKS) || '{}'); } catch (e) { tasks = {}; }
+      syncEl.textContent = 'Modo local: las tareas se guardan solo en este navegador.';
+    }
+  }
+  async function save(t) {
+    tasks[t.id] = t;
+    if (remote) { try { await fetch(base + '/tareas/' + t.id + '.json', { method: 'PUT', body: JSON.stringify(t) }); } catch (e) {} }
+    else { try { localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); } catch (e) {} }
+  }
+  async function remove(id) {
+    delete tasks[id];
+    if (remote) { try { await fetch(base + '/tareas/' + id + '.json', { method: 'DELETE' }); } catch (e) {} }
+    else { try { localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); } catch (e) {} }
+  }
+
+  // ── render ──
+  function rich(text) {
+    return esc(text).replace(/@(tablero|ciclo|recursos|icheck)\b/gi, (_, s) => {
+      const m = MODS.find(x => x.slug === s.toLowerCase());
+      const label = m.icon + ' ' + m.name;
+      return m.href
+        ? `<a class="tk-chip ${m.color}" href="${m.href}">${label}</a>`
+        : `<span class="tk-chip ${m.color} off" title="Módulo en construcción">${label}</span>`;
+    });
+  }
+  function fmtDue(d) {
+    if (!d) return '';
+    const [y, m, dd] = d.split('-');
+    const late = d < new Date().toISOString().slice(0, 10);
+    return `<span class="${late ? 'late' : ''}">📅 ${dd}/${m}${late ? ' · vencida' : ''}</span>`;
+  }
+  function render() {
+    const all = Object.values(tasks).sort((a, b) => (a.done - b.done) || (b.created - a.created));
+    const pending = all.filter(t => t.to === me && !t.done).length;
+    countEl.hidden = !pending; countEl.textContent = pending + (pending === 1 ? ' pendiente' : ' pendientes');
+    let rows = all;
+    if (tab === 'mine') rows = all.filter(t => t.to === me && !t.done);
+    else if (tab === 'sent') rows = all.filter(t => t.from === me && t.to !== me && !t.done);
+    else if (tab === 'done') rows = all.filter(t => t.done && (t.to === me || t.from === me));
+    else rows = all.filter(t => !t.done);
+    if (!rows.length) {
+      list.innerHTML = '<div class="tk-empty">' + ({ mine: 'Nada pendiente para vos. 🎉', sent: 'No le asignaste tareas a nadie.', done: 'Todavía no hay tareas hechas.', all: 'No hay tareas abiertas.' }[tab]) + '</div>';
+      return;
+    }
+    list.innerHTML = rows.map(t => `
+      <div class="tk-item ${t.done ? 'done' : ''}" data-id="${esc(t.id)}">
+        <input class="tk-check" type="checkbox" ${t.done ? 'checked' : ''} aria-label="Marcar como hecha">
+        <div class="tk-body">
+          <div class="tk-text">${rich(t.text)}</div>
+          <div class="tk-meta">
+            <span>${t.from === t.to ? '👤 ' + esc(t.to) : esc(t.from) + ' → ' + esc(t.to)}</span>
+            ${fmtDue(t.due)}
+          </div>
+        </div>
+        <button class="tk-del" type="button" aria-label="Borrar tarea" title="Borrar">✕</button>
+      </div>`).join('');
+  }
+
+  // ── eventos ──
+  meSel.addEventListener('change', () => {
+    me = meSel.value; toSel.value = me;
+    try { localStorage.setItem(LS_ME, me); } catch (e) {}
+    render();
+  });
+  $('tk-tabs').addEventListener('click', e => {
+    const b = e.target.closest('.tk-tab'); if (!b) return;
+    tab = b.dataset.tab;
+    document.querySelectorAll('.tk-tab').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  });
+  list.addEventListener('click', async e => {
+    const it = e.target.closest('.tk-item'); if (!it) return;
+    const t = tasks[it.dataset.id]; if (!t) return;
+    if (e.target.classList.contains('tk-check')) { t.done = e.target.checked; await save(t); render(); }
+    else if (e.target.classList.contains('tk-del')) { if (confirm('¿Borrar esta tarea?')) { await remove(t.id); render(); } }
+  });
+
+  async function add() {
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    const t = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text, from: me, to: toSel.value, due: dueIn.value || '', done: false, created: Date.now() };
+    await save(t);
+    input.value = ''; dueIn.value = ''; toSel.value = me; closeMenu();
+    tab = t.to === me ? 'mine' : 'sent';
+    document.querySelectorAll('.tk-tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+    render();
+  }
+  $('tk-add').addEventListener('click', add);
+
+  // ── autocompletado de @módulos ──
+  let opts = [], sel = 0;
+  function closeMenu() { menu.hidden = true; opts = []; }
+  function openMenu(q) {
+    opts = MODS.filter(m => m.slug.startsWith(q.toLowerCase()) || m.name.toLowerCase().includes(q.toLowerCase()));
+    if (!opts.length) return closeMenu();
+    sel = Math.min(sel, opts.length - 1);
+    menu.innerHTML = opts.map((m, i) => `<div class="tk-opt ${i === sel ? 'on' : ''}" data-i="${i}">${m.icon} ${esc(m.name)}<small>@${m.slug}</small></div>`).join('');
+    menu.hidden = false;
+  }
+  function pickMod(m) {
+    const pos = input.selectionStart, before = input.value.slice(0, pos), after = input.value.slice(pos);
+    const nb = before.replace(/@\w*$/, '@' + m.slug + ' ');
+    input.value = nb + after;
+    input.setSelectionRange(nb.length, nb.length);
+    input.focus(); closeMenu();
+  }
+  input.addEventListener('input', () => {
+    const mt = input.value.slice(0, input.selectionStart).match(/@(\w*)$/);
+    if (mt) { sel = 0; openMenu(mt[1]); } else closeMenu();
+  });
+  input.addEventListener('keydown', e => {
+    if (!menu.hidden) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel = (sel + 1) % opts.length; openMenu(input.value.slice(0, input.selectionStart).match(/@(\w*)$/)[1]); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); sel = (sel - 1 + opts.length) % opts.length; openMenu(input.value.slice(0, input.selectionStart).match(/@(\w*)$/)[1]); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickMod(opts[sel]); return; }
+      if (e.key === 'Escape') { closeMenu(); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); }
+  });
+  menu.addEventListener('mousedown', e => {
+    const o = e.target.closest('.tk-opt'); if (!o) return;
+    e.preventDefault(); pickMod(opts[+o.dataset.i]);
+  });
+  input.addEventListener('blur', () => setTimeout(closeMenu, 120));
+
+  load().then(render);
+  setInterval(() => load().then(render), remote ? 10000 : 30000);
+  window.addEventListener('storage', e => { if (e.key === LS_TASKS) load().then(render); });
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

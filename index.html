@@ -509,28 +509,15 @@ body::before {
 
 .wx-item { position: absolute; line-height: 1; user-select: none; will-change: transform; }
 
-/* sol y luna */
-.wx-sun  { top: 60px; right: 5%; font-size: 100px;
-           filter: drop-shadow(0 0 40px rgba(245,158,11,.55));
-           animation: wxSun 5s ease-in-out infinite; }
-.wx-sun.sm { font-size: 70px; }
-.wx-moon { top: 70px; right: 8%; font-size: 84px;
-           filter: drop-shadow(0 0 30px rgba(226,232,240,.35));
-           animation: wxSun 6s ease-in-out infinite; }
-.wx-star { background: #475569; border-radius: 50%;
+/* sol y luna (pixel art) */
+.wx-sun  { top: 60px; right: 5%; animation: wxSun 5s ease-in-out infinite; }
+.wx-moon { top: 70px; right: 8%; animation: wxSun 6s ease-in-out infinite; }
+.wx-star { background: #64748b; border-radius: 0;
            animation: wxTwinkle var(--dur,3s) ease-in-out var(--delay,0s) infinite; }
 
-/* nubes con cara */
-.wx-cloud { left: 0; width: 7em; height: 2.5em; border-radius: 2.5em;
-            background: #94a3b8; opacity: .38;
-            animation: wxCross var(--dur,80s) linear var(--delay,0s) infinite; }
-.wx-cloud::before, .wx-cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
-.wx-cloud::before { width: 3em; height: 3em; top: -1.4em; left: 1em; }
-.wx-cloud::after  { width: 4em; height: 4em; top: -2em;   right: 1em; }
-.wx-cloud .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-                  font-family: var(--bc-font-mono); font-size: 1.1em; color: #0f172a; z-index: 1; }
-.wx-cloud.gray { background: #64748b; opacity: .3; }
-.wx-cloud.dark { background: #475569; opacity: .42; }
+/* nubes pixel art */
+.wx-cloudpx { left: 0; opacity: .8; animation: wxCross var(--dur,80s) linear var(--delay,0s) infinite; }
+.wx-cloudpx.fog { opacity: .35; }
 
 /* movimientos */
 .wx-rise  { bottom: -60px; left: 0; opacity: 0;
@@ -538,27 +525,24 @@ body::before {
 .wx-fall  { top: -60px; animation: wxFall var(--dur,10s) linear var(--delay,0s) infinite; }
 .wx-cross { left: 0; animation: wxCross var(--dur,30s) linear var(--delay,0s) infinite; }
 .wx-ground{ bottom: 8px; }
-.wx-hop   { display: inline-block; animation: wxHop .7s ease-in-out infinite; }
-.wx-sway  { display: inline-block; animation: wxSway 3s ease-in-out infinite alternate; }
-.wx-spin  { display: inline-block; animation: wxSpin 1.4s linear infinite; }
-.wx-bobber{ animation: wxHop var(--dur,3s) ease-in-out infinite; }
-.wx-shake { animation: wxShake .35s linear infinite; }
-.wx-wobble{ animation: wxWobble 2.4s ease-in-out infinite; transform-origin: 50% 100%; }
-.wx-peek  { animation: wxPeek 6s ease-in-out infinite; }
+.wx-hop   { display: inline-block; animation: wxHop .7s steps(2, jump-none) infinite; }
+.wx-sway  { display: inline-block; animation: wxSway 3s steps(6) infinite alternate; }
+.wx-spin  { display: inline-block; animation: wxSpin 1.4s steps(8) infinite; }
+.wx-bobber{ animation: wxHop var(--dur,3s) steps(2, jump-none) infinite; }
+.wx-shake { animation: wxShake .35s steps(2) infinite; }
+.wx-wobble{ animation: wxWobble 2.4s steps(4) infinite; transform-origin: 50% 100%; }
+.wx-peek  { animation: wxPeek 6s steps(8) infinite; }
 
-/* lluvia, tormenta, niebla */
-.wx-drop { width: 2px; border-radius: 2px; --dx: -40px;
-           background: linear-gradient(to bottom, transparent, rgba(125,170,255,.75)); }
+/* lluvia y tormenta */
+.wx-drop { width: 3px; border-radius: 0; --dx: -40px;
+           background: #6ea0ff; box-shadow: inset 1px 0 0 #cfe3ff; }
 .wx-flash{ inset: 0; background: #fde68a; opacity: 0; animation: wxFlash 7s linear infinite; }
 .wx-bolt { opacity: 0; animation: wxBolt var(--dur,6s) linear var(--delay,0s) infinite; }
-.wx-fogblob { border-radius: 50%; filter: blur(18px);
-              background: radial-gradient(closest-side, rgba(100,116,139,.28), transparent);
-              animation: wxDrift var(--dur,20s) ease-in-out var(--delay,0s) infinite alternate; }
 
-@keyframes wxSun     { 0%{transform:translateY(0) rotate(-6deg) scale(1)} 100%{transform:translateY(-14px) rotate(6deg) scale(1.05)} }
+@keyframes wxSun     { 0%{transform:translateY(0)} 100%{transform:translateY(-12px)} }
 @keyframes wxTwinkle { 0%,100%{opacity:.15} 50%{opacity:1} }
 @keyframes wxCross   { from{transform:translateX(-25vw)} to{transform:translateX(125vw)} }
-@keyframes wxRise    { 0%{transform:translateY(0) rotate(0);opacity:0} 10%,90%{opacity:.85} 100%{transform:translateY(-115vh) rotate(360deg);opacity:0} }
+@keyframes wxRise    { 0%{transform:translateY(0);opacity:0} 10%,90%{opacity:.95} 100%{transform:translateY(-115vh);opacity:0} }
 @keyframes wxFall    { 0%{transform:translate3d(0,0,0) rotate(0)} 100%{transform:translate3d(var(--dx,0px),118vh,0) rotate(var(--rot,0deg))} }
 @keyframes wxHop     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
 @keyframes wxSway    { from{transform:translateX(-18px)} to{transform:translateX(18px)} }
@@ -571,14 +555,13 @@ body::before {
 @keyframes wxBolt    { 0%,88%,100%{opacity:0} 90%,93%{opacity:1} 91.5%{opacity:.1} 95%{opacity:0} }
 
 /* clima chip en la barra */
-.wx-chip { font-family: var(--bc-font-mono); font-size: 10px; letter-spacing: .06em;
+.wx-chip { display: inline-flex; align-items: center; font-family: var(--bc-font-mono); font-size: 10px; letter-spacing: .06em;
            color: var(--bc-muted); border: 1px solid var(--bc-border); background: var(--bc-surface2);
-           padding: 5px 10px; border-radius: 20px; white-space: nowrap; cursor: help; }
+           padding: 2px 12px 2px 6px; border-radius: 20px; white-space: nowrap; cursor: help; }
 .wx-chip[hidden] { display: none; }
 
 @media (max-width: 640px) {
-  .wx-sun { font-size: 70px; top: 50px; }
-  .wx-moon { font-size: 60px; }
+  .wx-sun { top: 50px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #weather-bg .wx-item:not(.wx-keep) { display: none; }
@@ -811,96 +794,81 @@ document.querySelectorAll('.mod-card').forEach(card => {
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const n = x => Math.max(1, Math.round(x * K));
 
-  const HAPPY = ['•ᴗ•', '◕‿◕', '^_^', '°o°'];
-  const MEH   = ['-_-', '¬_¬', '•_•', '-.-'];
-  const SAD   = ['╥﹏╥', 'T_T', '>_<', '•︵•'];
+  const HAPPY = 'happy', MEH = 'meh', SAD = 'sad';
 
+  const ri = (a, b) => Math.floor(rnd(a, b + 1));
   function mk(cls, html, style) {
     const d = document.createElement('div');
     d.className = 'wx-item ' + cls;
-    if (html) d.innerHTML = html;
+    if (html instanceof Node) d.appendChild(html);
+    else if (html) d.innerHTML = html;
     if (style) d.style.cssText = style;
     bg.appendChild(d);
     return d;
   }
 
   // ── piezas ──
-  function sun(small) { mk('wx-keep wx-sun' + (small ? ' sm' : ''), '🌞'); }
-
-  function floaters() {
-    const stuff = ['🍦', '🕶️', '🩴', '🍉', '🧴', '🏖️', '🍹'];
-    for (let i = 0; i < n(8); i++)
-      mk('wx-rise', pick(stuff), `left:${rnd(2, 96)}%;font-size:${rnd(22, 38)}px;--dur:${rnd(14, 26)}s;--delay:-${rnd(0, 26)}s`);
-  }
+  function sun(small) { mk('wx-keep wx-sun', WXS.node('sun', { scale: small ? 3 : 4 })); }
 
   function night() {
-    mk('wx-keep wx-moon', '🌙');
+    mk('wx-keep wx-moon', WXS.node('moon', { scale: 4 }));
     for (let i = 0; i < n(40); i++) {
-      const s = rnd(1.5, 3);
+      const s = Math.random() < .25 ? 3 : 2;
       mk('wx-star', '', `left:${rnd(0, 100)}%;top:${rnd(0, 70)}%;width:${s}px;height:${s}px;--dur:${rnd(1.5, 4)}s;--delay:-${rnd(0, 4)}s`);
     }
-    for (let i = 0; i < 3; i++)
-      mk('wx-rise', '💤', `left:${rnd(60, 95)}%;font-size:${rnd(22, 34)}px;--dur:${rnd(10, 16)}s;--delay:-${rnd(0, 16)}s`);
-    mk('wx-cross', '🌠', `top:${rnd(5, 35)}%;font-size:28px;--dur:18s;--delay:-${rnd(0, 18)}s`);
   }
 
-  function clouds(count, tone, faces) {
+  function clouds(count, tone, face, big) {
+    const t = tone === 'light' ? 'light' : tone;
     for (let i = 0; i < count; i++)
-      mk('wx-cloud ' + tone, `<span class="face">${pick(faces)}</span>`,
-         `top:${rnd(6, 55)}%;font-size:${rnd(14, 26)}px;--dur:${rnd(55, 110)}s;--delay:-${rnd(0, 110)}s`);
+      mk('wx-cloudpx' + (face ? '' : ' fog'), WXS.node('cloud', { tone: t, face: face, scale: big ? ri(6, 8) : ri(2, 4) }),
+         `top:${rnd(4, 55)}%;--dur:${rnd(55, 110)}s;--delay:-${rnd(0, 110)}s`);
   }
 
   function drops(count) {
     for (let i = 0; i < count; i++)
-      mk('wx-fall wx-drop', '', `left:${rnd(0, 105)}%;height:${rnd(12, 22)}px;--dur:${rnd(.6, 1.1)}s;--delay:-${rnd(0, 1.1)}s`);
+      mk('wx-fall wx-drop', '', `left:${rnd(0, 105)}%;height:${ri(4, 7) * 3}px;--dur:${rnd(.6, 1.1)}s;--delay:-${rnd(0, 1.1)}s`);
   }
 
   function gusts(count) {
-    for (let i = 0; i < count; i++)
-      mk('wx-cross', `<span class="wx-spin">${pick(['🍃', '🍂', '🎩', '🧢', '🪁'])}</span>`,
-         `top:${rnd(8, 80)}%;font-size:${rnd(22, 36)}px;--dur:${rnd(5, 10)}s;--delay:-${rnd(0, 10)}s`);
+    for (let i = 0; i < count; i++) {
+      const k = pick(['leaf', 'leafO']);
+      const cv = WXS.node(k === 'leafO' ? 'leaf' : k, { scale: ri(2, 3), orange: k === 'leafO' });
+      const inner = k === 'kite' ? cv : (() => { const w = document.createElement('span'); w.className = 'wx-spin'; w.appendChild(cv); return w; })();
+      mk('wx-cross', inner, `top:${rnd(8, 80)}%;--dur:${rnd(5, 10)}s;--delay:-${rnd(0, 10)}s`);
+    }
   }
 
   // ── escenas ──
   function rain(level) {           // 1 llovizna · 2 lluvia · 3 diluvio
     clouds(n(level === 1 ? 3 : 5), 'dark', SAD);
     drops(n([0, 28, 55, 80][level]));
-    for (let i = 0; i < (level === 1 ? 2 : 3); i++)
-      mk('wx-ground wx-bobber', '☂️', `left:${rnd(5, 90)}%;font-size:${rnd(30, 46)}px;--dur:${rnd(2, 3.5)}s`);
-    mk('wx-cross wx-ground', '<span class="wx-hop">🐸</span>', 'font-size:30px;--dur:50s;--delay:-20s');
-    if (level >= 2) mk('wx-cross wx-ground', '<span class="wx-hop">🦆</span>', 'font-size:34px;--dur:38s;--delay:-8s');
-    if (level === 3)  // "llueven gatos y perros"
-      for (let i = 0; i < 5; i++)
-        mk('wx-fall', pick(['🐱', '🐶']), `left:${rnd(3, 95)}%;font-size:${rnd(28, 40)}px;--dur:${rnd(5, 8)}s;--delay:-${rnd(0, 8)}s;--rot:${rnd(-200, 200)}deg;opacity:.9`);
   }
+
+  function wrap(cls, el) { const w = document.createElement('span'); w.className = cls; w.appendChild(el); return w; }
 
   function thunder() {
     rain(3);
     mk('wx-flash');
     for (let i = 0; i < 3; i++)
-      mk('wx-bolt', '⚡', `left:${rnd(10, 90)}%;top:${rnd(5, 40)}%;font-size:${rnd(40, 70)}px;--dur:${rnd(5, 9)}s;--delay:-${rnd(0, 9)}s`);
-    mk('wx-ground wx-shake', '😱', 'right:6%;font-size:64px');
+      mk('wx-bolt', WXS.node('bolt', { scale: ri(3, 5) }), `left:${rnd(10, 90)}%;top:${rnd(5, 40)}%;--dur:${rnd(5, 9)}s;--delay:-${rnd(0, 9)}s`);
   }
 
   function snow() {
     clouds(n(3), 'gray', HAPPY);
-    for (let i = 0; i < n(45); i++)
-      mk('wx-fall', `<span class="wx-sway">${pick(['❄️', '❄', '•', '❅'])}</span>`,
-         `left:${rnd(0, 100)}%;font-size:${rnd(10, 26)}px;--dur:${rnd(8, 16)}s;--delay:-${rnd(0, 16)}s;--dx:${rnd(-60, 60)}px;opacity:${rnd(.5, .95)}`);
-    mk('wx-ground wx-wobble', '⛄', 'left:5%;font-size:64px');
-    mk('wx-ground wx-shake', '🥶', 'right:8%;font-size:48px');
-    mk('wx-cross wx-ground', '<span class="wx-hop">🐧</span>', 'font-size:34px;--dur:35s;--delay:-12s');
+    for (let i = 0; i < n(45); i++) {
+      const big = Math.random() < .5;
+      mk('wx-fall', wrap('wx-sway', WXS.node('flake', { scale: ri(1, 3), big: big, outline: 'rgba(90,130,200,.55)' })),
+         `left:${rnd(0, 100)}%;--dur:${rnd(8, 16)}s;--delay:-${rnd(0, 16)}s;--dx:${rnd(-60, 60)}px;opacity:${rnd(.6, .95)}`);
+    }
   }
 
   function fog() {
-    for (let i = 0; i < n(5); i++)
-      mk('wx-fogblob', '', `top:${rnd(5, 85)}%;left:${rnd(-10, 80)}%;width:${rnd(300, 520)}px;height:${rnd(120, 200)}px;--dur:${rnd(14, 26)}s;--delay:-${rnd(0, 20)}s`);
-    mk('wx-ground wx-peek', '👻', `left:${rnd(10, 80)}%;font-size:56px`);
+    clouds(n(6), 'fog', null, true);
   }
 
   function overcast() {
     clouds(n(7), 'gray', MEH);
-    mk('wx-cross wx-ground', '🐌', 'font-size:30px;--dur:120s;--delay:-40s');
   }
 
   // ── mapeo de códigos WMO → escena ──
@@ -936,7 +904,7 @@ document.querySelectorAll('.mod-card').forEach(card => {
     window.__bcWx = d;   // la mascota lee el clima de acá
 
     switch (d.scene) {
-      case 'clear':    d.day ? (sun(false), floaters()) : night(); break;
+      case 'clear':    d.day ? sun(false) : night(); break;
       case 'partly':   d.day ? sun(true) : night(); clouds(n(3), 'light', HAPPY); break;
       case 'overcast': overcast(); break;
       case 'fog':      fog(); break;
@@ -950,10 +918,10 @@ document.querySelectorAll('.mod-card').forEach(card => {
 
     if (chip && d.live) {
       const i = INFO[d.scene];
-      const icon = (d.scene === 'clear' && !d.day) ? '🌙' : i[0];
       const label = (d.scene === 'clear' && !d.day) ? 'Noche despejada' : i[1];
       const t = Math.round(d.temp);
-      chip.textContent = `${icon} ${t}°C · ${label}`;
+      chip.textContent = ''; chip.appendChild(WXS.icon(d.scene, d.day));
+      chip.appendChild(document.createTextNode(`${t}°C · ${label}`));
       chip.title = i[2] + (d.wind >= 30 ? ' Y con viento: agarrate el sombrero.' : '');
       chip.hidden = false;
     } else if (chip) {
@@ -996,7 +964,7 @@ document.querySelectorAll('.mod-card').forEach(card => {
   }
 
   const go = () => load().then(render);
-  go();
+  if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
   if (!new URLSearchParams(location.search).get('clima')) setInterval(go, 15 * 60 * 1000);
 })();
 </script>
@@ -1054,7 +1022,376 @@ const PX = (function () {
 })();
 
 // ═════════════════════════════════════════════════════════════════
-// COCINERO — 34×46 px · f: 0-3 caminando, 4 quieto · scared: susto
+// SPRITES DEL CLIMA — mismo estilo 8-bit con contorno oscuro que el cocinero y el obrero
+// ═════════════════════════════════════════════════════════════════
+const WXS = (function () {
+  const PAL = {
+    k: '#14121f', w: '#ffffff', g: '#dde2ea', G: '#b4bcc9', s: '#7e8799',
+    y: '#f5c518', Y: '#ffe27a', o: '#ff7f11', O: '#e06a00', r: '#d62839', R: '#97192a',
+    b: '#2f5fb3', B: '#4a7bd0', d: '#244a8c', c: '#9fd3ff', n: '#3f9d4a', N: '#2c7a37', l: '#7ccf5a',
+    p: '#f4a3b5', P: '#e9806e', u: '#8b5a2b', U: '#c08a4b', f: '#f4bc8a', m: '#f6efc0', M: '#d9cf8f'
+  };
+  const TONES = {
+    light: { a: '#f4f7fb', h: '#ffffff', e: '#c5cee0' },
+    gray:  { a: '#c3cad6', h: '#e2e7ef', e: '#8f9ab0' },
+    dark:  { a: '#8a94aa', h: '#aab3c5', e: '#5d6880' },
+    fog:   { a: '#d5dbe6', h: '#eef1f6', e: '#aeb8c9' }
+  };
+  const PSF = window.innerWidth < 640 ? 0.67 : 1;           // en celu, un poco más chicos
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function Grid(w, h) { this.w = w; this.h = h; this.a = Array.from({ length: h }, () => Array(w).fill('.')); }
+  Grid.prototype = {
+    set(x, y, ch) { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < this.w && y < this.h) this.a[y][x] = ch; return this; },
+    get(x, y) { return (x < 0 || y < 0 || x >= this.w || y >= this.h) ? '.' : this.a[y][x]; },
+    rect(x, y, w, h, ch) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.set(x + i, y + j, ch); return this; },
+    ell(cx, cy, rx, ry, ch) {
+      for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
+        const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry;
+        if (dx * dx + dy * dy <= 1) this.a[y][x] = ch;
+      }
+      return this;
+    },
+    art(rows, x0, y0) { rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.' && ch !== ' ') this.set(x0 + i, y0 + j, ch); })); return this; },
+    // pinta el borde claro arriba-izq y la sombra abajo-der del color 'from'
+    bevel(from, hi, lo) {
+      const src = this.a.map(r => r.slice());
+      for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) if (src[y][x] === from) {
+        const g = (xx, yy) => (xx < 0 || yy < 0 || xx >= this.w || yy >= this.h) ? '.' : src[yy][xx];
+        if (g(x - 1, y - 1) === '.' || g(x, y - 1) === '.' && g(x - 1, y) === '.') this.a[y][x] = hi;
+        else if (g(x + 1, y + 1) === '.' || g(x, y + 1) === '.') this.a[y][x] = lo;
+      }
+      return this;
+    },
+    canvas(scale, pal, outline) {
+      const W = this.w + 2, H = this.h + 2;
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      for (let j = 0; j < this.h; j++) for (let i = 0; i < this.w; i++) {
+        const ch = this.a[j][i]; if (ch === '.') continue;
+        x.fillStyle = (pal && pal[ch]) || PAL[ch] || '#f0f'; x.fillRect(i + 1, j + 1, 1, 1);
+      }
+      if (outline !== null) {
+        const d = x.getImageData(0, 0, W, H).data, A = (px, py) => (px < 0 || py < 0 || px >= W || py >= H) ? 0 : d[(py * W + px) * 4 + 3];
+        x.fillStyle = outline || PAL.k;
+        for (let py = 0; py < H; py++) for (let px = 0; px < W; px++)
+          if (!A(px, py) && (A(px - 1, py) || A(px + 1, py) || A(px, py - 1) || A(px, py + 1))) x.fillRect(px, py, 1, 1);
+      }
+      const s = Math.max(1, Math.round(scale * PSF));
+      c.style.width = (W * s) + 'px'; c.style.height = (H * s) + 'px';
+      c.style.imageRendering = 'pixelated'; c.style.display = 'block';
+      return c;
+    }
+  };
+
+  // ── dibujos ──
+  const SP = {};
+
+  SP.sun = (o) => {
+    const g = new Grid(28, 28), cx = 14, cy = 14;
+    const f = o.frame || 0;
+    const ray = (x, y, w, h) => { g.rect(x, y, w, h, 'y'); };
+    if (f === 0) { ray(13, 0, 2, 4); ray(13, 24, 2, 4); ray(0, 13, 4, 2); ray(24, 13, 4, 2); ray(4, 4, 2, 2); ray(22, 4, 2, 2); ray(4, 22, 2, 2); ray(22, 22, 2, 2); }
+    else { ray(13, 2, 2, 2); ray(13, 24, 2, 2); ray(2, 13, 2, 2); ray(24, 13, 2, 2); ray(3, 3, 3, 3); ray(22, 3, 3, 3); ray(3, 22, 3, 3); ray(22, 22, 3, 3); }
+    g.ell(cx, cy, 8.5, 8.5, 'y');
+    for (let y = 0; y < 28; y++) for (let x = 0; x < 28; x++)
+      if (g.get(x, y) === 'y' && Math.hypot(x + .5 - cx, y + .5 - cy) > 6.3 && x + y > 28) g.set(x, y, 'o');
+    g.rect(9, 8, 3, 1, 'Y'); g.rect(8, 9, 1, 2, 'Y');
+    g.rect(11, 12, 2, 3, 'k'); g.rect(16, 12, 2, 3, 'k');
+    g.set(11, 12, 'w'); g.set(16, 12, 'w');
+    g.rect(9, 16, 2, 1, 'P'); g.rect(18, 16, 2, 1, 'P');
+    g.set(12, 17, 'k'); g.rect(13, 18, 3, 1, 'k'); g.set(16, 17, 'k');
+    return g;
+  };
+
+  SP.moon = () => {
+    const g = new Grid(24, 24);
+    g.ell(12, 12, 10, 10, 'm');
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) if (Math.hypot(x + .5 - 18, y + .5 - 10) < 9) g.set(x, y, '.');
+    g.rect(5, 9, 2, 1, 'M'); g.rect(5, 10, 1, 1, 'M'); g.rect(6, 17, 2, 1, 'M'); g.rect(6, 18, 1, 1, 'M');
+    g.rect(5, 13, 3, 1, 'k'); g.rect(5, 15, 2, 1, 'P');
+    return g;
+  };
+
+  SP.cloud = (o) => {
+    const g = new Grid(28, 16);
+    g.ell(8, 10, 5.5, 5.5, 'a'); g.ell(14.5, 7, 7, 7, 'a'); g.ell(21, 10, 6, 5.5, 'a');
+    g.rect(8, 9, 13, 6, 'a'); g.rect(5, 12, 19, 3, 'a');
+    g.bevel('a', 'h', 'e');
+    for (let x = 0; x < 28; x++) if (g.get(x, 14) === 'a') g.set(x, 14, 'e');
+    const face = o.face;
+    if (face) {
+      g.rect(11, 8, 1, 2, 'k'); g.rect(17, 8, 1, 2, 'k');
+      if (face === 'happy') { g.set(12, 11, 'k'); g.rect(13, 12, 3, 1, 'k'); g.set(16, 11, 'k'); g.rect(9, 11, 2, 1, 'P'); g.rect(18, 11, 2, 1, 'P'); }
+      else if (face === 'meh') g.rect(12, 11, 5, 1, 'k');
+      else { g.set(12, 12, 'k'); g.rect(13, 11, 3, 1, 'k'); g.set(16, 12, 'k'); g.rect(10, 10, 1, 2, 'c'); }
+    }
+    return g;
+  };
+
+  SP.umbrella = () => {
+    const g = new Grid(20, 20);
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 20; x++) {
+      const dx = (x + .5 - 10) / 10, dy = (y + .5 - 8) / 8;
+      if (dx * dx + dy * dy <= 1) g.set(x, y, (Math.floor(x / 3.4) % 2) ? 'w' : 'r');
+    }
+    g.rect(0, 8, 20, 1, 'R'); for (let x = 0; x < 20; x += 4) g.rect(x, 9, 2, 1, (Math.floor(x / 3.4) % 2) ? 'G' : 'R');
+    g.rect(10, 9, 1, 8, 'u'); g.rect(8, 17, 3, 1, 'u'); g.set(8, 16, 'u');
+    return g;
+  };
+
+  SP.frog = () => {
+    const g = new Grid(16, 11);
+    g.art([
+      '.nnn......nnn.',
+      'nnwwn....nwwnn',
+      'nnwknnnnnnwknn',
+      'nnnnnnnnnnnnnn',
+      'nnnnnnnnnnnnnn',
+      'nnnNNNNNNNNnnn',
+      'lnnnnnnnnnnnnl',
+      'nnlnnnnnnnnlnn',
+      'NNNn......nNNN'], 1, 1);
+    g.rect(2, 2, 1, 1, 'k');
+    return g;
+  };
+
+  SP.duck = () => {
+    const g = new Grid(16, 14);
+    g.art([
+      '.......yyy....',
+      '......yyyyy...',
+      '......yykyy...',
+      '......yyyyyoo.',
+      '.......yyyyoo.',
+      '..yy...yyyy...',
+      '.yyyy.yyyyy...',
+      'yyyyyyyyyyyy..',
+      'yYyyyyyyyyyy..',
+      'yyyyyyyyyyyy..',
+      '.yyyyyyyyyy...',
+      '..OOOOOOOO....'], 1, 1);
+    return g;
+  };
+
+  SP.cat = () => {
+    const g = new Grid(14, 12);
+    g.art([
+      'oo........oo',
+      'oOo......oOo',
+      'oooooooooooo',
+      'oooooooooooo',
+      'ookkooookkoo',
+      'ookkooookkoo',
+      'oooopppooooo',
+      'wooowkwoooow',
+      '.ooooooooooo',
+      '..oooooooo..'], 1, 1);
+    return g;
+  };
+
+  SP.dog = () => {
+    const g = new Grid(14, 12);
+    g.art([
+      'uuu......uuu',
+      'uuuUUUUUUuuu',
+      'uuUUUUUUUUuu',
+      'uuUUkUUkUUuu',
+      'uuUUUUUUUUuu',
+      '.uUUUwwUUUu.',
+      '..UUwkkwUU..',
+      '...UUwrwUU..',
+      '....UUrrUU..'], 1, 1);
+    return g;
+  };
+
+  SP.bolt = () => {
+    const g = new Grid(12, 20);
+    g.art([
+      '......yyyy..',
+      '.....yyyy...',
+      '....yyyy....',
+      '...yyyyy....',
+      '..yyyyyyyy..',
+      '.yyyyyyyy...',
+      '.....yyyy...',
+      '....yyyy....',
+      '...yyyy.....',
+      '...yyy......',
+      '..yyy.......',
+      '..yy........',
+      '.yy.........',
+      '.y..........'], 0, 0);
+    g.rect(7, 0, 2, 1, 'Y'); g.rect(6, 1, 2, 1, 'Y'); g.rect(5, 2, 2, 1, 'Y');
+    return g;
+  };
+
+  SP.flake = (o) => {
+    const g = new Grid(7, 7);
+    g.art(o.big ? [
+      '...w...', '.w.w.w.', '..www..', 'wwwwwww', '..www..', '.w.w.w.', '...w...'
+    ] : [
+      '...w...', '...w...', '..www..', 'wwwwwww', '..www..', '...w...', '...w...'], 0, 0);
+    return g;
+  };
+
+  SP.snowman = () => {
+    const g = new Grid(20, 26);
+    g.ell(10, 18.5, 8, 7.5, 'w'); g.ell(10, 7.5, 5.5, 5.5, 'w');
+    g.bevel('w', 'w', 'g');
+    for (let y = 0; y < 26; y++) for (let x = 0; x < 20; x++) if (g.get(x, y) === 'w' && (x + .5 > 14 && y > 11 || false) && Math.hypot(x + .5 - 10, y + .5 - 18.5) > 5.5) g.set(x, y, 'g');
+    g.rect(1, 12, 3, 1, 'u'); g.rect(0, 11, 1, 2, 'u'); g.rect(16, 12, 3, 1, 'u'); g.rect(19, 11, 1, 2, 'u');
+    g.rect(8, 6, 1, 2, 'k'); g.rect(12, 6, 1, 2, 'k'); g.rect(10, 8, 3, 1, 'o'); g.rect(13, 8, 1, 1, 'O');
+    g.rect(6, 12, 9, 2, 'r'); g.rect(12, 14, 2, 3, 'R');
+    g.rect(9, 17, 2, 2, 'k'); g.rect(9, 21, 2, 2, 'k');
+    g.rect(6, 0, 9, 2, 'k'); g.rect(8, -1, 5, 1, 'k'); g.rect(8, 0, 5, 1, 'k'); g.rect(5, 2, 11, 1, 'k'); g.rect(8, 1, 5, 1, 'd');
+    return g;
+  };
+
+  SP.penguin = () => {
+    const g = new Grid(14, 18);
+    g.ell(7, 9.5, 6, 8, 'k'); g.ell(7, 11, 4, 5.5, 'w');
+    g.rect(3, 5, 8, 1, 'k'); g.rect(4, 4, 6, 1, 'k');
+    g.rect(4, 6, 2, 2, 'w'); g.rect(8, 6, 2, 2, 'w'); g.set(5, 7, 'k'); g.set(9, 7, 'k');
+    g.rect(6, 8, 3, 1, 'o'); g.rect(6, 9, 2, 1, 'O');
+    g.rect(2, 16, 4, 2, 'o'); g.rect(8, 16, 4, 2, 'o');
+    g.rect(0, 9, 1, 5, 's'); g.rect(13, 9, 1, 5, 's');
+    return g;
+  };
+
+  SP.ghost = () => {
+    const g = new Grid(18, 22);
+    g.ell(9, 9, 8, 8, 'w'); g.rect(1, 9, 16, 11, 'w');
+    for (let x = 1; x < 17; x++) { const up = Math.floor(x / 3) % 2 === 0; if (!up) g.rect(x, 20, 1, 2, 'w'); else g.set(x, 20, '.'); }
+    g.bevel('w', 'w', 'g');
+    g.rect(5, 8, 3, 4, 'k'); g.rect(11, 8, 3, 4, 'k'); g.set(5, 8, 'w'); g.set(11, 8, 'w');
+    g.rect(8, 14, 3, 3, 'k');
+    g.rect(2, 13, 2, 1, 'p'); g.rect(15, 13, 2, 1, 'p');
+    return g;
+  };
+
+  SP.snail = () => {
+    const g = new Grid(20, 14);
+    g.rect(1, 9, 18, 3, 'M'); g.rect(15, 6, 3, 4, 'M'); g.rect(16, 3, 1, 3, 'M'); g.rect(18, 3, 1, 3, 'M');
+    g.set(16, 2, 'k'); g.set(18, 2, 'k'); g.set(17, 7, 'k');
+    g.ell(8, 6, 7, 6, 'U'); g.ell(8, 6, 4.5, 4, 'u'); g.ell(8, 6, 2, 1.8, 'U'); g.rect(8, 6, 1, 1, 'u');
+    g.rect(1, 11, 18, 1, 'G');
+    return g;
+  };
+
+  SP.iceCream = () => {
+    const g = new Grid(12, 20);
+    g.ell(6, 9, 5.5, 4.5, 'p'); g.ell(6, 4.5, 4, 3.5, 'w'); g.rect(6, 0, 1, 1, 'r');
+    g.rect(2, 8, 1, 1, 'P'); g.rect(9, 10, 1, 1, 'P'); g.rect(4, 3, 1, 1, 'g');
+    const rows = [[1, 10], [2, 9], [2, 9], [3, 8], [3, 8], [4, 7], [4, 7], [5, 6], [5, 6]];
+    rows.forEach(([a, b], i) => { for (let x = a; x <= b; x++) g.set(x, 12 + i, ((x + i) % 2) ? 'U' : 'u'); });
+    return g;
+  };
+
+  SP.sunglasses = () => {
+    const g = new Grid(18, 8);
+    g.rect(0, 1, 8, 5, 'k'); g.rect(10, 1, 8, 5, 'k'); g.rect(8, 1, 2, 1, 'k'); g.rect(0, 0, 1, 2, 'k'); g.rect(17, 0, 1, 2, 'k');
+    g.rect(1, 2, 6, 3, 'd'); g.rect(11, 2, 6, 3, 'd'); g.rect(2, 2, 2, 1, 'c'); g.rect(12, 2, 2, 1, 'c');
+    return g;
+  };
+
+  SP.melon = () => {
+    const g = new Grid(20, 11);
+    g.ell(10, 0, 10, 10.5, 'n'); g.ell(10, 0, 9, 9.3, 'w'); g.ell(10, 0, 8, 8.2, 'r');
+    [[5, 3], [10, 5], [14, 3], [8, 7], [12, 8]].forEach(([x, y]) => g.rect(x, y, 1, 2, 'k'));
+    return g;
+  };
+
+  SP.drink = () => {
+    const g = new Grid(12, 20);
+    g.rect(1, 5, 9, 13, 'c'); g.rect(2, 8, 7, 9, 'o'); g.rect(2, 8, 7, 1, 'y');
+    g.rect(2, 17, 7, 1, 'O'); g.rect(8, 0, 1, 9, 'r'); g.rect(6, 0, 3, 1, 'r');
+    g.rect(0, 4, 3, 2, 'y'); g.rect(1, 5, 1, 1, 'O'); g.rect(3, 6, 1, 6, 'w');
+    return g;
+  };
+
+  SP.leaf = (o) => {
+    const g = new Grid(14, 12);
+    g.art(['......nnnn..', '....nnnlnnn.', '...nnnlnnnn.', '..nnnlnnnN..', '.nnnlnnnNN..', '.nnlnnnNN...', 'nnnlnnNN....', 'nnlnNN......', 'uuuN........'], 0, 0);
+    if (o.orange) { const m = { n: 'o', l: 'y', N: 'O' }; g.a = g.a.map(r => r.map(c => m[c] || c)); }
+    return g;
+  };
+
+  SP.kite = () => {
+    const g = new Grid(14, 26);
+    for (let y = 0; y < 14; y++) { const hw = y <= 7 ? y + 1 : 14 - y; for (let x = 7 - hw; x < 7 + hw; x++) g.set(x, y, x < 7 ? (y < 7 ? 'r' : 'R') : (y < 7 ? 'y' : 'O')); }
+    g.rect(6, 0, 2, 14, 'w');
+    for (let y = 14; y < 26; y++) g.set(7 + (y % 4 < 2 ? 0 : 1), y, 'u');
+    g.rect(5, 17, 3, 2, 'b'); g.rect(8, 22, 3, 2, 'b');
+    return g;
+  };
+
+  SP.cap = () => {
+    const g = new Grid(18, 10);
+    g.ell(8, 8, 7.5, 7, 'r'); g.rect(0, 8, 18, 1, 'r');
+    for (let y = 0; y < 10; y++) for (let x = 0; x < 18; x++) if (y > 8) g.set(x, y, '.');
+    g.rect(7, 1, 2, 1, 'R'); g.rect(8, 8, 10, 2, 'R'); g.rect(4, 3, 2, 2, 'w');
+    return g;
+  };
+
+  SP.z = () => {
+    const g = new Grid(8, 8);
+    g.art(['wwwwwww.', '.....ww.', '....ww..', '...ww...', '..ww....', '.ww.....', 'wwwwwww.'], 0, 0);
+    return g;
+  };
+
+  SP.shooting = () => {
+    const g = new Grid(30, 9);
+    g.rect(0, 4, 18, 1, 'c'); g.rect(6, 3, 12, 1, 'c'); g.rect(10, 5, 8, 1, 'c');
+    g.art(['...y...', '...y...', '..yyy..', 'yyyyyyy', '..yyy..', '.yy.yy.', '.y...y.'], 19, 1);
+    return g;
+  };
+
+  // ── API ──
+  const SUN_FR = [0, 1];
+  function node(name, o) {
+    o = o || {};
+    const sc = o.scale || 3;
+    const pal = o.tone ? Object.assign({}, TONES[o.tone]) : null;
+    const make = (extra) => SP[name](Object.assign({}, o, extra || {})).canvas(sc, pal, o.outline);
+    const c = make();
+    if (name === 'sun' && !reduce) {
+      let fr = 0;
+      const ctx = c.getContext('2d');
+      const alt = make({ frame: 1 });
+      const base = make({ frame: 0 });
+      setInterval(() => { fr ^= 1; ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(fr ? alt : base, 0, 0); }, 650);
+    }
+    return c;
+  }
+
+  // ícono chiquito para la barra superior (escala 1, sin escalar por pantalla)
+  function icon(scene, day) {
+    const W = 34, H = 26;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    c.style.cssText = `width:${W}px;height:${H}px;image-rendering:pixelated;vertical-align:middle;margin-right:6px`;
+    const x = c.getContext('2d');
+    const put = (cv, dx, dy) => x.drawImage(cv, dx, dy);
+    const raw = (g, pal) => g.canvas(1, pal);
+    const cloud = (tone) => raw(SP.cloud({ face: null }), TONES[tone]);
+    const sun = () => raw(SP.sun({ frame: 0 }));
+    const drops = (n) => { x.fillStyle = '#6ea0ff'; for (let i = 0; i < n; i++) x.fillRect(8 + i * 7, 20 + (i % 2) * 2, 2, 4); };
+    if (scene === 'clear') { put(day ? sun() : raw(SP.moon()), day ? 3 : 5, day ? -1 : 1); }
+    else if (scene === 'partly') { if (day) put(sun(), 0, -3); else put(raw(SP.moon()), 0, 0); put(cloud('light'), 6, 8); }
+    else if (scene === 'overcast') put(cloud('gray'), 3, 5);
+    else if (scene === 'fog') { put(cloud('fog'), 3, 3); x.fillStyle = '#aeb8c9'; x.fillRect(4, 20, 24, 2); x.fillRect(8, 23, 22, 2); }
+    else if (scene === 'drizzle' || scene === 'rain') { put(cloud('dark'), 3, 1); drops(scene === 'rain' ? 4 : 3); }
+    else if (scene === 'downpour') { put(cloud('dark'), 3, 0); drops(4); }
+    else if (scene === 'thunder') { put(cloud('dark'), 3, 0); put(raw(SP.bolt()), 14, 11); }
+    else if (scene === 'snow') { put(cloud('gray'), 3, 1); x.fillStyle = '#fff'; [[8, 21], [15, 23], [22, 21], [12, 18], [26, 24]].forEach(([a, b]) => x.fillRect(a, b, 2, 2)); }
+    return c;
+  }
+
+  return { node, icon };
+})();
+
+// ═════════════════════════════════════════════════════════════════
+// COCINERO — 34×46 px · remera blanca, delantal azul, pantalón negro · f: 0-3 caminando, 4 quieto · scared: susto
 // ═════════════════════════════════════════════════════════════════
 function drawCook(ctx, f, scared, steam) {
   const W = 34, H = 46, OY = 2;
@@ -1064,52 +1401,67 @@ function drawCook(ctx, f, scared, steam) {
   const WH = '#ffffff', W2 = '#dde2ea', W3 = '#b4bcc9';
   const SK = '#f4bc8a', SKS = '#d9935f', CH = '#e9806e';
   const HAIR = '#4a2c17', HAIRH = '#7a4a26', EYE = '#161616';
-  const RED = '#d62839', REDD = '#97192a';
+  const RED = '#d62839';
   const SIL = '#c7cfdb', SILL = '#eef2f7', SILD = '#98a2b3';
+  const AP = '#2f5fb3', APD = '#244a8c', APH = '#4a7bd0';        // delantal azul
+  const PANT = '#16161d', PANTH = '#272733';                      // pantalón negro
 
   const by = scared ? -1 : ((f === 1 || f === 3) ? -1 : 0);   // rebote del cuerpo
 
-  // ── piernas: pantalón a cuadros + zuecos ──
+  // ── piernas: pantalón negro + zapatos ──
   const STR = [[-2, 1, 2, 0], [0, 0, 0, 0], [2, 0, -2, 1], [0, 0, 0, 0], [0, 0, 0, 0]];
-  const [lo, ll, ro, rl] = scared ? [-2, 1, 2, 1] : STR[f];
+  const [lo, ll, ro, rl] = scared ? [-2, 1, 2, 1] : (STR[f] || STR[4]);
   function leg(x0, lift) {
     for (let y = 35; y < 40 - lift; y++)
       for (let x = x0; x < x0 + 5; x++)
-        R(x, y, 1, 1, (((x >> 1) + (y >> 1)) & 1) ? '#343a46' : '#eceff4');
-    R(x0 - 1, 40 - lift, 7, 3, '#232331');        // zueco
-    R(x0 + 3, 40 - lift, 3, 1, '#4d4d68');        // brillo punta
+        R(x, y, 1, 1, (x === x0 + 1) ? PANTH : PANT);
+    R(x0 - 1, 40 - lift, 7, 3, '#2b2b3a');        // zapato
+    R(x0 + 3, 40 - lift, 3, 1, '#5a5a78');        // brillo punta
     R(x0 - 1, 42 - lift, 7, 1, '#0d0d16');        // suela
   }
   leg(10 + lo, ll);
   leg(17 + ro, rl);
-  R(9, 34, 13, 1, '#2a2d3a');                      // cintura
+  R(9, 34, 13, 1, PANT);                           // cintura
 
-  // ── chaqueta blanca cruzada ──
+  // ── remera blanca ──
   const T = 24 + by;
   R(7, T, 15, 34 - T, WH);
   R(19, T, 3, 34 - T, W2);
   R(7, 33, 15, 1, W3);
-  R(14, T, 1, 34 - T, W3);
-  [[11, 3], [11, 6], [17, 3], [17, 6]].forEach(([x, y]) => R(x, T + y, 1, 1, '#2f3e63'));
-  R(9, T + 4, 2, 2, RED); R(9, T + 4, 1, 1, '#ffd166');     // parche del local
+  R(12, T, 5, 1, SKS);                             // cuello redondo
 
-  // ── pañuelo rojo ──
-  R(10, 22 + by, 9, 2, RED); R(10, 23 + by, 9, 1, REDD);
-  R(13, 24 + by, 3, 2, REDD); R(12, 26 + by, 2, 1, RED); R(15, 26 + by, 2, 1, RED);
+  // ── delantal azul ──
+  R(10, T, 9, 31 - T, AP);                         // peto
+  R(8, 31, 13, 7, AP);                             // falda
+  R(10, T, 9, 1, APH);
+  R(18, T, 1, 31 - T, APD);
+  R(20, 31, 1, 7, APD); R(8, 31, 1, 1, APD);
+  R(8, 31, 13, 1, APH);
+  R(12, 33, 5, 3, APD); R(12, 33, 5, 1, APH);      // bolsillo
+  R(11, T - 1, 1, 1, APD); R(17, T - 1, 1, 1, APD); // tiras al cuello
 
-  // ── brazo izquierdo ──
+  // ── cuello ──
+  R(12, 22 + by, 5, 2, SKS);
+
+  // ── brazo izquierdo (manga corta) ──
   if (scared) {
-    R(3, 16 + by, 4, 10, WH); R(3, 16 + by, 1, 10, W2); R(3, 16 + by, 4, 1, W3);
-    R(3, 13 + by, 4, 3, SK); R(3, 12 + by, 1, 1, SK); R(5, 12 + by, 1, 1, SK); R(6, 12 + by, 1, 1, SK);
+    R(3, 22 + by, 4, 4, WH); R(3, 22 + by, 1, 4, W2); R(3, 25 + by, 4, 1, W3);
+    R(3, 13 + by, 4, 9, SK); R(6, 15 + by, 1, 6, SKS);
+    R(3, 12 + by, 1, 1, SK); R(5, 12 + by, 1, 1, SK); R(6, 12 + by, 1, 1, SK);
   } else {
     const ax = [1, 0, -1, 0, 0][f];
-    R(4 + ax, 24 + by, 4, 8, WH); R(4 + ax, 24 + by, 1, 8, W2); R(4 + ax, 31 + by, 4, 1, W3);
-    R(4 + ax, 32 + by, 4, 3, SK); R(4 + ax, 34 + by, 4, 1, SKS);
+    R(4 + ax, 24 + by, 4, 3, WH); R(4 + ax, 24 + by, 1, 3, W2); R(4 + ax, 26 + by, 4, 1, W3);
+    R(4 + ax, 27 + by, 4, 8, SK); R(7 + ax, 27 + by, 1, 8, SKS); R(4 + ax, 34 + by, 4, 1, SKS);
   }
 
-  // ── cabeza ──
+  // ── cabeza (sin gorro: pelo prolijo) ──
+  const hy = scared ? by - 1 : by;
   R(8, 15 + by, 1, 3, SKS); R(20, 15 + by, 1, 3, SKS);           // orejas
   R(9, 11 + by, 11, 11, SK); R(10, 21 + by, 9, 1, SKS);          // cara
+  R(9, 8 + hy, 11, 4, HAIR);                                     // pelo
+  R(10, 7 + hy, 9, 1, HAIR); R(12, 6 + hy, 5, 1, HAIR);
+  R(8, 9 + hy, 1, 4, HAIR); R(20, 9 + hy, 1, 4, HAIR);
+  R(12, 8 + hy, 3, 1, HAIRH); R(11, 7 + hy, 1, 1, HAIRH);
   R(9, 11 + by, 1, 4, HAIR); R(19, 11 + by, 1, 4, HAIR);         // patillas
   const brow = scared ? 12 + by : 13 + by;
   R(10, brow, 3, 1, HAIR); R(16, brow, 3, 1, HAIR);              // cejas
@@ -1125,13 +1477,14 @@ function drawCook(ctx, f, scared, steam) {
   R(11, 19 + by, 8, 2, HAIR); R(10, 20 + by, 1, 1, HAIR); R(19, 20 + by, 1, 1, HAIR); R(12, 19 + by, 2, 1, HAIRH); // bigote
   if (scared) R(13, 21 + by, 3, 2, '#5b1a1a'); else R(13, 21 + by, 3, 1, '#8b2c2c');                              // boca
 
-  // ── brazo derecho ──
+  // ── brazo derecho + bandeja ──
   if (scared) {
-    R(22, 16 + by, 4, 10, WH); R(25, 16 + by, 1, 10, W2); R(22, 16 + by, 4, 1, W3);
-    R(22, 13 + by, 4, 3, SK); R(22, 12 + by, 1, 1, SK); R(24, 12 + by, 1, 1, SK); R(25, 12 + by, 1, 1, SK);
+    R(22, 22 + by, 4, 4, WH); R(25, 22 + by, 1, 4, W2); R(22, 25 + by, 4, 1, W3);
+    R(22, 13 + by, 4, 9, SK); R(22, 15 + by, 1, 6, SKS);
+    R(22, 12 + by, 1, 1, SK); R(24, 12 + by, 1, 1, SK); R(25, 12 + by, 1, 1, SK);
   } else {
-    R(22, 24 + by, 4, 4, WH); R(22, 24 + by, 4, 1, W3);
-    R(24, 19 + by, 3, 8, WH); R(26, 19 + by, 1, 8, W2); R(24, 19 + by, 3, 1, W3);
+    R(22, 24 + by, 4, 4, WH); R(22, 27 + by, 4, 1, W3);
+    R(24, 19 + by, 3, 8, SK); R(26, 19 + by, 1, 8, SKS);
     R(24, 16 + by, 3, 3, SK); R(27, 17 + by, 1, 2, SK);           // mano + pulgar
     R(22, 14 + by, 10, 2, '#b8c1cf'); R(22, 15 + by, 10, 1, SILD); // bandeja
     R(26, 6 + by, 1, 2, SILD);                                    // cloche
@@ -1141,15 +1494,6 @@ function drawCook(ctx, f, scared, steam) {
     R(24, 10 + by, 2, 3, '#ffffff');
     R(28, 10 + by, 2, 4, SILD);
   }
-
-  // ── gorro de chef ──
-  const hy = scared ? by - 2 : by;
-  R(10, 1 + hy, 9, 2, WH);
-  R(8, 3 + hy, 13, 5, WH);
-  R(18, 3 + hy, 3, 5, W2);
-  R(12, 3 + hy, 1, 5, W2); R(15, 3 + hy, 1, 5, W2);
-  R(8, 8 + hy, 13, 1, W2);
-  R(9, 9 + hy, 11, 2, '#eef0f4'); R(9, 10 + hy, 11, 1, W3);
 
   // ── extras del susto ──
   if (scared) {
@@ -1169,10 +1513,11 @@ function drawCook(ctx, f, scared, steam) {
 }
 
 // ═════════════════════════════════════════════════════════════════
-// OBRERO — 52×46 px · frame: 'up' | 'mid' | 'hit' · spark: chispas
+// OBRERO — 41×40 px (más chico) · frame: 'sip0' | 'sip1' (tomando café)
+//                                        'work0' | 'work1' (llave inglesa + tuerca)
 // ═════════════════════════════════════════════════════════════════
 function drawWorker(ctx, frame, spark) {
-  const W = 52, H = 46, OY = 2;
+  const W = 41, H = 40, OY = 2;
   ctx.clearRect(0, 0, W, H);
   const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
 
@@ -1182,97 +1527,102 @@ function drawWorker(ctx, frame, spark) {
   const BLU = '#2f5fb3', BLUD = '#264d94';
   const JEA = '#3f6ab8', JEAD = '#2f5496', JEAH = '#5b88d6';
   const BOOT = '#7a4b25', GLV = '#c08a4b', WOOD = '#8b5a2b', WOODH = '#a9713a', STEEL = '#a5adbb';
-  const dx = frame === 'hit' ? 1 : 0;                 // se inclina al pegar
+  const working = frame === 'work0' || frame === 'work1';
+  const dx = working ? 1 : 0;                         // se inclina al laburar
+  const relax = frame === 'sip1';                     // ojos entrecerrados al tomar
 
   // ── cartel de peligro + poste ──
-  for (let y = 19; y <= 31; y++)
-    for (let x = 40; x <= 49; x++)
+  for (let y = 14; y <= 25; y++)
+    for (let x = 28; x <= 38; x++)
       R(x, y, 1, 1, (((x - y) % 6 + 6) % 6 < 3) ? '#2a2a2a' : YEL);
-  R(40, 19, 10, 1, '#2a2a2a'); R(40, 31, 10, 1, '#2a2a2a');
-  [[41, 20], [48, 20], [41, 30], [48, 30]].forEach(([x, y]) => R(x, y, 1, 1, '#cfd4dc'));
-  R(43, 32, 4, 10, WOOD); R(43, 32, 1, 10, WOODH); R(46, 32, 1, 10, '#6b4423');
-  R(40, 42, 11, 1, '#8a6a3a');
-  // clavo
-  if (frame === 'hit') R(39, 23, 1, 3, '#cfd4dc');
-  else { R(36, 24, 4, 1, '#9aa2ae'); R(35, 23, 1, 3, '#cfd4dc'); }
+  R(28, 14, 11, 1, '#2a2a2a'); R(28, 25, 11, 1, '#2a2a2a');
+  R(31, 26, 4, 9, WOOD); R(31, 26, 1, 9, WOODH); R(34, 26, 1, 9, '#6b4423');
+  R(28, 35, 10, 1, '#8a6a3a');
 
-  // ── piernas + botas de seguridad ──
-  R(10, 34, 5, 6, JEA); R(16, 34, 5, 6, JEA); R(9, 34, 12, 1, JEAD);
-  R(11, 35, 1, 4, JEAH); R(17, 35, 1, 4, JEAH);
-  R(10, 38, 5, 1, JEAD); R(16, 38, 5, 1, JEAD);
-  R(9, 39, 7, 3, BOOT); R(16, 39, 7, 3, BOOT);
-  R(10, 39, 3, 1, '#4a2c14'); R(17, 39, 3, 1, '#4a2c14');
-  R(14, 40, 2, 2, '#c5c9d0'); R(21, 40, 2, 2, '#c5c9d0');       // punteras de acero
-  R(9, 42, 7, 1, '#2a1a0e'); R(16, 42, 7, 1, '#2a1a0e');
+  // ── tuerca grande en el cartel ──
+  R(32, 17, 4, 6, STEEL); R(31, 18, 6, 4, STEEL);
+  R(32, 17, 4, 1, '#e5e9f0'); R(32, 22, 4, 1, '#6b7483');
+  R(33, 19, 2, 2, '#2a2a2a');
+  if (frame === 'work1') R(35, 18, 1, 1, '#fff'); else R(32, 18, 1, 1, '#fff');
 
-  // ── torso: camisa azul + chaleco naranja reflectivo ──
-  R(8 + dx, 22, 14, 11, BLU);
-  R(9 + dx, 22, 12, 11, ORG);
-  R(13 + dx, 22, 4, 1, BLU); R(14 + dx, 23, 2, 4, BLU);
-  R(19 + dx, 22, 2, 11, ORGD);
-  R(15 + dx, 27, 1, 6, '#9a4a00');
-  R(9 + dx, 28, 12, 1, '#f5f5f5'); R(9 + dx, 29, 12, 1, '#b8bfca');
-  R(9 + dx, 31, 12, 1, '#f5f5f5'); R(9 + dx, 32, 12, 1, '#b8bfca');
-  R(9 + dx, 33, 12, 1, '#5b3a1a'); R(14 + dx, 33, 3, 1, YEL);   // cinturón
-  R(18, 34, 3, 3, WOOD); R(18, 34, 3, 1, '#6b4423');            // bolsillo de herramientas
+  // ── piernas + botas ──
+  R(8, 28, 4, 5, JEA); R(13, 28, 4, 5, JEA); R(7, 28, 10, 1, JEAD);
+  R(9, 29, 1, 3, JEAH); R(14, 29, 1, 3, JEAH);
+  R(7, 32, 5, 3, BOOT); R(13, 32, 5, 3, BOOT);
+  R(8, 32, 3, 1, '#4a2c14'); R(14, 32, 3, 1, '#4a2c14');
+  R(7, 35, 5, 1, '#2a1a0e'); R(13, 35, 5, 1, '#2a1a0e');
+
+  // ── torso: camisa azul + chaleco naranja ──
+  R(7 + dx, 19, 10, 9, BLU);
+  R(8 + dx, 19, 8, 9, ORG);
+  R(11 + dx, 19, 3, 1, BLU); R(12 + dx, 20, 1, 3, BLU);
+  R(15 + dx, 19, 1, 9, ORGD);
+  R(8 + dx, 23, 8, 1, '#f5f5f5'); R(8 + dx, 24, 8, 1, '#b8bfca');
+  R(8 + dx, 26, 8, 1, '#f5f5f5');
+  R(8 + dx, 27, 8, 1, '#5b3a1a'); R(11 + dx, 27, 2, 1, YEL);
 
   // ── brazo izquierdo ──
-  R(6 + dx, 23, 3, 9, BLU); R(6 + dx, 23, 1, 9, BLUD);
-  R(6 + dx, 32, 3, 3, GLV); R(6 + dx, 34, 3, 1, '#a8733a');
+  R(5 + dx, 20, 3, 7, BLU); R(5 + dx, 20, 1, 7, BLUD);
+  R(5 + dx, 27, 3, 2, GLV);
 
   // ── cabeza ──
-  R(13 + dx, 20, 5, 2, SKS);                                    // cuello
-  R(10 + dx, 11, 10, 9, SK);
-  R(9 + dx, 14, 1, 3, SKS); R(20 + dx, 14, 1, 3, SKS);          // orejas
-  R(20 + dx, 11, 1, 1, '#374151'); R(20 + dx, 12, 1, 2, '#f59e0b'); // lápiz en la oreja
-  R(11 + dx, 13, 4, 1, HAIR); R(16 + dx, 13, 4, 1, HAIR);       // cejas
-  R(12 + dx, 14, 2, 2, EYE); R(17 + dx, 14, 2, 2, EYE);
-  R(12 + dx, 14, 1, 1, '#fff'); R(17 + dx, 14, 1, 1, '#fff');
-  R(15 + dx, 15, 2, 3, SKS);                                     // nariz
-  for (let y = 17; y <= 19; y++)                                  // barba de dos días
-    for (let x = 11; x <= 18; x++) if ((x + y) % 2 === 0) R(x + dx, y, 1, 1, '#7a6652');
-  R(14 + dx, 19, 3, 1, '#7b2d26');                               // boca
+  R(11 + dx, 18, 3, 1, SKS);
+  R(8 + dx, 10, 9, 8, SK);
+  R(7 + dx, 12, 1, 3, SKS); R(17 + dx, 12, 1, 3, SKS);
+  R(17 + dx, 10, 1, 1, '#374151'); R(17 + dx, 11, 1, 1, '#f59e0b');   // lápiz en la oreja
+  R(9 + dx, 11, 3, 1, HAIR); R(13 + dx, 11, 3, 1, HAIR);
+  if (relax) {                                                        // cara de "qué bien"
+    R(10 + dx, 13, 2, 1, EYE); R(14 + dx, 13, 2, 1, EYE);
+  } else {
+    R(10 + dx, 12, 2, 2, EYE); R(14 + dx, 12, 2, 2, EYE);
+    R(10 + dx, 12, 1, 1, '#fff'); R(14 + dx, 12, 1, 1, '#fff');
+  }
+  R(12 + dx, 13, 2, 2, SKS);
+  for (let y = 15; y <= 17; y++)
+    for (let x = 9; x <= 15; x++) if ((x + y) % 2 === 0) R(x + dx, y, 1, 1, '#7a6652');
+  R(12 + dx, 16, 3, 1, '#7b2d26');
 
   // ── casco amarillo ──
-  R(9 + dx, 5, 12, 5, YEL);
-  R(11 + dx, 3, 8, 2, YEL);
-  R(13 + dx, 2, 4, 1, YEL);
-  R(14 + dx, 3, 2, 6, '#ffd84d');
-  R(11 + dx, 4, 2, 2, YELH);
-  R(19 + dx, 5, 2, 5, YELD);
-  R(8 + dx, 9, 15, 2, YELD); R(8 + dx, 9, 15, 1, '#eab308');
+  R(7 + dx, 5, 11, 4, YEL);
+  R(9 + dx, 3, 7, 2, YEL);
+  R(11 + dx, 2, 3, 1, YEL);
+  R(12 + dx, 3, 2, 5, '#ffd84d');
+  R(9 + dx, 4, 2, 2, YELH);
+  R(16 + dx, 5, 2, 4, YELD);
+  R(6 + dx, 8, 13, 2, YELD); R(6 + dx, 8, 13, 1, '#eab308');
 
-  // ── brazo derecho + martillo ──
-  if (frame === 'up') {
-    R(20 + dx, 23, 4, 3, BLU);
-    R(23, 17, 3, 8, BLU); R(23, 17, 1, 8, BLUD);
-    R(23, 14, 4, 4, GLV); R(23, 14, 4, 1, '#a8733a');
-    R(24, 6, 2, 8, WOOD); R(24, 6, 1, 8, WOODH);
-    R(21, 3, 9, 3, STEEL); R(21, 3, 9, 1, '#e5e9f0'); R(21, 5, 9, 1, '#6b7483'); R(30, 4, 1, 2, STEEL);
-  } else if (frame === 'mid') {
-    R(20 + dx, 23, 4, 3, BLU);
-    R(21, 24, 8, 3, BLU); R(21, 24, 8, 1, BLUD);
-    R(29, 23, 4, 4, GLV);
-    R(30, 14, 2, 9, WOOD); R(30, 14, 1, 9, WOODH);
-    R(27, 11, 8, 3, STEEL); R(27, 11, 8, 1, '#e5e9f0'); R(27, 13, 8, 1, '#6b7483');
-  } else {
-    R(21, 23, 4, 3, BLU);
-    R(22, 24, 8, 3, BLU); R(22, 24, 8, 1, BLUD);
-    R(30, 23, 3, 4, GLV);
-    R(32, 24, 4, 2, WOOD); R(32, 24, 4, 1, WOODH);
-    R(36, 21, 3, 8, STEEL); R(36, 21, 1, 8, '#e5e9f0'); R(38, 21, 1, 8, '#6b7483');
+  // ── brazo derecho ──
+  if (frame === 'sip0') {                    // taza abajo, relajado
+    R(17, 20, 3, 6, BLU); R(17, 20, 1, 6, BLUD);
+    R(18, 26, 3, 2, GLV);
+    R(20, 24, 5, 5, '#f4f4f4'); R(20, 24, 5, 1, '#5a3418'); R(20, 28, 5, 1, '#c9ccd2');
+    R(25, 25, 1, 3, '#f4f4f4');
+    R(21, 21, 1, 2, '#cfd6e0');              // vapor
+  } else if (frame === 'sip1') {             // taza arriba, tomando
+    R(17, 20, 4, 3, BLU); R(17, 20, 4, 1, BLUD);
+    R(19, 16, 3, 4, BLU);
+    R(19, 15, 3, 2, GLV);
+    R(18, 10, 5, 5, '#f4f4f4'); R(18, 10, 5, 1, '#5a3418'); R(18, 14, 5, 1, '#c9ccd2');
+    R(23, 11, 1, 3, '#f4f4f4');
+    R(20, 6, 1, 2, '#cfd6e0'); R(22, 5, 1, 2, '#cfd6e0');   // vapor
+  } else {                                   // laburando con la llave inglesa
+    const up = frame === 'work0';
+    const ay = up ? 17 : 20;
+    R(18, ay, 4, 3, BLU); R(18, ay, 4, 1, BLUD);
+    R(22, ay, 3, 3, GLV);
+    R(25, ay + 1, 2, 2, STEEL); R(25, ay + 1, 2, 1, '#e5e9f0');           // mango
+    R(27, up ? 19 : 20, 3, 2, STEEL);
+    R(29, 16, 3, 8, STEEL); R(29, 16, 1, 8, '#e5e9f0');                    // cabeza de la llave
+    R(31, 16, 4, 1, STEEL); R(31, 23, 4, 1, STEEL);                        // mordaza
   }
 
   PX.outline(ctx, W, H);
 
-  if (frame === 'hit') {               // chispas del golpe
-    const S = spark
-      ? [[40, 21, '#ffffff'], [42, 23, '#ff6b00'], [41, 26, '#ffffff'], [44, 22, '#ffd84d'], [39, 20, '#ff6b00']]
-      : [[41, 22, '#ffffff'], [43, 24, '#ff6b00'], [40, 27, '#ffd84d'], [45, 21, '#ffffff']];
-    S.forEach(([x, y, c]) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, 1, 1); });
+  if (frame === 'work1' && spark) {          // chispitas al apretar
+    [[37, 16, '#ffd84d'], [38, 19, '#ffffff'], [37, 23, '#ff6b00']].forEach(([x, y, c]) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, 1, 1); });
   }
-  PX.shadow(ctx, 6, H - 1, 18);
-  PX.shadow(ctx, 40, H - 1, 11);
+  PX.shadow(ctx, 5, H - 1, 14);
+  PX.shadow(ctx, 28, H - 1, 10);
 }
 </script>
 <script>
@@ -1364,7 +1714,7 @@ function drawWorker(ctx, frame, spark) {
   });
 
   function tick(now) {
-    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now;
     left -= dt;
     const steam = Math.floor(now / 350) % 2;
 
@@ -1395,20 +1745,35 @@ function drawWorker(ctx, frame, spark) {
   requestAnimationFrame(tick);
 })();
 
-// ─── iCHECK: obrero 8-bit martillando + chistes al click ─────────
+// ─── iCHECK: obrero 8-bit tomando café; al tocarlo se pone a laburar ─────────
 (function () {
   'use strict';
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const host = document.getElementById('worker-sprite');
+  let working = false, workTimer = null, step = 0, tick = 0;
+  const IDLE = ['sip0', 'sip0', 'sip0', 'sip0', 'sip1', 'sip1', 'sip1'];
+  const WORK = ['work0', 'work1'];
+  let paint = () => {};
   if (host) {
-    const cv = PX.make(52, 46, 2);
+    const cv = PX.make(41, 40, 2);
     host.appendChild(cv);
     const ctx = PX.ctxOf(cv);
-    const SEQ = [['up', 0], ['mid', 0], ['hit', 0], ['hit', 1], ['mid', 0], ['up', 0]];
-    let i = 0;
-    const paint = () => drawWorker(ctx, SEQ[i][0], SEQ[i][1]);
+    let key = '';
+    paint = () => {
+      const f = working ? WORK[step % 2] : IDLE[step % IDLE.length];
+      const sp = working ? (tick % 4 < 2 ? 1 : 0) : 0;
+      const k = f + sp;
+      if (k === key) return;
+      key = k;
+      drawWorker(ctx, f, sp);
+    };
     paint();
-    if (!reduce) setInterval(() => { i = (i + 1) % SEQ.length; paint(); }, 150);
+    if (!reduce) setInterval(() => { tick++; if (working) step = tick; else if (tick % 3 === 0) step++; paint(); }, 160);
+  }
+  function startWork() {
+    working = true; tick = 0; step = 0; paint();
+    clearTimeout(workTimer);
+    workTimer = setTimeout(() => { working = false; tick = 0; step = 0; paint(); }, 3200);
   }
 
   const card = document.getElementById('card-icheck');
@@ -1417,13 +1782,14 @@ function drawWorker(ctx, frame, spark) {
   const MSG = [
     '🚧 Lisandro está en eso... (spoiler: no es tan rápido)',
     '👷 "Queda para mañana" — dijo hace tres semanas',
-    '🔨 Estamos clavando el último clavo. Hace una hora.',
+    '🔧 Estamos ajustando la última tuerca. Hace una hora.',
     '☕ El desarrollador salió por un cafecito',
     '🧱 Faltan el techo y las paredes. Pero el cartel está lindo.',
     '🔒 Módulo en obra: prohibido el paso, salvo que seas Diego'
   ];
   let i = Math.floor(Math.random() * MSG.length), t = null;
   card.addEventListener('click', () => {
+    startWork();
     toast.textContent = MSG[i++ % MSG.length];
     toast.classList.add('show');
     card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');

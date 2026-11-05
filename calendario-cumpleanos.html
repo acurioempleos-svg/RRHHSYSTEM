@@ -505,6 +505,10 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
   .theme-itc .bday .cake{ font-size: 8px; }
 }
 
+/* ============ PECES 8-BIT ANIMADOS ============ */
+.pxfish{ width:144px; height:96px; image-rendering:crisp-edges; image-rendering:pixelated; flex-shrink:0; }
+@media (max-width: 700px){ .pxfish{ width:72px; height:48px; } }
+
 /* ============ SECCIÓN DE MESES (navegador de mes, todas las pestañas) ============ */
 .month-nav{
   display:flex; align-items:center; justify-content:center; gap: 16px;
@@ -663,19 +667,9 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
     <div class="stripe"></div>
 
     <div class="doodle-row">
-      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
-        <path d="M95 30 L118 15 L112 30 L118 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
-        <circle cx="34" cy="26" r="3.2" fill="#0B2E4F"/>
-        <path d="M15 30 Q35 40 55 30" fill="none" stroke="#E8492B" stroke-width="2"/>
-      </svg>
+      <canvas class="pxfish" data-th="barra" data-v="0" data-flip="1" aria-hidden="true"></canvas>
       <div class="doodle-title">CUMPLEAÑOS DEL EQUIPO</div>
-      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-        <path d="M110 30 C 90 5, 50 5, 25 30 C 50 55, 90 55, 110 30 Z" fill="none" stroke="#145C82" stroke-width="3"/>
-        <path d="M25 30 L2 15 L8 30 L2 45 Z" fill="#F2B705" stroke="#145C82" stroke-width="2"/>
-        <circle cx="86" cy="26" r="3.2" fill="#0B2E4F"/>
-        <path d="M105 30 Q85 40 65 30" fill="none" stroke="#E8492B" stroke-width="2"/>
-      </svg>
+      <canvas class="pxfish" data-th="barra" data-v="1" data-flip="0" aria-hidden="true"></canvas>
     </div>
 
     <div class="legend">
@@ -794,17 +788,9 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
     </div>
 
     <div class="doodle-row">
-      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#D96C4A" stroke-width="3"/>
-        <path d="M52 25 L58 18 L58 32 Z" fill="#D96C4A"/>
-        <circle cx="20" cy="22" r="2.4" fill="#10495E"/>
-      </svg>
+      <canvas class="pxfish" data-th="lamar" data-v="0" data-flip="1" aria-hidden="true"></canvas>
       <div class="doodle-title">cumpleaños del equipo</div>
-      <svg viewBox="0 0 60 50" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="30" cy="25" rx="22" ry="12" fill="none" stroke="#4C8C6E" stroke-width="3" transform="scale(-1,1) translate(-60,0)"/>
-        <path d="M8 25 L2 18 L2 32 Z" fill="#4C8C6E" transform="translate(0,0)"/>
-        <circle cx="40" cy="22" r="2.4" fill="#10495E"/>
-      </svg>
+      <canvas class="pxfish" data-th="lamar" data-v="1" data-flip="0" aria-hidden="true"></canvas>
     </div>
 
     <div class="legend">
@@ -856,19 +842,9 @@ body{font-family:'DM Sans', sans-serif; padding: 0 0 60px;}
     <div class="stripe"></div>
 
     <div class="doodle-row">
-      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 30 C 30 5, 70 5, 95 30 C 70 55, 30 55, 10 30 Z" fill="none" stroke="#0B2E4F" stroke-width="3"/>
-        <path d="M95 30 L118 15 L112 30 L118 45 Z" fill="#F2B705" stroke="#0B2E4F" stroke-width="2"/>
-        <circle cx="34" cy="26" r="3.2" fill="#D9524A"/>
-        <path d="M15 30 Q35 40 55 30" fill="none" stroke="#D9524A" stroke-width="2"/>
-      </svg>
+      <canvas class="pxfish" data-th="itc" data-v="0" data-flip="1" aria-hidden="true"></canvas>
       <div class="doodle-title">Cumpleaños del equipo</div>
-      <svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
-        <path d="M110 30 C 90 5, 50 5, 25 30 C 50 55, 90 55, 110 30 Z" fill="none" stroke="#0B2E4F" stroke-width="3"/>
-        <path d="M25 30 L2 15 L8 30 L2 45 Z" fill="#F2B705" stroke="#0B2E4F" stroke-width="2"/>
-        <circle cx="86" cy="26" r="3.2" fill="#D9524A"/>
-        <path d="M105 30 Q85 40 65 30" fill="none" stroke="#D9524A" stroke-width="2"/>
-      </svg>
+      <canvas class="pxfish" data-th="itc" data-v="1" data-flip="0" aria-hidden="true"></canvas>
     </div>
 
     <div class="legend">
@@ -1918,6 +1894,124 @@ function closeWeeklyModal(){
 function closeWeeklyModalOutside(e){
   if(e.target.id === 'weekly-modal-overlay') closeWeeklyModal();
 }
+
+/* ============ PECES 8-BIT ANIMADOS (pixel art generado por código, ~8 cuadros por segundo) ============ */
+const PX_W = 72, PX_H = 48;
+const PX_PAL = {
+  barra: [
+    { body:'#2F8FBF', back:'#1D5F8C', belly:'#CFE9F2', fin:'#F2B705', fin2:'#E8492B', stripe:'#E8492B', out:'#0B2E4F' },
+    { body:'#F2B705', back:'#C98A00', belly:'#FFF1B8', fin:'#E8492B', fin2:'#145C82', stripe:'#145C82', out:'#0B2E4F' }
+  ],
+  lamar: [
+    { body:'#D96C4A', back:'#A8472B', belly:'#F8DCC6', fin:'#4C8C6E', fin2:'#10495E', stripe:'#10495E', out:'#0A3140' },
+    { body:'#4C8C6E', back:'#2F6A50', belly:'#D6EBDD', fin:'#D96C4A', fin2:'#10495E', stripe:'#EFE6D3', out:'#0A3140' }
+  ],
+  itc: [
+    { body:'#3A5F8F', back:'#0B2E4F', belly:'#DDE6F0', fin:'#F2B705', fin2:'#D9524A', stripe:'#D9524A', out:'#072038' },
+    { body:'#D9524A', back:'#A8352E', belly:'#F9D9D3', fin:'#0B2E4F', fin2:'#F2B705', stripe:'#F2B705', out:'#072038' }
+  ]
+};
+// Arma el pez (mirando a la derecha) en una grilla de píxeles para el cuadro f.
+function pxFishGrid(pal, f){
+  const W = PX_W, H = PX_H, g = Array.from({length:H}, () => new Array(W).fill(null));
+  const put = (x, y, c) => { x = Math.round(x); y = Math.round(y); if(x >= 0 && x < W && y >= 0 && y < H) g[y][x] = c; };
+  const t = f * 0.5, bob = Math.round(Math.sin(f * 0.2) * 1.5);
+  const cx = 38, cy = 27 + bob, rx = 20, ry = 11;
+  const off = x => Math.sin(t * 1.6 - (x - cx) * 0.09) * (Math.max(0, cx - x) / rx) * 2;   // la cola ondula más que la cabeza
+  const half = x => {
+    const nx = (x - cx) / rx; if(nx < -1 || nx > 1) return 0;
+    let h = ry * Math.sqrt(1 - nx * nx);
+    if(nx < 0) h *= 0.5 + 0.5 * (1 + nx);
+    return nx < -0.62 ? Math.max(h, 2.4) : h;
+  };
+  // Aleta caudal bifurcada, con rayos y vaivén
+  for(let x = 3; x <= 19; x++){
+    const k = 19 - x, h = 2.4 + k * 0.55, hi = Math.floor(h);
+    const yc = cy + off(x) + Math.sin(t * 1.6 - (x - cx) * 0.09) * k * 0.12;
+    const notch = Math.max(0, (12 - x) * 0.5);
+    for(let dy = -hi; dy <= hi; dy++){
+      if(Math.abs(dy) < notch) continue;
+      put(x, yc + dy, ((dy + 30) % 3 === 0 || Math.abs(dy) === hi) ? pal.fin2 : pal.fin);
+    }
+  }
+  // Aleta dorsal (flamea), anal y pélvica
+  for(let x = cx - 9; x <= cx + 5; x++){
+    const u = (x - (cx - 9)) / 14, h = Math.round(8 * Math.sin(Math.PI * Math.pow(u, 0.65)) + Math.sin(t * 2 + x * 0.5) * 0.8);
+    const top = Math.round(cy + off(x) - half(x));
+    for(let k = 0; k < h; k++) put(x, top - k, x % 2 === 0 ? pal.fin : pal.fin2);
+  }
+  for(let x = cx - 8; x <= cx - 1; x++){
+    const u = (x - (cx - 8)) / 7, h = Math.round(5 * Math.sin(Math.PI * Math.pow(u, 0.8)) + Math.sin(t * 2 + x) * 0.6);
+    const bot = Math.round(cy + off(x) + half(x));
+    for(let k = 0; k < h; k++) put(x, bot + k, x % 2 ? pal.fin : pal.fin2);
+  }
+  for(let x = cx + 2; x <= cx + 6; x++){
+    const h = Math.round(4 - (x - (cx + 2)) * 0.7), bot = Math.round(cy + half(x));
+    for(let k = 0; k < h; k++) put(x, bot + k, k === h - 1 ? pal.fin2 : pal.fin);
+  }
+  // Cuerpo: lomo oscuro, panza clara (con trama punteada en las transiciones), rayas y escamas
+  for(let x = cx - rx; x <= cx + rx; x++){
+    const nx = (x - cx) / rx, hh = half(x), yc = cy + off(x);
+    for(let y = Math.ceil(yc - hh); y <= Math.floor(yc + hh); y++){
+      const ny = (y - yc) / (hh || 1), dith = (x + y) & 1;
+      let c = pal.body;
+      if(ny < -0.5 || (ny < -0.38 && dith)) c = pal.back;
+      else if(ny > 0.42 || (ny > 0.3 && dith)) c = pal.belly;
+      const band = (nx > -0.52 && nx < -0.36) || (nx > -0.12 && nx < 0.04);
+      if(band && ny < 0.55) c = pal.stripe;
+      else if(y % 2 === 0 && (x + ((y >> 1) & 1) * 2) % 4 === 0){
+        if(c === pal.body) c = pal.back; else if(c === pal.back) c = pal.out;
+      }
+      g[y][x] = c;
+    }
+  }
+  // Destello que recorre el lomo
+  const gx = cx - rx + Math.floor((f * 1.2) % (2 * rx + 8)) - 4;
+  for(let y = cy - 10; y <= cy + 10; y++) for(let d = 0; d < 2; d++){
+    const x = gx + d + Math.round((cy - y) * 0.35);
+    if(g[y] && g[y][x] != null && (g[y][x] === pal.body || g[y][x] === pal.back)) g[y][x] = pal.belly;
+  }
+  // Línea de la branquia
+  for(let dy = -7; dy <= 7; dy++){ const x = cx + 8 - Math.round(dy * dy / 20), y = cy + dy; if(g[y] && g[y][x] != null) g[y][x] = pal.back; }
+  // Aleta pectoral aleteando
+  const fl = Math.sin(t * 3) * 2;
+  for(let i = 0; i < 7; i++){ const len = Math.max(1, 4 - Math.abs(i - 2)); for(let j = 0; j < len; j++) put(cx + 6 - i, cy + 3 + j + Math.round(fl * i / 6), j === len - 1 ? pal.fin2 : pal.fin); }
+  // Ojo con brillo y boca que se abre y cierra
+  const ex = cx + 12, ey = cy - 3;
+  for(let dx = -2; dx <= 2; dx++) for(let dy = -2; dy <= 2; dy++) if(dx * dx + dy * dy <= 5) put(ex + dx, ey + dy, '#FFFFFF');
+  [[1,0],[2,0],[1,1],[2,1]].forEach(p => put(ex + p[0], ey + p[1], pal.out));
+  put(ex + 1, ey, '#FFFFFF');
+  put(cx + rx - 2, cy + 1, pal.out); put(cx + rx - 3, cy + 1, pal.out);
+  if(Math.sin(t * 1.1) > 0.55) put(cx + rx - 3, cy + 2, pal.out);
+  // Contorno oscuro de 1 píxel
+  const out = g.map(r => r.slice());
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    if(g[y][x] !== null) continue;
+    if((y > 0 && g[y-1][x]) || (y < H-1 && g[y+1][x]) || (x > 0 && g[y][x-1]) || (x < W-1 && g[y][x+1])) out[y][x] = pal.out;
+  }
+  return out;
+}
+function pxDraw(cv, th, v, flip, f){
+  const ctx = cv.getContext('2d'), pal = PX_PAL[th][v], g = pxFishGrid(pal, f);
+  ctx.clearRect(0, 0, PX_W, PX_H);
+  const px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(flip ? PX_W - 1 - x : x, y, 1, 1); };
+  for(let y = 0; y < PX_H; y++) for(let x = 0; x < PX_W; x++) if(g[y][x]) px(x, y, g[y][x]);
+  // Burbujas que salen de la boca
+  for(let i = 0; i < 4; i++){
+    const ph = ((f * 0.045) + i / 4) % 1, by = Math.round(27 - ph * 24), bx = Math.round(62 + ph * 3 + Math.sin(ph * 7 + i * 1.7) * 2);
+    if(i % 2 === 0){ [[1,0],[0,1],[2,1],[1,2]].forEach(p => px(bx + p[0], by + p[1], '#BDE8F7')); px(bx, by + 1, '#FFFFFF'); }
+    else { px(bx, by, '#E8F8FD'); px(bx + 1, by, '#BDE8F7'); }
+  }
+}
+(function(){
+  const fishes = [...document.querySelectorAll('canvas.pxfish')].map(cv => {
+    cv.width = PX_W; cv.height = PX_H;
+    return { cv, th: cv.dataset.th, v: +cv.dataset.v, flip: cv.dataset.flip === '1', f0: Math.floor(Math.random() * 200) };
+  });
+  let n = 0;
+  const tick = () => { if(document.hidden) return; n++; fishes.forEach(o => pxDraw(o.cv, o.th, o.v, o.flip, o.f0 + n)); };
+  tick(); setInterval(tick, 125);
+})();
 
 loadCumpleData();
 </script>

@@ -789,6 +789,27 @@ a.tk-chip.green:hover { background: #059669; color:#fff; } a.tk-chip.blue:hover 
       </div>
     </div>
 
+    <!-- Módulo: Calendario de Cumpleaños -->
+    <a class="mod-card purple" href="https://acurioempleos-svg.github.io/RRHHSYSTEM/calendario-cumpleanos.html" id="card-cumple">
+      <div class="card-top">
+        <div class="card-icon sprite char" id="char-cumple" role="button" tabindex="0" aria-label="Tocá a la chica" title="¡Tocala!"></div>
+        <div class="card-badge">Módulo 5</div>
+      </div>
+      <div class="card-title">Calendario de<br>Cumpleaños</div>
+      <div class="card-desc">
+        Los cumpleaños del equipo en un solo calendario, para no olvidarse de saludar a nadie.
+      </div>
+      <div class="card-features">
+        <span class="card-feat">Calendario</span>
+        <span class="card-feat">Cumpleaños</span>
+        <span class="card-feat">Equipo</span>
+      </div>
+      <div class="card-cta">
+        <span class="card-cta-text">Abrir módulo</span>
+        <div class="card-arrow">→</div>
+      </div>
+    </a>
+
   </div>
 
 
@@ -2279,6 +2300,114 @@ function drawWorker(ctx, frame, spark) {
   load().then(render);
   setInterval(() => load().then(render), remote ? 10000 : 30000);
   window.addEventListener('storage', e => { if (e.key === LS_TASKS) load().then(render); });
+})();
+</script>
+<script>
+// ─── CUMPLEAÑOS: chica enojada laburando; le suena el celu y se alegra ───
+(function () {
+  'use strict';
+  const host = document.getElementById('char-cumple');
+  if (!host) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const W = 60, H = 46;
+  const cv = PX.make(W, H, 2);
+  host.appendChild(cv);
+  const ctx = PX.ctxOf(cv);
+  // Labura enojada hasta que la tocan: ahí le vibra el celu, lo mira y se alegra; después vuelve a laburar.
+  const BUZZ = 4, HAPPY = 24;       // ticks (140ms) que dura cada momento después del toque
+  let t = 0, p = -1;                // p = ticks desde el toque (-1 = sin tocar)
+
+  function draw() {
+    const phase = p < 0 ? 'work' : p < BUZZ ? 'buzz' : 'happy';
+    const OY = 2;
+    ctx.clearRect(0, 0, W, H);
+    const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
+    const SK = '#f4bc8a', SKS = '#d9935f', HAIR = '#7a3b2e', HAIRH = '#a05a44', K = '#161616', RED = '#d62839';
+    const BL = '#7c3aed', BLD = '#6228c4', BLH = '#a78bfa';
+    const heart = (x, y, c) => { R(x, y, 1, 1, c); R(x + 2, y, 1, 1, c); R(x, y + 1, 3, 1, c); R(x + 1, y + 2, 1, 1, c); };
+    const happy = phase === 'happy', angry = !happy;
+    const hy = angry ? 1 : 0;
+
+    // silla + escritorio
+    R(4, 16, 14, 16, '#4b3b6b');
+    R(0, 32, 60, 3, '#9a6a3a'); R(0, 35, 60, 1, '#6b4423'); R(2, 36, 4, 9, '#6b4423'); R(53, 36, 4, 9, '#6b4423');
+
+    // monitor
+    R(43, 31, 12, 1, '#555b6b'); R(47, 26, 4, 5, '#555b6b');
+    R(38, 8, 20, 18, '#2b2f3a'); R(40, 10, 16, 14, '#0b1220');
+    for (let i = 0; i < 3; i++) {
+      const bad = phase === 'work' && (Math.floor(t / 2) + i) % 3 === 0;
+      R(42, 12 + i * 4, 3, 2, bad ? '#ef4444' : '#7aa6d8');
+      R(46, 12 + i * 4, bad ? 8 : 6 + i * 2, 2, bad ? '#ef4444' : '#46e06a');
+    }
+    // teclado
+    R(30, 30, 22, 2, '#d5dae5'); R(31, 30, 20, 1, '#98a2b3');
+
+    // cuerpo
+    R(10, 20 + hy, 4, 3, SKS);
+    R(6, 23, 14, 9, BL); R(6, 23, 14, 1, BLH); R(10, 23, 6, 2, '#fff'); R(6, 31, 14, 1, BLD);
+    // cabeza + pelo
+    R(7, 9 + hy, 12, 11, SK);
+    R(6, 6 + hy, 14, 5, HAIR); R(6, 8 + hy, 2, 12, HAIR); R(18, 8 + hy, 2, 12, HAIR); R(9, 6 + hy, 5, 1, HAIRH);
+    R(10, 2 + hy, 6, 4, HAIR); R(11, 2 + hy, 3, 1, HAIRH); R(15, 4 + hy, 2, 2, '#f472b6');
+    if (angry) {
+      R(8, 12 + hy, 3, 1, HAIR); R(11, 13 + hy, 1, 1, HAIR); R(14, 13 + hy, 1, 1, HAIR); R(15, 12 + hy, 3, 1, HAIR);
+      R(9, 14 + hy, 2, 2, K); R(15, 14 + hy, 2, 2, K);
+      R(8, 17 + hy, 2, 1, '#ff6b6b'); R(16, 17 + hy, 2, 1, '#ff6b6b');
+      R(11, 18 + hy, 4, 1, K); R(10, 19 + hy, 1, 1, K); R(15, 19 + hy, 1, 1, K);
+    } else {
+      R(9, 15, 1, 1, K); R(10, 14, 2, 1, K); R(12, 15, 1, 1, K);
+      R(14, 15, 1, 1, K); R(15, 14, 2, 1, K); R(17, 15, 1, 1, K);
+      R(8, 16, 2, 2, '#ff9aa8'); R(16, 16, 2, 2, '#ff9aa8');
+      R(10, 17, 1, 1, '#8b2c2c'); R(11, 18, 4, 1, '#8b2c2c'); R(15, 17, 1, 1, '#8b2c2c');
+    }
+
+    // brazos
+    if (happy) {
+      R(4, 26, 4, 6, BL); R(3, 30, 5, 2, SK);                         // apoyado
+      R(19, 24, 5, 3, BL); R(22, 15, 3, 9, BL); R(22, 12, 4, 3, SK);   // sostiene el celu
+      R(23, 4, 7, 11, '#2a2a35');
+      const bg = ['#ffe3f0', '#e9d5ff', '#fff3c4'][Math.floor(t / 3) % 3];
+      R(24, 5, 5, 9, bg); R(25, 6, 2, 1, '#ffd84d'); R(24, 8, 5, 2, '#fff'); R(24, 10, 5, 4, '#ff9ad5');
+    } else {
+      R(19, 24, 9, 3, BL); R(28, 26 + (t % 2), 3, 3, SK);
+      R(18, 27, 9, 3, BLD); R(27, 29 - (t % 2), 3, 3, SK);
+      if (phase === 'buzz') {                                          // celu vibrando en el escritorio
+        const o = (t % 2) ? 1 : -1;
+        R(20 + o, 29, 7, 3, '#2a2a35'); R(21 + o, 29, 5, 1, ['#7fd4ff', '#ff9ad5'][t % 2]);
+        R(18, 27 + (t % 2), 1, 2, '#c7cdd8'); R(28, 26, 1, 2, '#c7cdd8');
+      }
+    }
+
+    // extras
+    if (angry && t % 4 < 2) { R(22, 3, 2, 1, RED); R(21, 4, 1, 2, RED); R(24, 4, 1, 2, RED); R(22, 6, 2, 1, RED); }
+    if (angry) { R(4, 4 + (t % 3), 1, 2, '#c7cdd8'); R(2, 8 - (t % 2), 1, 2, '#c7cdd8'); }
+    if (happy) {
+      const a = (t * 1) % 12;
+      heart(31 + (t % 3), 8 - Math.min(8, a), '#ff5a7a');
+      heart(35 - (t % 2), 14 - Math.min(10, (a + 5) % 12), '#f472b6');
+      [[2, 10], [30, 18], [14, 1]].forEach(([x, y], i) => { if ((t + i) % 2) { R(x, y - 1, 1, 3, '#ffd84d'); R(x - 1, y, 3, 1, '#ffd84d'); } });
+    }
+
+    PX.outline(ctx, W, H);
+    PX.shadow(ctx, 0, H - 1, 60);
+  }
+
+  draw();
+  if (!reduce) {
+    setInterval(() => { t++; if (p >= 0 && ++p >= HAPPY) p = -1; draw(); }, 140);
+    host.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();       // tocar a la chica no abre el módulo
+      p = 0; draw();                                 // le suena el celu
+    });
+  } else {
+    host.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      p = BUZZ; draw();
+      setTimeout(() => { p = -1; draw(); }, 2500);
+    });
+  }
+  host.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); host.click(); } });
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

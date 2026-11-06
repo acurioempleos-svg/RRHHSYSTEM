@@ -677,6 +677,78 @@ a.tk-chip.green:hover { background: #059669; color:#fff; } a.tk-chip.blue:hover 
 .tk-empty { text-align: center; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--faint); padding: 22px 0; }
 .tk-sync { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint); margin-top: 12px; text-align: right; }
 @media (max-width: 640px) { .tk-add { width: 100%; margin-left: 0; } .tk-panel { padding: 16px; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT: contenido + bitácora (abajo en celu · al costado en compu)
+   ═══════════════════════════════════════════════════════════════ */
+#layout { display: block; }
+#main { min-width: 0; }
+#bitacora { margin-top: 36px; min-width: 0; }
+@media (min-width: 1040px) {
+  #wrapper { max-width: 1380px; }
+  #layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 28px; align-items: start; }
+  #bitacora { margin-top: 0; position: sticky; top: 20px; align-self: start; padding-top: 28px; }
+  .bt-panel { max-height: calc(100dvh - 60px); overflow-y: auto; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BITÁCORA
+   ═══════════════════════════════════════════════════════════════ */
+.bt-panel { background: rgba(255,255,255,0.9); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: var(--bc-shadow-sm); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.bt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.bt-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+.bt-nav { display: flex; align-items: center; gap: 6px; }
+.bt-navbtn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border-hi); background: var(--surface); color: var(--text); font-size: 18px; cursor: pointer; flex-shrink: 0; }
+.bt-navbtn:hover { border-color: var(--amber); color: var(--amber); }
+.bt-date { flex: 1; min-width: 0; height: 36px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border-hi); border-radius: 8px; padding: 0 10px; outline: none; }
+.bt-date:focus { border-color: var(--amber); }
+.bt-today { height: 36px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--amber); background: var(--amber-dim); border: 1px solid rgba(217,119,6,.3); border-radius: 8px; padding: 0 12px; cursor: pointer; flex-shrink: 0; }
+.bt-day { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: capitalize; margin: 10px 0 12px; }
+.bt-locals { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.bt-local { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.bt-local.on { color: var(--amber); border-color: rgba(217,119,6,.4); background: var(--amber-dim); }
+.bt-local i { font-style: normal; font-size: 10px; min-width: 18px; text-align: center; padding: 1px 5px; border-radius: 10px; background: rgba(17,24,39,.08); color: var(--muted); }
+.bt-local.on i { background: var(--amber); color: #fff; }
+.bt-form { display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.bt-form select { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border-hi); border-radius: 8px; padding: 7px 10px; outline: none; }
+.bt-pending { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .04em; margin-bottom: 10px; }
+.bt-pending b { color: var(--amber); font-weight: 500; }
+.bt-pending .ok { color: var(--green); }
+.bt-list { display: flex; flex-direction: column; gap: 8px; }
+.bt-item { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--au, var(--amber)); border-radius: 12px; padding: 10px 12px; }
+.bt-item-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .04em; margin-bottom: 5px; }
+.bt-author { font-weight: 500; color: var(--au, var(--amber)); background: var(--au-bg, var(--amber-dim)); padding: 2px 8px; border-radius: 20px; }
+.bt-shift { padding: 2px 8px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); }
+.bt-item .tk-del { margin-left: auto; }
+.bt-text { font-size: 14px; font-weight: 600; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+@media (max-width: 640px) { .bt-panel { padding: 16px; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   CLIMA POR FRANJA HORARIA + PANEL DE DETALLE
+   ═══════════════════════════════════════════════════════════════ */
+.wx-sky { pointer-events: none; }
+button.wx-chip { appearance: none; -webkit-appearance: none; cursor: pointer; font-family: var(--bc-font-mono); }
+button.wx-chip:hover { border-color: var(--bc-amber); color: var(--bc-amber); }
+#wx-panel { position: fixed; top: 56px; right: 20px; z-index: 65; width: min(360px, calc(100vw - 24px)); background: #fff; border: 1px solid var(--border-hi); border-radius: 14px; box-shadow: var(--bc-shadow); padding: 16px; font-family: 'DM Mono', monospace; color: var(--text); }
+#wx-panel[hidden] { display: none; }
+.wxp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.wxp-ic canvas { display: block; image-rendering: pixelated; }
+.wxp-temp { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; line-height: 1; }
+.wxp-lab { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.wxp-ph { margin-left: auto; text-align: right; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.wxp-ph b { font-size: 15px; color: var(--text); font-weight: 500; }
+.wxp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+.wxp-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; }
+.wxp-stat small { display: block; font-size: 9px; color: var(--faint); letter-spacing: .08em; text-transform: uppercase; }
+.wxp-stat span { font-size: 12px; font-weight: 500; }
+.wxp-sun { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding: 8px 2px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.wxp-hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.wxp-h { flex: 0 0 auto; width: 52px; text-align: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 2px; font-size: 10px; }
+.wxp-h b { display: block; font-weight: 500; color: var(--muted); }
+.wxp-h .hi canvas { display: block; margin: 4px auto; image-rendering: pixelated; }
+.wxp-h .tt { font-size: 12px; font-weight: 500; }
+.wxp-h .pp { color: #2563eb; font-size: 10px; min-height: 12px; }
+.wxp-foot { font-size: 9px; color: var(--faint); margin-top: 8px; text-align: right; }
 </style>
 </head>
 <body>
@@ -688,8 +760,11 @@ a.tk-chip.green:hover { background: #059669; color:#fff; } a.tk-chip.blue:hover 
 <div id="wrapper">
 
 <!-- Chip de clima (flotante) -->
-<div id="weather-chip" class="wx-chip" hidden></div>
+<button type="button" id="weather-chip" class="wx-chip" hidden aria-expanded="false"></button>
+<div id="wx-panel" hidden></div>
 
+  <div id="layout">
+  <div id="main">
   <!-- HERO -->
   <header id="hero">
     <div class="hero-eyebrow">Sistema de recursos humanos</div>
@@ -846,6 +921,36 @@ a.tk-chip.green:hover { background: #059669; color:#fff; } a.tk-chip.blue:hover 
     </div>
   </section>
 
+  </div><!-- /main -->
+
+  <!-- BITÁCORA POR LOCAL Y POR DÍA -->
+  <aside id="bitacora">
+    <div class="bt-panel">
+      <div class="bt-head">
+        <div class="bt-title">📓 Bitácora <span class="tk-count" id="bt-count" hidden></span></div>
+        <div class="tk-me">Soy <select id="bt-me"></select></div>
+      </div>
+      <div class="bt-nav">
+        <button type="button" class="bt-navbtn" id="bt-prev" aria-label="Día anterior">‹</button>
+        <input type="date" id="bt-date" class="bt-date">
+        <button type="button" class="bt-navbtn" id="bt-next" aria-label="Día siguiente">›</button>
+        <button type="button" class="bt-today" id="bt-today">Hoy</button>
+      </div>
+      <div class="bt-day" id="bt-daylabel"></div>
+      <div class="bt-locals" id="bt-locals" role="tablist"></div>
+      <div class="bt-form">
+        <textarea class="tk-input" id="bt-input" rows="3" placeholder="¿Cómo estuvo el día en este local? Novedades, faltantes, incidentes…"></textarea>
+        <div class="tk-row">
+          <label>Turno <select id="bt-shift"><option value="">Todo el día</option><option>Mañana</option><option>Tarde</option><option>Noche</option></select></label>
+          <button class="tk-add" id="bt-add" type="button">Agregar a la bitácora</button>
+        </div>
+      </div>
+      <div class="bt-list" id="bt-list"></div>
+      <div class="tk-sync" id="bt-sync"></div>
+    </div>
+  </aside>
+  </div><!-- /layout -->
+
   <!-- FOOTER -->
   <footer id="footer">
     <div class="footer-copy">© BC Gestión · Grupo BC · Buenos Aires</div>
@@ -867,23 +972,27 @@ document.querySelectorAll('.mod-card').forEach(card => {
 });
 </script>
 <script>
-// ─── CLIMA: FONDO ANIMADO CÓMICO ─────────────────────────────────
-// Usa Open-Meteo (gratis, sin API key) para Buenos Aires.
-// Para probar escenas: index.html?clima=sol|noche|nublado|niebla|llovizna|lluvia|diluvio|tormenta|nieve|viento
+// ─── CLIMA: FONDO ANIMADO POR FRANJA HORARIA ─────────────────────
+// Open-Meteo (gratis, sin API key) para Buenos Aires: clima actual + pronóstico por hora + salida/puesta del sol.
+// El cielo cambia según la hora (madrugada, amanecer, mañana, mediodía, tarde, atardecer, anochecer, noche),
+// el sol/luna recorren el cielo y la nubosidad sigue el dato real.
+// Para probar: index.html?clima=sol|nublado|niebla|llovizna|lluvia|diluvio|tormenta|nieve|viento  y/o  &hora=18:30
 (function () {
   'use strict';
   const bg = document.getElementById('weather-bg');
   const chip = document.getElementById('weather-chip');
+  const panel = document.getElementById('wx-panel');
   if (!bg) return;
 
+  const qp = new URLSearchParams(location.search);
   const K = window.innerWidth < 640 ? 0.6 : 1;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const n = x => Math.max(1, Math.round(x * K));
-
+  const ri = (a, b) => Math.floor(rnd(a, b + 1));
+  const pad = x => String(x).padStart(2, '0');
   const HAPPY = 'happy', MEH = 'meh', SAD = 'sad';
 
-  const ri = (a, b) => Math.floor(rnd(a, b + 1));
   function mk(cls, html, style) {
     const d = document.createElement('div');
     d.className = 'wx-item ' + cls;
@@ -893,54 +1002,93 @@ document.querySelectorAll('.mod-card').forEach(card => {
     bg.appendChild(d);
     return d;
   }
+  function wrap(cls, el) { const w = document.createElement('span'); w.className = cls; w.appendChild(el); return w; }
+
+  // ── tiempo (todo en "minutos" de hora de Buenos Aires) ──
+  const toMin = iso => { const m = iso.match(/(\d+)-(\d+)-(\d+)T(\d+):(\d+)/); return Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) / 60000; };
+  const hhmm = min => { const d = new Date(min * 60000); return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()); };
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  // ── franjas del día ──
+  const PH = {
+    lateNight: { l: 'Madrugada', e: '🌌', g: 'linear-gradient(180deg, rgba(10,16,56,.38), rgba(30,41,100,.10) 70%, transparent)', stars: 42 },
+    dawn:      { l: 'Amanecer',  e: '🌅', g: 'linear-gradient(180deg, rgba(99,102,241,.22), rgba(244,114,182,.20) 45%, rgba(251,191,36,.26) 80%, transparent)', stars: 14 },
+    morning:   { l: 'Mañana',    e: '🌤️', g: 'linear-gradient(180deg, rgba(125,190,255,.22), rgba(255,240,200,.16) 70%, transparent)', stars: 0 },
+    midday:    { l: 'Mediodía',  e: '☀️', g: 'linear-gradient(180deg, rgba(70,150,255,.26), rgba(150,200,255,.10) 60%, transparent)', stars: 0 },
+    afternoon: { l: 'Tarde',     e: '🌞', g: 'linear-gradient(180deg, rgba(110,175,245,.20), rgba(253,224,160,.20) 75%, transparent)', stars: 0 },
+    sunset:    { l: 'Atardecer', e: '🌇', g: 'linear-gradient(180deg, rgba(124,58,237,.22), rgba(244,114,82,.28) 50%, rgba(251,191,36,.30) 85%, transparent)', stars: 0 },
+    dusk:      { l: 'Anochecer', e: '🌆', g: 'linear-gradient(180deg, rgba(49,46,129,.32), rgba(190,80,120,.20) 60%, transparent)', stars: 20 },
+    night:     { l: 'Noche',     e: '🌙', g: 'linear-gradient(180deg, rgba(15,23,70,.34), rgba(49,46,129,.12) 70%, transparent)', stars: 40 }
+  };
+  function phaseOf(d) {
+    const now = d.now, rise = d.rise, set = d.set;
+    if (now >= rise - 60 && now < rise + 30) return 'dawn';
+    if (now >= rise + 30 && now < set - 60) {
+      const p = (now - rise) / (set - rise);
+      return p < .33 ? 'morning' : p < .62 ? 'midday' : 'afternoon';
+    }
+    if (now >= set - 60 && now < set + 30) return 'sunset';
+    if (now >= set + 30 && now < set + 90) return 'dusk';
+    return now < rise - 60 ? 'lateNight' : 'night';
+  }
+  // posición 0..1 del sol (de día) o de la luna (de noche) en su recorrido
+  function arcP(d) {
+    if (d.now >= d.rise && d.now < d.set) return clamp((d.now - d.rise) / (d.set - d.rise), 0, 1);
+    const a = d.now >= d.set ? d.set : d.setPrev;
+    const b = d.now >= d.set ? d.riseNext : d.rise;
+    return clamp((d.now - a) / (b - a), 0, 1);
+  }
+  const arcPos = p => `left:${(6 + 82 * p).toFixed(1)}%;right:auto;top:max(50px,${(38 - 31 * Math.sin(Math.PI * p)).toFixed(1)}%)`;
 
   // ── piezas ──
-  function sun(small) { mk('wx-keep wx-sun', WXS.node('sun', { scale: small ? 3 : 4 })); }
-
-  function night() {
-    mk('wx-keep wx-moon', WXS.node('moon', { scale: 4 }));
-    for (let i = 0; i < n(40); i++) {
+  const WARM_FILTER = 'filter:sepia(.55) saturate(2.2) hue-rotate(-18deg) drop-shadow(0 0 18px rgba(249,115,22,.55));';
+  function stars(count) {
+    for (let i = 0; i < n(count); i++) {
       const s = Math.random() < .25 ? 3 : 2;
       mk('wx-star', '', `left:${rnd(0, 100)}%;top:${rnd(0, 70)}%;width:${s}px;height:${s}px;--dur:${rnd(1.5, 4)}s;--delay:-${rnd(0, 4)}s`);
     }
   }
-
-  function clouds(count, tone, face, big) {
-    const t = tone === 'light' ? 'light' : tone;
-    for (let i = 0; i < count; i++)
-      mk('wx-cloudpx' + (face ? '' : ' fog'), WXS.node('cloud', { tone: t, face: face, scale: big ? ri(6, 8) : ri(2, 4) }),
-         `top:${rnd(4, 55)}%;--dur:${rnd(55, 110)}s;--delay:-${rnd(0, 110)}s`);
+  let cel = null;
+  function celestial(d, ph, small) {
+    const p = arcP(d);
+    if (d.day) {
+      const sc = small ? 3 : (p < .12 || p > .88 ? 5 : 4);
+      const warm = ph === 'dawn' || ph === 'sunset';
+      cel = mk('wx-keep wx-sun', WXS.node('sun', { scale: sc }), arcPos(p) + ';' + (warm ? WARM_FILTER : ''));
+    } else {
+      cel = mk('wx-keep wx-moon', WXS.node('moon', { scale: 4 }), arcPos(p));
+    }
+    if (!d.day || ph === 'dawn') stars(PH[ph].stars);
   }
+
+  function clouds(count, tone, face, big, extra) {
+    for (let i = 0; i < count; i++)
+      mk('wx-cloudpx' + (face ? '' : ' fog'), WXS.node('cloud', { tone: tone, face: face, scale: big ? ri(6, 8) : ri(2, 4) }),
+         `top:${rnd(4, 55)}%;--dur:${rnd(55, 110)}s;--delay:-${rnd(0, 110)}s;${extra || ''}`);
+  }
+  const coverCount = c => c < 10 ? 0 : c < 30 ? 1 : c < 55 ? 2 : c < 80 ? 4 : 6;
 
   function drops(count) {
     for (let i = 0; i < count; i++)
       mk('wx-fall wx-drop', '', `left:${rnd(0, 105)}%;height:${ri(4, 7) * 3}px;--dur:${rnd(.6, 1.1)}s;--delay:-${rnd(0, 1.1)}s`);
   }
-
   function gusts(count) {
     for (let i = 0; i < count; i++) {
       const k = pick(['leaf', 'leafO']);
-      const cv = WXS.node(k === 'leafO' ? 'leaf' : k, { scale: ri(2, 3), orange: k === 'leafO' });
-      const inner = k === 'kite' ? cv : (() => { const w = document.createElement('span'); w.className = 'wx-spin'; w.appendChild(cv); return w; })();
-      mk('wx-cross', inner, `top:${rnd(8, 80)}%;--dur:${rnd(5, 10)}s;--delay:-${rnd(0, 10)}s`);
+      const cv = WXS.node('leaf', { scale: ri(2, 3), orange: k === 'leafO' });
+      mk('wx-cross', wrap('wx-spin', cv), `top:${rnd(8, 80)}%;--dur:${rnd(5, 10)}s;--delay:-${rnd(0, 10)}s`);
     }
   }
-
-  // ── escenas ──
-  function rain(level) {           // 1 llovizna · 2 lluvia · 3 diluvio
+  function rain(level, tone) {
     clouds(n(level === 1 ? 3 : 5), 'dark', SAD);
     drops(n([0, 28, 55, 80][level]));
   }
-
-  function wrap(cls, el) { const w = document.createElement('span'); w.className = cls; w.appendChild(el); return w; }
-
   function thunder() {
     rain(3);
     mk('wx-flash');
     for (let i = 0; i < 3; i++)
       mk('wx-bolt', WXS.node('bolt', { scale: ri(3, 5) }), `left:${rnd(10, 90)}%;top:${rnd(5, 40)}%;--dur:${rnd(5, 9)}s;--delay:-${rnd(0, 9)}s`);
   }
-
   function snow() {
     clouds(n(3), 'gray', HAPPY);
     for (let i = 0; i < n(45); i++) {
@@ -950,15 +1098,7 @@ document.querySelectorAll('.mod-card').forEach(card => {
     }
   }
 
-  function fog() {
-    clouds(n(6), 'fog', null, true);
-  }
-
-  function overcast() {
-    clouds(n(7), 'gray', MEH);
-  }
-
-  // ── mapeo de códigos WMO → escena ──
+  // ── WMO → escena ──
   function scene(code) {
     if (code === 0 || code === 1) return 'clear';
     if (code === 2) return 'partly';
@@ -971,7 +1111,6 @@ document.querySelectorAll('.mod-card').forEach(card => {
     if ([95, 96, 99].includes(code)) return 'thunder';
     return 'overcast';
   }
-
   const INFO = {
     clear:    ['☀️', 'Despejado',     'Sol de justicia. El que no se puso protector, se lo pierde.'],
     partly:   ['⛅', 'Algo nublado',  'Entre sol y nubes: ni fu ni fa.'],
@@ -983,18 +1122,42 @@ document.querySelectorAll('.mod-card').forEach(card => {
     thunder:  ['⛈️', 'Tormenta',      'Truenos y relámpagos. Ojo con los cortes de luz.'],
     snow:     ['🌨️', 'Nieve',         '¿Nieve en Buenos Aires? Sacá foto, es histórico.']
   };
+  const labelOf = d => (d.scene === 'clear' && !d.day) ? 'Noche despejada' : INFO[d.scene][1];
 
+  // ── render del fondo ──
+  let cur = null;
   function render(d) {
-    bg.innerHTML = '';
+    cur = d;
+    bg.innerHTML = ''; cel = null;
+    const ph = phaseOf(d), P = PH[ph];
+    d.phase = ph;
+    d.day = d.now >= d.rise && d.now < d.set;
     const cls = d.scene === 'downpour' ? 'rain' : d.scene;
-    bg.className = 'scene-' + cls + (d.day ? '' : ' is-night');
+    bg.className = 'scene-' + cls;
     window.__bcWx = d;   // la mascota lee el clima de acá
 
+    // cielo de la franja horaria (+ calor / frío), atenuado por la nubosidad
+    const layers = [P.g];
+    if (d.temp >= 30) layers.unshift('radial-gradient(ellipse at 50% 100%, rgba(251,146,60,.18), transparent 60%)');
+    if (d.temp <= 8)  layers.unshift('linear-gradient(180deg, rgba(147,197,253,.16), transparent 60%)');
+    mk('wx-sky', '', `inset:0;background:${layers.join(',')};opacity:${Math.max(.45, 1 - (d.cloud || 0) / 180).toFixed(2)}`);
+
+    const dark = ph === 'lateNight' || ph === 'night' || ph === 'dusk';
+    const tone = dark ? 'gray' : 'light';
+    const warm = (ph === 'sunset' || ph === 'dawn') ? 'filter:sepia(.5) saturate(2) hue-rotate(-20deg);' : '';
+    const cc = coverCount(d.cloud || 0);
+
     switch (d.scene) {
-      case 'clear':    d.day ? sun(false) : night(); break;
-      case 'partly':   d.day ? sun(true) : night(); clouds(n(3), 'light', HAPPY); break;
-      case 'overcast': overcast(); break;
-      case 'fog':      fog(); break;
+      case 'clear':
+        celestial(d, ph, false);
+        if (cc) clouds(n(cc), tone, HAPPY, false, warm);
+        break;
+      case 'partly':
+        celestial(d, ph, true);
+        clouds(n(Math.max(2, cc)), tone, HAPPY, false, warm);
+        break;
+      case 'overcast': clouds(n(7), 'gray', MEH); break;
+      case 'fog':      clouds(n(6), 'fog', null, true); break;
       case 'drizzle':  rain(1); break;
       case 'rain':     rain(2); break;
       case 'downpour': rain(3); break;
@@ -1004,55 +1167,137 @@ document.querySelectorAll('.mod-card').forEach(card => {
     if (d.wind >= 30) gusts(n(6));
 
     if (chip && d.live) {
-      const i = INFO[d.scene];
-      const label = (d.scene === 'clear' && !d.day) ? 'Noche despejada' : i[1];
-      const t = Math.round(d.temp);
       chip.textContent = ''; chip.appendChild(WXS.icon(d.scene, d.day));
-      chip.appendChild(document.createTextNode(`${t}°C · ${label}`));
-      chip.title = i[2] + (d.wind >= 30 ? ' Y con viento: agarrate el sombrero.' : '');
+      chip.appendChild(document.createTextNode(`${Math.round(d.temp)}°C · ${labelOf(d)} · ${P.l}`));
+      chip.title = INFO[d.scene][2] + (d.wind >= 30 ? ' Y con viento: agarrate el sombrero.' : '') + ' (tocá para ver el detalle)';
       chip.hidden = false;
     } else if (chip) {
-      chip.hidden = true;
+      chip.hidden = true; if (panel) panel.hidden = true;
     }
+    renderPanel(d);
   }
 
-  // ── modo demo por URL (?clima=...) ──
-  const DEMO = {
-    sol:      { scene: 'clear',    day: true,  wind: 5,  temp: 30 },
-    noche:    { scene: 'clear',    day: false, wind: 5,  temp: 18 },
-    nublado:  { scene: 'overcast', day: true,  wind: 10, temp: 19 },
-    niebla:   { scene: 'fog',      day: true,  wind: 3,  temp: 12 },
-    llovizna: { scene: 'drizzle',  day: true,  wind: 8,  temp: 16 },
-    lluvia:   { scene: 'rain',     day: true,  wind: 12, temp: 15 },
-    diluvio:  { scene: 'downpour', day: true,  wind: 20, temp: 14 },
-    tormenta: { scene: 'thunder',  day: false, wind: 25, temp: 17 },
-    nieve:    { scene: 'snow',     day: true,  wind: 6,  temp: -1 },
-    viento:   { scene: 'clear',    day: true,  wind: 45, temp: 22 }
-  };
+  // ── panel de detalle ──
+  function renderPanel(d) {
+    if (!panel || !d.live) return;
+    const P = PH[d.phase];
+    const hours = (d.hourly || []).filter(h => h.t >= Math.floor(d.now / 60) * 60).slice(0, 12);
+    const popNext = hours.slice(0, 6).reduce((m, h) => Math.max(m, h.pop || 0), 0);
+    const dayLen = d.set - d.rise;
+    const stats = [
+      ['Sensación', d.feels != null ? Math.round(d.feels) + '°' : null],
+      ['Humedad', d.hum != null ? Math.round(d.hum) + '%' : null],
+      ['Viento', Math.round(d.wind) + ' km/h'],
+      ['Nubosidad', d.cloud != null ? Math.round(d.cloud) + '%' : null],
+      ['Lluvia 6 h', hours.length ? popNext + '%' : null],
+      ['Mín / Máx', d.tmin != null ? Math.round(d.tmin) + '° / ' + Math.round(d.tmax) + '°' : null]
+    ].filter(s => s[1] != null);
+    panel.innerHTML = `
+      <div class="wxp-head">
+        <div class="wxp-ic"></div>
+        <div><div class="wxp-temp">${Math.round(d.temp)}°C</div><div class="wxp-lab">${labelOf(d)}</div></div>
+        <div class="wxp-ph">${P.e} ${P.l}<br><b id="wxp-clock">${hhmm(d.now)}</b></div>
+      </div>
+      <div class="wxp-stats">${stats.map(s => `<div class="wxp-stat"><small>${s[0]}</small><span>${s[1]}</span></div>`).join('')}</div>
+      <div class="wxp-sun"><span>🌅 ${hhmm(d.rise)}</span><span>☀️ ${Math.floor(dayLen / 60)} h ${Math.round(dayLen % 60)} min de luz</span><span>🌇 ${hhmm(d.set)}</span></div>
+      ${hours.length ? `<div class="wxp-hours">${hours.map((h, i) => `<div class="wxp-h"><b>${hhmm(h.t)}</b><div class="hi" data-i="${i}"></div><div class="tt">${Math.round(h.temp)}°</div><div class="pp">${h.pop >= 10 ? '💧' + h.pop + '%' : ''}</div></div>`).join('')}</div>` : '<div class="wxp-foot" style="text-align:left">Sin pronóstico por hora (sin conexión).</div>'}
+      <div class="wxp-foot">Datos: Open-Meteo · Buenos Aires</div>`;
+    panel.querySelector('.wxp-ic').appendChild(WXS.icon(d.scene, d.day));
+    panel.querySelectorAll('.hi').forEach(el => {
+      const h = hours[+el.dataset.i];
+      const hd = ((h.t - d.rise) % 1440 + 1440) % 1440 < dayLen;
+      el.appendChild(WXS.icon(scene(h.code), hd));
+    });
+  }
+  if (chip && panel) {
+    chip.addEventListener('click', e => { e.stopPropagation(); panel.hidden = !panel.hidden; chip.setAttribute('aria-expanded', String(!panel.hidden)); });
+    document.addEventListener('click', e => { if (!panel.hidden && !panel.contains(e.target)) { panel.hidden = true; chip.setAttribute('aria-expanded', 'false'); } });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { panel.hidden = true; chip.setAttribute('aria-expanded', 'false'); } });
+  }
 
+  // ── datos ──
+  const CODE = { clear: 0, partly: 2, overcast: 3, fog: 45, drizzle: 53, rain: 63, downpour: 65, thunder: 95, snow: 73 };
+  const COVER = { clear: 5, partly: 45, overcast: 92, fog: 80, drizzle: 85, rain: 90, downpour: 100, thunder: 100, snow: 85 };
+  const POP = { clear: 0, partly: 10, overcast: 20, fog: 10, drizzle: 50, rain: 75, downpour: 95, thunder: 90, snow: 70 };
+  const DEMO = {
+    sol:      { scene: 'clear',    wind: 5,  temp: 30 },
+    nublado:  { scene: 'overcast', wind: 10, temp: 19 },
+    niebla:   { scene: 'fog',      wind: 3,  temp: 12 },
+    llovizna: { scene: 'drizzle',  wind: 8,  temp: 16 },
+    lluvia:   { scene: 'rain',     wind: 12, temp: 15 },
+    diluvio:  { scene: 'downpour', wind: 20, temp: 14 },
+    tormenta: { scene: 'thunder',  wind: 25, temp: 17 },
+    nieve:    { scene: 'snow',     wind: 6,  temp: -1 },
+    viento:   { scene: 'clear',    wind: 45, temp: 22 },
+    parcial:  { scene: 'partly',   wind: 10, temp: 24 }
+  };
+  const deviceNow = () => { const x = new Date(); return Date.UTC(x.getFullYear(), x.getMonth(), x.getDate(), x.getHours(), x.getMinutes()) / 60000; };
+  function approxSun(now) {   // salida/puesta aproximada para Buenos Aires
+    const day0 = Math.floor(now / 1440) * 1440;
+    const doy = Math.floor((day0 * 60000 - Date.UTC(new Date(day0 * 60000).getUTCFullYear(), 0, 0)) / 864e5);
+    const len = 12.15 + 1.85 * Math.cos(2 * Math.PI * (doy - 355) / 365);
+    const rise = day0 + (12.95 - len / 2) * 60, set = day0 + (12.95 + len / 2) * 60;
+    return { rise, set, riseNext: rise + 1440, setPrev: set - 1440 };
+  }
+  function applyHora(d) {
+    const h = qp.get('hora'); if (!h) return d;
+    const m = h.match(/^(\d{1,2})(?::(\d{2}))?$/); if (!m) return d;
+    d.now = Math.floor(d.now / 1440) * 1440 + (+m[1]) * 60 + (+(m[2] || 0));
+    return d;
+  }
+  function demoData(key) {
+    const base = DEMO[key], now = deviceNow(), sun = approxSun(now);
+    const hourly = [];
+    for (let i = 0; i < 30; i++) {
+      const t = Math.floor(now / 60) * 60 + i * 60;
+      hourly.push({ t, temp: base.temp + 4 * Math.sin((((t % 1440) / 60) - 9) / 24 * 2 * Math.PI), pop: POP[base.scene], code: CODE[base.scene] });
+    }
+    return Object.assign({ live: true, now, cloud: COVER[base.scene], hum: 60, feels: base.temp - 1, tmin: base.temp - 5, tmax: base.temp + 4, hourly }, sun, base);
+  }
   async function load() {
-    const q = new URLSearchParams(location.search).get('clima');
-    if (q && DEMO[q]) return Object.assign({ live: true }, DEMO[q]);
+    const q = qp.get('clima');
+    if (q && DEMO[q]) return applyHora(demoData(q));
     try {
       const url = 'https://api.open-meteo.com/v1/forecast?latitude=-34.61&longitude=-58.38' +
-                  '&current=temperature_2m,weather_code,is_day,wind_speed_10m' +
-                  '&timezone=America%2FArgentina%2FBuenos_Aires';
+        '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,cloud_cover,is_day,wind_speed_10m' +
+        '&hourly=temperature_2m,precipitation_probability,weather_code' +
+        '&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min' +
+        '&past_days=1&forecast_days=2&timezone=America%2FArgentina%2FBuenos_Aires';
       const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 6000);
+      const to = setTimeout(() => ctrl.abort(), 7000);
       const r = await fetch(url, { signal: ctrl.signal });
       clearTimeout(to);
-      const c = (await r.json()).current;
-      return { scene: scene(c.weather_code), day: !!c.is_day, wind: c.wind_speed_10m, temp: c.temperature_2m, live: true };
+      const j = await r.json(), c = j.current, dl = j.daily;
+      const i = Math.max(0, dl.time.indexOf(c.time.slice(0, 10)));
+      const hourly = j.hourly.time.map((t, k) => ({ t: toMin(t), temp: j.hourly.temperature_2m[k], pop: j.hourly.precipitation_probability[k], code: j.hourly.weather_code[k] }));
+      return applyHora({
+        live: true, scene: scene(c.weather_code), now: toMin(c.time), wind: c.wind_speed_10m, temp: c.temperature_2m,
+        feels: c.apparent_temperature, hum: c.relative_humidity_2m, cloud: c.cloud_cover, precip: c.precipitation,
+        rise: toMin(dl.sunrise[i]), set: toMin(dl.sunset[i]), riseNext: toMin(dl.sunrise[i + 1] || dl.sunrise[i]) + (dl.sunrise[i + 1] ? 0 : 1440),
+        setPrev: i > 0 ? toMin(dl.sunset[i - 1]) : toMin(dl.sunset[i]) - 1440,
+        tmin: dl.temperature_2m_min[i], tmax: dl.temperature_2m_max[i], hourly
+      });
     } catch (e) {
-      // sin conexión a la API: escena según la hora
-      const h = new Date().getHours();
-      return { scene: 'clear', day: h >= 7 && h < 20, wind: 0, temp: 0, live: false };
+      // sin conexión a la API: cielo según la hora del dispositivo
+      const now = deviceNow();
+      return applyHora(Object.assign({ live: false, scene: 'clear', wind: 0, temp: 0, cloud: 0, now }, approxSun(now)));
     }
   }
 
-  const go = () => load().then(render);
+  // ── ciclo de vida ──
+  let last = null, lastAt = 0;
+  const fixedHour = !!qp.get('hora');
+  const go = () => load().then(d => { last = d; lastAt = Date.now(); render(d); });
   if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
-  if (!new URLSearchParams(location.search).get('clima')) setInterval(go, 15 * 60 * 1000);
+  if (!qp.get('clima')) setInterval(go, 15 * 60 * 1000);
+  // cada minuto: avanza el reloj; si cambió la franja, redibuja; si no, solo mueve el sol/luna
+  if (!fixedHour) setInterval(() => {
+    if (!last) return;
+    const d = Object.assign({}, last, { now: last.now + Math.round((Date.now() - lastAt) / 60000) });
+    if (phaseOf(d) !== (cur && cur.phase)) { render(d); return; }
+    if (cel) { const p = arcP(d); cel.style.cssText += ';' + arcPos(p); }
+    const ck = document.getElementById('wxp-clock'); if (ck) ck.textContent = hhmm(d.now);
+  }, 60000);
 })();
 </script>
 <!-- Mascota y toast -->
@@ -2303,7 +2548,7 @@ function drawWorker(ctx, frame, spark) {
 })();
 </script>
 <script>
-// ─── CUMPLEAÑOS: chica enojada laburando; le suena el celu y se alegra ───
+// ─── CUMPLEAÑOS: chico frente al espejo; al tocarlo el reflejo se vuelve demoníaco y el real se enoja ───
 (function () {
   'use strict';
   const host = document.getElementById('char-cumple');
@@ -2313,81 +2558,93 @@ function drawWorker(ctx, frame, spark) {
   const cv = PX.make(W, H, 2);
   host.appendChild(cv);
   const ctx = PX.ctxOf(cv);
-  // Labura enojada hasta que la tocan: ahí le vibra el celu, lo mira y se alegra; después vuelve a laburar.
-  const BUZZ = 4, HAPPY = 24;       // ticks (140ms) que dura cada momento después del toque
+  const SURP = 4, END = 28;         // ticks (140ms): sorpresa y fin de la escena
   let t = 0, p = -1;                // p = ticks desde el toque (-1 = sin tocar)
 
   function draw() {
-    const phase = p < 0 ? 'work' : p < BUZZ ? 'buzz' : 'happy';
+    const phase = p < 0 ? 'vain' : p < SURP ? 'surp' : 'angry';
+    const evil = p >= 0;
     const OY = 2;
     ctx.clearRect(0, 0, W, H);
     const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
-    const SK = '#f4bc8a', SKS = '#d9935f', HAIR = '#7a3b2e', HAIRH = '#a05a44', K = '#161616', RED = '#d62839';
-    const BL = '#7c3aed', BLD = '#6228c4', BLH = '#a78bfa';
-    const heart = (x, y, c) => { R(x, y, 1, 1, c); R(x + 2, y, 1, 1, c); R(x, y + 1, 3, 1, c); R(x + 1, y + 2, 1, 1, c); };
-    const happy = phase === 'happy', angry = !happy;
-    const hy = angry ? 1 : 0;
+    const K = '#161616', RED = '#d62839', HAIR = '#6b4426', HAIRH = '#8a5e38';
+    const BLK = '#1b1b1f', BLKH = '#34343d', JEA = '#2e3a55', JEAD = '#1f2740';
 
-    // silla + escritorio
-    R(4, 16, 14, 16, '#4b3b6b');
-    R(0, 32, 60, 3, '#9a6a3a'); R(0, 35, 60, 1, '#6b4423'); R(2, 36, 4, 9, '#6b4423'); R(53, 36, 4, 9, '#6b4423');
-
-    // monitor
-    R(43, 31, 12, 1, '#555b6b'); R(47, 26, 4, 5, '#555b6b');
-    R(38, 8, 20, 18, '#2b2f3a'); R(40, 10, 16, 14, '#0b1220');
-    for (let i = 0; i < 3; i++) {
-      const bad = phase === 'work' && (Math.floor(t / 2) + i) % 3 === 0;
-      R(42, 12 + i * 4, 3, 2, bad ? '#ef4444' : '#7aa6d8');
-      R(46, 12 + i * 4, bad ? 8 : 6 + i * 2, 2, bad ? '#ef4444' : '#46e06a');
-    }
-    // teclado
-    R(30, 30, 22, 2, '#d5dae5'); R(31, 30, 20, 1, '#98a2b3');
-
-    // cuerpo
-    R(10, 20 + hy, 4, 3, SKS);
-    R(6, 23, 14, 9, BL); R(6, 23, 14, 1, BLH); R(10, 23, 6, 2, '#fff'); R(6, 31, 14, 1, BLD);
-    // cabeza + pelo
-    R(7, 9 + hy, 12, 11, SK);
-    R(6, 6 + hy, 14, 5, HAIR); R(6, 8 + hy, 2, 12, HAIR); R(18, 8 + hy, 2, 12, HAIR); R(9, 6 + hy, 5, 1, HAIRH);
-    R(10, 2 + hy, 6, 4, HAIR); R(11, 2 + hy, 3, 1, HAIRH); R(15, 4 + hy, 2, 2, '#f472b6');
-    if (angry) {
-      R(8, 12 + hy, 3, 1, HAIR); R(11, 13 + hy, 1, 1, HAIR); R(14, 13 + hy, 1, 1, HAIR); R(15, 12 + hy, 3, 1, HAIR);
-      R(9, 14 + hy, 2, 2, K); R(15, 14 + hy, 2, 2, K);
-      R(8, 17 + hy, 2, 1, '#ff6b6b'); R(16, 17 + hy, 2, 1, '#ff6b6b');
-      R(11, 18 + hy, 4, 1, K); R(10, 19 + hy, 1, 1, K); R(15, 19 + hy, 1, 1, K);
+    // ── espejo ──
+    R(27, 0, 32, 43, '#8a5a2b'); R(27, 0, 32, 1, '#b98245'); R(27, 0, 1, 43, '#b98245'); R(58, 1, 1, 42, '#6b4423');
+    const glass = evil ? ((t % 2) ? '#2a0a12' : '#3d0f1b') : '#cfe8f5';
+    R(29, 2, 28, 39, glass);
+    if (!evil) {
+      for (let i = 0; i < 6; i++) R(31 + i, 12 - i, 1, 1, '#ffffff');
+      for (let i = 0; i < 3; i++) R(36 + i, 12 - i, 1, 1, '#ffffff');
+      if (t % 14 < 2) { R(52, 6, 1, 3, '#fff'); R(51, 7, 3, 1, '#fff'); }           // brillito
     } else {
-      R(9, 15, 1, 1, K); R(10, 14, 2, 1, K); R(12, 15, 1, 1, K);
-      R(14, 15, 1, 1, K); R(15, 14, 2, 1, K); R(17, 15, 1, 1, K);
-      R(8, 16, 2, 2, '#ff9aa8'); R(16, 16, 2, 2, '#ff9aa8');
-      R(10, 17, 1, 1, '#8b2c2c'); R(11, 18, 4, 1, '#8b2c2c'); R(15, 17, 1, 1, '#8b2c2c');
+      R(29, 2, 28, 2, '#7f1d1d'); R(29, 39, 28, 2, '#7f1d1d');
+      [[30, 7], [31, 8], [32, 10], [33, 11], [55, 30], [54, 31], [53, 33], [55, 12], [54, 14]].forEach(([x, y]) => R(x, y, 1, 1, (t % 2) ? '#ff4d4d' : '#ff9a3c'));
     }
 
-    // brazos
-    if (happy) {
-      R(4, 26, 4, 6, BL); R(3, 30, 5, 2, SK);                         // apoyado
-      R(19, 24, 5, 3, BL); R(22, 15, 3, 9, BL); R(22, 12, 4, 3, SK);   // sostiene el celu
-      R(23, 4, 7, 11, '#2a2a35');
-      const bg = ['#ffe3f0', '#e9d5ff', '#fff3c4'][Math.floor(t / 3) % 3];
-      R(24, 5, 5, 9, bg); R(25, 6, 2, 1, '#ffd84d'); R(24, 8, 5, 2, '#fff'); R(24, 10, 5, 4, '#ff9ad5');
-    } else {
-      R(19, 24, 9, 3, BL); R(28, 26 + (t % 2), 3, 3, SK);
-      R(18, 27, 9, 3, BLD); R(27, 29 - (t % 2), 3, 3, SK);
-      if (phase === 'buzz') {                                          // celu vibrando en el escritorio
-        const o = (t % 2) ? 1 : -1;
-        R(20 + o, 29, 7, 3, '#2a2a35'); R(21 + o, 29, 5, 1, ['#7fd4ff', '#ff9ad5'][t % 2]);
-        R(18, 27 + (t % 2), 1, 2, '#c7cdd8'); R(28, 26, 1, 2, '#c7cdd8');
+    // ── chico (x0 = posición, dy = altura, flip = reflejo) ──
+    function guy(x0, dy, flip, mood, shake) {
+      const P = (x, y, w, h, c) => R(flip ? x0 + 16 - x - w : x0 + x, y + dy, w, h, c);
+      const demon = mood === 'evil', angry = mood === 'angry', surp = mood === 'surp';
+      const skin = demon ? '#c8323a' : angry ? '#e8715a' : '#f1bd91';
+      const shade = demon ? '#8f1d2a' : angry ? '#c4543f' : '#d9935f';
+      const raise = !evil && (t % 18) >= 12;                      // se acomoda el pelo
+
+      // cuernos (solo el reflejo maligno)
+      if (demon) { P(1, -1, 2, 3, '#3b0a0a'); P(1, -1, 1, 1, '#7f1d1d'); P(13, -1, 2, 3, '#3b0a0a'); P(14, -1, 1, 1, '#7f1d1d'); }
+
+      // cabeza + pelo corto castaño
+      P(3, 3, 10, 9, skin); P(2, 6, 1, 3, shade); P(13, 6, 1, 3, shade);
+      P(3, 0, 10, 3, HAIR); P(2, 2, 1, 3, HAIR); P(13, 2, 1, 3, HAIR); P(5, 0, 4, 1, HAIRH);
+      P(6, 12, 4, 1, shade);
+
+      // cara según estado
+      if (demon) {
+        const eye = (t % 2) ? '#ffe24a' : '#ff8a2a';
+        P(4, 6, 3, 2, eye); P(9, 6, 3, 2, eye); P(5, 6, 1, 2, K); P(10, 6, 1, 2, K);
+        P(4, 4, 2, 1, K); P(6, 5, 2, 1, K); P(10, 4, 2, 1, K); P(8, 5, 2, 1, K);        // cejas malvadas
+        P(4, 9, 8, 3, K);
+        for (let i = 0; i < 3; i++) { P(5 + i * 3, 9, 1, 1, '#fff'); P(6 + i * 3, 11, 1, 1, '#fff'); }
+      } else if (surp) {
+        P(4, 6, 3, 3, '#fff'); P(9, 6, 3, 3, '#fff'); P(5, 7, 1, 1, K); P(10, 7, 1, 1, K);
+        P(4, 4, 3, 1, HAIR); P(9, 4, 3, 1, HAIR);
+        P(7, 10, 2, 2, K);
+      } else if (angry) {
+        P(5, 6, 2, 2, K); P(9, 6, 2, 2, K); P(5, 6, 1, 1, '#fff'); P(9, 6, 1, 1, '#fff');
+        P(4, 4, 2, 1, K); P(6, 5, 2, 1, K); P(10, 4, 2, 1, K); P(8, 5, 2, 1, K);        // cejas fruncidas
+        P(6, 10, 4, 1, K); P(5, 11, 1, 1, K); P(10, 11, 1, 1, K);                       // boca de enojo
+      } else {                                                                           // canchero
+        P(5, 6, 2, 2, K); P(9, 6, 2, 2, K); P(5, 6, 1, 1, '#fff'); P(9, 6, 1, 1, '#fff');
+        P(5, 5, 2, 1, HAIR); P(9, 5, 2, 1, HAIR);
+        P(4, 9, 1, 1, '#f4a08a'); P(11, 9, 1, 1, '#f4a08a');
+        P(5, 9, 1, 1, '#8b2c2c'); P(6, 10, 4, 1, '#8b2c2c'); P(10, 9, 1, 1, '#8b2c2c');
+        if (t % 14 < 2) P(7, 10, 2, 1, '#fff');                                           // sonrisa con brillo
+      }
+
+      // remera negra + brazos
+      P(2, 13, 12, 11, BLK); P(3, 13, 2, 10, BLKH); P(6, 13, 4, 1, shade);
+      P(0, 13, 3, 5, BLK);
+      P(0, 18, 3, 6, skin);
+      if (raise) { P(13, 13, 3, 3, BLK); P(13, 10, 3, 4, skin); P(11, 8, 4, 3, skin); }
+      else { P(13, 13, 3, 5, BLK); P(13, 18, 3, 6, skin); }
+      if (angry || demon) { P(0, 24, 3, 2, shade); if (!raise) P(13, 24, 3, 2, shade); }
+
+      // pantalón largo + zapatillas
+      P(3, 24, 10, 10, JEA); P(3, 24, 10, 1, '#111'); P(7, 28, 1, 6, JEAD); P(3, 24, 1, 10, '#3b4a6d');
+      P(2, 34, 6, 2, '#f1f5f9'); P(8, 34, 6, 2, '#f1f5f9'); P(2, 35, 6, 1, '#9aa5b5'); P(8, 35, 6, 1, '#9aa5b5');
+
+      // extras del enojo (solo el real)
+      if (angry && !flip) {
+        P(11, 1, 3, 1, RED); P(12, 0, 1, 3, RED);
+        P(1, -3 - (t % 3), 2, 2, '#e5e7eb'); P(12, -4 - ((t + 1) % 3), 2, 2, '#e5e7eb');
       }
     }
 
-    // extras
-    if (angry && t % 4 < 2) { R(22, 3, 2, 1, RED); R(21, 4, 1, 2, RED); R(24, 4, 1, 2, RED); R(22, 6, 2, 1, RED); }
-    if (angry) { R(4, 4 + (t % 3), 1, 2, '#c7cdd8'); R(2, 8 - (t % 2), 1, 2, '#c7cdd8'); }
-    if (happy) {
-      const a = (t * 1) % 12;
-      heart(31 + (t % 3), 8 - Math.min(8, a), '#ff5a7a');
-      heart(35 - (t % 2), 14 - Math.min(10, (a + 5) % 12), '#f472b6');
-      [[2, 10], [30, 18], [14, 1]].forEach(([x, y], i) => { if ((t + i) % 2) { R(x, y - 1, 1, 3, '#ffd84d'); R(x - 1, y, 3, 1, '#ffd84d'); } });
-    }
+    // chico real a la izquierda; reflejo adentro del espejo
+    const shake = phase === 'angry' ? ((t % 2) ? 1 : -1) : 0;
+    guy(6 + shake, 6, false, phase === 'vain' ? 'vain' : phase, shake);
+    guy(36, 3, true, evil ? 'evil' : 'vain', 0);
 
     PX.outline(ctx, W, H);
     PX.shadow(ctx, 0, H - 1, 60);
@@ -2395,19 +2652,136 @@ function drawWorker(ctx, frame, spark) {
 
   draw();
   if (!reduce) {
-    setInterval(() => { t++; if (p >= 0 && ++p >= HAPPY) p = -1; draw(); }, 140);
+    setInterval(() => { t++; if (p >= 0 && ++p >= END) p = -1; draw(); }, 140);
     host.addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation();       // tocar a la chica no abre el módulo
-      p = 0; draw();                                 // le suena el celu
+      e.preventDefault(); e.stopPropagation();       // tocar al chico no abre el módulo
+      p = 0; draw();
     });
   } else {
     host.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation();
-      p = BUZZ; draw();
+      p = SURP + 2; draw();
       setTimeout(() => { p = -1; draw(); }, 2500);
     });
   }
   host.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); host.click(); } });
+})();
+</script>
+<script>
+// ─── BITÁCORA POR LOCAL Y POR DÍA ────────────────────────────────
+// Cada persona (Valentín, María, Lisandro) carga su bitácora del día, local por local.
+// Para compartirla entre usuarios/dispositivos, pegá acá la MISMA URL de Firebase que usás en Tareas.
+// Si queda vacío, se guarda solo en este navegador (localStorage).
+(function () {
+  'use strict';
+  const FIREBASE_DB_URL = '';
+  const USERS = ['Valentín', 'María', 'Lisandro'];
+  const LOCALES = ['Local 1', 'Local 2', 'Local 3'];   // ← poné acá los nombres reales de tus locales
+  const COLORS = { 'Valentín': ['#2563eb', 'rgba(37,99,235,.10)'], 'María': ['#7c3aed', 'rgba(124,58,237,.10)'], 'Lisandro': ['#059669', 'rgba(5,150,105,.10)'] };
+
+  const $ = id => document.getElementById(id);
+  const meSel = $('bt-me'), dateIn = $('bt-date'), dayLbl = $('bt-daylabel'), localsEl = $('bt-locals'),
+        input = $('bt-input'), shiftSel = $('bt-shift'), list = $('bt-list'), syncEl = $('bt-sync'), countEl = $('bt-count');
+  if (!list) return;
+
+  const LS_DATA = 'bc_bitacora_v1', LS_ME = 'bc_tareas_me';   // comparte "Soy" con Tareas
+  const pad = x => String(x).padStart(2, '0');
+  const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const today = () => ymd(new Date());
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let data = {}, date = today(), local = LOCALES[0], me = USERS[0];
+  try { me = localStorage.getItem(LS_ME) || USERS[0]; } catch (e) {}
+  if (!USERS.includes(me)) me = USERS[0];
+  USERS.forEach(u => meSel.add(new Option(u, u)));
+  meSel.value = me; dateIn.value = date;
+
+  // ── almacenamiento ──
+  const remote = !!FIREBASE_DB_URL, base = FIREBASE_DB_URL.replace(/\/$/, '');
+  async function load() {
+    if (remote) {
+      try { data = (await (await fetch(base + '/bitacora.json')).json()) || {};
+            syncEl.textContent = '● sincronizado · ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { syncEl.textContent = '⚠ sin conexión con la base'; }
+    } else {
+      try { data = JSON.parse(localStorage.getItem(LS_DATA) || '{}'); } catch (e) { data = {}; }
+      syncEl.textContent = 'Modo local: la bitácora se guarda solo en este navegador.';
+    }
+  }
+  async function save(it) {
+    data[it.id] = it;
+    if (remote) { try { await fetch(base + '/bitacora/' + it.id + '.json', { method: 'PUT', body: JSON.stringify(it) }); } catch (e) {} }
+    else { try { localStorage.setItem(LS_DATA, JSON.stringify(data)); } catch (e) {} }
+  }
+  async function remove(id) {
+    delete data[id];
+    if (remote) { try { await fetch(base + '/bitacora/' + id + '.json', { method: 'DELETE' }); } catch (e) {} }
+    else { try { localStorage.setItem(LS_DATA, JSON.stringify(data)); } catch (e) {} }
+  }
+
+  // ── render ──
+  function fmtDay(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    const label = new Date(y, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+    return label + (s === today() ? ' · hoy' : '');
+  }
+  function render() {
+    const all = Object.values(data).filter(x => x.date === date);
+    dayLbl.textContent = fmtDay(date);
+    countEl.hidden = !all.length; countEl.textContent = all.length + (all.length === 1 ? ' entrada' : ' entradas');
+
+    localsEl.innerHTML = LOCALES.map(l => {
+      const c = all.filter(x => x.local === l).length;
+      return `<button type="button" class="bt-local ${l === local ? 'on' : ''}" data-l="${esc(l)}" role="tab">${esc(l)} <i>${c}</i></button>`;
+    }).join('');
+
+    const rows = all.filter(x => x.local === local).sort((a, b) => a.created - b.created);
+    const wrote = new Set(rows.map(x => x.author));
+    const missing = USERS.filter(u => !wrote.has(u));
+    const pend = document.getElementById('bt-pending') || (() => { const p = document.createElement('div'); p.id = 'bt-pending'; p.className = 'bt-pending'; list.parentNode.insertBefore(p, list); return p; })();
+    pend.innerHTML = missing.length ? 'Falta cargar: <b>' + missing.map(esc).join(', ') + '</b>' : '<span class="ok">✓ Los tres cargaron su bitácora en este local.</span>';
+
+    if (!rows.length) { list.innerHTML = '<div class="tk-empty">Todavía no hay nada cargado en ' + esc(local) + ' este día.</div>'; return; }
+    list.innerHTML = rows.map(x => {
+      const c = COLORS[x.author] || ['#d97706', 'rgba(217,119,6,.12)'];
+      const t = new Date(x.created).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+      return `<div class="bt-item" data-id="${esc(x.id)}" style="--au:${c[0]};--au-bg:${c[1]}">
+        <div class="bt-item-top"><span class="bt-author">${esc(x.author)}</span>${x.shift ? `<span class="bt-shift">${esc(x.shift)}</span>` : ''}<span>${t}</span>
+          ${x.author === me ? '<button class="tk-del" type="button" aria-label="Borrar entrada" title="Borrar">✕</button>' : ''}</div>
+        <div class="bt-text">${esc(x.text)}</div></div>`;
+    }).join('');
+  }
+
+  // ── eventos ──
+  function setDate(s) { date = s || today(); dateIn.value = date; render(); }
+  const shift = days => { const [y, m, d] = date.split('-').map(Number); setDate(ymd(new Date(y, m - 1, d + days))); };
+  $('bt-prev').addEventListener('click', () => shift(-1));
+  $('bt-next').addEventListener('click', () => shift(1));
+  $('bt-today').addEventListener('click', () => setDate(today()));
+  dateIn.addEventListener('change', () => setDate(dateIn.value));
+  meSel.addEventListener('change', () => {
+    me = meSel.value;
+    try { localStorage.setItem(LS_ME, me); } catch (e) {}
+    render();
+  });
+  localsEl.addEventListener('click', e => { const b = e.target.closest('.bt-local'); if (!b) return; local = b.dataset.l; render(); });
+  list.addEventListener('click', async e => {
+    if (!e.target.classList.contains('tk-del')) return;
+    const it = data[e.target.closest('.bt-item').dataset.id];
+    if (it && confirm('¿Borrar esta entrada?')) { await remove(it.id); render(); }
+  });
+  async function add() {
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    await save({ id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), local, date, author: me, shift: shiftSel.value, text, created: Date.now() });
+    input.value = ''; render();
+  }
+  $('bt-add').addEventListener('click', add);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
+
+  load().then(render);
+  setInterval(() => load().then(render), remote ? 10000 : 30000);
+  window.addEventListener('storage', e => { if (e.key === LS_DATA) load().then(render); });
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

@@ -1550,7 +1550,7 @@ function updateLiq() {
       <label><input type="checkbox" data-cierre="recibo" ${c.recibo ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Recibo firmado por el empleado</label>
       <label><input type="checkbox" data-cierre="art80" ${c.art80 ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Certificado de trabajo (art. 80) entregado</label>
       <label><input type="checkbox" data-cierre="baja" ${c.baja ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Baja informada en ARCA</label>
-      ${est === 'pagada' ? `<div style="margin-top:10px"><button class="btn primary" data-act="archiveLiq" ${ok ? '' : 'disabled'}>Archivar legajo</button></div>` : '<p class="muted">Legajo archivado.</p><div style="margin-top:10px"><button class="btn" data-act="unarchiveLiq">Volver atrás (reabrir legajo)</button></div>'}</div>
+      ${est === 'pagada' ? `<div style="margin-top:10px"><button class="btn primary" data-act="archiveLiq" ${ok ? '' : 'disabled'}>Archivar legajo</button> <button class="btn" data-act="unpayLiq">Volver a Aprobada (anular pago)</button></div>` : '<p class="muted">Legajo archivado.</p><div style="margin-top:10px"><button class="btn" data-act="unarchiveLiq">Volver a Pagada (reabrir legajo)</button></div>'}</div>
       <div class="actions"><button class="btn" data-act="print">Imprimir recibo</button></div>`;
   }
   const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
@@ -3257,6 +3257,12 @@ const ACT = {
   archiveLiq: () => {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
     l.estado = 'cerrada'; e.estado = 'archivado'; log(e.id, 'Legajo archivado'); save(); renderLiq(); toast('Legajo archivado');
+  },
+  unpayLiq: () => {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
+    if (!l || l.estado !== 'pagada') return;
+    if (!confirm('¿Volver atrás? La liquidación pasa de Pagada a Aprobada y se borra el registro del pago (fecha y montos).')) return;
+    l.estado = 'aprobada'; l.pago = null; e.estado = 'egreso'; log(e.id, 'Pago anulado (liquidación vuelta de Pagada a Aprobada)'); save(); renderLiq(); toast('Liquidación vuelta a Aprobada');
   },
   unarchiveLiq: () => {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);

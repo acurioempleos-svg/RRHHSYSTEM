@@ -876,7 +876,7 @@ const normHeader = s => stripAcc(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').tr
 const IMP_ALIAS = {
   legajo: ['legajo'], nombre: ['nombre'], apellido: ['apellido'], dni: ['dni'], cuil: ['cuil'],
   fechaNac: ['fecha nacimiento', 'fecha de nacimiento', 'nacimiento'],
-  tel: ['telefono', 'celular', 'tel'], email: ['email', 'mail', 'correo'], domicilio: ['domicilio', 'direccion'],
+  tel: ['telefono', 'celular', 'tel'], email: ['email', 'mail', 'correo'], domicilio: ['domicilio', 'direccion'], codPostal: ['codigo postal', 'cod postal', 'cp'],
   emergenciaNombre: ['contacto emergencia', 'emergencia nombre', 'contacto de emergencia'],
   emergenciaTel: ['telefono emergencia', 'emergencia telefono', 'tel emergencia'],
   cbu: ['cbu'], banco: ['banco'], estado: ['estado'], local: ['local', 'sucursal'], razonSocial: ['razon social', 'razonsocial', 'empresa'], puesto: ['puesto', 'cargo'], alta: ['alta'], fechaAlta: ['fecha alta', 'fecha de alta'], sexo: ['sexo'],
@@ -1235,7 +1235,7 @@ function renderDetail() {
       ${inp('DNI', 'dni', 'text', 'inputmode="numeric"')}${inp('CUIL', 'cuil', 'text', 'inputmode="numeric" placeholder="20-12345678-3"')}
       ${inp('Fecha de nacimiento', 'fechaNac', 'date')}${sel('Sexo (se completa según el CUIL)', 'sexo', { '': 'Sin indicar', M: 'Masculino', F: 'Femenino' }, e.sexo || sexoDeCuil(e.cuil))}
       ${inp('Teléfono', 'tel', 'tel')}${inp('Email', 'email', 'email')}
-      ${inp('Domicilio', 'domicilio')}
+      ${inp('Domicilio', 'domicilio')}${inp('Código postal', 'codPostal', 'text', 'inputmode="numeric" maxlength="8"')}
       ${inp('Contacto de emergencia', 'emergenciaNombre')}${inp('Teléfono de emergencia', 'emergenciaTel', 'tel')}
     </div>
     ${sc}${so('bancaria', 'Cuenta bancaria')}
@@ -1550,7 +1550,7 @@ function updateLiq() {
       <label><input type="checkbox" data-cierre="recibo" ${c.recibo ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Recibo firmado por el empleado</label>
       <label><input type="checkbox" data-cierre="art80" ${c.art80 ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Certificado de trabajo (art. 80) entregado</label>
       <label><input type="checkbox" data-cierre="baja" ${c.baja ? 'checked' : ''} ${est === 'cerrada' ? 'disabled' : ''}> Baja informada en ARCA</label>
-      ${est === 'pagada' ? `<div style="margin-top:10px"><button class="btn primary" data-act="archiveLiq" ${ok ? '' : 'disabled'}>Archivar legajo</button></div>` : '<p class="muted">Legajo archivado.</p>'}</div>
+      ${est === 'pagada' ? `<div style="margin-top:10px"><button class="btn primary" data-act="archiveLiq" ${ok ? '' : 'disabled'}>Archivar legajo</button></div>` : '<p class="muted">Legajo archivado.</p><div style="margin-top:10px"><button class="btn" data-act="unarchiveLiq">Volver atrás (reabrir legajo)</button></div>'}</div>
       <div class="actions"><button class="btn" data-act="print">Imprimir recibo</button></div>`;
   }
   const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
@@ -2081,7 +2081,7 @@ function renderPar() {
       <span id="imp-emp-nombre" class="muted"></span>
     </div>
     <details class="muted" style="margin-top:12px"><summary style="cursor:pointer">Columnas que reconoce</summary>
-      <p style="margin:8px 0 0">Obligatoria: <b>DNI</b> (para legajos nuevos, también <b>Nombre</b> y <b>Apellido</b>). Opcionales: Nombre, Apellido, Legajo, CUIL, Sexo, Fecha de alta, Fecha nacimiento, Teléfono, Email, Domicilio, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria, Régimen 710 (Sí/No). El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
+      <p style="margin:8px 0 0">Obligatoria: <b>DNI</b> (para legajos nuevos, también <b>Nombre</b> y <b>Apellido</b>). Opcionales: Nombre, Apellido, Legajo, CUIL, Sexo, Fecha de alta, Fecha nacimiento, Teléfono, Email, Domicilio, Código postal, Contacto emergencia, Teléfono emergencia, CBU, Banco, Estado, Local, Puesto, Alta, Categoría CCT, Modalidad, Fecha de ingreso, Sueldo, Vto. DNI / precaria, Vto. libreta sanitaria, Régimen 710 (Sí/No). El orden de las columnas no importa, y los nombres de encabezado son flexibles (con o sin tildes/mayúsculas). Las fechas pueden venir como fecha de Excel o como texto DD/MM/AAAA.</p>
     </details>
     <div id="imp-emp-resultado" class="muted" style="margin-top:10px"></div>
   </form>
@@ -3146,7 +3146,7 @@ const ACT = {
     if (avisos.length && !confirm('Revisá estos puntos antes de guardar:\n\n' + avisos.map(a => '• ' + a).join('\n') + '\n\n¿Guardar igual?')) return;
     const docs = {}; Object.keys(DOCS).forEach(k => docs[k] = f.elements['doc_' + k].checked);
     const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
-      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || sexoDeCuil(d.cuil) || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio,
+      legajo, nombre: d.nombre.trim(), apellido: d.apellido.trim(), dni: d.dni.trim(), cuil: d.cuil.trim(), sexo: d.sexo || sexoDeCuil(d.cuil) || '', fechaNac: d.fechaNac, tel: d.tel, email: d.email, domicilio: d.domicilio, codPostal: (d.codPostal || '').trim(),
       emergenciaNombre: d.emergenciaNombre, emergenciaTel: d.emergenciaTel, cbu: d.cbu, banco: d.banco, estado: d.estado, local: canonLocal(d.local), razonSocial: d.razonSocial || '', puesto: d.puesto, alta: d.alta || '', fechaAlta: d.alta ? (d.fechaAlta || '') : '',
       categoriaCCT: d.categoriaCCT, modalidad: d.modalidad, fechaIngreso: d.fechaIngreso, sueldoActual: +d.sueldoActual || 0, docs,
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
@@ -3258,6 +3258,12 @@ const ACT = {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
     l.estado = 'cerrada'; e.estado = 'archivado'; log(e.id, 'Legajo archivado'); save(); renderLiq(); toast('Legajo archivado');
   },
+  unarchiveLiq: () => {
+    const l = S.liquidaciones.find(x => x.id === UI.liq.id), e = S.empleados.find(x => x.id === l.empleadoId);
+    if (!l || l.estado !== 'cerrada') return;
+    if (!confirm('¿Volver atrás? La liquidación pasa de Cerrada a Pagada y el legajo deja de estar archivado.')) return;
+    l.estado = 'pagada'; e.estado = 'liquidado'; log(e.id, 'Legajo reabierto (liquidación vuelta de Cerrada a Pagada)'); save(); renderLiq(); toast('Legajo reabierto');
+  },
   print: () => window.print(),
   estPrint: () => imprimirSolo('#est-area'),
   vistaSave: () => {
@@ -3279,7 +3285,7 @@ const ACT = {
     const lst = (t, arr, fn) => arr.length ? `<h3>${t}</h3><table><tbody>${arr.map(fn).join('')}</tbody></table>` : '';
     const d = document.createElement('div'); d.id = 'ficha'; d.className = 'card'; d.style.display = 'none';
     d.innerHTML = `<h2>Ficha del legajo ${esc(e.legajo)} — ${esc(e.apellido)}, ${esc(e.nombre)}</h2><p class="muted">Emitida el ${fdate(today())}</p>
-      <table><tbody>${fila('DNI', e.dni)}${fila('CUIL', e.cuil)}${fila('Fecha de nacimiento', e.fechaNac ? fdate(e.fechaNac) : '')}${fila('Teléfono', e.tel)}${fila('Email', e.email)}${fila('Domicilio', e.domicilio)}${fila('Contacto de emergencia', [e.emergenciaNombre, e.emergenciaTel].filter(Boolean).join(' — '))}${fila('Estado', ESTADOS[e.estado])}${fila('Razón social', e.razonSocial)}${fila('Local', e.local)}${fila('Puesto', e.puesto)}${fila('Categoría CCT', e.categoriaCCT)}${fila('Modalidad', e.modalidad)}${fila('Alta', e.alta)}${fila('Fecha de ingreso', e.fechaIngreso ? fdate(e.fechaIngreso) : '')}${fila('Fin de prueba', e.fechaIngreso ? fdate(finPruebaDe(e)) : '')}${fila('Sueldo', e.sueldoActual ? money(e.sueldoActual) : '')}${fila('Banco / CBU', [e.banco, e.cbu].filter(Boolean).join(' — '))}${fila('Venc. DNI / precaria', e.dniVenc ? fdate(e.dniVenc) : '')}${fila('Venc. libreta sanitaria', e.libretaSanitariaVenc ? fdate(e.libretaSanitariaVenc) : '')}${fila('Documentación', Object.entries(DOCS).map(([k, v]) => `${v}: ${e.docs?.[k] ? 'sí' : 'no'}`).join(' · '))}${sv ? fila('Vacaciones ' + sv.anio, `corresponden ${sv.corresp}, gozadas ${sv.goz}, restantes ${sv.rest}`) : ''}</tbody></table>
+      <table><tbody>${fila('DNI', e.dni)}${fila('CUIL', e.cuil)}${fila('Fecha de nacimiento', e.fechaNac ? fdate(e.fechaNac) : '')}${fila('Teléfono', e.tel)}${fila('Email', e.email)}${fila('Domicilio', e.domicilio)}${fila('Código postal', e.codPostal)}${fila('Contacto de emergencia', [e.emergenciaNombre, e.emergenciaTel].filter(Boolean).join(' — '))}${fila('Estado', ESTADOS[e.estado])}${fila('Razón social', e.razonSocial)}${fila('Local', e.local)}${fila('Puesto', e.puesto)}${fila('Categoría CCT', e.categoriaCCT)}${fila('Modalidad', e.modalidad)}${fila('Alta', e.alta)}${fila('Fecha de ingreso', e.fechaIngreso ? fdate(e.fechaIngreso) : '')}${fila('Fin de prueba', e.fechaIngreso ? fdate(finPruebaDe(e)) : '')}${fila('Sueldo', e.sueldoActual ? money(e.sueldoActual) : '')}${fila('Banco / CBU', [e.banco, e.cbu].filter(Boolean).join(' — '))}${fila('Venc. DNI / precaria', e.dniVenc ? fdate(e.dniVenc) : '')}${fila('Venc. libreta sanitaria', e.libretaSanitariaVenc ? fdate(e.libretaSanitariaVenc) : '')}${fila('Documentación', Object.entries(DOCS).map(([k, v]) => `${v}: ${e.docs?.[k] ? 'sí' : 'no'}`).join(' · '))}${sv ? fila('Vacaciones ' + sv.anio, `corresponden ${sv.corresp}, gozadas ${sv.goz}, restantes ${sv.rest}`) : ''}</tbody></table>
       ${lst('Vacaciones gozadas', by(S.vacaciones, 'desde'), v => `<tr><td>${fdate(v.desde)} al ${fdate(v.hasta)}</td><td>${v.dias} días</td></tr>`)}
       ${lst('Licencias', by(S.licencias, 'desde'), l => `<tr><td>${esc(l.tipo)}</td><td>${fdate(l.desde)} al ${fdate(l.hasta)}</td></tr>`)}
       ${lst('Sanciones', by(S.sanciones, 'fecha'), x => `<tr><td>${fdate(x.fecha)}</td><td>${esc(x.tipo)}</td><td>${esc(x.motivo || '')}</td></tr>`)}`;
@@ -3364,10 +3370,10 @@ const ACT = {
     a.download = `rrhh-ciclo-${today()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
   impEmpPlantilla: async () => {
-    const headers = ['Legajo', 'Nombre', 'Apellido', 'DNI', 'CUIL', 'Fecha nacimiento', 'Teléfono', 'Email', 'Domicilio',
+    const headers = ['Legajo', 'Nombre', 'Apellido', 'DNI', 'CUIL', 'Fecha nacimiento', 'Teléfono', 'Email', 'Domicilio', 'Código postal',
       'Contacto emergencia', 'Teléfono emergencia', 'CBU', 'Banco', 'Estado', 'Local', 'Razón social', 'Puesto', 'Alta', 'Categoría CCT',
       'Modalidad', 'Fecha de ingreso', 'Sueldo', 'Vto. DNI / precaria', 'Vto. libreta sanitaria', 'Régimen 710'];
-    const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Sabores Incas', 'Camarero', '', '', '', '2024-03-01', 500000, '', '', ''];
+    const ejemplo = ['', 'Juan', 'Pérez', '30111222', '', '', '', '', '', '', '', '', '', '', 'activo', 'BCP', 'Sabores Incas', 'Camarero', '', '', '', '2024-03-01', 500000, '', '', ''];
     try { await cargarXLSX(); } catch (e) { toast(e.message); return; }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ejemplo]), 'Empleados');
@@ -3491,7 +3497,7 @@ document.addEventListener('change', e => {
         const nuevo = Object.assign({}, prev || { id: uid(), creado: today() }, {
           legajo, nombre, apellido, dni,
           cuil: impTxt(d.cuil, prev && prev.cuil), fechaNac: impFecha(d.fechaNac) || (prev ? prev.fechaNac : ''),
-          tel: impTxt(d.tel, prev && prev.tel), email: impTxt(d.email, prev && prev.email), domicilio: impTxt(d.domicilio, prev && prev.domicilio),
+          tel: impTxt(d.tel, prev && prev.tel), email: impTxt(d.email, prev && prev.email), domicilio: impTxt(d.domicilio, prev && prev.domicilio), codPostal: impTxt(d.codPostal, prev && prev.codPostal),
           emergenciaNombre: impTxt(d.emergenciaNombre, prev && prev.emergenciaNombre), emergenciaTel: impTxt(d.emergenciaTel, prev && prev.emergenciaTel),
           cbu: impTxt(d.cbu, prev && prev.cbu), banco: impTxt(d.banco, prev && prev.banco),
           estado: (d.estado !== undefined && String(d.estado).trim() !== '' && impEstado(d.estado)) || (prev ? prev.estado : 'activo'),

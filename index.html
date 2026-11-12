@@ -1129,6 +1129,7 @@ document.querySelectorAll('.mod-card').forEach(card => {
     const cls = d.scene === 'downpour' ? 'rain' : d.scene;
     bg.className = 'scene-' + cls;
     window.__bcWx = d;   // la mascota lee el clima de acá
+    window.dispatchEvent(new Event('bcwx'));
 
     // cielo de la franja horaria (+ calor / frío), atenuado por la nubosidad
     const layers = [P.g];
@@ -1719,8 +1720,9 @@ const WXS = (function () {
 // ═════════════════════════════════════════════════════════════════
 // COCINERO — 34×46 px · remera blanca, delantal azul, pantalón negro · f: 0-3 caminando, 4 quieto · scared: susto
 // ═════════════════════════════════════════════════════════════════
-function drawCook(ctx, f, scared, steam) {
-  const W = 34, H = 46, OY = 2;
+function drawCook(ctx, f, scared, steam, o) {
+  o = o || {};
+  const W = 34, H = 58, OY = 14;
   ctx.clearRect(0, 0, W, H);
   const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y + OY, w, h); };
 
@@ -1826,6 +1828,68 @@ function drawCook(ctx, f, scared, steam) {
     R(6, 12 + by, 1, 2, '#7ec8ff'); R(22, 9 + by, 1, 2, '#7ec8ff');     // sudor
     R(1, 0, 2, 5, RED); R(1, 6, 2, 2, RED);                              // !
     R(27, 1, 4, 1, SILL); R(26, 2, 6, 3, SIL); R(26, 2, 1, 3, '#fff'); R(25, 5, 8, 1, SILD); // cloche volando
+  }
+
+  // ── VESTUARIO SEGÚN EL CLIMA ──
+  {
+    const sc = o.sc, st = steam ? 1 : 0, BLK = '#111118';
+    let head = true;                                   // ¿hay algo en la cabeza?
+    if (sc === 'clear' && o.day) {                     // lentes de sol + pomada en la nariz
+      R(9, 14 + by, 11, 1, BLK); R(10, 14 + by, 4, 3, BLK); R(15, 14 + by, 4, 3, BLK); R(11, 14 + by, 1, 1, '#5b8def'); R(16, 14 + by, 1, 1, '#5b8def');
+      R(14, 16 + by, 2, 2, '#ffffff');
+    } else if (sc === 'partly') {                      // lentes "por las dudas", en la frente
+      R(10, 9 + hy, 9, 2, BLK); R(11, 9 + hy, 2, 1, '#5b8def'); R(16, 9 + hy, 2, 1, '#5b8def');
+    } else if (sc === 'overcast') {                    // nubecita personal con lloviznita
+      R(9, 1 + hy, 12, 2, '#9ca3af'); R(11, -1 + hy, 7, 2, '#b4bcc9'); R(10, 3 + hy, 3, 1, '#9ca3af');
+      R(11, 4 + hy + st, 1, 2, '#7ec8ff'); R(16, 5 + hy - st, 1, 2, '#7ec8ff');
+    } else if (sc === 'drizzle') {                     // diario en la cabeza
+      R(5, 3 + hy, 19, 3, '#f3f4f6'); R(6, 4 + hy, 6, 1, '#6b7280'); R(14, 4 + hy, 8, 1, '#9ca3af'); R(5, 6 + hy, 19, 1, '#cbd5e1');
+    } else if (sc === 'rain' || sc === 'downpour') {   // paraguas
+      R(8, -3 + hy, 13, 1, '#e63946'); R(5, -2 + hy, 19, 1, '#ffffff'); R(3, -1 + hy, 23, 2, '#e63946'); R(3, 1 + hy, 23, 1, '#c1121f');
+      R(3, 2 + hy, 3, 1, '#ffffff'); R(10, 2 + hy, 3, 1, '#ffffff'); R(17, 2 + hy, 3, 1, '#ffffff'); R(23, 2 + hy, 3, 1, '#ffffff');
+      R(14, 2 + hy, 1, 5, '#6b4a2b');
+      R(1, 4 + hy + st * 2, 1, 2, '#7ec8ff'); R(27, 5 + hy + (1 - st) * 2, 1, 2, '#7ec8ff'); R(30, 8 + hy + st, 1, 2, '#7ec8ff');
+      if (sc === 'downpour') {                         // + salvavidas y antiparras
+        R(6, 30, 18, 4, '#e63946'); R(10, 30, 3, 4, '#ffffff'); R(17, 30, 3, 4, '#ffffff'); R(6, 30, 18, 1, '#ff7b86');
+        R(9, 14 + by, 11, 3, '#0e7490'); R(10, 14 + by, 4, 3, '#67e8f9'); R(15, 14 + by, 4, 3, '#67e8f9'); R(11, 14 + by, 1, 1, '#ffffff'); R(16, 14 + by, 1, 1, '#ffffff');
+      }
+    } else if (sc === 'thunder') {                     // pelo electrizado + rayo
+      R(9, 3 + hy, 2, 5, '#4a2c17'); R(13, 1 + hy, 2, 6, '#4a2c17'); R(17, 3 + hy, 2, 5, '#4a2c17'); R(11, 4 + hy, 1, 3, '#4a2c17'); R(15, 3 + hy, 1, 4, '#4a2c17');
+      R(11, 13 + by, 3, 5, '#ffffff'); R(12, 15 + by, 1, 2, '#161616'); R(16, 13 + by, 3, 5, '#ffffff'); R(17, 15 + by, 1, 2, '#161616');
+      R(9, 18 + by, 11, 3, '#5a4a40');                 // cara tiznada
+      R(2, 2, 3, 3, '#facc15'); R(1, 5, 4, 2, '#facc15'); R(2, 7, 2, 4, '#facc15');
+      if (st) R(28, 4, 1, 1, '#facc15'); else R(6, 3, 1, 1, '#facc15');
+    } else if (sc === 'snow') {                        // gorro de lana con pompón
+      R(9, 4 + hy, 11, 4, '#2563eb'); R(8, 8 + hy, 13, 2, '#ffffff'); R(13, 2 + hy, 3, 2, '#ffffff'); R(10, 5 + hy, 2, 1, '#60a5fa');
+      R(14, 17 + by, 2, 1, '#93c5fd');                 // nariz helada
+      R(3, 4 + st * 2, 1, 1, '#ffffff'); R(30, 7 - st * 2 + 3, 1, 1, '#ffffff');
+    } else if (sc === 'fog') {                         // casco con linterna
+      R(9, 4 + hy, 11, 4, '#facc15'); R(8, 8 + hy, 13, 1, '#eab308'); R(13, 5 + hy, 3, 2, '#ffffff'); R(10, 5 + hy, 2, 1, '#fde68a');
+    } else head = false;
+
+    // calor fuerte: cachetes colorados y gotas de sudor
+    if (o.hot && !(sc === 'clear' && o.day && false)) {
+      R(10, 18 + by, 2, 1, '#e63946'); R(17, 18 + by, 2, 1, '#e63946');
+      R(7, 12 + by + st, 1, 2, '#7ec8ff'); R(21, 10 + by + (1 - st), 1, 2, '#7ec8ff'); R(6, 19 + by, 1, 2, '#7ec8ff');
+    }
+    // frío: bufanda
+    if (o.cold || sc === 'snow') {
+      R(10, 22 + by, 10, 3, '#d62839'); R(10, 23 + by, 10, 1, '#ffffff'); R(11, 25 + by, 3, 7, '#d62839'); R(11, 28 + by, 3, 1, '#ffffff');
+    }
+    // viento: líneas de velocidad
+    if (o.wind) {
+      R(0, 18 + by, 4 + st, 1, '#cbd5e1'); R(0, 24 + by, 5 - st, 1, '#cbd5e1'); R(1, 30 + by, 3 + st, 1, '#cbd5e1');
+      if (!head && !scared) { R(10, 5 + hy, 2, 1, '#4a2c17'); R(18, 4 + hy, 4, 1, '#4a2c17'); R(21, 5 + hy, 2, 1, '#4a2c17'); }
+    }
+    // de noche: sueño, gorro de dormir y Zzz
+    if (o.night) {
+      R(11, 14 + by, 2, 1, '#f4bc8a'); R(16, 14 + by, 2, 1, '#f4bc8a');
+      if (!head) {
+        R(9, 4 + hy, 11, 4, '#6d28d9'); R(8, 8 + hy, 13, 1, '#ffffff'); R(18, 3 + hy, 5, 2, '#6d28d9'); R(22, 5 + hy, 3, 3, '#ffffff'); R(11, 5 + hy, 1, 1, '#a78bfa');
+      }
+      const zy = st ? 0 : 2;
+      R(26, zy, 3, 1, '#ffffff'); R(27, zy + 1, 1, 1, '#ffffff'); R(26, zy + 2, 3, 1, '#ffffff');
+    }
   }
 
   PX.outline(ctx, W, H);
@@ -1952,7 +2016,7 @@ function drawWorker(ctx, frame, spark) {
 }
 </script>
 <script>
-// ─── MASCOTA: cocinero 8-bit que pasea y comenta el clima ────────
+// ─── MASCOTA: camarero 8-bit que pasea, se viste según el clima y lo comenta (probar: ?clima=lluvia&hora=22:00) ────────
 (function () {
   'use strict';
   const m = document.getElementById('mascot');
@@ -1964,34 +2028,54 @@ function drawWorker(ctx, frame, spark) {
   const pick = a => a[Math.floor(Math.random() * a.length)];
 
   const S = window.innerWidth < 640 ? 2 : 3;          // escala del sprite
-  const cv = PX.make(34, 46, S);
+  const cv = PX.make(34, 58, S);
   flip.appendChild(cv);
   const ctx = PX.ctxOf(cv);
   const SW = 34 * S;
 
-  let key = '';
+  let key = '', lastF = 4, lastS = false, lastSt = 0;
+  function outfit() {
+    const d = window.__bcWx || {};
+    return { sc: d.scene, day: d.day !== false, night: d.day === false,
+             wind: d.wind >= 30, hot: d.temp >= 30, cold: d.temp <= 10 && d.live !== false };
+  }
   function paint(f, scared, steam) {
-    const k = f + '|' + scared + '|' + steam;
+    lastF = f; lastS = scared; lastSt = steam;
+    const o = outfit();
+    const k = f + '|' + scared + '|' + steam + '|' + JSON.stringify(o);
     if (k === key) return;
     key = k;
-    drawCook(ctx, f, scared, steam);
+    drawCook(ctx, f, scared, steam, o);
   }
 
   const LINES = {
-    generic:  ['¿Alguien vio mi delantal?', 'Mesa 7 pidió la cuenta... hace 20 minutos', 'Yo no fui, fue el de la barra',
+    generic:  ['¿Alguien vio mi delantal? Lo tengo puesto, pero igual', 'Mesa 7 pidió la cuenta... hace 20 minutos', 'Yo no fui, fue el de la barra',
                '¿Esto era horario corrido?', 'Los lunes son un estado mental', 'Che, ¿y la propina?',
-               'Marchando un mate para RRHH ☕'],
-    clear:    ['Con este solcito la terraza explota', 'Me olvidé el protector, ¡ayuda!', 'Hoy hasta el hielo se rinde'],
-    partly:   ['Ni sol ni lluvia: día de dudas', 'Entre sol y nubes, como mi humor'],
-    overcast: ['Cielo gris: ideal para un caldito', 'Hoy no sonríe ni la nube'],
-    fog:      ['No veo ni la carta...', 'Escucho ruidos... ¿será el fantasma? 👻'],
-    drizzle:  ['Garúa: la peor, ni paraguas ni nada'],
-    rain:     ['Con esta lluvia nadie viene... ¿pido el día?', 'Se inundó la vereda del local'],
-    downpour: ['¡Llueven gatos y perros! Yo no los lavo', 'Che, ¿alguien tiene un bote?'],
-    thunder:  ['¡Se cortó la luz! ¿Quién desenchufó el horno?', 'Nadie toque el microondas'],
-    snow:     ['¿Nieve? Aviso que no tengo campera', 'Mi delantal no abriga nada'],
-    night:    ['¿Todavía están acá? Yo ya me fui', 'Hora de cerrar caja'],
-    wind:     ['¡Se me vuela el gorro!', 'Agarrate de la bandeja, que vuela todo']
+               'Marchando un mate para RRHH ☕', 'Dicen que el cliente siempre tiene razón. Dicen.', 'Llevo 8 km caminados y todavía no llegué a la mesa 3'],
+    clear:    ['Lentes puestos, pomada en la nariz: hoy soy influencer de la terraza 😎', 'Con este solcito hasta el ceviche se cocina solo', 'Hoy hasta el hielo se rinde', 'Bandeja al sol: ahora los chicharrones vienen dorados'],
+    partly:   ['Ni sol ni lluvia: llevo los lentes en la frente por las dudas', 'Entre sol y nubes, como mi humor', 'El pronóstico dice "parcialmente". Yo digo "parcialmente perdido"'],
+    overcast: ['Me salió una nubecita personal. Se llama Ramón ☁️', 'Cielo gris: ideal para un caldito', 'Hoy no sonríe ni la nube', 'Esta nube me sigue desde la cocina. Creo que le gusto'],
+    fog:      ['Me puse el casco con linterna: no veo ni la carta...', 'Escucho ruidos... ¿será el fantasma? 👻', 'Con esta niebla le llevé el postre a una columna'],
+    drizzle:  ['Garúa: la peor. Me puse el diario de paraguas, soy un genio', 'Esta llovizna no moja, pero ofende', 'Hoy el diario sirve para algo más que los crucigramas'],
+    rain:     ['Con esta lluvia nadie viene... ¿pido el día?', 'Se inundó la vereda del local', 'Paraguas rojo y bandeja en mano: soy Mary Poppins con delantal', 'Pedí una sopa y salió el patio entero'],
+    downpour: ['¡Salvavidas puesto! Si me hundo, que alguien termine la mesa 4', '¡Llueven gatos y perros! Yo no los lavo', 'Che, ¿alguien tiene un bote? 🚣', 'Con antiparras y salvavidas: servicio de mesa anfibio'],
+    thunder:  ['¡Se cortó la luz! ¿Quién desenchufó el horno?', 'Nadie toque el microondas', 'Me electrizó el peinado. Cobro adicional por look punk ⚡', '¡Un rayo me tiznó la cara! Vale como maquillaje'],
+    snow:     ['¿Nieve? Gorrito, bufanda y cero ganas de laburar', 'Mi delantal no abriga nada', 'Se me congeló la propina', 'Nieve en Buenos Aires: hoy el helado se sirve solo ❄️'],
+    night:    ['¿Todavía están acá? Yo ya me fui... en espíritu', 'Hora de cerrar caja. Y los ojos', 'Zzz... ah, ¿ya cerramos? 😴', 'Me puse el gorrito de dormir y lo que sale, sale'],
+    wind:     ['¡Se me vuela la bandeja! Agarrense de las servilletas', 'Con este viento el peinado es una sugerencia', 'Agarrate de la bandeja, que vuela todo', 'Hoy los platos viajan solos: servicio por correo aéreo 🌬️'],
+    hot:      ['Estoy más transpirado que ensalada con aderezo 🥵', '¡Esto es una sauna con mesas!', 'Me derrito más rápido que el hielo del pisco'],
+    cold:     ['Bufanda y a laburar, que el frío no perdona 🧣', 'Tengo tanto frío que hasta la sopa me tiene envidia', 'Esto no es temperatura, es una amenaza']
+  };
+  const ENTER = {
+    clear:    ['¡Salió el sol! Lentes y pomada, ya vuelvo 😎'],
+    partly:   ['Hay nubes y sol... me pongo los lentes en la frente, ni uno ni otro'],
+    overcast: ['Miren, me apareció una nubecita. La llamo Ramón ☁️'],
+    fog:      ['¡Niebla! Me puse el casco con linterna, ahora sí veo (poco)'],
+    drizzle:  ['Garúa detectada: diario en la cabeza, protocolo activado 📰'],
+    rain:     ['¡Llueve! Paraguas en mano, soy Mary Poppins con bandeja ☔'],
+    downpour: ['¡DILUVIO! Salvavidas y antiparras, el servicio sigue 🛟'],
+    thunder:  ['¡Rayo! Ahora tengo el pelo en modo punk ⚡'],
+    snow:     ['¡Nieve! Gorrito, bufanda y cero dignidad ❄️']
   };
   const SCARE = ['¡AAAH!', '¡Casi se me cae la bandeja! 🍽️', '¡Yo no fui!',
                  '¡Ey! Manos quietas, que estoy en horario', '¡Me asustaste, che!'];
@@ -1999,11 +2083,22 @@ function drawWorker(ctx, frame, spark) {
   function lines() {
     const d = window.__bcWx || {};
     let a = LINES.generic.slice();
-    if (LINES[d.scene]) a = a.concat(LINES[d.scene]);
+    if (LINES[d.scene]) a = a.concat(LINES[d.scene], LINES[d.scene]);   // las del clima salen más seguido
     if (d.day === false) a = a.concat(LINES.night);
     if (d.wind >= 30) a = a.concat(LINES.wind);
+    if (d.temp >= 30) a = a.concat(LINES.hot);
+    if (d.temp <= 10 && d.live !== false) a = a.concat(LINES.cold);
     return a;
   }
+  // cuando llega o cambia el clima: se cambia de ropa y lo anuncia
+  let wxScene = null;
+  window.addEventListener('bcwx', () => {
+    const d = window.__bcWx || {};
+    key = ''; paint(lastF, lastS, lastSt);
+    if (d.live === false || d.scene === wxScene) return;
+    wxScene = d.scene;
+    if (ENTER[d.scene]) setTimeout(() => { say(pick(ENTER[d.scene]), 4500); if (typeof mode !== 'undefined' && mode === 'walk') { mode = 'talk'; left = 4.5; } }, 600);
+  });
 
   let x = rnd(0, Math.max(100, window.innerWidth - SW - 20));
   let dir = Math.random() < .5 ? -1 : 1;

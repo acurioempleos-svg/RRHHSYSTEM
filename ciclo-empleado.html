@@ -67,6 +67,12 @@ tr:last-child td{border-bottom:0}
 td.num,th.num{text-align:right}
 .empty{color:var(--muted);text-align:center;padding:28px 14px}
 .chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12.5px;font-weight:500;background:#E6ECEA;color:#41565C}
+.av{display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--av,28px);height:var(--av,28px);border-radius:50%;background:#DCE8E4;color:#0D6B58;font-size:calc(var(--av,28px)*.38);font-weight:700;overflow:hidden;vertical-align:middle;margin-right:8px}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.foto-box{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px}
+.foto-box .av{margin:0;border:1px solid var(--line)}
+.foto-box .fb-btns{display:flex;gap:8px;flex-wrap:wrap}
+.foto-box .fb-hint{flex-basis:100%;margin:0;font-size:12.5px}
 .alta{display:inline-block;min-width:26px;text-align:center;font-weight:700;border-radius:6px;padding:1px 8px;color:#fff}.alta-N{background:#2F7D4F}.alta-S{background:#B23A2B}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:middle;border:1px solid rgba(0,0,0,.12)}
 .colorpick{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
@@ -727,6 +733,151 @@ function jbDisconnect() {
   try { localStorage.setItem(JB_KEY, JSON.stringify({ off: true })); localStorage.removeItem(JB_META); } catch (e) {}
   clearInterval(jbPoll); clearTimeout(jbTimer); jbReady = false; setSync('off', 'Sin sincronización');
 }
+/* ================= Fotos de perfil (livianas para Cloudinary) =================
+   La foto se achica en este navegador (recorte cuadrado de 256 px, JPEG, unos 15–25 KB) y se sube como
+   un archivo aparte y cifrado (rrhh_foto_<id>.bin) con la misma clave de la nube. En los datos del legajo
+   solo queda la marca de versión (fotoV), así que NO engorda el archivo principal que se sincroniza cada 20 s.
+   Cada computadora la baja una sola vez y la guarda en su caché (IndexedDB). */
+const FOTO_PX = 256, FOTO_MAX_KB = 30;
+const fotoPid = id => 'rrhh_foto_' + id + '.bin';
+const fotoMem = new Map();                                            // id -> { v, url } (url = blob: de esta sesión)
+const fotoTried = new Map(), fotoCola = []; let fotoCorriendo = 0, fotoKeyC = null, fotoDBp = null;
+function fotoDB() {
+  return fotoDBp || (fotoDBp = new Promise(ok => {
+    try { const r = indexedDB.open('rrhh_ciclo_fotos', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); } catch (e) { ok(null); }
+  }));
+}
+async function fotoIdb(modo, id, val) {
+  const db = await fotoDB(); if (!db) return null;
+  return new Promise(ok => {
+    try {
+      const st = db.transaction('f', modo === 'get' ? 'readonly' : 'readwrite').objectStore('f');
+      const q = modo === 'get' ? st.get(id) : modo === 'set' ? st.put(val, id) : st.delete(id);
+      q.onsuccess = () => ok(q.result || null); q.onerror = () => ok(null);
+    } catch (e) { ok(null); }
+  });
+}
+function fotoClave(pass) {                                            // clave AES derivada una sola vez por sesión (salt fijo: cada archivo lleva su propio IV)
+  if (fotoKeyC && fotoKeyC.pass === pass) return fotoKeyC.p;
+  const enc = t => new TextEncoder().encode(t);
+  const p = crypto.subtle.importKey('raw', enc(pass), 'PBKDF2', false, ['deriveKey'])
+    .then(base => crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc('rrhh-ciclo-foto-v1'), iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']));
+  fotoKeyC = { pass, p }; return p;
+}
+async function fotoComprimir(file) {                                  // -> Blob JPEG cuadrado, <= FOTO_MAX_KB
+  if (!file || !/^image\//.test(file.type)) throw new Error('El archivo no es una imagen');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('No se pudo leer la imagen (probá con JPG o PNG)')); i.src = url; });
+    const lado = Math.min(img.naturalWidth, img.naturalHeight), sx = (img.naturalWidth - lado) / 2, sy = (img.naturalHeight - lado) / 2;
+    for (const px of [FOTO_PX, 200, 160]) {
+      const t = Math.min(px, lado), c = document.createElement('canvas'); c.width = c.height = t;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, t, t); g.imageSmoothingQuality = 'high';
+      g.drawImage(img, sx, sy, lado, lado, 0, 0, t, t);
+      for (const q of [0.8, 0.7, 0.6, 0.5]) {
+        const b = await new Promise(ok => c.toBlob(ok, 'image/jpeg', q));
+        if (b && b.size <= FOTO_MAX_KB * 1024) return b;
+      }
+    }
+    throw new Error('No se pudo achicar la foto lo suficiente');
+  } finally { URL.revokeObjectURL(url); }
+}
+async function fotoSubir(id, blob) {                                  // cifra (AES-256-GCM) y sube como archivo raw binario: iv(12) + datos
+  const cfg = jbConfig(); if (!cfg) return;
+  if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await fotoClave(cfg.clave), await blob.arrayBuffer()));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+  const p = { invalidate: 'true', overwrite: 'true', public_id: fotoPid(id), timestamp: Math.floor(Date.now() / 1000) };
+  const fd = new FormData();
+  fd.append('file', new Blob([out], { type: 'application/octet-stream' }), fotoPid(id));
+  fd.append('api_key', cfg.apiKey); Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+  fd.append('signature', await clFirmar(p, cfg.apiSecret));
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/upload`, { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+}
+async function fotoBorrarNube(id) {                                   // mejor esfuerzo: si falla, queda un archivo huérfano de ~20 KB
+  const cfg = jbConfig(); if (!cfg) return;
+  try {
+    const p = { invalidate: 'true', public_id: fotoPid(id), timestamp: Math.floor(Date.now() / 1000) };
+    const fd = new FormData(); fd.append('api_key', cfg.apiKey); Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+    fd.append('signature', await clFirmar(p, cfg.apiSecret));
+    await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/destroy`, { method: 'POST', body: fd });
+  } catch (e) {}
+}
+async function fotoBajar(id, v) {
+  const cfg = jbConfig(); if (!cfg || !window.crypto || !crypto.subtle) return null;
+  try {
+    const r = await fetch(`https://res.cloudinary.com/${encodeURIComponent(cfg.cloud)}/raw/upload/${fotoPid(id)}?_=${encodeURIComponent(v)}`);
+    if (!r.ok) return null;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, await fotoClave(cfg.clave), buf.slice(12));
+    return new Blob([pt], { type: 'image/jpeg' });
+  } catch (e) { return null; }
+}
+const fotoIni = e => ((e.nombre || '').trim()[0] || '') + ((e.apellido || '').trim()[0] || '');
+function fotoPintar(id) {                                             // actualiza todos los avatares visibles de ese legajo
+  const m = fotoMem.get(id);
+  $$('[data-av="' + id + '"]').forEach(n => { n.innerHTML = m ? `<img src="${m.url}" alt="">` : esc((n.dataset.ini || '').toUpperCase()); });
+}
+function fotoPonerCache(id, v, blob) {
+  const ant = fotoMem.get(id); if (ant) URL.revokeObjectURL(ant.url);
+  fotoMem.set(id, { v, url: URL.createObjectURL(blob) });
+  fotoIdb('set', id, { v, blob }); fotoPintar(id);
+}
+function fotoCorrer() {
+  while (fotoCorriendo < 4 && fotoCola.length) { const f = fotoCola.shift(); fotoCorriendo++; f().catch(() => {}).finally(() => { fotoCorriendo--; fotoCorrer(); }); }
+}
+function fotoPedir(e) {                                               // trae la foto (caché local o nube) sin bloquear la pantalla
+  const id = e.id, v = e.fotoV, t = fotoTried.get(id);
+  if (!v || (t && t.v === v && Date.now() - t.t < 60000)) return;
+  fotoTried.set(id, { v, t: Date.now() });
+  fotoCola.push(async () => {
+    const it = await fotoIdb('get', id);
+    if (it && it.v === v && it.blob) { fotoPonerCache(id, v, it.blob); return; }
+    const b = await fotoBajar(id, v);
+    if (b) fotoPonerCache(id, v, b); else if (it && it.blob) { const ant = fotoMem.get(id); if (!ant) { fotoMem.set(id, { v: it.v, url: URL.createObjectURL(it.blob) }); fotoPintar(id); } }
+  });
+  fotoCorrer();
+}
+function fotoUrl(e) {
+  if (!e || !e.fotoV) return '';
+  const m = fotoMem.get(e.id);
+  if (m && m.v === e.fotoV) return m.url;
+  fotoPedir(e); return m ? m.url : '';
+}
+function avatarHtml(e, px = 28) {
+  const u = fotoUrl(e);
+  return `<span class="av" data-av="${esc(e.id)}" data-ini="${esc(fotoIni(e))}" style="--av:${px}px">${u ? `<img src="${u}" alt="">` : esc(fotoIni(e).toUpperCase())}</span>`;
+}
+async function fotoGuardar(emp, blob) {                               // sube primero y recién después marca la versión, para que otras PCs no la busquen antes de que exista
+  const v = new Date().toISOString(), nube = !!jbConfig();
+  try { await fotoSubir(emp.id, blob); } catch (err) { toast(('No se pudo subir la foto: ' + (err.message || 'error')).slice(0, 140)); return false; }
+  const e = S.empleados.find(x => x.id === emp.id); if (!e) return false;
+  fotoPonerCache(e.id, v, blob); e.fotoV = v; log(e.id, 'Foto de perfil actualizada'); save();
+  toast(nube ? `Foto guardada (${Math.round(blob.size / 1024)} KB)` : 'Foto guardada solo en este navegador (Cloudinary sin configurar)');
+  return true;
+}
+function fotoBoxHtml(e, isNew) {
+  const tmp = isNew && UI.fotoNueva ? URL.createObjectURL(UI.fotoNueva) : '', u = isNew ? tmp : fotoUrl(e);
+  const hay = isNew ? !!UI.fotoNueva : !!e.fotoV;
+  return `<span class="av" ${isNew ? '' : `data-av="${esc(e.id)}" data-ini="${esc(fotoIni(e))}"`} style="--av:84px">${u ? `<img src="${u}" alt="Foto de perfil">` : esc(fotoIni(e).toUpperCase() || '＋')}</span>
+    <div class="fb-btns"><button type="button" class="btn sm" data-act="fotoElegir">${hay ? 'Cambiar foto' : 'Subir / sacar foto'}</button>${hay ? '<button type="button" class="btn sm danger" data-act="fotoQuitar">Quitar</button>' : ''}</div>
+    <p class="muted fb-hint">Se achica sola a ${FOTO_PX} px (≈ 15–25 KB) y se guarda cifrada aparte: no pesa en Cloudinary ni en la sincronización.${isNew ? ' Se sube al crear el legajo.' : ''}</p>`;
+}
+function paintFotoBox() { const b = $('#foto-box'); if (b) b.innerHTML = fotoBoxHtml(UI.detail === 'new' ? {} : (empActual() || {}), UI.detail === 'new'); }
+document.addEventListener('change', async ev => {
+  const t = ev.target; if (!t || t.id !== 'foto-in' || !t.files || !t.files[0]) return;
+  const file = t.files[0]; t.value = '';
+  try {
+    toast('Procesando foto…');
+    const blob = await fotoComprimir(file);
+    if (UI.detail === 'new') { UI.fotoNueva = blob; UI.dirty = true; paintDirty(); paintFotoBox(); toast(`Foto lista (${Math.round(blob.size / 1024)} KB): se sube al crear el legajo`); return; }
+    const e = empActual(); if (!e) return;
+    if (await fotoGuardar(e, blob)) paintFotoBox();
+  } catch (err) { toast((err && err.message) || 'No se pudo procesar la foto'); }
+});
 const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
@@ -1171,7 +1322,7 @@ function paintRows() {
     const cab = (idx === 0 || (rows[idx - 1].local || '').trim() !== (e.local || '').trim()) ? filaGrupo((e.local || '').trim()) : '';
     const bg = filaBg(e), fg = filaFg(bg), st = bg ? ` style="background:${bg}${fg ? ';color:' + fg : ''}"` : '';
     const dot = e.color && colorDe(e.color) ? `<span class="dot" style="background:${colorDe(e.color).dot}" title="Color: ${esc(colorDe(e.color).nombre)}"></span>` : '';
-    return cab + `<tr class="${bg ? 'tint' : ''}" data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl && !e.alta ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
+    return cab + `<tr class="${bg ? 'tint' : ''}" data-act="openEmp" data-id="${e.id}" tabindex="0"${st}><td data-label="Legajo"${st}>${esc(e.legajo)}</td><td data-label="Nombre"${st}>${dot}${e.fotoV ? avatarHtml(e, 26) : ''}${esc(e.apellido)}, ${esc(e.nombre)}${e.rifl && !e.alta ? ' <span title="Régimen 710 (RIFL)" style="display:inline-block;padding:0 6px;border-radius:99px;background:#E3F1EC;color:#0D6B58;font-size:11px;font-weight:700;vertical-align:1px">710</span>' : ''}</td>${cols.map(c => COLCELLS[c.id](e)).join('')}</tr>`;
   }).join('')
     : `<tr><td colspan="${2 + cols.length}" class="empty">${S.empleados.length ? 'Ningún empleado coincide con la búsqueda o los filtros.' : 'Todavía no hay empleados. Cargá el primero con "Nuevo empleado".'}</td></tr>`;
   const c = $('#emp-count'); if (c) c.textContent = `Mostrando ${rows.length} de ${S.empleados.length} empleados.`;
@@ -1227,10 +1378,12 @@ function renderDetail() {
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
     <button class="btn primary ${UI.dirty ? 'dirty' : ''}" type="button" style="margin-left:auto" data-act="saveEmp" title="Atajo: Ctrl+D">${isNew ? 'Crear empleado' : 'Guardar cambios'}<span class="dirtytxt"> · sin guardar</span></button>
     ${!isNew && canEgreso ? `<button class="btn primary" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
+  <input type="file" id="foto-in" accept="image/*" hidden>
   <div class="cols">
    <form class="card" id="emp-form" onsubmit="return false">
     <div class="secs-tools"><button type="button" class="btn sm" data-act="secsAll">Contraer / expandir todo</button></div>
     ${so('personales', 'Datos personales')}
+    <div id="foto-box" class="foto-box">${fotoBoxHtml(e, isNew)}</div>
     <div class="frm">
       ${inp('Nombre', 'nombre')}${inp('Apellido', 'apellido')}
       ${inp('DNI', 'dni', 'text', 'inputmode="numeric"')}${inp('CUIL', 'cuil', 'text', 'inputmode="numeric" placeholder="20-12345678-3"')}
@@ -3143,9 +3296,16 @@ const ACT = {
   },
   colMove: b => { const ord = ordenColsEmp(), i = +b.dataset.i, j = i + +b.dataset.d; if (j < 0 || j >= ord.length) return; [ord[i], ord[j]] = [ord[j], ord[i]]; S.ordenColsEmp = ord; save(); paintOrdenCols(); },
   colsReset: () => { if (!confirm('¿Volver al orden original de columnas?')) return; S.ordenColsEmp = []; save(); paintOrdenCols(); toast('Orden restablecido'); },
-  newEmp: () => { UI.detail = 'new'; renderEmp(); window.scrollTo(0, 0); },
+  fotoElegir: () => { const i = $('#foto-in'); if (i) i.click(); },
+  fotoQuitar: () => {
+    if (UI.detail === 'new') { UI.fotoNueva = null; paintFotoBox(); return; }
+    const e = empActual(); if (!e || !confirm('¿Quitar la foto de perfil?')) return;
+    fotoBorrarNube(e.id); fotoIdb('del', e.id); const m = fotoMem.get(e.id); if (m) URL.revokeObjectURL(m.url); fotoMem.delete(e.id);
+    e.fotoV = ''; log(e.id, 'Foto de perfil quitada'); save(); fotoPintar(e.id); paintFotoBox(); toast('Foto quitada');
+  },
+  newEmp: () => { UI.detail = 'new'; UI.fotoNueva = null; renderEmp(); window.scrollTo(0, 0); },
   openEmp: b => { UI.detail = b.dataset.id; go('emp'); },
-  back: () => { UI.detail = null; renderEmp(); },
+  back: () => { UI.detail = null; UI.fotoNueva = null; renderEmp(); },
   calMes: b => { const d = +b.dataset.d; if (d === 0) UI.calMes = today().slice(0, 7); else { let [y, m] = (UI.calMes || today().slice(0, 7)).split('-').map(Number); m += d; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } UI.calMes = `${y}-${String(m).padStart(2, '0')}`; } UI.calDia = null; renderCal(); },
   calDia: b => { UI.calDia = UI.calDia === b.dataset.d ? null : b.dataset.d; keepScroll(renderCal); },
   calLink: () => { const u = S.parametros.urlCumples; if (u) window.open(u, '_blank', 'noopener'); },
@@ -3173,7 +3333,7 @@ const ACT = {
       libretaSanitariaVenc: d.libretaSanitariaVenc || '', dniVenc: d.dniVenc || '', rifl: !!f.elements.rifl.checked,
       color: prev ? (prev.color || '') : '', destacado: !!f.elements.destacado.checked,
       solicitaAlta: !!f.elements.solicitaAlta.checked, solicitaAumento: !!f.elements.solicitaAumento.checked });
-    if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); }
+    if (isNew) { S.empleados.push(nuevo); log(nuevo.id, `Legajo creado (${ESTADOS[nuevo.estado]})`); if (UI.fotoNueva) { const fb = UI.fotoNueva; UI.fotoNueva = null; fotoGuardar(nuevo, fb); } }
     else {
       const lab = { estado: 'Estado', local: 'Local', razonSocial: 'Razón social', puesto: 'Puesto', categoriaCCT: 'Categoría', sueldoActual: 'Sueldo', modalidad: 'Modalidad', fechaIngreso: 'Fecha de ingreso', alta: 'Alta', fechaAlta: 'Fecha de alta', libretaSanitariaVenc: 'Vto. libreta sanitaria', dniVenc: 'Vto. DNI / precaria' };
       Object.keys(lab).forEach(k => { if (String(prev[k] ?? '') !== String(nuevo[k] ?? '')) log(nuevo.id, `${lab[k]}: ${k === 'estado' ? ESTADOS[prev[k]] + ' → ' + ESTADOS[nuevo[k]] : k === 'sueldoActual' ? money(prev[k] || 0) + ' → ' + money(nuevo[k] || 0) : (prev[k] || '—') + ' → ' + (nuevo[k] || '—')}`); });
@@ -3188,7 +3348,7 @@ const ACT = {
   delEmp: () => {
     const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
     ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial', 'comentarios', 'novedades'].forEach(k => S[k] = (S[k] || []).filter(x => x.empleadoId !== e.id));
-    S.empleados = S.empleados.filter(x => x.id !== e.id); save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
+    S.empleados = S.empleados.filter(x => x.id !== e.id); if (e.fotoV) { fotoBorrarNube(e.id); fotoIdb('del', e.id); fotoMem.delete(e.id); } save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
   },
   addRem: () => {
     const e = empActual(), per = $('#r-per').value, val = +$('#r-val').value;
@@ -3311,7 +3471,7 @@ const ACT = {
     const by = (arr, k) => arr.filter(x => x.empleadoId === e.id).sort((a, b) => b[k].localeCompare(a[k]));
     const lst = (t, arr, fn) => arr.length ? `<h3>${t}</h3><table><tbody>${arr.map(fn).join('')}</tbody></table>` : '';
     const d = document.createElement('div'); d.id = 'ficha'; d.className = 'card'; d.style.display = 'none';
-    d.innerHTML = `<h2>Ficha del legajo ${esc(e.legajo)} — ${esc(e.apellido)}, ${esc(e.nombre)}</h2><p class="muted">Emitida el ${fdate(today())}</p>
+    d.innerHTML = `${fotoUrl(e) ? `<img src="${fotoUrl(e)}" alt="" style="float:right;width:90px;height:90px;object-fit:cover;border-radius:8px">` : ''}<h2>Ficha del legajo ${esc(e.legajo)} — ${esc(e.apellido)}, ${esc(e.nombre)}</h2><p class="muted">Emitida el ${fdate(today())}</p>
       <table><tbody>${fila('DNI', e.dni)}${fila('CUIL', e.cuil)}${fila('Fecha de nacimiento', e.fechaNac ? fdate(e.fechaNac) : '')}${fila('Teléfono', e.tel)}${fila('Email', e.email)}${fila('Domicilio', e.domicilio)}${fila('Código postal', e.codPostal)}${fila('Contacto de emergencia', [e.emergenciaNombre, e.emergenciaTel].filter(Boolean).join(' — '))}${fila('Estado', ESTADOS[e.estado])}${fila('Razón social', e.razonSocial)}${fila('Local', e.local)}${fila('Puesto', e.puesto)}${fila('Categoría CCT', e.categoriaCCT)}${fila('Modalidad', e.modalidad)}${fila('Alta', e.alta)}${fila('Fecha de ingreso', e.fechaIngreso ? fdate(e.fechaIngreso) : '')}${fila('Fin de prueba', e.fechaIngreso ? fdate(finPruebaDe(e)) : '')}${fila('Sueldo', e.sueldoActual ? money(e.sueldoActual) : '')}${fila('Banco / CBU', [e.banco, e.cbu].filter(Boolean).join(' — '))}${fila('Venc. DNI / precaria', e.dniVenc ? fdate(e.dniVenc) : '')}${fila('Venc. libreta sanitaria', e.libretaSanitariaVenc ? fdate(e.libretaSanitariaVenc) : '')}${fila('Documentación', Object.entries(DOCS).map(([k, v]) => `${v}: ${e.docs?.[k] ? 'sí' : 'no'}`).join(' · '))}${sv ? fila('Vacaciones ' + sv.anio, `corresponden ${sv.corresp}, gozadas ${sv.goz}, restantes ${sv.rest}`) : ''}</tbody></table>
       ${lst('Vacaciones gozadas', by(S.vacaciones, 'desde'), v => `<tr><td>${fdate(v.desde)} al ${fdate(v.hasta)}</td><td>${v.dias} días</td></tr>`)}
       ${lst('Licencias', by(S.licencias, 'desde'), l => `<tr><td>${esc(l.tipo)}</td><td>${fdate(l.desde)} al ${fdate(l.hasta)}</td></tr>`)}

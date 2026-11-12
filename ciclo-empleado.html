@@ -1343,18 +1343,24 @@ function descLiqHtml(list, dis) {
 }
 const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', motivo: '', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
 
-UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
+UI.ll = { q: '', tipo: '', motivo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
 function imprimirSolo(sel, cb) {
   const t = $(sel); if (!t) return;
   t.classList.add('print-target'); document.body.classList.add('print-only');
   const fin = () => { t.classList.remove('print-target'); document.body.classList.remove('print-only'); window.removeEventListener('afterprint', fin); if (cb) cb(); };
   window.addEventListener('afterprint', fin); window.print();
 }
+// Motivos para el filtro: los de la lista de Parámetros más los que ya tengan liquidaciones guardadas (aunque se hayan sacado de la lista)
+function motivosFiltro() {
+  const l = (S.parametros.motivosEgreso || []).filter(Boolean).slice();
+  S.liquidaciones.forEach(x => { const m = x.inputs && x.inputs.motivo; if (m && !l.includes(m)) l.push(m); });
+  return l;
+}
 function liqFilas(ov) {
   const L = ov ? { ...UI.ll, estado: '', desde: '', hasta: '' } : UI.ll, q = stripAcc(L.q || '').toLowerCase(), oml = new Map(ordenLocales().map((l, i) => [l, i]));
   return S.liquidaciones.map(l => { const e = S.empleados.find(x => x.id === l.empleadoId) || {};
       return { l, e, nom: `${e.apellido || '—'}, ${e.nombre || ''}`, local: (e.local || '').trim() || 'Sin local', razon: (e.razonSocial || '').trim() || 'Sin razón social', monto: totalDe(l.result) || 0, efe: +((l.pago || l.reparto || {}).efectivo) || 0, tra: +((l.pago || l.reparto || {}).transferencia) || 0 }; })
-    .filter(r => (!q || stripAcc(`${r.nom} ${r.e.legajo || ''} ${r.e.dni || ''}`).toLowerCase().includes(q)) && (!L.tipo || r.l.inputs.tipo === L.tipo) && (!L.estado || r.l.estado === L.estado) && (!L.local || r.local === L.local) && (!L.razon || r.razon === L.razon)
+    .filter(r => (!q || stripAcc(`${r.nom} ${r.e.legajo || ''} ${r.e.dni || ''}`).toLowerCase().includes(q)) && (!L.tipo || r.l.inputs.tipo === L.tipo) && (!L.motivo || (L.motivo === '__sin' ? !r.l.inputs.motivo : r.l.inputs.motivo === L.motivo)) && (!L.estado || r.l.estado === L.estado) && (!L.local || r.local === L.local) && (!L.razon || r.razon === L.razon)
       && (!L.desde || r.l.inputs.fecha >= L.desde) && (!L.hasta || r.l.inputs.fecha <= L.hasta)
       && (!ov || (ov.estados.includes(r.l.estado) && (() => { const fx = (ov.campo === 'pago' ? (r.l.pago && r.l.pago.fecha) : r.l.inputs.fecha) || ''; return (!ov.desde || fx >= ov.desde) && (!ov.hasta || fx <= ov.hasta); })())))
     .sort((a, b) => (oml.get(a.local) ?? 999) - (oml.get(b.local) ?? 999) || a.nom.localeCompare(b.nom));
@@ -1379,7 +1385,7 @@ function dlgInforme(fmt) {
     </div>
     <label class="fld" style="margin-bottom:10px"><span>El rango de fechas se aplica sobre</span><select id="inf-campo"><option value="egreso">Fecha de egreso</option><option value="pago">Fecha de pago (solo pagadas)</option></select></label>
     <div style="display:flex;gap:10px;margin-bottom:10px"><label class="fld" style="flex:1"><span>Desde</span><input type="date" id="inf-desde" value="${esc(L.desde)}"></label><label class="fld" style="flex:1"><span>Hasta</span><input type="date" id="inf-hasta" value="${esc(L.hasta)}"></label></div>
-    <p class="muted" style="margin:0 0 14px">Las fechas son opcionales. Se mantienen los demás filtros de la lista (búsqueda, tipo, local y razón social).</p>
+    <p class="muted" style="margin:0 0 14px">Las fechas son opcionales. Se mantienen los demás filtros de la lista (búsqueda, tipo, motivo, local y razón social).</p>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="inf-cancel">Cancelar</button><button type="button" class="btn primary" id="inf-ok">Descargar</button></div>`;
   document.body.appendChild(d);
   const sync = () => { const b = !d.querySelector('#inf-pag').checked, c = d.querySelector('#inf-campo'); c.querySelector('[value=pago]').disabled = b; if (b) c.value = 'egreso'; };
@@ -1409,7 +1415,7 @@ function paintLiqLista() {
       <div class="cols"><div><h3>Suma por local</h3>${sum('local', 'Local')}</div><div><h3>Suma por razón social</h3>${sum('razon', 'Razón social')}</div></div>
     </details>`
     : '<p class="muted" style="margin:0">No hay liquidaciones que coincidan.</p>';
-  const n = ['tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
+  const n = ['tipo', 'motivo', 'estado', 'local', 'razon', 'desde', 'hasta'].filter(k => UI.ll[k]).length, c = $('#llcount'); if (c) { c.textContent = n; c.hidden = !n; }
 }
 function renderLiq() {
   const L = UI.liq;
@@ -1472,6 +1478,7 @@ function renderLiq() {
       <summary><span class="chev"></span>Filtros <span class="fcount" id="llcount" hidden></span><span class="fspace"></span><button type="button" class="btn sm" style="padding:2px 9px" data-act="llClear">Limpiar filtros</button></summary>
       <div class="fg-f">
         <div class="ff"><span class="ff-l">Tipo</span><select id="ll-tipo" aria-label="Filtrar por tipo"><option value="">Todos</option>${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${UI.ll.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="ff"><span class="ff-l">Motivo</span><select id="ll-motivo" aria-label="Filtrar por motivo de desvinculación"><option value="">Todos</option>${motivosFiltro().map(m => `<option value="${esc(m)}" ${UI.ll.motivo === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}<option value="__sin" ${UI.ll.motivo === '__sin' ? 'selected' : ''}>Sin motivo cargado</option></select></div>
         <div class="ff"><span class="ff-l">Estado</span><select id="ll-estado" aria-label="Filtrar por estado"><option value="">Todos</option>${Object.entries(LIQ_ESTADOS).map(([k, v]) => `<option value="${k}" ${UI.ll.estado === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
         <div class="ff"><span class="ff-l">Local</span><select id="ll-local" aria-label="Filtrar por local"><option value="">Todos</option>${ordenLocales().map(v => `<option value="${esc(v)}" ${UI.ll.local === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
         <div class="ff"><span class="ff-l">Razón social</span><select id="ll-razon" aria-label="Filtrar por razón social"><option value="">Todas</option>${RAZONES.map(v => `<option value="${esc(v)}" ${UI.ll.razon === v ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
@@ -1860,7 +1867,7 @@ function mailUrl() {
 }
 const liqOvMail = () => { const M = UI.mail, t = M.liqTipo; return { tipo: t, estados: t === 'pagada' ? ['pagada', 'cerrada'] : [t], desde: M.liqDesde || '', hasta: M.liqHasta || '', campo: 'egreso' }; };
 async function conLiqLimpio(fn) {   // las liquidaciones del correo no heredan los filtros de la pestaña Liquidación
-  const bak = UI.ll; UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
+  const bak = UI.ll; UI.ll = { q: '', tipo: '', motivo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
   try {
     const ov = liqOvMail(), f = liqFilas(ov);
     if (!f.length) { toast('No hay liquidaciones con esa selección.'); return false; }
@@ -2898,7 +2905,7 @@ async function pdfEst() {
 async function pdfLiq(f0, ov) {
   const f = f0 || liqFilas(); if (!f.length) { toast('No hay liquidaciones para exportar.'); return false; }
   const sm = k => r2(f.reduce((s, r) => s + r[k], 0)), tot = sm('monto'), efe = sm('efe'), tra = sm('tra'), L = UI.ll, P = PDF_C;
-  const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], ...(ov ? infDesc(ov) : [L.estado && LIQ_ESTADOS[L.estado], (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`]), L.local, L.razon].filter(Boolean);
+  const fl = [L.q && `búsqueda "${L.q}"`, L.tipo && TIPOS[L.tipo], L.motivo && (L.motivo === '__sin' ? 'sin motivo cargado' : 'motivo: ' + L.motivo), ...(ov ? infDesc(ov) : [L.estado && LIQ_ESTADOS[L.estado], (L.desde || L.hasta) && `egreso ${L.desde ? fdate(L.desde) : '...'} a ${L.hasta ? fdate(L.hasta) : '...'}`]), L.local, L.razon].filter(Boolean);
   const suma = (k, c) => ({ t: 'Suma por ' + c.toLowerCase(), head: [c, 'Liquidaciones', 'Total', 'Efectivo', 'Transferencia'], body: liqSumas(f, k).map(([x, v]) => [x, v.n, mp(v.t), mp(v.efe), mp(v.tra)]), foot: ['TOTAL', f.length, mp(tot), mp(efe), mp(tra)], loc: k === 'local' ? 0 : undefined, ctr: [1], num: [2, 3, 4] });
   return pdfInforme({
     orient: 'l', titulo: 'Informe de liquidaciones', sub: fl.length ? 'Filtros: ' + fl.join(' · ') : 'Todas las liquidaciones', archivo: `liquidaciones${ov ? '-' + INF_ARCH[ov.tipo] : ''}-${today()}.pdf`,
@@ -3107,7 +3114,7 @@ const ACT = {
   iniGo: b => {
     const d = b.dataset; UI.detail = null; UI.liqFrom = null;
     if (d.tab === 'ale') UI.al = { q: '', prio: d.prio || '', cat: d.cat || '', local: '' };
-    if (d.tab === 'liq') { UI.liq = null; UI.ll = { q: '', tipo: '', estado: d.estado || '', local: '', razon: '', desde: '', hasta: '' }; UI.llOpen = !!d.estado; }
+    if (d.tab === 'liq') { UI.liq = null; UI.ll = { q: '', tipo: '', motivo: '', estado: d.estado || '', local: '', razon: '', desde: '', hasta: '' }; UI.llOpen = !!d.estado; }
     go(d.tab);
   },
   estAll: () => { const ds = $$('#est-area details[data-est]'), abrir = ds.every(x => !x.open); ds.forEach(x => { x.open = abrir; UI.estOpen[x.dataset.est] = abrir; }); prefsSave(); },
@@ -3318,7 +3325,7 @@ const ACT = {
   empHxPdf: () => dlgHsExtra(),
   empAltasPdf: conPdf(() => pdfAltas()),
   alClear: () => { UI.al = { q: '', prio: '', cat: '', local: '' }; renderAle(); },
-  llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
+  llClear: (b, ev) => { if (ev) ev.preventDefault(); UI.ll = { q: '', tipo: '', motivo: '', estado: '', local: '', razon: '', desde: '', hasta: '' }; ['q', 'tipo', 'motivo', 'estado', 'local', 'razon', 'desde', 'hasta'].forEach(k => { $('#ll-' + k).value = ''; }); paintLiqLista(); },
   llXlsx: () => dlgInforme('xlsx'),
   llXlsxGo: async (f, ov) => {
     if (!f.length) return toast('No hay liquidaciones para exportar.');

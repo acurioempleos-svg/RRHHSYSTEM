@@ -2371,13 +2371,177 @@ function drawWorker(ctx, frame, spark) {
 })();
 </script>
 <script>
+// ─── NUBE COMPARTIDA (Cloudinary) ────────────────────────────────
+// Guarda Tareas y Bitácora en la MISMA cuenta de Cloudinary que usa ciclo-empleado.html,
+// en un archivo aparte (bc_panel_datos.json) para no pisar los datos de empleados.
+// Todo se cifra en este navegador (AES-256-GCM + gzip) con la misma clave de ciclo-empleado.
+// Funciona con copia local: si no hay internet, se guarda en el navegador y se sube cuando vuelve.
+// Si varias personas cargan a la vez, se fusionan por id (gana la edición más reciente de cada ítem).
+window.BCNube = (function () {
+  'use strict';
+  const CFG = { cloud: 'dqar21few', apiKey: '676986277772494', apiSecret: 'GXtIMDiTbraUN7BZTdeQQafvlPo', clave: 'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4' };
+  const FILE = 'bc_panel_datos.json';
+  const LS = 'bc_panel_v1', LS_META = 'bc_panel_meta';
+  const LEGACY = { tareas: 'bc_tareas_v1', bitacora: 'bc_bitacora_v1' };   // claves viejas (se siguen espejando)
+  const COLS = ['tareas', 'bitacora'];
+  const localId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const blank = () => ({ tareas: {}, bitacora: {}, borrados: {} });
+  const hora = () => new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+
+  // ── cifrado / compresión ──
+  const b64 = buf => { const a = new Uint8Array(buf); let t = ''; for (let i = 0; i < a.length; i += 0x8000) t += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(t); };
+  const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  async function crKey(pass, salt) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function crEncrypt(bytes, pass) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await crKey(pass, salt), bytes);
+    return { salt: b64(salt), iv: b64(iv), data: b64(ct) };
+  }
+  async function crDecrypt(env, pass) {
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(env.iv) }, await crKey(pass, unb64(env.salt)), unb64(env.data)));
+  }
+  async function gzComp(str) {
+    const s = new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(new CompressionStream('gzip'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+  async function gzDecomp(bytes) {
+    const s = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return new TextDecoder().decode(await new Response(s).arrayBuffer());
+  }
+  async function firmar(params, secret) {
+    const str = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&') + secret;
+    const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
+    return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  const canon = o => Array.isArray(o) ? '[' + o.map(canon).join(',') + ']'
+    : (o && typeof o === 'object') ? '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}'
+    : JSON.stringify(o);
+
+  // ── estado local ──
+  let S = blank(), statusTxt = 'Conectando con la nube…';
+  const metaGet = () => { try { return JSON.parse(localStorage.getItem(LS_META) || '{}') || {}; } catch (e) { return {}; } };
+  const metaSet = m => { try { localStorage.setItem(LS_META, JSON.stringify(Object.assign(metaGet(), m))); } catch (e) {} };
+  function loadLocal() {
+    try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s) S = Object.assign(blank(), s); } catch (e) { S = blank(); }
+    if (!metaGet().migrado) {                                  // primera vez: traer lo que ya había en este navegador
+      COLS.forEach(c => {
+        try {
+          const old = JSON.parse(localStorage.getItem(LEGACY[c]) || '{}') || {};
+          Object.values(old).forEach(it => { if (it && it.id && !S[c][it.id]) { it._u = it._u || it.created || Date.now(); S[c][it.id] = it; } });
+        } catch (e) {}
+      });
+      metaSet({ migrado: true }); saveLocal();
+    }
+  }
+  function saveLocal() {
+    try {
+      localStorage.setItem(LS, JSON.stringify(S));
+      COLS.forEach(c => localStorage.setItem(LEGACY[c], JSON.stringify(S[c])));
+    } catch (e) {}
+  }
+
+  // ── fusión por id (gana el _u más nuevo; los borrados quedan como "lápidas") ──
+  function merge(L, R) {
+    const out = blank(); let changed = false;
+    const tomb = Object.assign({}, L.borrados);
+    Object.entries(R.borrados || {}).forEach(([id, ts]) => { if (!(tomb[id] >= ts)) tomb[id] = ts; });
+    COLS.forEach(c => {
+      const l = L[c] || {}, r = R[c] || {};
+      new Set(Object.keys(l).concat(Object.keys(r))).forEach(id => {
+        const a = l[id], b = r[id];
+        let w = a;
+        if (b && (!a || (b._u || 0) > (a._u || 0))) { w = b; changed = true; }
+        if (!w) return;
+        if (tomb[id] && tomb[id] >= (w._u || 0)) { if (a) changed = true; return; }
+        out[c][id] = w;
+      });
+    });
+    const corte = Date.now() - 90 * 864e5;
+    Object.entries(tomb).forEach(([id, ts]) => { if (ts >= corte) out.borrados[id] = ts; });
+    return { out, changed };
+  }
+
+  // ── listeners ──
+  const lChange = [], lStatus = [];
+  const notify = () => lChange.forEach(f => { try { f(); } catch (e) {} });
+  function status(state, txt) { statusTxt = txt; lStatus.forEach(f => { try { f(txt, state); } catch (e) {} }); }
+
+  // ── nube ──
+  async function fetchRemote() {
+    const r = await fetch(`https://res.cloudinary.com/${encodeURIComponent(CFG.cloud)}/raw/upload/${FILE}?_=${Date.now()}`, { cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const env = await r.json();
+    let data;
+    try { data = JSON.parse(await gzDecomp(await crDecrypt(env, CFG.clave))); }
+    catch (e) { throw new Error('clave incorrecta o datos dañados'); }
+    return Object.assign(blank(), data);
+  }
+  async function upload() {
+    const env = Object.assign({ v: 2, actualizado: new Date().toISOString(), _local: localId }, await crEncrypt(await gzComp(JSON.stringify(S)), CFG.clave));
+    const p = { invalidate: 'true', overwrite: 'true', public_id: FILE, timestamp: Math.floor(Date.now() / 1000) };
+    const fd = new FormData();
+    fd.append('file', new Blob([JSON.stringify(env)], { type: 'application/json' }), FILE);
+    fd.append('api_key', CFG.apiKey);
+    Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+    fd.append('signature', await firmar(p, CFG.apiSecret));
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(CFG.cloud)}/raw/upload`, { method: 'POST', body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+  }
+  let busy = false, again = false, timer = null;
+  async function sync() {                                       // bajar → fusionar → subir si hace falta
+    if (busy) { again = true; return; }
+    busy = true;
+    try {
+      if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí la página desde https o localhost)');
+      status('off', 'Sincronizando con la nube…');
+      const remote = await fetchRemote();
+      let needPush = false;
+      if (remote) {
+        const m = merge(S, remote);
+        if (m.changed) { S = m.out; saveLocal(); notify(); } else S = m.out;
+        needPush = canon(S) !== canon(remote);
+      } else {
+        needPush = COLS.some(c => Object.keys(S[c]).length) || Object.keys(S.borrados).length;
+      }
+      if (needPush) await upload();
+      status('on', '● sincronizado con la nube · ' + hora());
+    } catch (e) {
+      status('err', ('⚠ nube: ' + (e.message || 'sin conexión') + ' (guardado en este navegador)').slice(0, 140));
+    } finally {
+      busy = false;
+      if (again) { again = false; schedule(300); }
+    }
+  }
+  function schedule(ms) { clearTimeout(timer); timer = setTimeout(sync, ms == null ? 1500 : ms); }
+
+  // ── API pública ──
+  const api = {
+    all: c => Object.assign({}, S[c]),
+    put(c, item) { item._u = Date.now(); S[c][item.id] = item; delete S.borrados[item.id]; saveLocal(); status('off', 'Cambios sin subir a la nube…'); schedule(); },
+    del(c, id) { delete S[c][id]; S.borrados[id] = Date.now(); saveLocal(); status('off', 'Cambios sin subir a la nube…'); schedule(); },
+    onChange(f) { lChange.push(f); },
+    onStatus(f) { lStatus.push(f); f(statusTxt, 'off'); },
+    sync: () => sync()
+  };
+  loadLocal();
+  window.addEventListener('storage', e => { if (e.key === LS) { loadLocal(); notify(); } });
+  window.addEventListener('online', () => schedule(300));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(300); });
+  setInterval(() => { if (!document.hidden) sync(); }, 20000);
+  setTimeout(sync, 0);
+  return api;
+})();
+</script>
+<script>
 // ─── TAREAS DEL EQUIPO ───────────────────────────────────────────
-// Para que las tareas se compartan entre usuarios/dispositivos, pegá acá la URL
-// de tu Firebase Realtime Database (ej: 'https://tu-proyecto-default-rtdb.firebaseio.com').
-// Si queda vacío, las tareas se guardan solo en este navegador (localStorage).
+// Las tareas se guardan en la nube compartida (Cloudinary, ver BCNube) y quedan también en este navegador.
 (function () {
   'use strict';
-  const FIREBASE_DB_URL = '';
   const USERS = ['Lisandro', 'María', 'Valentín'];          // editá acá los usuarios
   const MODS = [
     { slug: 'tablero',  name: 'Tablero de Locales', href: 'tablero-locales.html', color: 'blue',   icon: '📋' },
@@ -2400,31 +2564,12 @@ function drawWorker(ctx, frame, spark) {
 
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // ── almacenamiento ──
-  const remote = !!FIREBASE_DB_URL;
-  const base = FIREBASE_DB_URL.replace(/\/$/, '');
-  async function load() {
-    if (remote) {
-      try {
-        const r = await fetch(base + '/tareas.json');
-        tasks = (await r.json()) || {};
-        syncEl.textContent = '● sincronizado · ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-      } catch (e) { syncEl.textContent = '⚠ sin conexión con la base'; }
-    } else {
-      try { tasks = JSON.parse(localStorage.getItem(LS_TASKS) || '{}'); } catch (e) { tasks = {}; }
-      syncEl.textContent = 'Modo local: las tareas se guardan solo en este navegador.';
-    }
-  }
-  async function save(t) {
-    tasks[t.id] = t;
-    if (remote) { try { await fetch(base + '/tareas/' + t.id + '.json', { method: 'PUT', body: JSON.stringify(t) }); } catch (e) {} }
-    else { try { localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); } catch (e) {} }
-  }
-  async function remove(id) {
-    delete tasks[id];
-    if (remote) { try { await fetch(base + '/tareas/' + id + '.json', { method: 'DELETE' }); } catch (e) {} }
-    else { try { localStorage.setItem(LS_TASKS, JSON.stringify(tasks)); } catch (e) {} }
-  }
+  // ── almacenamiento (nube compartida con copia local) ──
+  async function load() { tasks = BCNube.all('tareas'); }
+  async function save(t) { tasks[t.id] = t; BCNube.put('tareas', t); }
+  async function remove(id) { delete tasks[id]; BCNube.del('tareas', id); }
+  BCNube.onStatus(txt => { syncEl.textContent = txt; });
+  BCNube.onChange(() => load().then(render));
 
   // ── render ──
   function rich(text) {
@@ -2537,8 +2682,7 @@ function drawWorker(ctx, frame, spark) {
   input.addEventListener('blur', () => setTimeout(closeMenu, 120));
 
   load().then(render);
-  setInterval(() => load().then(render), remote ? 10000 : 30000);
-  window.addEventListener('storage', e => { if (e.key === LS_TASKS) load().then(render); });
+  setInterval(() => load().then(render), 30000);
 })();
 </script>
 <script>
@@ -2664,11 +2808,9 @@ function drawWorker(ctx, frame, spark) {
 <script>
 // ─── BITÁCORA POR LOCAL Y POR DÍA ────────────────────────────────
 // Cada persona (Valentín, María, Lisandro) carga su bitácora del día, local por local.
-// Para compartirla entre usuarios/dispositivos, pegá acá la MISMA URL de Firebase que usás en Tareas.
-// Si queda vacío, se guarda solo en este navegador (localStorage).
+// Se guarda en la misma nube compartida que Tareas (Cloudinary, ver BCNube) y también en este navegador.
 (function () {
   'use strict';
-  const FIREBASE_DB_URL = '';
   const USERS = ['Valentín', 'María', 'Lisandro'];
   const LOCALES = ['Local 1', 'Local 2', 'Local 3'];   // ← poné acá los nombres reales de tus locales
   const COLORS = { 'Valentín': ['#2563eb', 'rgba(37,99,235,.10)'], 'María': ['#7c3aed', 'rgba(124,58,237,.10)'], 'Lisandro': ['#059669', 'rgba(5,150,105,.10)'] };
@@ -2690,28 +2832,12 @@ function drawWorker(ctx, frame, spark) {
   USERS.forEach(u => meSel.add(new Option(u, u)));
   meSel.value = me; dateIn.value = date;
 
-  // ── almacenamiento ──
-  const remote = !!FIREBASE_DB_URL, base = FIREBASE_DB_URL.replace(/\/$/, '');
-  async function load() {
-    if (remote) {
-      try { data = (await (await fetch(base + '/bitacora.json')).json()) || {};
-            syncEl.textContent = '● sincronizado · ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }); }
-      catch (e) { syncEl.textContent = '⚠ sin conexión con la base'; }
-    } else {
-      try { data = JSON.parse(localStorage.getItem(LS_DATA) || '{}'); } catch (e) { data = {}; }
-      syncEl.textContent = 'Modo local: la bitácora se guarda solo en este navegador.';
-    }
-  }
-  async function save(it) {
-    data[it.id] = it;
-    if (remote) { try { await fetch(base + '/bitacora/' + it.id + '.json', { method: 'PUT', body: JSON.stringify(it) }); } catch (e) {} }
-    else { try { localStorage.setItem(LS_DATA, JSON.stringify(data)); } catch (e) {} }
-  }
-  async function remove(id) {
-    delete data[id];
-    if (remote) { try { await fetch(base + '/bitacora/' + id + '.json', { method: 'DELETE' }); } catch (e) {} }
-    else { try { localStorage.setItem(LS_DATA, JSON.stringify(data)); } catch (e) {} }
-  }
+  // ── almacenamiento (nube compartida con copia local) ──
+  async function load() { data = BCNube.all('bitacora'); }
+  async function save(it) { data[it.id] = it; BCNube.put('bitacora', it); }
+  async function remove(id) { delete data[id]; BCNube.del('bitacora', id); }
+  BCNube.onStatus(txt => { syncEl.textContent = txt; });
+  BCNube.onChange(() => load().then(render));
 
   // ── render ──
   function fmtDay(s) {
@@ -2774,8 +2900,7 @@ function drawWorker(ctx, frame, spark) {
   input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); add(); } });
 
   load().then(render);
-  setInterval(() => load().then(render), remote ? 10000 : 30000);
-  window.addEventListener('storage', e => { if (e.key === LS_DATA) load().then(render); });
+  setInterval(() => load().then(render), 30000);
 })();
 </script>
 <script src="andino-assistant.js" data-page="index"></script>

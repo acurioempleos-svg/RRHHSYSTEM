@@ -425,6 +425,7 @@ const DEFAULT_P = {
   topeCCT: 0,                                                          // 3 × promedio de remuneraciones del CCT
   colsEmp: { banco: true, cbu: true, razon: true, local: true, puesto: true, ingreso: true, finPrueba: true, alta: true, fechaAlta: true, estado: true, vencDni: true, vencLibreta: true },
   coloresLocal: {},                                                    // color de fondo (#RRGGBB) por local: pinta a sus colaboradores en Empleados y en la planilla de sueldos
+  motivosEgreso: ['Sueldo/remuneración baja', 'Horarios/turnos', 'Motivos personales', 'No se adaptó a normas/exigencias', 'Distancia/transporte', 'Dificultad de la tarea/puesto', 'Ausentismo/impuntualidad'],   // lista para elegir el motivo de la desvinculación al liquidar (se edita en Parámetros)
   historialMesesNube: 12,                                              // a la nube (Cloudinary) solo se sube el historial de estos últimos N meses; local y respaldo quedan completos
 };
 const COLS_EMP = [                                                     // columnas opcionales de la pestaña Empleados (Legajo y Nombre son fijas)
@@ -1340,7 +1341,7 @@ function descLiqHtml(list, dis) {
     <label class="fld"><span>Monto pagado</span><input type="number" class="dc-m" step="0.01" min="0" value="${+n.monto || 0}" ${dis}></label>
     <button type="button" class="btn sm danger" data-act="delLiqDesc" data-i="${i}" ${dis}>Quitar</button></div>`).join('');
 }
-const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
+const defaultsLiq = emp => ({ tipo: 'despido_sin_causa', motivo: '', fecha: today(), pagarPreaviso: false, pagarIntegracion: false, montoPactado: 0, vacGozadas: vacAuto(emp.id, today()), vacPend: 0 });
 
 UI.ll = { q: '', tipo: '', estado: '', local: '', razon: '', desde: '', hasta: '' };
 function imprimirSolo(sel, cb) {
@@ -1432,6 +1433,7 @@ function renderLiq() {
       <label class="fld"><span>Empleado</span><select id="l-emp" ${liq ? 'disabled' : ''}><option value="">Elegí un empleado</option>${elegibles.map(e => `<option value="${e.id}" ${emp && e.id === emp.id ? 'selected' : ''}>${esc(e.apellido)}, ${esc(e.nombre)} (${esc(e.legajo)})</option>`).join('')}</select></label>
       <div class="frm" style="grid-template-columns:1fr;margin-top:12px">
         <label class="fld"><span>Tipo de egreso</span><select id="l-tipo" ${dis}>${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${inp.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label class="fld"><span>Motivo de la desvinculación</span><select id="l-motivo" ${dis}><option value="">Elegí un motivo</option>${motivosLiq(inp.motivo).map(m => `<option value="${esc(m)}" ${inp.motivo === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
         <label class="fld"><span>Fecha de egreso</span><input type="date" id="l-fecha" value="${esc(inp.fecha || '')}" ${dis}></label>
         <label class="fld" id="row-monto" hidden><span>Monto acordado</span><input type="number" id="l-monto" step="0.01" min="0" value="${inp.montoPactado || 0}" ${dis}></label>
       </div>
@@ -1485,8 +1487,13 @@ function renderLiq() {
 const novMes = (empId, fecha) => { const m = String(fecha || '').slice(0, 7);
   return { feriados: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'feriado' && n.mes === m).length,
            nremun: S.novedades.filter(n => n.empleadoId === empId && n.tipo === 'nremun' && n.mes === m).map(n => ({ concepto: n.concepto, monto: n.monto })) }; };
+// Lista de motivos para elegir (la de Parámetros). Si una liquidación ya guardada tiene un motivo que después se sacó de la lista, se sigue mostrando.
+function motivosLiq(actual) {
+  const l = (S.parametros.motivosEgreso || []).filter(Boolean);
+  return actual && !l.includes(actual) ? l.concat(actual) : l;
+}
 function readLiqForm() {
-  return { tipo: $('#l-tipo').value, fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
+  return { tipo: $('#l-tipo').value, motivo: $('#l-motivo') ? $('#l-motivo').value : '', fecha: $('#l-fecha').value, pagarPreaviso: $('#l-prea').checked, pagarIntegracion: $('#l-integ').checked,
     montoPactado: +$('#l-monto').value || 0, vacGozadas: 0, vacPend: +$('#l-vp').value || 0,
     ausDias: Math.max(0, +$('#l-aus').value || 0), presDescontar: Math.max(0, +$('#l-pres').value || 0),
     nremunExtra: [...document.querySelectorAll('#l-nrem .nr-row')].map(r => ({ concepto: r.querySelector('.nr-c').value.trim(), monto: Math.max(0, +r.querySelector('.nr-m').value || 0) })),
@@ -1556,7 +1563,7 @@ function updateLiq() {
   const row = c => `<tr><td>${esc(c.desc)}${c.remunerativo ? '' : '<span class="tag">no remunerativo</span>'}</td><td class="num">${money(c.monto)}</td></tr>`;
   box.innerHTML = `
     <div class="rc-head"><h2>Liquidación final <span class="chip st-${est}" style="vertical-align:middle;margin-left:6px">${LIQ_ESTADOS[est]}</span></h2>
-      <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span>${emp.fechaAlta ? `<span>Alta ${fdate(emp.fechaAlta)}</span>` : ''}<span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span></div></div>
+      <div class="who"><span><b>${esc(emp.apellido)}, ${esc(emp.nombre)}</b></span><span>Legajo ${esc(emp.legajo)}</span><span>CUIL ${esc(emp.cuil || '—')}</span><span>Ingreso ${fdate(emp.fechaIngreso)}</span>${emp.fechaAlta ? `<span>Alta ${fdate(emp.fechaAlta)}</span>` : ''}<span>Egreso ${fdate(inp.fecha)}</span><span>${esc(TIPOS[inp.tipo])}</span>${inp.motivo ? `<span>Motivo: ${esc(inp.motivo)}</span>` : ''}</div></div>
     ${res.avisos.length ? `<div class="avisos">${res.avisos.map(a => `<p>${esc(a)}</p>`).join('')}</div>` : ''}
     <table class="ledger"><tbody>
       <tr class="sec"><td colspan="2">Haberes</td></tr>
@@ -1570,12 +1577,13 @@ function updateLiq() {
 function persistLiq(estado) {
   const L = UI.liq;
   if (!L || !L.res) { toast('Completá los datos para poder calcular.'); return; }
+  if (!(L.inputs && L.inputs.motivo)) { toast('Elegí el motivo de la desvinculación.'); const m = $('#l-motivo'); if (m) { m.scrollIntoView({ block: 'center' }); m.focus(); } return; }
   const emp = S.empleados.find(x => x.id === L.empId);
   let liq = L.id ? S.liquidaciones.find(x => x.id === L.id) : null;
   const nueva = !liq;
   if (nueva) { liq = { id: uid(), empleadoId: emp.id, creada: today(), cierre: {}, pago: null }; S.liquidaciones.push(liq); L.id = liq.id; }
   liq.inputs = clone(L.inputs); liq.result = clone(L.res); liq.parametros = clone(S.parametros); liq.estado = estado; liq.actualizada = today(); liq.reparto = L.rep ? clone(L.rep) : null;
-  emp.estado = 'egreso'; emp.fechaEgreso = liq.inputs.fecha; emp.tipoEgreso = liq.inputs.tipo;
+  emp.estado = 'egreso'; emp.fechaEgreso = liq.inputs.fecha; emp.tipoEgreso = liq.inputs.tipo; emp.motivoEgreso = liq.inputs.motivo || '';
   log(emp.id, `Liquidación ${nueva ? 'creada' : 'actualizada'} (${TIPOS[liq.inputs.tipo]}, egreso ${fdate(liq.inputs.fecha)}): ${LIQ_ESTADOS[estado].toLowerCase()}, total ${money(totalDe(liq.result))}`);
   save(); renderLiq(); toast(estado === 'aprobada' ? 'Liquidación aprobada' : 'Borrador guardado');
 }
@@ -2043,6 +2051,12 @@ function renderPar() {
     <div class="frm">${num('par-v1', 'Hasta 5 años', P.vacaciones[0].dias, 'step="1" min="0"')}${num('par-v2', 'Más de 5 y hasta 10', P.vacaciones[1].dias, 'step="1" min="0"')}${num('par-v3', 'Más de 10 y hasta 20', P.vacaciones[2].dias, 'step="1" min="0"')}${num('par-v4', 'Más de 20 años', P.vacaciones[3].dias, 'step="1" min="0"')}</div>
     <div style="margin-top:18px"><button class="btn primary" type="button" data-act="savePar">Guardar parámetros</button></div>
   </form>
+  <div class="card">
+    <h2>Motivos de desvinculación</h2>
+    <p class="muted" style="margin-top:0">Es la lista que aparece para elegir el motivo cuando pasás a una persona a liquidación. Escribí un motivo por renglón. Podés agregar, borrar o cambiar los que quieras: las liquidaciones ya guardadas conservan el motivo que tenían.</p>
+    <label class="fld"><span>Motivos (uno por renglón)</span><textarea id="par-motivos" rows="9">${esc((P.motivosEgreso || []).join('\n'))}</textarea></label>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-act="saveMotivos">Guardar motivos</button><button class="btn" type="button" data-act="motivosReset">Volver a la lista original</button></div>
+  </div>
   <div class="card">
     <h2>Columnas de la tabla de Empleados</h2>
     <p class="muted" style="margin-top:0">Elegí qué columnas mostrar y en qué orden, arrastrándolas o con las flechas. Legajo y Nombre siempre se muestran primero. Se guarda al instante.</p>
@@ -2706,7 +2720,7 @@ async function pdfEmpInforme(c) {
   }
   if (T('egresos')) {
     const a = S.empleados.filter(e => ESTV.egresados.includes(e.estado) && enLoc(e) && (!rango || dentro(e.fechaEgreso)));
-    secs.push({ t: 'Egresos', n: cnt(a), head: ['Legajo', 'Empleado', 'Local', 'Puesto', 'Ingreso', 'Egreso', 'Motivo'], body: ordena(a.map(e => ({ e, f: e.fechaEgreso, r: [e.legajo || '—', nm(e), lc(e), e.puesto || '—', fdate(e.fechaIngreso), fdate(e.fechaEgreso), TIPOS[e.tipoEgreso] || '—'] }))), loc: 2, ctr: [4, 5], cols: { 0: { cellWidth: 46 } }, vacio: 'No hay egresos en ese período.' });
+    secs.push({ t: 'Egresos', n: cnt(a), head: ['Legajo', 'Empleado', 'Local', 'Puesto', 'Ingreso', 'Egreso', 'Motivo', 'Motivo de la desvinculación'], body: ordena(a.map(e => ({ e, f: e.fechaEgreso, r: [e.legajo || '—', nm(e), lc(e), e.puesto || '—', fdate(e.fechaIngreso), fdate(e.fechaEgreso), TIPOS[e.tipoEgreso] || '—', e.motivoEgreso || '—'] }))), loc: 2, ctr: [4, 5], cols: { 0: { cellWidth: 46 } }, vacio: 'No hay egresos en ese período.' });
     kp.push({ l: 'Egresos', v: a.length, c: P.bad });
   }
   if (T('suspensiones')) {
@@ -3240,7 +3254,7 @@ const ACT = {
     const l = S.liquidaciones.find(x => x.id === UI.liq.id); if (!confirm('¿Descartar este borrador?')) return;
     const e = S.empleados.find(x => x.id === l.empleadoId);
     S.liquidaciones = S.liquidaciones.filter(x => x.id !== l.id);
-    if (e && e.estado === 'egreso' && !S.liquidaciones.some(x => x.empleadoId === e.id)) { e.estado = 'activo'; e.fechaEgreso = ''; e.tipoEgreso = ''; }
+    if (e && e.estado === 'egreso' && !S.liquidaciones.some(x => x.empleadoId === e.id)) { e.estado = 'activo'; e.fechaEgreso = ''; e.tipoEgreso = ''; e.motivoEgreso = ''; }
     if (e) log(e.id, 'Borrador de liquidación descartado'); save(); UI.liq = null; renderLiq(); toast('Borrador descartado');
   },
   payLiq: () => {
@@ -3348,6 +3362,15 @@ const ACT = {
     P.vacaciones = [{ hasta: 5, dias: g('par-v1') }, { hasta: 10, dias: g('par-v2') }, { hasta: 20, dias: g('par-v3') }, { hasta: 999, dias: g('par-v4') }];
     if ($('#par-histmeses')) P.historialMesesNube = g('par-histmeses');
     save(); toast('Parámetros guardados');
+  },
+  saveMotivos: () => {
+    const lista = $('#par-motivos').value.split('\n').map(x => x.trim()).filter((x, i, a) => x && a.indexOf(x) === i);
+    if (!lista.length) return toast('Dejá al menos un motivo en la lista.');
+    S.parametros.motivosEgreso = lista; save(); renderPar(); toast('Motivos guardados');
+  },
+  motivosReset: () => {
+    if (!confirm('¿Volver a la lista original de motivos? Se pierden los cambios que hiciste en la lista.')) return;
+    S.parametros.motivosEgreso = clone(DEFAULT_P.motivosEgreso); save(); renderPar(); toast('Lista de motivos restablecida');
   },
   jbTamano: async b => {
     b.textContent = 'Calculando…'; b.disabled = true;

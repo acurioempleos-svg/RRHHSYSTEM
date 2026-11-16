@@ -2347,7 +2347,7 @@ function renderPar() {
   </div>
   <div class="card">
     <h2>Planilla de sueldos (Excel)</h2>
-    <p class="muted" style="margin-top:0">Arma una planilla con el mismo formato que SUELDO_SEPTIEMBRE: una fila por colaborador en nómina (activos y en licencia), agrupados por local y pintados con el color de su local, con resumen de totales por local al final. Toma del programa legajo, nombre, local, ingreso y sueldo, y del mes elegido las vacaciones (P.VAC) y los ausentes (licencia sin goce y suspensiones). Del legajo toma también feriados, hs extra y no remunerativo. Transferencia, adelantos y presentismo quedan vacíos para completar en Excel; las fórmulas calculan solas.</p>
+    <p class="muted" style="margin-top:0">Arma una planilla con el mismo formato que SUELDO_SEPTIEMBRE: una fila por colaborador en nómina (activos y en licencia), agrupados por local y pintados con el color de su local, con un resumen al final por local (sueldos, hs extra, vacaciones, no remunerativas, feriados, descuentos, %ITC, total, adelantos, transferencia y efectivo) y su total; si hay un local Intercompany, su costo se reparte entre los demás según el % de la columna Q. Toma del programa legajo, nombre, local, ingreso y sueldo, y del mes elegido las vacaciones (P.VAC) y los ausentes (licencia sin goce y suspensiones). Del legajo toma también feriados, hs extra y no remunerativo. Transferencia, adelantos y presentismo quedan vacíos para completar en Excel; las fórmulas calculan solas.</p>
     <div class="frm"><label class="fld"><span>Mes</span><input type="month" id="pl-mes" value="${esc(UI.planillaMes || today().slice(0, 7))}"></label></div>
     <div style="margin-top:14px"><button class="btn primary" type="button" data-act="planillaSueldos">Descargar planilla de sueldos</button></div>
   </div>
@@ -2623,6 +2623,55 @@ async function cargarExcelJS() {
   await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'], () => window.ExcelJS, 'No se pudo cargar la librería de Excel. Revisá la conexión a internet e intentá de nuevo.');
   return window.ExcelJS;
 }
+/* Resumen de abajo de la planilla de sueldos. Réplica del resumen de la planilla original (columnas C a P):
+   una fila por local con sueldos, hs extra, vacaciones, no remunerativas, feriados, descuentos, %ITC, total, adelantos,
+   transferencia y efectivo. El local "Intercompany" (si existe) va último y su costo neto se reparte entre los demás
+   locales según el % de la columna Q (editable). */
+function resumenPlanilla({ ws, put, locales, last, FMT, colorDeLocal, GRIS, AMAR, VERDE, ROSA }) {
+  const h = last + 3, ES_ITC = /intercompany/i, TXT = 'FF3E5656';
+  const normales = locales.filter(L => !ES_ITC.test(L.local)), itc = locales.find(L => ES_ITC.test(L.local));
+  const orden = itc ? [...normales, itc] : normales;
+  const PAL = ['FFACC9FE', 'FFD9D2E9', 'FFF8ECCA', 'FFE0F7FA', 'FF8CD3CD', 'FFF4CCCC'], FILL_ITC = 'FF63D297';
+  let pct = normales.map(L => /\bbcc\b/i.test(L.local) ? 0.05 : 0.19);
+  if (Math.abs(pct.reduce((t, v) => t + v, 0) - 1) > 1e-9) pct = normales.map(() => 1 / (normales.length || 1));
+  const rng = c => `${c}$2:${c}$${last}`, sum = (c, r) => `SUMIF($D$2:$D$${last},$C${r},${rng(c)})`;
+  const ir = h + 1 + orden.length - 1;   // fila del local Intercompany
+
+  // Encabezado
+  [['PAX', 4, GRIS, 0], ['SUELDOS', 5, GRIS, 1], ['HS EXTRAS', 6, AMAR, 1], ['VACACIONES', 7, VERDE], ['NO REMUNERATIVAS', 8, VERDE], ['FERIADOS', 9, VERDE], ['DESCUENTOS', 10, VERDE],
+   ['%ITC', 11, VERDE], ['TOTAL SUELDOS', 12, VERDE], ['ADELANTOS', 13, VERDE], ['TOTAL A PAGAR', 14, ROSA, 1], ['TRANSFERENCIA', 15, AMAR], ['TOTAL EFECTIVO', 16, VERDE, 1]]
+    .forEach(([t, c, fl, dk]) => put(h, c, t, { size: 10, bold: true, fg: dk ? TXT : undefined, fill: fl, borde: true, thin: true, wrap: true }));
+  if (itc) {
+    put(h, 17, '% ITC A REPARTIR', { size: 10, bold: true, fg: TXT, fill: AMAR, borde: true, thin: true });
+    ws.getCell(h, 17).note = 'A completar: porcentaje del costo del local Intercompany que se reparte a cada local (columna %ITC). Los porcentajes deben sumar 100 %.';
+  }
+
+  // Una fila por local
+  orden.forEach((L, i) => {
+    const r = h + 1 + i, esItc = L === itc, loc = colorDeLocal(L.local);
+    const base = { bold: true, fill: esItc ? FILL_ITC : (loc.fill || PAL[i % PAL.length]), fg: loc.fill && !esItc ? loc.fg : undefined };
+    const cel = (c, f, fmt) => put(r, c, f === undefined ? '' : { formula: f }, { ...base, fmt: fmt || FMT.h, borde: true, thin: true });
+    put(r, 3, L.etiqueta, base);
+    cel(4, `COUNTIF($D$2:$D$${last},$C${r})`, '0');
+    cel(5, sum('F', r)); cel(6, sum('W', r)); cel(7, sum('X', r)); cel(8, sum('M', r)); cel(9, sum('V', r));
+    cel(10, `${sum('Y', r)}+${sum('Z', r)}${esItc ? `+M${r}` : ''}`);
+    cel(13, sum('O', r));
+    if (esItc) { [11, 12, 14, 15, 16].forEach(c => cel(c)); return; }
+    cel(11, itc ? `((E$${ir}+I$${ir}+G$${ir}+F$${ir}+H$${ir})-J$${ir})*$Q${r}` : '0');
+    cel(12, `E${r}+F${r}+G${r}+H${r}+I${r}+K${r}-J${r}`);
+    cel(14, `L${r}-M${r}`); cel(15, sum('G', r)); cel(16, `N${r}-O${r}`);
+    if (itc) put(r, 17, pct[i], { ...base, fg: 'FF0000FF', fmt: '0%', borde: true, thin: true });
+  });
+
+  // Total
+  const tr = h + 1 + orden.length, a = h + 1, z = tr - 1;
+  put(tr, 3, 'TOTAL', { bold: true, fill: GRIS });
+  for (let c = 4; c <= 16; c++) {
+    const col = String.fromCharCode(64 + c);
+    put(tr, c, { formula: `SUM(${col}${a}:${col}${z})` }, { name: 'Arial', bold: true, fill: GRIS, fmt: c === 4 ? '0' : FMT.h, borde: true, thin: true });
+  }
+  if (itc) put(tr, 17, { formula: `SUM(Q${a}:Q${z})` }, { name: 'Arial', bold: true, fill: GRIS, fmt: '0%', borde: true, thin: true });
+}
 async function descargarPlanilla(mes) {
   const EJ = await cargarExcelJS();
   const { Y, M, filas, locales } = planillaDatos(mes);
@@ -2630,7 +2679,7 @@ async function descargarPlanilla(mes) {
   const nomMes = MESES_ES[M - 1];
   const wb = new EJ.Workbook();
   wb.calcProperties.fullCalcOnLoad = true;
-  const ws = wb.addWorksheet('SUELDO ' + nomMes, { views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }] });
+  const ws = wb.addWorksheet('SUELDOS ' + nomMes, { views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }] });
   const FMT = {
     p0: String.raw`_-"$"* #,##0_-;\-"$"* #,##0_-;_-"$"* "-"??_-;_-@`,
     p2: String.raw`_-"$"* #,##0.00_-;\-"$"* #,##0.00_-;_-"$"* "-"??_-;_-@`,
@@ -2700,23 +2749,12 @@ async function descargarPlanilla(mes) {
     put(r, 26, { formula: `S${r}*P${r}/10` }, { bold: true, fill: GRIS, fmt: FMT.p2, borde: true });
   });
 
-  // Resumen por local (mismo esquema que la planilla original)
-  const last = filas.length + 1, h = last + 3;
-  [['SUELDOS', 6, GRIS], ['TOTAL TRANSFERENCIA', 7, AMAR], ['TOTAL EFECTIVO', 8, VERDE], ['TOTAL A PAGAR', 9, ROSA]].forEach(([t, c, fl]) => put(h, c, t, { size: 10, bold: true, fill: fl }));
-  put(h, 12, 'LOCAL', { bold: true, fill: ROSA }); put(h, 13, 'HRS EXTRA', { bold: true, fill: ROSA });
-  locales.forEach((L, i) => {
-    const r = h + 1 + i, loc = colorDeLocal(L.local);
-    put(r, 4, L.etiqueta, { bold: true, ...loc });
-    ['F', 'G', 'H', 'I'].forEach((col, k) => put(r, 6 + k, { formula: `SUMIF($D$2:$D$${last},$D${r},${col}$2:${col}$${last})` }, { size: 10, bold: k === 0, fill: [GRIS, AMAR, VERDE, ROSA][k], fmt: FMT.p0 }));
-    put(r, 12, L.etiqueta, { bold: true, ...loc });
-    put(r, 13, { formula: `SUMIF(D:D,L${r},W:W)` }, { bold: true, ...loc, fmt: FMT.p2 });
-  });
-  const tr = h + 1 + locales.length;
-  put(tr, 4, 'TOTAL', { size: 10, bold: true });
-  ['F', 'G', 'H', 'I'].forEach((col, k) => put(tr, 6 + k, { formula: `SUM(${col}${h + 1}:${col}${tr - 1})` }, { size: 10, bold: true, fill: GRIS, fmt: FMT.p0 }));
+  // Resumen por local (mismo esquema que la planilla original: una fila por local, intercompany, total y %ITC)
+  const last = filas.length + 1;
+  resumenPlanilla({ ws, put, locales, last, FMT, colorDeLocal, GRIS, AMAR, VERDE, ROSA });
 
   // Anchos, columnas ocultas (A y B, como en la original) y filtro
-  [[1, 14.6], [2, 12.6], [3, 27.5], [4, 11.1], [5, 17.3], [6, 13.2], [7, 14.4], [8, 15.6], [9, 13.2], [10, 9], [11, 9], [12, 8], [13, 13.6], [14, 10], [15, 11], [16, 12], [17, 43], [18, 5], [19, 14], [20, 11], [21, 11], [22, 12], [23, 12], [24, 11], [25, 12], [26, 13]]
+  [[1, 14.6], [2, 12.6], [3, 27.5], [4, 11.1], [5, 17.3], [6, 16], [7, 16], [8, 16], [9, 16], [10, 16], [11, 16], [12, 16], [13, 16], [14, 16], [15, 16], [16, 16], [17, 43], [18, 5], [19, 14], [20, 11], [21, 11], [22, 12], [23, 12], [24, 11], [25, 12], [26, 13]]
     .forEach(([c, w]) => { ws.getColumn(c).width = w; });
   ws.getColumn(1).hidden = true; ws.getColumn(2).hidden = true;
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: last, column: 27 } };

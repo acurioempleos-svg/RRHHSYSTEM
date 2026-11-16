@@ -369,6 +369,7 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
     <button data-act="tab" data-tab="ale">Alertas <span class="bdg" id="ale-n" hidden>0</span></button>
     <button data-act="tab" data-tab="liq">Liquidación</button>
     <button data-act="tab" data-tab="est">Historial y estadística</button>
+    <button data-act="tab" data-tab="pub">Publicaciones</button>
     <button data-act="tab" data-tab="cor">Correo</button>
     <button data-act="tab" data-tab="par">Parámetros</button>
   </nav>
@@ -384,6 +385,7 @@ details.cardsec.tablewrap .cardsec-body{padding:0}
   <section class="view" id="v-ale" hidden></section>
   <section class="view" id="v-liq" hidden></section>
   <section class="view" id="v-est" hidden></section>
+  <section class="view" id="v-pub" hidden></section>
   <section class="view" id="v-cor" hidden></section>
   <section class="view" id="v-par" hidden></section>
   <section class="view" id="v-rep" hidden></section>
@@ -878,7 +880,7 @@ document.addEventListener('change', async ev => {
     if (await fotoGuardar(e, blob)) paintFotoBox();
   } catch (err) { toast((err && err.message) || 'No se pudo procesar la foto'); }
 });
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
+const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], publicaciones: [], empresasPub: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -1204,11 +1206,90 @@ function paintAle() {
   [['prio', 'al-prio'], ['cat', 'al-cat'], ['local', 'al-local'], ['q', 'al-q']].forEach(([k, id]) => { const el = $('#' + id); if (el && el.closest) el.closest('.ff').classList.toggle('on', !!F[k]); });
 }
 
+/* ================= Publicaciones (gasto en avisos / búsquedas) ================= */
+const MEDIOS_PUB = ['Transferencia', 'Efectivo', 'Tarjeta', 'Otro'];
+const pubEmpresa = id => (S.empresasPub || []).find(x => x.id === id);
+const pubEmpNom = g => { const e = pubEmpresa(g.empresaId); return e ? e.nombre : (g.empresa || '—'); };
+function pubFiltrados() {
+  const F = UI.pub, q = (F.q || '').trim().toLowerCase();
+  return (S.publicaciones || []).filter(g => {
+    if (F.empresa && g.empresaId !== F.empresa) return false;
+    if (F.local && (g.local || '') !== F.local) return false;
+    if (F.desde && g.fecha < F.desde) return false;
+    if (F.hasta && g.fecha > F.hasta) return false;
+    if (q && !`${pubEmpNom(g)} ${g.detalle || ''} ${g.local || ''} ${g.nota || ''}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => b.fecha.localeCompare(a.fecha) || (b.id > a.id ? 1 : -1));
+}
+function renderPub() {
+  UI.pub = UI.pub || { q: '', empresa: '', local: '', desde: '', hasta: '', edit: null };
+  const F = UI.pub, g = F.edit ? (S.publicaciones || []).find(x => x.id === F.edit) : null, emps = [...(S.empresasPub || [])].sort((a, b) => a.nombre.localeCompare(b.nombre)), locs = ordenLocales();
+  const opt = (v, t, sel) => `<option value="${esc(v)}" ${sel ? 'selected' : ''}>${esc(t)}</option>`;
+  $('#v-pub').innerHTML = `<h2>Publicaciones</h2>
+  <p class="muted" style="margin-top:0">Cargá lo que gastaste en publicar avisos de búsqueda y a qué empresa (portal, diario, agencia) le pagaste.</p>
+  <div class="cols">
+   <div class="stack">
+    <div class="card"><h3>${g ? 'Editar gasto' : 'Cargar gasto'}</h3>
+      <div style="display:grid;gap:10px">
+        <div class="row">
+          <label class="fld"><span>Fecha</span><input type="date" id="pg-fecha" value="${esc(g ? g.fecha : today())}"></label>
+          <label class="fld"><span>Monto</span><input type="number" id="pg-monto" min="0" step="0.01" inputmode="decimal" placeholder="0,00" value="${g ? g.monto : ''}"></label>
+        </div>
+        <label class="fld"><span>Empresa a la que se le pagó</span><select id="pg-emp"><option value="">— Elegí una empresa —</option>${emps.map(e => opt(e.id, e.nombre, g && g.empresaId === e.id)).join('')}</select></label>
+        ${emps.length ? '' : '<p class="muted" style="margin:0">Todavía no cargaste empresas: agregalas en el recuadro de abajo.</p>'}
+        <div class="row">
+          <label class="fld"><span>Local (opcional)</span><select id="pg-local"><option value="">General / todos</option>${locs.map(l => opt(l, l, g && g.local === l)).join('')}</select></label>
+          <label class="fld"><span>Medio de pago</span><select id="pg-medio">${MEDIOS_PUB.map(m => opt(m, m, g ? g.medio === m : m === 'Transferencia')).join('')}</select></label>
+        </div>
+        <label class="fld"><span>Detalle (puesto / aviso)</span><input type="text" id="pg-detalle" placeholder="Ej.: Aviso destacado de camarero" value="${esc(g ? g.detalle : '')}"></label>
+        <label class="fld"><span>Nota (opcional)</span><input type="text" id="pg-nota" placeholder="N.º de factura, referencia…" value="${esc(g ? g.nota : '')}"></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" data-act="pubSave">${g ? 'Guardar cambios' : 'Agregar gasto'}</button>${g ? '<button class="btn" type="button" data-act="pubCancel">Cancelar</button>' : ''}</div>
+      </div>
+    </div>
+    <div class="card"><h3>Empresas</h3>
+      <div class="row" style="margin-bottom:10px"><label class="fld"><span>Nueva empresa</span><input type="text" id="pe-nom" placeholder="Ej.: Zonajobs, Indeed, Computrabajo…"></label><button class="btn" type="button" data-act="pubEmpAdd">Agregar</button></div>
+      ${emps.length ? `<div class="tablewrap"><table><tbody>${emps.map(e => { const n = (S.publicaciones || []).filter(x => x.empresaId === e.id).length; return `<tr><td>${esc(e.nombre)}</td><td class="num muted">${n} gasto${n === 1 ? '' : 's'}</td><td class="num"><button class="btn sm" type="button" data-act="pubEmpRen" data-id="${e.id}">Renombrar</button> <button class="btn sm danger" type="button" data-act="pubEmpDel" data-id="${e.id}">Quitar</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted" style="margin:0">Sin empresas cargadas.</p>'}
+    </div>
+   </div>
+   <div class="stack">
+    <div class="card"><h3>Filtros</h3>
+      <div class="row">
+        <label class="fld"><span>Buscar</span><input type="search" data-pf="q" placeholder="Empresa, detalle, nota" value="${esc(F.q)}"></label>
+        <label class="fld"><span>Empresa</span><select data-pf="empresa"><option value="">Todas</option>${emps.map(e => opt(e.id, e.nombre, F.empresa === e.id)).join('')}</select></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="fld"><span>Local</span><select data-pf="local"><option value="">Todos</option>${locs.map(l => opt(l, l, F.local === l)).join('')}</select></label>
+        <label class="fld"><span>Desde</span><input type="date" data-pf="desde" value="${esc(F.desde)}"></label>
+        <label class="fld"><span>Hasta</span><input type="date" data-pf="hasta" value="${esc(F.hasta)}"></label>
+        <button class="btn" type="button" data-act="pubLimpiar">Limpiar</button>
+      </div>
+    </div>
+    <div id="pub-res"></div>
+   </div>
+  </div>`;
+  paintPub();
+}
+function paintPub() {
+  const box = $('#pub-res'); if (!box) return;
+  const f = pubFiltrados(), tot = r2(f.reduce((s, g) => s + (+g.monto || 0), 0));
+  const porEmp = {}; f.forEach(g => { const n = pubEmpNom(g); porEmp[n] = r2((porEmp[n] || 0) + (+g.monto || 0)); });
+  const items = Object.entries(porEmp).sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+  const todos = (S.publicaciones || []).length;
+  box.innerHTML = `<div class="kpis" style="margin-bottom:12px">
+      <div class="kpi" style="cursor:default"><strong>${money(tot)}</strong><span>Total gastado</span><small>${f.length === todos ? 'Todos los gastos' : `${f.length} de ${todos} gastos`}</small></div>
+      <div class="kpi" style="cursor:default"><strong>${f.length}</strong><span>Publicaciones</span><small>${f.length ? `Promedio ${money(tot / f.length)}` : ''}</small></div>
+    </div>
+    ${items.length > 1 ? `<div class="card" style="margin-bottom:12px"><h3>Por empresa</h3>${barras(items, { money: true })}</div>` : ''}
+    <div class="card" style="padding:0"><div class="tablewrap">${f.length ? `<table class="grid"><thead><tr><th>Fecha</th><th>Empresa</th><th>Detalle</th><th>Local</th><th>Medio</th><th class="num">Monto</th><th></th></tr></thead><tbody>${f.map(g => `<tr><td>${fdate(g.fecha)}</td><td>${esc(pubEmpNom(g))}</td><td>${esc(g.detalle || '—')}${g.nota ? `<div class="muted">${esc(g.nota)}</div>` : ''}</td><td>${esc(g.local || 'General')}</td><td>${esc(g.medio || '—')}</td><td class="num">${money(g.monto)}</td><td class="num" style="white-space:nowrap"><button class="btn sm" type="button" data-act="pubEdit" data-id="${g.id}">Editar</button> <button class="btn sm danger" type="button" data-act="pubDel" data-id="${g.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : `<p class="muted" style="margin:0;padding:18px">${todos ? 'Ningún gasto coincide con los filtros.' : 'Todavía no cargaste gastos de publicaciones.'}</p>`}</div></div>`;
+}
+document.addEventListener('input', e => { const t = e.target, k = t.dataset && t.dataset.pf; if (!k || !UI.pub) return; UI.pub[k] = t.value; paintPub(); });
+document.addEventListener('change', e => { const t = e.target, k = t.dataset && t.dataset.pf; if (!k || !UI.pub) return; UI.pub[k] = t.value; paintPub(); });
+
 function go(tab) {
   UI.tab = tab;
   $$('.view').forEach(v => v.hidden = v.id !== 'v-' + tab);
   $$('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === (tab === 'rep' ? 'par' : tab) ? 'page' : 'false'));
-  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar, rep: renderRep, cor: renderCor })[tab]();
+  ({ ini: renderIni, emp: renderEmp, ale: renderAle, liq: renderLiq, est: renderEst, par: renderPar, rep: renderRep, cor: renderCor, pub: renderPub })[tab]();
   paintBadge();
   window.scrollTo(0, 0);
 }
@@ -3264,6 +3345,49 @@ const ACT = {
     $('#l-nrem').innerHTML = nremLiqHtml(inp.nremunExtra, ''); updateLiq();
   },
   tab: b => { UI.detail = null; UI.liqFrom = null; if (b.dataset.tab === 'liq') UI.liq = null; go(b.dataset.tab); },
+  pubSave: () => {
+    const fecha = $('#pg-fecha').value, monto = r2(+$('#pg-monto').value), empresaId = $('#pg-emp').value;
+    if (!fecha) { toast('Falta la fecha.'); return; }
+    if (!(monto > 0)) { toast('Cargá un monto mayor a cero.'); return; }
+    if (!empresaId) { toast('Elegí la empresa a la que se le pagó.'); return; }
+    const d = { fecha, monto, empresaId, empresa: (pubEmpresa(empresaId) || {}).nombre || '', local: $('#pg-local').value, medio: $('#pg-medio').value, detalle: $('#pg-detalle').value.trim(), nota: $('#pg-nota').value.trim() };
+    S.publicaciones = S.publicaciones || [];
+    const ex = UI.pub.edit && S.publicaciones.find(x => x.id === UI.pub.edit);
+    if (ex) Object.assign(ex, d); else S.publicaciones.push(Object.assign({ id: uid() }, d));
+    UI.pub.edit = null; save(); renderPub(); toast(ex ? 'Gasto actualizado' : 'Gasto agregado');
+  },
+  pubEdit: b => { UI.pub.edit = b.dataset.id; renderPub(); window.scrollTo(0, 0); },
+  pubCancel: () => { UI.pub.edit = null; renderPub(); },
+  pubDel: b => {
+    const g = (S.publicaciones || []).find(x => x.id === b.dataset.id); if (!g) return;
+    if (!confirm(`¿Quitar el gasto de ${money(g.monto)} del ${fdate(g.fecha)} (${pubEmpNom(g)})?`)) return;
+    S.publicaciones = S.publicaciones.filter(x => x.id !== g.id); if (UI.pub.edit === g.id) UI.pub.edit = null;
+    save(); renderPub(); toast('Gasto quitado');
+  },
+  pubLimpiar: () => { UI.pub = { q: '', empresa: '', local: '', desde: '', hasta: '', edit: UI.pub.edit }; renderPub(); },
+  pubEmpAdd: () => {
+    const inp = $('#pe-nom'), n = inp.value.trim().replace(/\s+/g, ' ');
+    if (!n) { toast('Escribí el nombre de la empresa.'); return; }
+    S.empresasPub = S.empresasPub || [];
+    if (S.empresasPub.some(x => x.nombre.toLowerCase() === n.toLowerCase())) { toast('Esa empresa ya está cargada.'); return; }
+    S.empresasPub.push({ id: uid(), nombre: n }); save();
+    const keep = { f: $('#pg-fecha').value, m: $('#pg-monto').value, l: $('#pg-local').value, p: $('#pg-medio').value, d: $('#pg-detalle').value, n: $('#pg-nota').value };
+    renderPub();
+    $('#pg-fecha').value = keep.f; $('#pg-monto').value = keep.m; $('#pg-local').value = keep.l; $('#pg-medio').value = keep.p; $('#pg-detalle').value = keep.d; $('#pg-nota').value = keep.n;
+    $('#pg-emp').value = S.empresasPub[S.empresasPub.length - 1].id; toast('Empresa agregada');
+  },
+  pubEmpRen: b => {
+    const e = pubEmpresa(b.dataset.id); if (!e) return;
+    const n = (prompt('Nuevo nombre de la empresa:', e.nombre) || '').trim().replace(/\s+/g, ' '); if (!n || n === e.nombre) return;
+    if (S.empresasPub.some(x => x.id !== e.id && x.nombre.toLowerCase() === n.toLowerCase())) { toast('Ya existe una empresa con ese nombre.'); return; }
+    e.nombre = n; (S.publicaciones || []).forEach(g => { if (g.empresaId === e.id) g.empresa = n; }); save(); renderPub(); toast('Empresa renombrada');
+  },
+  pubEmpDel: b => {
+    const e = pubEmpresa(b.dataset.id); if (!e) return;
+    if ((S.publicaciones || []).some(g => g.empresaId === e.id)) { toast('No se puede quitar: tiene gastos cargados. Quitá o reasigná esos gastos primero.'); return; }
+    if (!confirm(`¿Quitar la empresa "${e.nombre}"?`)) return;
+    S.empresasPub = S.empresasPub.filter(x => x.id !== e.id); save(); renderPub(); toast('Empresa quitada');
+  },
   iniGo: b => {
     const d = b.dataset; UI.detail = null; UI.liqFrom = null;
     if (d.tab === 'ale') UI.al = { q: '', prio: d.prio || '', cat: d.cat || '', local: '' };

@@ -2088,7 +2088,7 @@ function paintHist() {
    mailto abre el programa de correo del usuario con destinatarios, asunto y texto, pero NO puede adjuntar archivos:
    por eso los documentos se generan y descargan primero, y el usuario los arrastra al correo. */
 UI.mail = { sel: new Set(), q: '', local: '', est: 'nomina', extra: '', modo: 'auto', asunto: '', cuerpo: '', docs: new Set(),
-  liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7), hxHasta: today().slice(0, 7), plMes: today().slice(0, 7), gen: [], propios: [] };
+  liqTipo: 'borrador', liqDesde: '', liqHasta: '', hxDesde: today().slice(0, 7) + '-01', hxHasta: today(), plMes: today().slice(0, 7), gen: [], propios: [] };
 /* Captura de archivos: mientras UI.mailCap sea un array, las descargas que generan los informes (PDF y Excel) no bajan a Descargas: se guardan en memoria para compartirlas con Web Share. */
 const MAILBLOBS = new Map(), _cOM = URL.createObjectURL.bind(URL);
 URL.createObjectURL = function (o) { const u = _cOM(o); if (o instanceof Blob) MAILBLOBS.set(u, o); return u; };
@@ -2157,7 +2157,7 @@ const MAIL_DOCS = [
   { id: 'liqXlsx', grp: 'Liquidaciones', label: 'Informe de liquidaciones', fmt: 'Excel', name: () => `liquidaciones-${INF_ARCH[UI.mail.liqTipo]}-${today()}.xlsx`, run: () => conLiqLimpio(async (f, ov) => { await ACT.llXlsxGo(f, ov); return true; }) },
   { id: 'plaXlsx', grp: 'Liquidaciones', label: 'Planilla de sueldos', fmt: 'Excel', name: () => { const m = +(UI.mail.plMes || today().slice(0, 7)).slice(5, 7) || 1; return `SUELDO_${MESES_ES[m - 1]}.xlsx`; }, run: async () => { const m = UI.mail.plMes; if (!/^\d{4}-\d{2}$/.test(m)) { toast('Elegí el mes de la planilla.'); return false; } await descargarPlanilla(m); return true; } },
   { id: 'hxPdf', grp: 'Horas extra', label: 'Informe de horas extra', fmt: 'PDF', name: () => { const M = UI.mail; return `horas-extra-${M.hxDesde}${M.hxDesde === M.hxHasta ? '' : '_a_' + M.hxHasta}.pdf`; }, run: () => {
-      const M = UI.mail; if (!M.hxDesde || !M.hxHasta || M.hxDesde > M.hxHasta) { toast('Revisá los meses del informe de horas extra.'); return false; }
+      const M = UI.mail; if (!M.hxDesde || !M.hxHasta || M.hxDesde > M.hxHasta) { toast('Revisá las fechas del informe de horas extra.'); return false; }
       const locs = [...new Set([...ordenLocales(), ...S.empleados.map(mailLc)])];
       return pdfHsExtra({ locs, todosLocs: true, ids: null, desde: M.hxDesde, hasta: M.hxHasta }); } },
   { id: 'repPdf', grp: 'Reporte semanal', label: 'Reporte semanal de novedades', fmt: 'PDF', name: () => `reporte-semanal-rrhh-${today()}.pdf`, run: () => pdfReporte() },
@@ -2265,7 +2265,7 @@ function renderCor() {
       ${det('Empleados', ['empPdf', 'empXlsx', 'altasPdf'], `<button class="btn sm" type="button" data-act="mcInformeMedida" style="margin:4px 0 0 26px">Informe de empleados a medida…</button><div class="muted" style="margin-left:26px;font-size:12.5px">Se descarga al confirmar; después sumalo en "Mis archivos".</div>`)}
       ${det('Estadística', ['estPdf', 'estXlsx'])}
       ${det('Liquidaciones y sueldos', ['liqPdf', 'liqXlsx', 'plaXlsx'], `<div class="mc-par"><label class="fld"><span>Liquidaciones</span><select data-mc="liqTipo"><option value="borrador" ${M.liqTipo === 'borrador' ? 'selected' : ''}>Borradores</option><option value="aprobada" ${M.liqTipo === 'aprobada' ? 'selected' : ''}>Aprobadas (sin pagar)</option><option value="pagada" ${M.liqTipo === 'pagada' ? 'selected' : ''}>Pagadas</option></select></label>${mi('liqDesde', 'Egreso desde', 'date', M.liqDesde)}${mi('liqHasta', 'Egreso hasta', 'date', M.liqHasta)}</div><div class="mc-par">${mi('plMes', 'Mes de la planilla', 'month', M.plMes)}</div>`)}
-      ${det('Horas extra', ['hxPdf'], `<div class="mc-par">${mi('hxDesde', 'Mes desde', 'month', M.hxDesde)}${mi('hxHasta', 'Mes hasta', 'month', M.hxHasta)}</div>`)}
+      ${det('Horas extra', ['hxPdf'], `<div class="mc-par">${mi('hxDesde', 'Desde el día', 'date', M.hxDesde)}${mi('hxHasta', 'Hasta el día', 'date', M.hxHasta)}</div>`)}
       ${det('Reporte semanal', ['repPdf'])}
     </div>
     <div class="card"><h3>${st(4)}Enviar</h3>
@@ -2593,7 +2593,7 @@ function planillaDatos(mes) {
       .forEach(s => { aus += +s.dias; notas.push(`Suspensión ${s.dias} d (${fdate(s.fecha)})`); });
     const fer = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'feriado' && n.fecha >= ini && n.fecha <= fin);
     const nre = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'nremun' && n.mes === mes);
-    const hxs = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra' && n.fecha >= ini && n.fecha <= fin).sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const hxs = S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra' && (n.mes === mes || (n.fecha >= ini && n.fecha <= fin))).sort((a, b) => a.fecha.localeCompare(b.fecha));
     const hsExtra = hxs.reduce((t, n) => t + (+n.horas || 0), 0);
     if (hxs.length) notas.push(`Hs extra ${hsExtra} (${hxs.map(n => `${fdate(n.fecha).slice(0, 5)} ${+n.horas}h${n.motivo ? ' ' + n.motivo : ''}`).join(', ')})`);
     const nremun = r2(nre.reduce((t, n) => t + (+n.monto || 0), 0));
@@ -2646,17 +2646,18 @@ async function descargarPlanilla(mes) {
     cell.font = { name: o.name || 'Calibri', size: o.size || 9, bold: !!o.bold, color: o.fg ? { argb: o.fg } : undefined };
     if (o.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: o.fill } };
     if (o.fmt) cell.numFmt = o.fmt;
-    if (o.borde) cell.border = borde;
+    if (o.borde) cell.border = o.thin ? { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } } : borde;
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: !!o.wrap };
     return cell;
   };
   const colorDeLocal = local => { const c = (h => h && fuerte(h))(colorLocal({ local })); return c ? { fill: 'FF' + c.slice(1).toUpperCase(), fg: esOscuro(c) ? 'FFFFFFFF' : undefined } : {}; };
 
   // Encabezados (fila 1)
-  ['Legajo P', 'Legajo', 'Nombre completo', 'Local', 'Fecha de ingreso', 'Sueldo', 'Transferencia', 'Efectivo', 'Sueldo total', 'FERIADO', 'HS EXTRA', 'P.VAC', 'NREMUN', 'AUSENTES', 'ADELANTOS', 'PRSENTISMO', 'Observaciones']
-    .forEach((t, i) => put(1, i + 1, t, { name: 'Arial', size: 10, bold: true }));
-  put(1, 18, M, { name: 'Arial', size: 10 }).note = 'Número de mes de la planilla. Lo usa la columna AUSENCIAS para descontar los días previos al ingreso.';
+  ['Legajo P', 'Legajo', 'NOMBRES', 'Local', 'Fecha de ingreso', 'Sueldo', 'Transferencia', 'Efectivo', 'Sueldo total', 'FERIADO', 'HS EXTRA', 'P.VAC', 'NREMUN', 'AUSENTES', 'ADELANTOS', 'PRSENTISMO', 'Observaciones']
+    .forEach((t, i) => put(1, i + 1, t, { name: 'Arial', size: 10, borde: true, thin: true, wrap: i === 16 }));
+  put(1, 18, M, { name: 'Arial', size: 10, borde: true, thin: true }).note = 'Número de mes de la planilla. Lo usa la columna AUSENCIAS para descontar los días previos al ingreso.';
   [['Haberes', AMAR], ['JORNAL', VERDE], ['HORA', ROSA], ['FERIADO', GRIS], ['HS EXTRAS', GRIS], ['PVAC', GRIS], ['AUSENCIAS', GRIS], ['PRESENTISMO', GRIS]]
-    .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f }));
+    .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f, fg: 'FF3E5656', borde: true }));
   ws.getCell('G1').note = 'A completar: monto que se paga por transferencia. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
   ws.getCell('J1').note = 'Días de feriado trabajados en el mes, tomados de los feriados cargados en cada legajo.';
   ws.getCell('K1').note = 'Horas extra del mes, tomadas de las cargadas en cada legajo (se pagan a hora × 1,5). Se puede corregir a mano.';
@@ -2677,8 +2678,8 @@ async function descargarPlanilla(mes) {
     let ing = '';
     if (f.ingreso) { const [y, m, d] = f.ingreso.split('-').map(Number); ing = new Date(Date.UTC(y, m - 1, d)); }
     put(r, 5, ing, { ...id, fmt: FMT.f });
-    put(r, 6, f.sueldo, { size: 10, bold: true, fill: GRIS, fmt: FMT.p0, borde: true });
-    put(r, 7, '', { size: 10, fill: AMAR, fmt: FMT.p0, borde: true });
+    put(r, 6, f.sueldo, { size: 10, bold: true, fg: 'FF3E5656', fill: GRIS, fmt: FMT.p0, borde: true });
+    put(r, 7, '', { size: 10, bold: true, fg: 'FF3E5656', fill: AMAR, fmt: FMT.p0, borde: true });
     put(r, 8, { formula: `ROUNDUP(I${r}-G${r},-3)` }, { size: 10, fill: VERDE, fmt: FMT.p0, borde: true });
     put(r, 9, { formula: `S${r}+V${r}+W${r}+X${r}-Y${r}-Z${r}-O${r}+M${r}` }, { size: 10, bold: true, fill: ROSA, fmt: FMT.p0, borde: true });
     put(r, 10, f.feriados || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
@@ -2686,9 +2687,9 @@ async function descargarPlanilla(mes) {
     put(r, 12, f.vac || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
     put(r, 13, f.nremun || '', { fill: LILA, fmt: FMT.n, borde: true });
     put(r, 14, f.aus || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
-    put(r, 15, '', { borde: true });
+    put(r, 15, '', { fill: LILA, fmt: FMT.n, borde: true });
     put(r, 16, '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
-    put(r, 17, f.obs, { borde: true });
+    put(r, 17, f.obs, { fill: 'FFD5A6BD', fg: 'FF3E5656', fmt: FMT.n, borde: true, wrap: true });
     put(r, 19, { formula: `F${r}` }, { bold: true, fill: AMAR, fmt: FMT.s, borde: true });
     put(r, 20, { formula: `S${r}/30` }, { fill: VERDE, fmt: FMT.t, borde: true });
     put(r, 21, { formula: `T${r}/8` }, { bold: true, fill: ROSA, fmt: FMT.h, borde: true });
@@ -2715,10 +2716,10 @@ async function descargarPlanilla(mes) {
   ['F', 'G', 'H', 'I'].forEach((col, k) => put(tr, 6 + k, { formula: `SUM(${col}${h + 1}:${col}${tr - 1})` }, { size: 10, bold: true, fill: GRIS, fmt: FMT.p0 }));
 
   // Anchos, columnas ocultas (A y B, como en la original) y filtro
-  [[1, 14.7], [2, 12.7], [3, 32], [4, 15], [5, 12], [6, 13.2], [7, 14.9], [8, 15.3], [9, 13.2], [10, 9], [11, 9], [12, 8], [13, 11], [14, 10], [15, 11], [16, 12], [17, 43], [18, 5], [19, 14], [20, 11], [21, 11], [22, 12], [23, 12], [24, 11], [25, 12], [26, 13]]
+  [[1, 14.6], [2, 12.6], [3, 27.5], [4, 11.1], [5, 17.3], [6, 13.2], [7, 14.4], [8, 15.6], [9, 13.2], [10, 9], [11, 9], [12, 8], [13, 13.6], [14, 10], [15, 11], [16, 12], [17, 43], [18, 5], [19, 14], [20, 11], [21, 11], [22, 12], [23, 12], [24, 11], [25, 12], [26, 13]]
     .forEach(([c, w]) => { ws.getColumn(c).width = w; });
   ws.getColumn(1).hidden = true; ws.getColumn(2).hidden = true;
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: last, column: 17 } };
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: last, column: 27 } };
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -3031,7 +3032,7 @@ async function pdfEmpInforme(c) {
   });
 }
 
-/* ---- Informe de horas extra (botón en Empleados): locales, empleados y meses a elegir ---- */
+/* ---- Informe de horas extra (botón en Empleados): locales, empleados y fechas exactas a elegir ---- */
 function dlgHsExtra() {
   const old = $('#dlg-hx'); if (old) old.remove();
   const lc = e => (e.local || '').trim() || 'Sin local', nm = e => `${e.apellido || '—'}, ${e.nombre || ''}`.trim();
@@ -3040,7 +3041,7 @@ function dlgHsExtra() {
   const locs = ordenLocales().slice(); pool.forEach(e => { if (!locs.includes(lc(e))) locs.push(lc(e)); });
   const d = document.createElement('dialog'); d.id = 'dlg-hx';
   d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:580px;width:94%;max-height:92vh;overflow:auto;color:var(--ink)';
-  const row = 'display:flex;gap:8px;align-items:center', mes = today().slice(0, 7);
+  const row = 'display:flex;gap:8px;align-items:center', ini = today().slice(0, 7) + '-01', hoy = today();
   d.innerHTML = `<h3 style="margin:0 0 12px">Descargar informe de horas extra (PDF)</h3>
     <div class="fld" style="margin-bottom:10px"><span>Locales</span>
       <label style="${row};margin:4px 0"><input type="checkbox" id="hx-todos" checked> <strong>Todos los locales</strong></label>
@@ -3054,8 +3055,8 @@ function dlgHsExtra() {
         <div id="hx-lista" style="display:grid;gap:4px;max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px"></div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:4px"><label class="fld" style="flex:1"><span>Mes desde</span><input type="month" id="hx-desde" value="${mes}"></label><label class="fld" style="flex:1"><span>Mes hasta</span><input type="month" id="hx-hasta" value="${mes}"></label></div>
-    <p class="muted" style="margin:0 0 12px">Para un solo mes, dejá el mismo mes en los dos campos. Si elegís varios meses, el informe suma un resumen por mes y el detalle de cada uno.</p>
+    <div style="display:flex;gap:10px;margin-bottom:4px"><label class="fld" style="flex:1"><span>Desde el día</span><input type="date" id="hx-desde" value="${ini}"></label><label class="fld" style="flex:1"><span>Hasta el día</span><input type="date" id="hx-hasta" value="${hoy}"></label></div>
+    <p class="muted" style="margin:0 0 12px">Se incluyen las horas extra cargadas entre esas dos fechas, ambas inclusive. Si el rango abarca varios meses, el informe suma un resumen por mes y el detalle de cada uno.</p>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="hx-cancel">Cancelar</button><button type="button" class="btn primary" id="hx-ok">Descargar</button></div>`;
   document.body.appendChild(d);
   const todos = d.querySelector('#hx-todos'), cl = [...d.querySelectorAll('.hx-loc')], lista = d.querySelector('#hx-lista'), box = d.querySelector('#hx-selbox'), selIds = new Set();
@@ -3074,8 +3075,8 @@ function dlgHsExtra() {
   d.querySelector('#hx-ok').addEventListener('click', async () => {
     const sel = locsSel(), desde = d.querySelector('#hx-desde').value, hasta = d.querySelector('#hx-hasta').value;
     if (!sel.length) { toast('Elegí al menos un local.'); return; }
-    if (!desde || !hasta) { toast('Elegí el mes desde y el mes hasta.'); return; }
-    if (desde > hasta) { toast('El mes "desde" no puede ser posterior a "hasta".'); return; }
+    if (!desde || !hasta) { toast('Elegí la fecha desde y la fecha hasta.'); return; }
+    if (desde > hasta) { toast('La fecha "desde" no puede ser posterior a "hasta".'); return; }
     const ids = modoSel() ? visibles().filter(e => selIds.has(e.id)).map(e => e.id) : null;
     if (ids && !ids.length) { toast('Marcá al menos un empleado.'); return; }
     const o = { locs: sel, todosLocs: todos.checked, ids, desde, hasta };
@@ -3088,23 +3089,23 @@ async function pdfHsExtra(c) {
   const oi = new Map(ordenLocales().map((l, i) => [l, i])), ord = l => oi.has(l) ? oi.get(l) : 999;
   const vHx = e => (+e.sueldoActual || 0) / 30 / 8 * 1.5, fh = h => String(+(+h).toFixed(2)).replace('.', ',');
   const emps = new Map(S.empleados.filter(e => c.locs.includes(lc(e)) && (!c.ids || c.ids.includes(e.id))).map(e => [e.id, e]));
-  const regs = S.novedades.filter(n => n.tipo === 'hsextra' && emps.has(n.empleadoId) && n.mes >= c.desde && n.mes <= c.hasta)
+  const regs = S.novedades.filter(n => n.tipo === 'hsextra' && emps.has(n.empleadoId) && n.fecha >= c.desde && n.fecha <= c.hasta)
     .map(n => { const e = emps.get(n.empleadoId), h = +n.horas || 0; return { n, e, h, costo: h * vHx(e) }; });
   if (!regs.length) { toast('No hay horas extra cargadas con esos filtros.'); return false; }
   regs.sort((a, b) => ord(lc(a.e)) - ord(lc(b.e)) || nm(a.e).localeCompare(nm(b.e), 'es') || a.n.fecha.localeCompare(b.n.fecha));
   const sum = a => ({ d: a.length, h: a.reduce((t, r) => t + r.h, 0), c: a.reduce((t, r) => t + r.costo, 0), p: new Set(a.map(r => r.e.id)).size });
   const T = sum(regs), sinSueldo = new Set(regs.filter(r => !(+r.e.sueldoActual > 0)).map(r => r.e.id)).size;
-  const locsU = [...new Set(regs.map(r => lc(r.e)))].sort((a, b) => ord(a) - ord(b)), meses = [...new Set(regs.map(r => r.n.mes))].sort();
+  const locsU = [...new Set(regs.map(r => lc(r.e)))].sort((a, b) => ord(a) - ord(b)), meses = [...new Set(regs.map(r => r.n.fecha.slice(0, 7)))].sort();
   const resLoc = locsU.map(l => { const s = sum(regs.filter(r => lc(r.e) === l)); return [l, s.p, s.d, fh(s.h), mp(s.c)]; });
   const resEmp = [...new Set(regs.map(r => r.e.id))].map(id => { const a = regs.filter(r => r.e.id === id), e = a[0].e, s = sum(a); return [e.legajo || '—', nm(e), lc(e), s.d, fh(s.h), +e.sueldoActual > 0 ? mp(vHx(e)) : 'Sin sueldo', mp(s.c)]; });
   const secs = [
     { t: 'Resumen por local', head: ['Local', 'Colaboradores', 'Días', 'Horas', 'Costo'], body: resLoc, foot: ['TOTAL', T.p, T.d, fh(T.h), mp(T.c)], loc: 0, ctr: [1, 2], num: [3, 4], cols: { 0: { cellWidth: 150 } } },
     { t: 'Resumen por empleado', n: `${resEmp.length} colaborador${resEmp.length === 1 ? '' : 'es'}`, head: ['Legajo', 'Empleado', 'Local', 'Días', 'Horas', 'Valor hora extra', 'Costo'], body: resEmp, foot: ['TOTAL', '', '', T.d, fh(T.h), '', mp(T.c)], loc: 2, ctr: [3], num: [4, 5, 6], cols: { 0: { cellWidth: 46 } } },
   ];
-  if (meses.length > 1) secs.splice(1, 0, { t: 'Resumen por mes', head: ['Mes', 'Colaboradores', 'Días', 'Horas', 'Costo'], body: meses.map(m => { const s = sum(regs.filter(r => r.n.mes === m)); return [fper(m), s.p, s.d, fh(s.h), mp(s.c)]; }), foot: ['TOTAL', T.p, T.d, fh(T.h), mp(T.c)], ctr: [1, 2], num: [3, 4], cols: { 0: { cellWidth: 150 } } });
-  meses.forEach(m => { const a = regs.filter(r => r.n.mes === m), s = sum(a);
+  if (meses.length > 1) secs.splice(1, 0, { t: 'Resumen por mes', head: ['Mes', 'Colaboradores', 'Días', 'Horas', 'Costo'], body: meses.map(m => { const s = sum(regs.filter(r => r.n.fecha.slice(0, 7) === m)); return [fper(m), s.p, s.d, fh(s.h), mp(s.c)]; }), foot: ['TOTAL', T.p, T.d, fh(T.h), mp(T.c)], ctr: [1, 2], num: [3, 4], cols: { 0: { cellWidth: 150 } } });
+  meses.forEach(m => { const a = regs.filter(r => r.n.fecha.slice(0, 7) === m), s = sum(a);
     secs.push({ t: `Detalle · ${fper(m)}`, n: `${s.d} día${s.d === 1 ? '' : 's'} · ${fh(s.h)} hs · ${mp(s.c)}`, head: ['Fecha', 'Empleado', 'Local', 'Horas', 'Motivo', 'Costo'], body: a.map(r => [fdate(r.n.fecha), nm(r.e), lc(r.e), fh(r.h), r.n.motivo || '—', mp(r.costo)]), foot: ['TOTAL', '', '', fh(s.h), '', mp(s.c)], loc: 2, ctr: [0], num: [3, 5], cols: { 0: { cellWidth: 62 }, 3: { cellWidth: 50 }, 5: { cellWidth: 90 } } }); });
-  const loTxt = c.todosLocs ? 'Todos los locales' : c.locs.length <= 3 ? c.locs.join(', ') : `${c.locs.length} locales`, perTxt = c.desde === c.hasta ? fper(c.desde) : `${fper(c.desde)} a ${fper(c.hasta)}`;
+  const loTxt = c.todosLocs ? 'Todos los locales' : c.locs.length <= 3 ? c.locs.join(', ') : `${c.locs.length} locales`, perTxt = c.desde === c.hasta ? fdate(c.desde) : `${fdate(c.desde)} al ${fdate(c.hasta)}`;
   return pdfInforme({
     orient: 'l', titulo: 'Informe de horas extra', sub: `${loTxt}  ·  ${perTxt}${c.ids ? '  ·  Empleados seleccionados' : ''}  ·  Hora extra = sueldo ÷ 30 ÷ 8 × 1,5`, archivo: `horas-extra-${c.desde}${c.desde === c.hasta ? '' : '_a_' + c.hasta}.pdf`,
     kpis: [{ l: 'Colaboradores', v: T.p, n: 'con horas extra' }, { l: 'Días con hs extra', v: T.d }, { l: 'Horas totales', v: fh(T.h), c: P.blue }, { l: 'Costo total', v: mp(T.c), c: P.gold, n: sinSueldo ? `${sinSueldo} sin sueldo cargado` : 'hora × 1,5' }],

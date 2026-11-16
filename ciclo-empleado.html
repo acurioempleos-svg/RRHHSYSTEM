@@ -117,6 +117,25 @@ details.sec>summary::-webkit-details-marker{display:none}
 details.sec>summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>.sec-body{padding:2px 0 14px}
+.hx-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hxq{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.hxq:hover{border-color:var(--accent);color:var(--accent)}
+.hxq.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.hxq.big{padding:7px 16px;font-size:15px;font-weight:600}
+.hx-q{display:grid;gap:12px}
+.hx-r1{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.hx-r1 .fld{flex:0 1 170px}
+.hx-hrs{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hx-hrs input{width:90px}
+#hx-cal{border:1px solid var(--line);border-radius:8px;padding:10px;max-width:320px}
+.hx-calh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hx-calg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.hx-calg i{font-style:normal;font-size:12px;color:var(--muted)}
+.hxd{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 0;cursor:pointer}
+.hxd:hover{border-color:var(--accent)}
+.hxd.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.hxd.has{background:#E4EAE8;color:var(--muted);cursor:not-allowed;text-decoration:line-through}
+.hx-add{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .secs-tools{float:right;margin:7px 0 0 10px}   /* flota a la derecha: queda en la misma línea que el título de la primera sección */
 .cal-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:12px 0}.cal-bar .fld{margin:0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
@@ -1455,6 +1474,10 @@ function renderDetail() {
   const liqs = S.liquidaciones.filter(l => l.empleadoId === e.id);
   const canEgreso = ['activo', 'licencia', 'egreso'].includes(e.estado);
 
+  hxSel = new Set(); hxMes = '';
+  const hxF = (hxLast && hxLast.id === e.id) ? hxLast.fecha : today(), hxMotL = (hxLast && hxLast.id === e.id) ? hxLast.motivo : '';
+  const hxMot = (() => { const c = {}; S.novedades.forEach(n => { if (n.tipo === 'hsextra' && n.motivo) c[n.motivo] = (c[n.motivo] || 0) + 1; });
+    const a = Object.keys(c).sort((x, y) => c[y] - c[x]); ['Cubrió a un compañero', 'Salón lleno', 'Cierre tarde'].forEach(x => { if (!a.includes(x)) a.push(x); }); return a.slice(0, 4); })();
   $('#v-emp').innerHTML = `
   <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>${isNew ? '' : '<button class="btn" data-act="fichaPrint">Imprimir ficha / PDF</button>'}
     ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2><span style="margin:0 auto;align-self:center">${chip(e.estado)}</span>`}
@@ -1526,7 +1549,17 @@ function renderDetail() {
     </div>
     <div class="card"><h3>Horas extra</h3>
       <p class="muted" style="margin-top:0">Cargá cada día trabajado de más, con sus horas y el motivo. Se pagan a la hora × 1,5${vHora ? ` (sueldo ÷ 30 ÷ 8 = ${money(vHora)} por hora; hora extra = ${money(vHx)})` : ' (falta el sueldo en el legajo para calcular el costo)'}. Se suman por mes y van a la columna HS EXTRA de la planilla de sueldos.</p>
-      <div class="row"><label class="fld"><span>Día</span><input type="date" id="hx-fecha" value="${today()}"></label><label class="fld"><span>Horas</span><input type="number" id="hx-horas" min="0.5" max="24" step="0.5" placeholder="Ej.: 2"></label><label class="fld" style="flex:1 1 200px"><span>Motivo</span><input type="text" id="hx-motivo" placeholder="Ej.: cubrió a un compañero"></label><button class="btn" data-act="addHsExtra">Agregar</button></div>
+      <div class="hx-q" id="hx-box" data-vhx="${vHx}">
+        <div class="hx-r1">
+          <label class="fld"><span>Día <b id="hx-dow" class="muted" style="font-weight:400"></b></span><input type="date" id="hx-fecha" value="${hxF}"></label>
+          <div class="hx-chips"><button type="button" class="hxq" data-act="hxDia" data-d="0">Hoy</button><button type="button" class="hxq" data-act="hxDia" data-d="-1">Ayer</button><button type="button" class="hxq" data-act="hxVarios" id="hx-var">Varios días</button></div>
+        </div>
+        <div id="hx-cal" hidden></div>
+        <div class="fld"><span>Horas</span><div class="hx-hrs">${[1, 1.5, 2, 3, 4, 6].map(h => `<button type="button" class="hxq big" data-act="hxH" data-h="${h}">${String(h).replace('.', ',')}</button>`).join('')}<input type="number" id="hx-horas" min="0.5" max="24" step="0.5" placeholder="otra" aria-label="Otra cantidad de horas"></div></div>
+        <div class="fld"><span>Motivo (opcional)</span><input type="text" id="hx-motivo" list="hx-motivos" value="${esc(hxMotL)}" placeholder="Ej.: cubrió a un compañero" autocomplete="off"><datalist id="hx-motivos">${hxMot.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+          <div class="hx-chips" style="margin-top:6px">${hxMot.map(m => `<button type="button" class="hxq" data-act="hxM" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div></div>
+        <div class="hx-add"><button class="btn primary" type="button" id="hx-add" data-act="addHsExtra">Agregar</button><span class="muted" id="hx-res"></span></div>
+      </div>
       ${hx.length ? `<div class="tablewrap"><table style="margin-top:10px"><thead><tr><th>Día</th><th class="num">Horas</th><th>Motivo</th><th></th><th class="num">Costo (×1,5)</th><th></th></tr></thead><tbody>${hxHtml}</tbody></table></div>` : '<p class="muted" style="margin-bottom:0">Sin horas extra cargadas.</p>'}
     </div>
     <div class="card"><h3>Agregados no remunerativos</h3>
@@ -1548,6 +1581,7 @@ function renderDetail() {
     <div class="card"><h3>Historial</h3><div class="hist">${his.length ? his.map(h => `<p><time>${new Date(h.ts).toLocaleString('es-AR')}</time>${esc(h.texto)}</p>`).join('') : '<p class="muted">Sin movimientos.</p>'}</div></div>
    </div>`}
   </div>`;
+  hxSync();
 }
 function keepScroll(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
 const empActual = () => S.empleados.find(x => x.id === UI.detail);
@@ -3227,6 +3261,35 @@ function validarLegajo(d, prev) {
   return av;
 }
 
+let hxSel = new Set(), hxMes = '', hxLast = null;
+function hxCalDraw() {
+  const box = $('#hx-cal'); if (!box || box.hidden) return;
+  if (!hxMes) hxMes = ($('#hx-fecha').value || today()).slice(0, 7);
+  const [y, m] = hxMes.split('-').map(Number), e = empActual(), p2 = n => String(n).padStart(2, '0');
+  const ya = new Set(S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra').map(n => n.fecha));
+  const off = (new Date(y, m - 1, 1).getDay() + 6) % 7, dias = new Date(y, m, 0).getDate();
+  let h = `<div class="hx-calh"><button type="button" class="btn sm" data-act="hxMesNav" data-n="-1" aria-label="Mes anterior">\u25C0</button><b>${fper(hxMes)}</b><button type="button" class="btn sm" data-act="hxMesNav" data-n="1" aria-label="Mes siguiente">\u25B6</button></div><div class="hx-calg">`
+    + ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => `<i>${d}</i>`).join('') + '<span></span>'.repeat(off);
+  for (let d = 1; d <= dias; d++) { const iso = `${y}-${p2(m)}-${p2(d)}`, tiene = ya.has(iso);
+    h += `<button type="button" class="hxd ${hxSel.has(iso) ? 'on' : ''} ${tiene ? 'has' : ''}" ${tiene ? 'disabled title="Ya tiene horas extra cargadas"' : ''} data-act="hxTog" data-d="${iso}">${d}</button>`; }
+  box.innerHTML = h + '<p class="muted" style="margin:8px 0 0;font-size:12px">Tocá los días trabajados de más. Los tachados ya están cargados.</p></div>';
+}
+function hxSync() {                                                   // resalta lo elegido, muestra el día de la semana y el costo
+  const box = $('#hx-box'); if (!box) return;
+  const f = $('#hx-fecha').value, hv = +$('#hx-horas').value, multi = !$('#hx-cal').hidden && hxSel.size > 0, n = multi ? hxSel.size : (f ? 1 : 0);
+  $('#hx-dow').textContent = f ? '(' + new Date(f + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long' }) + ')' : '';
+  $('#hx-fecha').closest('.fld').style.opacity = multi ? .45 : 1;
+  box.querySelectorAll('[data-act=hxH]').forEach(b => b.classList.toggle('on', hv > 0 && +b.dataset.h === hv));
+  const mo = $('#hx-motivo').value.trim(); box.querySelectorAll('[data-act=hxM]').forEach(b => b.classList.toggle('on', !!mo && b.dataset.m === mo));
+  const hoy = today(), ay = new Date(); ay.setDate(ay.getDate() - 1);
+  box.querySelectorAll('[data-act=hxDia]').forEach(b => b.classList.toggle('on', !multi && f === (+b.dataset.d ? fmtISO(ay) : hoy)));
+  $('#hx-var').classList.toggle('on', !$('#hx-cal').hidden);
+  $('#hx-add').textContent = n > 1 ? `Agregar ${n} días` : 'Agregar';
+  const vHx = +box.dataset.vhx || 0;
+  $('#hx-res').textContent = hv > 0 && n ? `${n} ${n === 1 ? 'día' : 'días'} \u00D7 ${String(hv).replace('.', ',')} hs${vHx ? ' = ' + money(n * hv * vHx) : ''}` : '';
+}
+document.addEventListener('input', ev => { const t = ev.target; if (t.id === 'hx-fecha') { hxMes = ''; if (!$('#hx-cal').hidden) { hxSel = new Set(t.value ? [t.value] : []); hxMes = (t.value || today()).slice(0, 7); hxCalDraw(); } hxSync(); } else if (t.id === 'hx-horas' || t.id === 'hx-motivo') hxSync(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ['hx-fecha', 'hx-horas', 'hx-motivo'].includes(ev.target.id)) { ev.preventDefault(); ACT.addHsExtra(); } });
 const ACT = {
   mcPreparar: async b => {
     const M = UI.mail, docs = MAIL_DOCS.filter(x => M.docs.has(x.id));
@@ -3511,13 +3574,34 @@ const ACT = {
     log(e.id, `Feriado trabajado: ${fdate(f)}`); save(); keepScroll(renderDetail);
   },
   addHsExtra: () => {
-    const e = empActual(), f = $('#hx-fecha').value, h = +$('#hx-horas').value, motivo = $('#hx-motivo').value.trim();
-    if (!f) { toast('Elegí el día de las horas extra.'); return; }
-    if (!(h > 0) || h > 24) { toast('Cargá una cantidad de horas entre 0,5 y 24.'); return; }
-    if (S.novedades.some(n => n.empleadoId === e.id && n.tipo === 'hsextra' && n.fecha === f)) { toast('Ya hay horas extra cargadas ese día. Quitá la carga anterior y volvé a cargarla.'); return; }
-    S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'hsextra', fecha: f, mes: f.slice(0, 7), horas: h, motivo });
-    log(e.id, `Horas extra ${fdate(f)}: ${h} hs${motivo ? ' — ' + motivo : ''}`); save(); keepScroll(renderDetail);
+    const e = empActual(), h = +$('#hx-horas').value, motivo = $('#hx-motivo').value.trim();
+    const multi = !$('#hx-cal').hidden && hxSel.size > 0;
+    const fechas = multi ? [...hxSel].sort() : [$('#hx-fecha').value];
+    if (!fechas[0]) { toast('Elegí el día de las horas extra.'); return; }
+    if (!(h > 0) || h > 24) { toast('Elegí o escribí una cantidad de horas entre 0,5 y 24.'); return; }
+    const ya = new Set(S.novedades.filter(n => n.empleadoId === e.id && n.tipo === 'hsextra').map(n => n.fecha));
+    const nuevas = fechas.filter(f => !ya.has(f));
+    if (!nuevas.length) { toast('Ya hay horas extra cargadas ese día. Quitá la carga anterior y volvé a cargarla.'); return; }
+    nuevas.forEach(f => {
+      S.novedades.push({ id: uid(), empleadoId: e.id, tipo: 'hsextra', fecha: f, mes: f.slice(0, 7), horas: h, motivo });
+      log(e.id, `Horas extra ${fdate(f)}: ${h} hs${motivo ? ' \u2014 ' + motivo : ''}`);
+    });
+    const ult = nuevas[nuevas.length - 1], sig = new Date(ult + 'T00:00:00'); sig.setDate(sig.getDate() + 1);
+    hxLast = { id: e.id, fecha: fmtISO(sig) > today() ? today() : fmtISO(sig), motivo };
+    save(); keepScroll(renderDetail);
+    toast(nuevas.length > 1 ? `${nuevas.length} días de horas extra cargados` : 'Horas extra cargadas');
+    setTimeout(() => { const i = $('#hx-horas'); if (i) i.focus(); }, 0);
   },
+  hxDia: b => { const d = new Date(); d.setDate(d.getDate() + (+b.dataset.d)); $('#hx-fecha').value = fmtISO(d); hxMes = ''; hxSync(); },
+  hxH: b => { $('#hx-horas').value = b.dataset.h; hxSync(); const m = $('#hx-motivo'); if (m && !m.value) m.focus(); },
+  hxM: b => { $('#hx-motivo').value = b.dataset.m; hxSync(); },
+  hxVarios: () => {
+    const c = $('#hx-cal'); c.hidden = !c.hidden; hxSel = new Set(); hxMes = ($('#hx-fecha').value || today()).slice(0, 7);
+    if (!c.hidden) { const f = $('#hx-fecha').value; if (f) hxSel.add(f); }
+    hxCalDraw(); hxSync();
+  },
+  hxTog: b => { const d = b.dataset.d; if (hxSel.has(d)) hxSel.delete(d); else hxSel.add(d); hxCalDraw(); hxSync(); },
+  hxMesNav: b => { const [y, m] = hxMes.split('-').map(Number), d = new Date(y, m - 1 + (+b.dataset.n), 1); hxMes = fmtISO(d).slice(0, 7); hxCalDraw(); },
   addNRem: () => {
     const e = empActual(), mes = $('#nr-mes').value, concepto = $('#nr-conc').value.trim(), monto = +$('#nr-monto').value || 0;
     if (!mes || !(monto > 0)) { toast('Completá el período y un monto mayor a cero.'); return; }

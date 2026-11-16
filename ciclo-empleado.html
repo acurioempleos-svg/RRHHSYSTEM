@@ -3273,7 +3273,7 @@ function hxCalDraw() {
     + ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => `<i>${d}</i>`).join('') + '<span></span>'.repeat(off);
   for (let d = 1; d <= dias; d++) { const iso = `${y}-${p2(m)}-${p2(d)}`, tiene = ya.has(iso);
     h += `<button type="button" class="hxd ${hxSel.has(iso) ? 'on' : ''} ${tiene ? 'has' : ''}" ${tiene ? 'disabled title="Ya tiene horas extra cargadas"' : ''} data-act="hxTog" data-d="${iso}">${d}</button>`; }
-  box.innerHTML = h + '<p class="muted" style="margin:8px 0 0;font-size:12px">Tocá los días trabajados de más. Los tachados ya están cargados.</p></div>';
+  box.innerHTML = h + '</div><p class="muted" style="margin:8px 0 0;font-size:12px">Tocá los días trabajados de más. Los tachados ya están cargados.</p>';
 }
 function hxSync() {                                                   // resalta lo elegido, muestra el día de la semana y el costo
   const box = $('#hx-box'); if (!box) return;

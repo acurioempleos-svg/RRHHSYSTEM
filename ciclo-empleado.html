@@ -1555,7 +1555,7 @@ function renderDetail() {
           <div class="hx-chips"><button type="button" class="hxq" data-act="hxDia" data-d="0">Hoy</button><button type="button" class="hxq" data-act="hxDia" data-d="-1">Ayer</button><button type="button" class="hxq" data-act="hxVarios" id="hx-var">Varios días</button></div>
         </div>
         <div id="hx-cal" hidden></div>
-        <div class="fld"><span>Horas</span><div class="hx-hrs">${[1, 1.5, 2, 3, 4, 6].map(h => `<button type="button" class="hxq big" data-act="hxH" data-h="${h}">${String(h).replace('.', ',')}</button>`).join('')}<input type="number" id="hx-horas" min="0.5" max="24" step="0.5" placeholder="otra" aria-label="Otra cantidad de horas"></div></div>
+        <div class="fld"><span>Horas</span><div class="hx-hrs">${[2, 4, 6, 8].map(h => `<button type="button" class="hxq big" data-act="hxH" data-h="${h}">${String(h).replace('.', ',')}</button>`).join('')}<input type="number" id="hx-horas" min="0.5" max="24" step="0.5" placeholder="otra" aria-label="Otra cantidad de horas"></div></div>
         <div class="fld"><span>Motivo (opcional)</span><input type="text" id="hx-motivo" list="hx-motivos" value="${esc(hxMotL)}" placeholder="Ej.: cubrió a un compañero" autocomplete="off"><datalist id="hx-motivos">${hxMot.map(m => `<option value="${esc(m)}">`).join('')}</datalist>
           <div class="hx-chips" style="margin-top:6px">${hxMot.map(m => `<button type="button" class="hxq" data-act="hxM" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div></div>
         <div class="hx-add"><button class="btn primary" type="button" id="hx-add" data-act="addHsExtra">Agregar</button><span class="muted" id="hx-res"></span></div>

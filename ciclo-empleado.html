@@ -117,7 +117,7 @@ details.sec>summary::-webkit-details-marker{display:none}
 details.sec>summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
 details.sec[open]>summary::before{transform:rotate(90deg)}
 details.sec>.sec-body{padding:2px 0 14px}
-.secs-tools{display:flex;justify-content:flex-end;margin-bottom:2px}
+.secs-tools{float:right;margin:7px 0 0 10px}   /* flota a la derecha: queda en la misma línea que el título de la primera sección */
 .cal-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin:12px 0}.cal-bar .fld{margin:0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-dow{font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:4px 0}
@@ -1457,8 +1457,8 @@ function renderDetail() {
 
   $('#v-emp').innerHTML = `
   <div class="bar detail-bar"><button class="btn" data-act="back">Volver a empleados</button>${isNew ? '' : '<button class="btn" data-act="fichaPrint">Imprimir ficha / PDF</button>'}
-    ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2>${chip(e.estado)}`}
-    <button class="btn primary ${UI.dirty ? 'dirty' : ''}" type="button" style="margin-left:auto" data-act="saveEmp" title="Atajo: Ctrl+D">${isNew ? 'Crear empleado' : 'Guardar cambios'}<span class="dirtytxt"> · sin guardar</span></button>
+    ${isNew ? '' : `<h2 style="margin:0 0 0 6px;align-self:center">${esc(e.apellido)}, ${esc(e.nombre)}</h2><span style="margin:0 auto;align-self:center">${chip(e.estado)}</span>`}
+    <button class="btn primary ${UI.dirty ? 'dirty' : ''}" type="button" style="margin-left:${isNew ? 'auto' : '0'}" data-act="saveEmp" title="Atajo: Ctrl+D">${isNew ? 'Crear empleado' : 'Guardar cambios'}<span class="dirtytxt"> · sin guardar</span></button>
     ${!isNew && canEgreso ? `<button class="btn primary" data-act="startEgreso">Iniciar egreso y liquidar</button>` : ''}</div>
   <input type="file" id="foto-in" accept="image/*" hidden>
   <div class="cols">

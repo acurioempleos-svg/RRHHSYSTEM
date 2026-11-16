@@ -900,7 +900,167 @@ document.addEventListener('change', async ev => {
     if (await fotoGuardar(e, blob)) paintFotoBox();
   } catch (err) { toast((err && err.message) || 'No se pudo procesar la foto'); }
 });
-const blank = () => ({ empleados: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], publicaciones: [], empresasPub: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
+/* ================= Recibos de sueldo: carga de un PDF con todos los recibos, separación por colaborador ================= */
+const recPid = id => 'rrhh_recibo_' + id + '.json';
+const recNorm = s => stripAcc(String(s || '')).toUpperCase().replace(/[^A-Z0-9]/g, '');
+const REC_MESES = { enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12 };
+const recPer = p => { const m = String(p || '').match(/([A-Za-zÁÉÍÓÚáéíóúñ]+)\s+(\d{4})/); const n = m && REC_MESES[stripAcc(m[1]).toLowerCase()]; return n ? m[2] + '-' + String(n).padStart(2, '0') : ''; };
+async function recSubir(id, blob) {
+  const cfg = jbConfig(); if (!cfg) return;
+  if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await fotoClave(cfg.clave), await blob.arrayBuffer()));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+  const p = { invalidate: 'true', overwrite: 'true', public_id: recPid(id), timestamp: Math.floor(Date.now() / 1000) };
+  const fd = new FormData();
+  fd.append('file', new Blob([JSON.stringify({ v: 1, d: b64(out) })], { type: 'application/json' }), recPid(id));
+  fd.append('api_key', cfg.apiKey); Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+  fd.append('signature', await clFirmar(p, cfg.apiSecret));
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/upload`, { method: 'POST', body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+}
+async function recBorrarNube(id) {
+  const cfg = jbConfig(); if (!cfg) return;
+  try {
+    const p = { invalidate: 'true', public_id: recPid(id), timestamp: Math.floor(Date.now() / 1000) };
+    const fd = new FormData(); fd.append('api_key', cfg.apiKey); Object.entries(p).forEach(([k, v]) => fd.append(k, v));
+    fd.append('signature', await clFirmar(p, cfg.apiSecret));
+    await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/destroy`, { method: 'POST', body: fd });
+  } catch (e) {}
+}
+async function recBajar(id) {
+  const cfg = jbConfig(); if (!cfg || !window.crypto || !crypto.subtle) return null;
+  try {
+    const r = await fetch(`https://res.cloudinary.com/${encodeURIComponent(cfg.cloud)}/raw/upload/${recPid(id)}?_=${Date.now()}`);
+    if (!r.ok) return null;
+    const j = await r.json(); if (!j || typeof j.d !== 'string') return null;
+    const buf = unb64(j.d);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, await fotoClave(cfg.clave), buf.slice(12));
+    return new Blob([pt], { type: 'application/pdf' });
+  } catch (e) { return null; }
+}
+async function recBlob(id) {                                          // caché local primero; si no está, la nube (y se cachea)
+  const it = await fotoIdb('get', 'rec_' + id);
+  if (it && it.blob) return it.blob;
+  const b = await recBajar(id);
+  if (b) fotoIdb('set', 'rec_' + id, { blob: b });
+  return b;
+}
+async function recLibs() {
+  const msg = 'No se pudo cargar la librería de PDF. Revisá la conexión a internet e intentá de nuevo.';
+  await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js'], () => window.pdfjsLib, msg);
+  if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc || !/^blob:/.test(window.pdfjsLib.GlobalWorkerOptions.workerSrc)) {
+    let src = '';
+    for (const u of ['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js', 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js']) { try { const r = await fetch(u); if (r.ok) { src = await r.text(); break; } } catch (_) {} }
+    if (!src) throw new Error(msg);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  }
+  await cargarScript(['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'], () => window.PDFLib, msg);
+}
+const RE_CUIL = /\b(\d{2})-?(\d{8})-?(\d)\b/;
+function recParsePagina(t) {                                          // t: texto de una página con espacios simples
+  const emp = (t.match(/CUIT\s+Empleador:?\s*(\d{2}-?\d{8}-?\d)/i) || [])[1];
+  const empN = emp ? emp.replace(/\D/g, '') : '';
+  let cuil = '', nombre = '';
+  const m = t.match(/Apellido y Nombre\s+CUIL\s+Fecha ingreso\s+(?:\d+\s+)?(.+?)\s+(\d{2}-?\d{8}-?\d)/i);
+  if (m) { nombre = m[1].replace(/\s+/g, ' ').trim(); cuil = m[2].replace(/\D/g, ''); }
+  else { const all = [...t.matchAll(/\b\d{2}-\d{8}-\d\b/g)].map(x => x[0].replace(/\D/g, '')).filter(c => c !== empN); cuil = all[0] || ''; }
+  if (!cuil) return null;
+  const tp = (t.match(/Tipo de liquidaci[oó]n(?:\s+Lugar de pago)?\s+(Liquidaci[oó]n Final|Vacaciones|Mensual|SAC|Aguinaldo|Quincenal|Adelanto)/i) || [])[1] || 'Mensual';
+  const periodo = (t.match(/Per[ií]odo\s+([A-Za-zÁÉÍÓÚáéíóúñ]+\s+\d{4})/) || [])[1] || '';
+  const neto = (t.match(/SUELDO NETO A COBRAR\s+([\d.]+,\d\d)/i) || [])[1] || '';
+  return { cuil, nombre, tipo: tp.replace(/^liquidaci[oó]n final$/i, 'Liquidación Final').replace(/^./, c => c.toUpperCase()), periodo, per: recPer(periodo), neto };
+}
+async function recAnalizar(file) {
+  await recLibs();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await window.pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+  const pags = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent();
+    pags.push(tc.items.map(x => x.str + (x.hasEOL ? ' ' : ' ')).join('').replace(/\s+/g, ' ').trim());
+  }
+  const recs = [];
+  pags.forEach((t, i) => {
+    const d = recParsePagina(t);
+    if (d) recs.push(Object.assign(d, { pags: [i] }));
+    else if (recs.length) recs[recs.length - 1].pags.push(i);
+  });
+  const out = [];                                                     // cada recibo viene impreso dos veces seguidas (copia empleado / empleador): se juntan y se guardan AMBAS copias en un mismo PDF
+  recs.forEach(r => { const k = [r.cuil, r.per, r.tipo, r.neto].join('|'), a = out[out.length - 1]; if (a && a.k === k) { a.pags = a.pags.concat(r.pags); a.copias++; } else out.push(Object.assign(r, { k, copias: 1 })); });
+  return { bytes, out, total: pdf.numPages };
+}
+function recMatch(r) {
+  const porCuil = S.empleados.find(e => soloDig(e.cuil) === r.cuil);
+  if (porCuil) return porCuil.id;
+  const n = recNorm(r.nombre); if (!n) return '';
+  const lista = S.empleados.filter(e => { const f = recNorm((e.apellido || '') + (e.nombre || '')); return f && (f === n || (Math.min(f.length, n.length) >= 10 && (f.startsWith(n) || n.startsWith(f)))); });
+  return lista.length === 1 ? lista[0].id : '';
+}
+async function recCortar(srcBytes, pags) {
+  const L = window.PDFLib, src = await L.PDFDocument.load(srcBytes.slice(0), { ignoreEncryption: true }), dst = await L.PDFDocument.create();
+  (await dst.copyPages(src, pags)).forEach(p => dst.addPage(p));
+  return new Blob([await dst.save()], { type: 'application/pdf' });
+}
+const recNum = t => { const n = parseFloat(String(t || '').replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+const empNombre = e => e ? `${e.apellido || ''}, ${e.nombre || ''}`.trim() : '';
+async function recCargarArchivo(file) {
+  if (!file) return;
+  if (!S.empleados.length) { toast('Primero cargá empleados.'); return; }
+  let res;
+  try { toast('Leyendo el PDF…'); res = await recAnalizar(file); } catch (err) { toast(((err && err.message) || 'No se pudo leer el PDF').slice(0, 160)); return; }
+  if (!res.out.length) { toast('No encontré recibos en el PDF (no se detectó el CUIL de ningún colaborador).'); return; }
+  const items = res.out.map(r => Object.assign(r, { empId: recMatch(r) }));
+  const ords = [...S.empleados].sort((a, b) => empNombre(a).localeCompare(empNombre(b)));
+  const d = document.createElement('dialog'); d.id = 'dlg-rec';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:900px;width:96%;color:var(--ink)';
+  const fila = (r, i) => `<tr><td>${esc(r.nombre || '—')}<div class="muted">${esc(r.cuil.replace(/^(\d{2})(\d{8})(\d)$/, '$1-$2-$3'))}</div></td><td>${esc(r.tipo)}${r.copias > 1 ? `<div class="muted">${r.copias} copias</div>` : ''}</td><td>${esc(r.periodo || '—')}</td><td class="num">${esc(r.neto || '')}</td>
+    <td><select data-i="${i}" style="max-width:260px"><option value="">— No cargar —</option>${ords.map(e => `<option value="${e.id}" ${r.empId === e.id ? 'selected' : ''}>${esc(empNombre(e))}</option>`).join('')}</select></td></tr>`;
+  d.innerHTML = `<h3 style="margin:0 0 6px">Recibos encontrados: ${items.length}</h3>
+    <p class="muted" style="margin:0 0 10px"><span id="rec-ok"></span> Revisá la asignación; en los que no se reconoció podés elegir el colaborador a mano. Se guardan todas las copias (empleado y empleador) en un solo PDF. Si ya existe el mismo recibo (período, tipo y neto) en la ficha, se reemplaza.</p>
+    <div style="max-height:55vh;overflow:auto"><table><thead><tr><th>En el PDF</th><th>Tipo</th><th>Período</th><th class="num">Neto</th><th>Se guarda en la ficha de</th></tr></thead><tbody>${items.map(fila).join('')}</tbody></table></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button type="button" class="btn" id="rec-cancel">Cancelar</button><button type="button" class="btn primary" id="rec-ok-btn">Guardar recibos</button></div>`;
+  document.body.appendChild(d);
+  const cnt = () => { const n = items.filter(r => r.empId).length; d.querySelector('#rec-ok').textContent = `${n} asignados, ${items.length - n} sin asignar.`; };
+  d.addEventListener('change', ev => { const s = ev.target.closest('select[data-i]'); if (s) { items[+s.dataset.i].empId = s.value; cnt(); } }); cnt();
+  const cerrar = () => { d.close(); d.remove(); };
+  d.querySelector('#rec-cancel').addEventListener('click', cerrar);
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.querySelector('#rec-ok-btn').addEventListener('click', async () => {
+    const sel = items.filter(r => r.empId); if (!sel.length) { toast('No hay recibos asignados.'); return; }
+    const b = d.querySelector('#rec-ok-btn'); b.disabled = true; b.textContent = 'Guardando…';
+    let ok = 0, sinNube = 0, fallo = 0, i = 0;
+    S.recibos = S.recibos || [];
+    for (const r of sel) {
+      i++; toast(`Guardando recibos ${i} de ${sel.length}…`);
+      try {
+        const blob = await recCortar(res.bytes, r.pags), emp = S.empleados.find(x => x.id === r.empId); if (!emp) continue;
+        const viejo = S.recibos.find(x => x.empleadoId === emp.id && x.per === r.per && x.tipo === r.tipo && x.periodo === r.periodo && x.neto === r.neto);
+        const id = viejo ? viejo.id : uid();
+        await fotoIdb('set', 'rec_' + id, { blob });
+        try { await recSubir(id, blob); } catch (err) { if (jbConfig()) sinNube++; }
+        const reg = { id, empleadoId: emp.id, per: r.per, periodo: r.periodo, tipo: r.tipo, neto: r.neto, netoN: recNum(r.neto), kb: Math.round(blob.size / 1024), ts: new Date().toISOString() };
+        if (viejo) Object.assign(viejo, reg); else { S.recibos.push(reg); }
+        log(emp.id, `Recibo de sueldo cargado: ${r.tipo} ${r.periodo || ''}`.trim());
+        ok++;
+      } catch (err) { fallo++; }
+    }
+    save(); cerrar(); renderEmp();
+    toast(`${ok} recibos guardados en las fichas${sinNube ? ` (${sinNube} no se pudieron subir a la nube: quedan solo en este navegador)` : ''}${fallo ? `; ${fallo} con error` : ''}.`);
+  });
+  d.showModal();
+}
+function recibosCard(e) {
+  const rs = (S.recibos || []).filter(r => r.empleadoId === e.id).sort((a, b) => (b.per || '').localeCompare(a.per || '') || String(b.tipo).localeCompare(a.tipo));
+  return `<div class="card"><h3>Recibos de sueldo</h3>${rs.length ? `<table><tbody>${rs.map(r => `<tr><td>${esc(r.periodo || '—')}</td><td>${esc(r.tipo)}</td><td class="num">${r.neto ? '$ ' + esc(r.neto) : ''}</td><td class="num"><button class="btn sm" data-act="recVer" data-id="${r.id}">Ver</button> <button class="btn sm" data-act="recBajar" data-id="${r.id}">Descargar</button> <button class="btn sm danger" data-act="recQuitar" data-id="${r.id}">Quitar</button></td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted" style="margin:0">Sin recibos. Se cargan desde Empleados → "Cargar recibos (PDF)".</p>'}</div>`;
+}
+document.addEventListener('change', async ev => {
+  const t = ev.target; if (!t || t.id !== 'rec-in' || !t.files || !t.files[0]) return;
+  const f = t.files[0]; t.value = ''; await recCargarArchivo(f);
+});
+const blank = () => ({ empleados: [], recibos: [], remuneraciones: [], vacaciones: [], licencias: [], sanciones: [], historial: [], comentarios: [], liquidaciones: [], novedades: [], publicaciones: [], empresasPub: [], parametros: clone(DEFAULT_P), ordenPuestos: [], ordenLocales: [], ordenColsEmp: [], bancosExtra: [], reporteSemanal: null, lastExport: null });
 function normalize(d) {
   const b = Object.assign(blank(), d);
   const colsEmp = Object.assign({}, DEFAULT_P.colsEmp, (b.parametros && b.parametros.colsEmp) || {});
@@ -1367,6 +1527,8 @@ function renderEmp() {
       <input type="search" id="q" placeholder="Buscar por nombre, DNI o legajo" value="${esc(UI.q)}" aria-label="Buscar empleado">
       <select id="vista-sel" aria-label="Vistas guardadas"><option value="">Vistas guardadas…</option>${(S.vistasEmp || []).map(v => `<option value="${v.id}" ${UI.vistaSel === v.id ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <button class="btn" data-act="vistaSave">Guardar vista</button>${(S.vistasEmp || []).length ? '<button class="btn danger" data-act="vistaDel">Borrar vista</button>' : ''}
+      <input type="file" id="rec-in" accept="application/pdf,.pdf" hidden>
+      <button class="btn" data-act="recElegir" title="Subí el PDF con todos los recibos: se separa y cada recibo se guarda en la ficha del colaborador">Cargar recibos (PDF)</button>
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
       <button class="btn" data-act="empPdf" title="Elegí local, fechas y temas: suspensiones, apercibimientos, puestos, ingresos, licencias…">Descargar PDF</button>
       <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
@@ -1572,6 +1734,7 @@ function renderDetail() {
       <label class="fld full" style="margin-top:8px"><span>Motivo</span><input type="text" id="sa-motivo" placeholder="Descripción breve"></label>
       ${sanc.length ? `<table style="margin-top:10px"><tbody>${sanc.map(s => `<tr><td>${fdate(s.fecha)}</td><td>${esc(s.tipo)}${s.tipo === 'Suspensión' && s.dias ? ` (${s.dias} días)` : ''}<div class="muted">${esc(s.motivo || '')}</div></td><td class="num"><button class="btn sm danger" data-act="delSancion" data-id="${s.id}">Quitar</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted" style="margin-bottom:0">Sin sanciones registradas.</p>'}
     </div>
+    ${isNew ? '' : recibosCard(e)}
     ${liqs.length ? `<div class="card"><h3>Liquidaciones</h3><table><tbody>${liqs.map(l => `<tr><td>${fdate(l.inputs.fecha)}</td><td>${esc(TIPOS[l.inputs.tipo])}</td><td class="num">${money(totalDe(l.result))}</td><td>${liqChip(l.estado)}</td><td class="num"><button class="btn sm" data-act="openLiq" data-id="${l.id}">Abrir</button></td></tr>`).join('')}</tbody></table></div>` : ''}
     <div class="card"><h3>Comentarios</h3>
       <div class="row"><label class="fld full"><span>Nuevo comentario</span><textarea id="co-texto" rows="2" placeholder="Escribí una observación sobre este colaborador"></textarea></label></div>
@@ -2599,11 +2762,12 @@ function planillaDatos(mes) {
     const nremun = r2(nre.reduce((t, n) => t + (+n.monto || 0), 0));
     if (fer.length) notas.push(`Feriados trabajados ${fer.length} (${fer.map(n => fdate(n.fecha).slice(0, 5)).sort().join(', ')})`);
     nre.forEach(n => notas.push(`No remunerativo: ${n.concepto || 'agregado'} ${money(n.monto)}`));
+    const transf = r2((S.recibos || []).filter(x => x.empleadoId === e.id && x.per === mes).reduce((t, x) => t + (x.netoN != null ? x.netoN : recNum(x.neto)), 0));
     const leg = String(e.legajo ?? '').trim();
     return {
       local, etiqueta: etiqueta(local), legajo: /^\d+$/.test(leg) ? +leg : leg,
       nombre: `${e.apellido || ''} ${e.nombre || ''}`.replace(/\s+/g, ' ').trim(),
-      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, feriados: fer.length, hsExtra, nremun, obs: notas.join(' · '),
+      ingreso: e.fechaIngreso || '', sueldo: +e.sueldoActual || 0, vac, aus, transf, feriados: fer.length, hsExtra, nremun, obs: notas.join(' · '),
     };
   });
   const locales = [];
@@ -2707,7 +2871,7 @@ async function descargarPlanilla(mes) {
   put(1, 18, M, { name: 'Arial', size: 10, borde: true, thin: true }).note = 'Número de mes de la planilla. Lo usa la columna AUSENCIAS para descontar los días previos al ingreso.';
   [['Haberes', AMAR], ['JORNAL', VERDE], ['HORA', ROSA], ['FERIADO', GRIS], ['HS EXTRAS', GRIS], ['PVAC', GRIS], ['AUSENCIAS', GRIS], ['PRESENTISMO', GRIS]]
     .forEach(([t, f], i) => put(1, 19 + i, t, { bold: true, fill: f, fg: 'FF3E5656', borde: true }));
-  ws.getCell('G1').note = 'A completar: monto que se paga por transferencia. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
+  ws.getCell('G1').note = 'Suma del sueldo neto a cobrar de todos los recibos cargados del período (Mensual, Vacaciones, etc.); si no hay recibos cargados queda para completar a mano. Efectivo = sueldo total − transferencia, redondeado hacia arriba al millar.';
   ws.getCell('J1').note = 'Días de feriado trabajados en el mes, tomados de los feriados cargados en cada legajo.';
   ws.getCell('K1').note = 'Horas extra del mes, tomadas de las cargadas en cada legajo (se pagan a hora × 1,5). Se puede corregir a mano.';
   ws.getCell('L1').note = 'Días de vacaciones del mes, tomados de las vacaciones cargadas en el programa.';
@@ -2728,7 +2892,7 @@ async function descargarPlanilla(mes) {
     if (f.ingreso) { const [y, m, d] = f.ingreso.split('-').map(Number); ing = new Date(Date.UTC(y, m - 1, d)); }
     put(r, 5, ing, { ...id, fmt: FMT.f });
     put(r, 6, f.sueldo, { size: 10, bold: true, fg: 'FF3E5656', fill: GRIS, fmt: FMT.p0, borde: true });
-    put(r, 7, '', { size: 10, bold: true, fg: 'FF3E5656', fill: AMAR, fmt: FMT.p0, borde: true });
+    put(r, 7, f.transf || '', { size: 10, bold: true, fg: 'FF3E5656', fill: AMAR, fmt: FMT.p0, borde: true });
     put(r, 8, { formula: `ROUNDUP(I${r}-G${r},-3)` }, { size: 10, fill: VERDE, fmt: FMT.p0, borde: true });
     put(r, 9, { formula: `S${r}+V${r}+W${r}+X${r}-Y${r}-Z${r}-O${r}+M${r}` }, { size: 10, bold: true, fill: ROSA, fmt: FMT.p0, borde: true });
     put(r, 10, f.feriados || '', { bold: true, fill: GRIS, fmt: FMT.n, borde: true });
@@ -3572,9 +3736,28 @@ const ACT = {
     registrarBancoNuevo(nuevo.banco);
     UI.dirty = false; save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
   },
+  recElegir: () => { const i = $('#rec-in'); if (i) i.click(); },
+  recVer: async b => {
+    const w = window.open('', '_blank'); const r = (S.recibos || []).find(x => x.id === b.dataset.id); if (!r) return;
+    const bl = await recBlob(r.id); if (!bl) { if (w) w.close(); toast('No se pudo obtener el recibo (revisá la conexión).'); return; }
+    const u = URL.createObjectURL(bl); if (w) w.location = u; else window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 120000);
+  },
+  recBajar: async b => {
+    const r = (S.recibos || []).find(x => x.id === b.dataset.id), e = r && S.empleados.find(x => x.id === r.empleadoId); if (!r) return;
+    const bl = await recBlob(r.id); if (!bl) { toast('No se pudo obtener el recibo (revisá la conexión).'); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(bl);
+    a.download = ('Recibo_' + (e ? e.apellido + '_' + e.nombre : '') + '_' + (r.per || r.periodo) + '_' + r.tipo).replace(/[^\w.-]+/g, '_') + '.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  },
+  recQuitar: b => {
+    const r = (S.recibos || []).find(x => x.id === b.dataset.id); if (!r || !confirm(`¿Quitar el recibo ${r.tipo} ${r.periodo || ''}?`)) return;
+    S.recibos = S.recibos.filter(x => x.id !== r.id); recBorrarNube(r.id); fotoIdb('del', 'rec_' + r.id);
+    log(r.empleadoId, `Recibo de sueldo quitado: ${r.tipo} ${r.periodo || ''}`.trim()); save(); keepScroll(renderDetail);
+  },
   delEmp: () => {
     const e = empActual(); if (!e || !confirm(`¿Eliminar el legajo de ${e.apellido}, ${e.nombre}? No se puede deshacer.`)) return;
     ['remuneraciones', 'vacaciones', 'licencias', 'sanciones', 'historial', 'comentarios', 'novedades'].forEach(k => S[k] = (S[k] || []).filter(x => x.empleadoId !== e.id));
+    (S.recibos || []).filter(r => r.empleadoId === e.id).forEach(r => { recBorrarNube(r.id); fotoIdb('del', 'rec_' + r.id); }); S.recibos = (S.recibos || []).filter(r => r.empleadoId !== e.id);
     S.empleados = S.empleados.filter(x => x.id !== e.id); if (e.fotoV) { fotoBorrarNube(e.id); fotoIdb('del', e.id); fotoMem.delete(e.id); } save(); UI.detail = null; renderEmp(); toast('Legajo eliminado');
   },
   addRem: () => {

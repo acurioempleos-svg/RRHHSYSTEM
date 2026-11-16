@@ -1051,9 +1051,60 @@ async function recCargarArchivo(file) {
   });
   d.showModal();
 }
+/* Descarga de varios recibos a la vez: se juntan en un solo PDF (ordenado por local, colaborador y período) */
+async function recJuntar(lista, nombre) {
+  await recLibs();
+  const L = window.PDFLib, dst = await L.PDFDocument.create();
+  let ok = 0, falta = 0;
+  for (let i = 0; i < lista.length; i++) {
+    toast(`Armando el PDF… ${i + 1} de ${lista.length}`);
+    const bl = await recBlob(lista[i].id); if (!bl) { falta++; continue; }
+    try { const src = await L.PDFDocument.load(await bl.arrayBuffer(), { ignoreEncryption: true }); (await dst.copyPages(src, src.getPageIndices())).forEach(pg => dst.addPage(pg)); ok++; } catch (_) { falta++; }
+  }
+  if (!ok) { toast('No se pudo obtener ningún recibo (revisá la conexión).'); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([await dst.save()], { type: 'application/pdf' }));
+  a.download = nombre.replace(/[^\w.-]+/g, '_') + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+  toast(`${ok} recibo${ok === 1 ? '' : 's'} en un solo PDF${falta ? `; ${falta} no se pudieron obtener` : ''}.`);
+}
+function recOrdenar(lista) {
+  const ord = ordenLocales(), emp = id => S.empleados.find(e => e.id === id) || {};
+  const loc = r => { const i = ord.indexOf((emp(r.empleadoId).local || '').trim()); return i < 0 ? 999 : i; };
+  return lista.slice().sort((a, b) => loc(a) - loc(b) || empNombre(emp(a.empleadoId)).localeCompare(empNombre(emp(b.empleadoId))) || (a.per || '').localeCompare(b.per || '') || String(a.tipo).localeCompare(String(b.tipo)));
+}
+function recMasivo(empId) {
+  const todos = (S.recibos || []).filter(r => (!empId || r.empleadoId === empId) && S.empleados.some(e => e.id === r.empleadoId));
+  if (!todos.length) { toast('No hay recibos cargados.'); return; }
+  const pers = [...new Set(todos.map(r => r.per || ''))].sort().reverse(), emp = id => S.empleados.find(e => e.id === id) || {};
+  const locs = [...new Set(todos.map(r => (emp(r.empleadoId).local || '').trim()).filter(Boolean))];
+  const lab = per => { if (!per) return 'Sin período'; const [y, m] = per.split('-'); return MESES_ES[+m - 1].charAt(0) + MESES_ES[+m - 1].slice(1).toLowerCase() + ' ' + y; };
+  const d = document.createElement('dialog'); d.id = 'dlg-recmas';
+  d.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:20px 22px;max-width:520px;width:96%;color:var(--ink)';
+  d.innerHTML = `<h3 style="margin:0 0 10px">Descargar recibos${empId ? ' de ' + esc(empNombre(emp(empId))) : ''}</h3>
+    ${empId ? '' : `<label class="fld"><span>Local</span><select id="rm-loc"><option value="">Todos</option>${locs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</select></label>`}
+    <div style="margin:12px 0 6px"><b>Meses</b> <button type="button" class="btn sm" id="rm-all">Todos</button> <button type="button" class="btn sm" id="rm-none">Ninguno</button></div>
+    <div style="max-height:40vh;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px">${pers.map(p => `<label><input type="checkbox" class="rm-per" value="${p}" checked> ${esc(lab(p))}</label>`).join('')}</div>
+    <p class="muted" id="rm-cnt" style="margin:12px 0 0"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button type="button" class="btn" id="rm-cancel">Cancelar</button><button type="button" class="btn primary" id="rm-ok">Descargar PDF</button></div>`;
+  document.body.appendChild(d);
+  const sel = () => { const ps = [...d.querySelectorAll('.rm-per:checked')].map(i => i.value), l = d.querySelector('#rm-loc') ? d.querySelector('#rm-loc').value : ''; return recOrdenar(todos.filter(r => ps.includes(r.per || '') && (!l || (emp(r.empleadoId).local || '').trim() === l))); };
+  const cnt = () => { const n = sel().length; d.querySelector('#rm-cnt').textContent = `${n} recibo${n === 1 ? '' : 's'} seleccionado${n === 1 ? '' : 's'}. Se descargan juntos en un solo PDF.`; d.querySelector('#rm-ok').disabled = !n; };
+  d.addEventListener('change', cnt); cnt();
+  d.querySelector('#rm-all').addEventListener('click', () => { d.querySelectorAll('.rm-per').forEach(i => i.checked = true); cnt(); });
+  d.querySelector('#rm-none').addEventListener('click', () => { d.querySelectorAll('.rm-per').forEach(i => i.checked = false); cnt(); });
+  const cerrar = () => { d.close(); d.remove(); };
+  d.querySelector('#rm-cancel').addEventListener('click', cerrar);
+  d.addEventListener('cancel', () => setTimeout(() => d.remove(), 0));
+  d.querySelector('#rm-ok').addEventListener('click', async () => {
+    const lista = sel(); if (!lista.length) return; const b = d.querySelector('#rm-ok'); b.disabled = true; b.textContent = 'Armando…';
+    const ps = [...new Set(lista.map(r => r.per || 'sin-periodo'))].sort(), l = d.querySelector('#rm-loc') ? d.querySelector('#rm-loc').value : '';
+    const nom = 'Recibos_' + (empId ? empNombre(emp(empId)) + '_' : '') + (l ? l + '_' : '') + (ps.length > 1 ? ps[0] + '_a_' + ps[ps.length - 1] : ps[0]);
+    try { await recJuntar(lista, nom); cerrar(); } catch (err) { console.error(err); toast((err && err.message) || 'No se pudo armar el PDF.'); b.disabled = false; b.textContent = 'Descargar PDF'; }
+  });
+  d.showModal();
+}
 function recibosCard(e) {
   const rs = (S.recibos || []).filter(r => r.empleadoId === e.id).sort((a, b) => (b.per || '').localeCompare(a.per || '') || String(b.tipo).localeCompare(a.tipo));
-  return `<div class="card"><h3>Recibos de sueldo</h3>${rs.length ? `<table><tbody>${rs.map(r => `<tr><td>${esc(r.periodo || '—')}</td><td>${esc(r.tipo)}</td><td class="num">${r.neto ? '$ ' + esc(r.neto) : ''}</td><td class="num"><button class="btn sm" data-act="recVer" data-id="${r.id}">Ver</button> <button class="btn sm" data-act="recBajar" data-id="${r.id}">Descargar</button> <button class="btn sm danger" data-act="recQuitar" data-id="${r.id}">Quitar</button></td></tr>`).join('')}</tbody></table>`
+  return `<div class="card"><h3>Recibos de sueldo${rs.length > 1 ? ` <button class="btn sm" data-act="recTodos" data-id="${e.id}" style="float:right">Descargar varios</button>` : ''}</h3>${rs.length ? `<table><tbody>${rs.map(r => `<tr><td>${esc(r.periodo || '—')}</td><td>${esc(r.tipo)}</td><td class="num">${r.neto ? '$ ' + esc(r.neto) : ''}</td><td class="num"><button class="btn sm" data-act="recVer" data-id="${r.id}">Ver</button> <button class="btn sm" data-act="recBajar" data-id="${r.id}">Descargar</button> <button class="btn sm danger" data-act="recQuitar" data-id="${r.id}">Quitar</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="muted" style="margin:0">Sin recibos. Se cargan desde Empleados → "Cargar recibos (PDF)".</p>'}</div>`;
 }
 document.addEventListener('change', async ev => {
@@ -1529,6 +1580,7 @@ function renderEmp() {
       <button class="btn" data-act="vistaSave">Guardar vista</button>${(S.vistasEmp || []).length ? '<button class="btn danger" data-act="vistaDel">Borrar vista</button>' : ''}
       <input type="file" id="rec-in" accept="application/pdf,.pdf" hidden>
       <button class="btn" data-act="recElegir" title="Subí el PDF con todos los recibos: se separa y cada recibo se guarda en la ficha del colaborador">Cargar recibos (PDF)</button>
+      <button class="btn" data-act="recMasivo" title="Elegí uno o varios meses y bajá todos los recibos juntos en un solo PDF">Descargar recibos</button>
       <button class="btn" data-act="empXlsx">Descargar Excel</button>
       <button class="btn" data-act="empPdf" title="Elegí local, fechas y temas: suspensiones, apercibimientos, puestos, ingresos, licencias…">Descargar PDF</button>
       <button class="btn" data-act="empAltasPdf" title="Quién tiene alta, quién no y quién la solicitó">Informe de altas (PDF)</button>
@@ -3738,6 +3790,8 @@ const ACT = {
     UI.dirty = false; save(); UI.detail = nuevo.id; renderDetail(); window.scrollTo(0, 0); toast(isNew ? 'Legajo creado' : 'Cambios guardados');
   },
   recElegir: () => { const i = $('#rec-in'); if (i) i.click(); },
+  recMasivo: () => recMasivo(),
+  recTodos: b => recMasivo(b.dataset.id),
   recVer: async b => {
     const w = window.open('', '_blank'); const r = (S.recibos || []).find(x => x.id === b.dataset.id); if (!r) return;
     const bl = await recBlob(r.id); if (!bl) { if (w) w.close(); toast('No se pudo obtener el recibo (revisá la conexión).'); return; }

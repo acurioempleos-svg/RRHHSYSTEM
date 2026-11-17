@@ -953,7 +953,39 @@ const PLANTILLAS = {
   ],
   barra: [],
   tanta: [],
-  lamar: []
+  lamar: [
+    /* ---------------- RETIRO ---------------- */
+    {
+      id:'retiro', nombre:'Retiro', soloPdf:true,
+      desc:'Planilla de retiro a página completa: cantidad, talle, quién retira y firma.',
+      archivo: m => 'Retiro_' + MARCAS[m].slug + '.pdf',
+      generar(ctx){
+        const { doc, M } = ctx;
+        pdfTituloC(ctx, 'RETIRO');
+        const x0 = ctx.mx, ancho = ctx.W - ctx.mx*2;
+        const yTop = ctx.y, yBot = ctx.H - 24;
+        const hCab = 9, disp = yBot - yTop - hCab;
+        const n = Math.floor(disp / 10), alto = disp / n;
+        const cols = [['CANTIDAD',1],['TALLE',1],['QUIÉN RETIRA',3],['FIRMA',2.6]];
+        const suma = cols.reduce((a,c) => a + c[1], 0);
+        const ws = cols.map(c => ancho * c[1] / suma);
+        /* encabezado */
+        doc.setFillColor(...M.prim); doc.rect(x0, yTop, ancho, hCab, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
+        let x = x0;
+        cols.forEach((c,i) => { doc.text(c[0], x + ws[i]/2, yTop + 5.9, { align:'center' }); x += ws[i]; });
+        /* grilla */
+        doc.setDrawColor(...M.prim); doc.setLineWidth(0.25);
+        for(let r = 0; r < n; r++){
+          let xx = x0;
+          ws.forEach(w => { doc.rect(xx, yTop + hCab + r*alto, w, alto); xx += w; });
+        }
+        /* marco exterior que abarca toda la hoja */
+        doc.setLineWidth(0.7); doc.rect(x0, yTop, ancho, hCab + n*alto);
+        ctx.y = yBot;
+      }
+    }
+  ]
 };
 
 /* ---------- Diseño PDF por local (A4, mm) ----------

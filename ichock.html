@@ -622,10 +622,6 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .gx-wrap .auth-card{max-width:none;background:none;border:0;border-radius:0;box-shadow:none;padding:0}
 .gx-wrap{position:relative;margin:auto;transition:max-width .2s}
 .gx-wrap.gx-wide{max-width:600px}
-.qrs{display:flex;justify-content:center;margin:14px 0}
-.qrc{width:min(100%,300px);background:#F4E9D4;border-radius:12px;padding:12px;text-align:center;color:#0B2E4F}
-.qrt{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
-.qrb{display:inline-block;background:#fff;padding:10px;border-radius:10px;line-height:0}
 .gx-tabs{position:absolute;top:22px;right:-58px;display:flex;flex-direction:column;gap:10px;margin:0;padding:0;background:none}
 .gx-tabs button{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:2px solid #0B2E4F;border-radius:50%;background:#FFFDF7;color:#0B2E4F;cursor:pointer;box-shadow:3px 3px 0 rgba(0,0,0,.25);transition:transform .12s,background .15s}
 .gx-tabs button:hover{transform:scale(1.06)}
@@ -648,12 +644,11 @@ td.avn .av{margin-right:8px}
 .pop-in .chip .av{--av:26px}
 .adm h4{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;margin:16px 0 6px}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-/* Trabajadores + llegada por QR. Base compartida: bin nuevo de JSONBin "barra-asistencia-trabajadores". */
+/* Trabajadores + fichaje por cara. Base compartida: archivo cifrado "rrhh_asistencia_base.json" en Cloudinary (la misma cuenta de ciclo). */
 (function(){
   'use strict';
-  var NAME='barra-asistencia-trabajadores', RADIO=150, SAL=['encargado','cajero','salon','limpieza'];
+  var RADIO=150, SAL=['encargado','cajero','salon','limpieza'];
   var LOCS=[['palermo','Palermo'],['belgrano','Belgrano'],['bulnes','Bulnes'],['caseros','Caseros'],['lamar','La Mar'],['tanta','Tanta']].filter(function(l){return __BR.indexOf(l[0])>=0;});
   function $(i){return document.getElementById(i);}
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -672,41 +667,62 @@ td.avn .av{margin-right:8px}
     return hx(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(s),iterations:100000,hash:'SHA-256'},k,256)));}
   function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
-  /* ---------- base compartida (JSONBin) ---------- */
-  var B={id:ls('barra-asis-bin')};
-  function hd(x){var h={'X-Master-Key':window.__ciclo.key()};for(var k in x)h[k]=x[k];return h;}
-  async function buscar(){
-    if(B.id) return B.id; var last='';
-    for(var i=0;i<6;i++){
-      var r=await fetch('https://api.jsonbin.io/v3/c/uncategorized/bins'+(last?'/'+last:''),{headers:hd({})});
-      if(!r.ok) throw new Error('No se pudo conectar con la base compartida (HTTP '+r.status+').');
-      var a=await r.json(); if(!a.length) break;
-      for(var j=0;j<a.length;j++) if((a[j].snippetMeta||{}).name===NAME){B.id=a[j].record;ls('barra-asis-bin',B.id);return B.id;}
-      last=a[a.length-1].record; if(a.length<10) break;
-    }
-    return null;
+  /* ---------- base compartida (Cloudinary, cifrada con la clave de ciclo) ---------- */
+  var BASE_FILE='rrhh_asistencia_base.json', B={}, LAST=null, kP=null, kPass='';
+  function te(t){return new TextEncoder().encode(t);}
+  function b64(buf){var a=new Uint8Array(buf),t='';for(var i=0;i<a.length;i+=0x8000)t+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(t);}
+  function unb64(t){return Uint8Array.from(atob(t),function(c){return c.charCodeAt(0);});}
+  function CL(){return window.__ciclo.cl();}
+  function bkey(pass){
+    if(kP&&kPass===pass) return kP; kPass=pass;
+    return kP=crypto.subtle.importKey('raw',te(pass),'PBKDF2',false,['deriveKey']).then(function(b){
+      return crypto.subtle.deriveKey({name:'PBKDF2',salt:te('barra-asistencia-v1'),iterations:100000,hash:'SHA-256'},b,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}).catch(function(e){kP=null;throw e;});
   }
-  async function crear(){
-    var c=window.__ciclo, d={v:1,sec:rnd(12),workers:{},users:JSON.parse(JSON.stringify(window.__auth.getUsers())),hor:c.getHor()||{},sem:c.getSem()||null,geo:{},ll:[]};
-    var r=await fetch('https://api.jsonbin.io/v3/b',{method:'POST',headers:hd({'Content-Type':'application/json','X-Bin-Name':NAME,'X-Bin-Private':'true'}),body:JSON.stringify(d)});
-    if(!r.ok) throw new Error('No se pudo crear la base compartida (HTTP '+r.status+').');
-    B.id=(await r.json()).metadata.id; ls('barra-asis-bin',B.id);
+  async function firmar(p,secret){
+    var str=Object.keys(p).sort().map(function(k){return k+'='+p[k];}).join('&')+secret;
+    return hx(new Uint8Array(await crypto.subtle.digest('SHA-1',te(str))));
+  }
+  async function bajar(){
+    var c=CL(), r=await fetch('https://res.cloudinary.com/'+encodeURIComponent(c.cloud)+'/raw/upload/'+BASE_FILE+'?_='+Date.now(),{cache:'no-store'});
+    if(r.status===404) return null;
+    if(!r.ok) throw new Error('No se pudo conectar con la base compartida (HTTP '+r.status+').');
+    try{
+      var env=await r.json(), buf=unb64(env.d);
+      var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},await bkey(c.clave),buf.slice(12));
+      return JSON.parse(new TextDecoder().decode(pt));
+    }catch(e){ throw new Error('La base compartida no se pudo descifrar (clave incorrecta o datos dañados).'); }
+  }
+  async function subir(d){
+    var c=CL(); if(!window.crypto||!crypto.subtle) throw new Error('El navegador no permite cifrar (abrí la página desde https).');
+    d.rev=(d.rev||0)+1; d.at=Date.now();
+    var iv=crypto.getRandomValues(new Uint8Array(12)), ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},await bkey(c.clave),te(JSON.stringify(d))));
+    var out=new Uint8Array(12+ct.length); out.set(iv); out.set(ct,12);
+    var p={invalidate:'true',overwrite:'true',public_id:BASE_FILE,timestamp:Math.floor(Date.now()/1000)}, fd=new FormData();
+    fd.append('file',new Blob([JSON.stringify({v:1,d:b64(out)})],{type:'application/json'}),BASE_FILE);
+    fd.append('api_key',c.apiKey); Object.keys(p).forEach(function(k){fd.append(k,p[k]);}); fd.append('signature',await firmar(p,c.apiSecret));
+    var r=await fetch('https://api.cloudinary.com/v1_1/'+encodeURIComponent(c.cloud)+'/raw/upload',{method:'POST',body:fd});
+    if(!r.ok){ var j=await r.json().catch(function(){return {};}); throw new Error('No se pudo guardar'+((j.error&&j.error.message)?': '+j.error.message:' (HTTP '+r.status+')')+'.'); }
+    LAST={rev:d.rev,d:JSON.parse(JSON.stringify(d))};
+  }
+  function nueva(){
+    var c=window.__ciclo; return {v:2,rev:0,sec:rnd(12),workers:{},faces:{},users:JSON.parse(JSON.stringify(window.__auth.getUsers())),hor:c.getHor()||{},sem:c.getSem()||null,geo:{},ll:[]};
   }
   async function leer(){
-    var id=await buscar();
-    if(!id){ if(!esAdmin()&&!B.adm) throw new Error('La base compartida todavía no está creada. Pedile al administrador que abra la página una vez.'); await crear(); id=B.id; }
-    var r=await fetch('https://api.jsonbin.io/v3/b/'+id+'/latest',{headers:hd({'X-Bin-Meta':'false'}),cache:'no-store'});
-    if(!r.ok) throw new Error('No se pudo leer la base compartida (HTTP '+r.status+').');
-    var d=await r.json(); d.workers=d.workers||{};d.hor=d.hor||{};d.geo=d.geo||{};d.ll=d.ll||[];d.inf=d.inf||[];d.resp=d.resp||[];d.falt=d.falt||[];d.users=Array.isArray(d.users)?d.users:[]; d.faces=d.faces||{}; return d;
+    var d=await bajar();
+    if(!d){
+      if(LAST) d=JSON.parse(JSON.stringify(LAST.d));
+      else { if(!esAdmin()&&!B.adm) throw new Error('La base compartida todavía no está creada. Pedile al administrador que abra la página una vez.'); d=nueva(); await subir(d); }
+    } else if(LAST&&LAST.rev>(d.rev||0)) d=JSON.parse(JSON.stringify(LAST.d));   /* la nube todavía muestra una versión vieja (caché): sigo con la mía */
+    d.workers=d.workers||{};d.hor=d.hor||{};d.geo=d.geo||{};d.ll=d.ll||[];d.inf=d.inf||[];d.resp=d.resp||[];d.falt=d.falt||[];d.users=Array.isArray(d.users)?d.users:[]; d.faces=d.faces||{};
+    var vis={}; d.ll=d.ll.filter(function(x){var k=x.id+'|'+x.ts; if(vis[k]) return false; vis[k]=1; return true;});
+    return d;
   }
-  /* lee, modifica, guarda y verifica (si dos celulares guardan a la vez, reintenta) */
+  /* lee, modifica y guarda (si el cambio no quedó como se esperaba, reintenta) */
   async function mutar(fn,ok){
     for(var i=0;i<4;i++){
       var d=await leer(); fn(d);
-      var r=await fetch('https://api.jsonbin.io/v3/b/'+B.id,{method:'PUT',headers:hd({'Content-Type':'application/json'}),body:JSON.stringify(d)});
-      if(!r.ok) throw new Error('No se pudo guardar (HTTP '+r.status+').');
-      var c=await leer(); if(!ok||ok(c)) return c;
-      await sleep(400+Math.random()*900);
+      if(ok&&!ok(d)){ await sleep(400+Math.random()*900); continue; }
+      await subir(d); return d;
     }
     throw new Error('No se pudo guardar. Probá de nuevo.');
   }
@@ -748,43 +764,7 @@ td.avn .av{margin-right:8px}
   function pos(){return new Promise(function(ok,no){
     if(!navigator.geolocation) return no(new Error('Este celular no permite tomar la ubicación.'));
     navigator.geolocation.getCurrentPosition(ok,function(e){no(new Error(e.code===1?'Tenés que permitir la ubicación para poder registrar.':'No se pudo tomar la ubicación. Probá de nuevo.'));},{enableHighAccuracy:true,maximumAge:0,timeout:20000});});}
-  async function tokDe(d){var f=hoyF();return 'qr.'+f.replace(/-/g,'')+'.'+(await sha('qr'+f+d.sec)).slice(0,10);}
-  async function registrar(t){
-    var w=ls('barra-trab'); if(!w) throw new Error('Primero entrá con tu DNI y contraseña.');
-    var p=String(t).split('.'), d=await leer(), me=d.workers[w.dni];
-    if(!me||me.dev!==dev()) throw new Error('Tu cuenta ya no está activa en este celular. Volvé a entrar con tu DNI.');
-    if(p[0]!=='qr'||t!==await tokDe(d)) throw new Error('Este QR no es válido o es de otro día. Pedí el de hoy.');
-    var ks=Object.keys(d.geo); if(!ks.length) throw new Error('Todavía no hay ubicaciones de locales cargadas. Avisale al administrador.');
-    var q=await pos(), acc=Math.min(q.coords.accuracy||0,100), best=null;
-    ks.forEach(function(k){ var g=d.geo[k], m=dist(g.lat,g.lng,q.coords.latitude,q.coords.longitude); if(m-acc<=RADIO&&(!best||m<best.m)) best={l:k,m:m}; });
-    if(!best) throw new Error('No estás dentro del área de ningún local. Acercate al local para fichar.');
-    var mios=d.ll.filter(function(x){return x.id===w.rid;}).sort(function(a,b){return b.ts-a.ts;}), u=mios[0], ahora=Date.now();
-    if(u&&ahora-u.ts<120000) return {l:u.l,h:u.h,ya:true,t:u.t==='s'?'sa':'ll'};
-    var tp=(u&&u.t!=='s'&&ahora-u.ts<18*36e5)?'sa':'ll', h=horaH(), lim=ahora-14*864e5;
-    await mutar(function(x){x.ll=x.ll.filter(function(y){return y.ts>lim;});var e={id:w.rid,n:w.n,l:best.l,f:hoyF(),h:h,m:Math.round(best.m),ts:ahora};if(tp==='sa')e.t='s';x.ll.push(e);},
-      function(x){return x.ll.some(function(y){return y.id===w.rid&&y.ts===ahora;});});
-    return {l:best.l,h:h,t:tp};
-  }
   function ov(html){var o=document.createElement('div');o.className='expm';o.style.zIndex=1001;o.innerHTML='<div class="expm-c">'+html+'</div>';document.body.appendChild(o);return o;}
-  async function llegadaUI(t){
-    var o=ov('<h3>Registrando…</h3><p>Tomando tu ubicación. Aceptá el permiso si te lo pide.</p>'),c=o.querySelector('.expm-c');
-    try{ var r=await registrar(t);
-      var sal=r.t==='sa'; c.innerHTML='<h3>'+(r.ya?(sal?'Ya fichaste tu salida':'Ya fichaste tu entrada'):(sal?'¡Salida registrada!':'¡Entrada registrada!'))+'</h3><p>'+esc(LN(r.l))+' · '+esc(r.h)+'</p><button type="button" class="expm-b" id="gx-ok">LISTO</button>';
-    }catch(e){ c.innerHTML='<h3>No se pudo registrar</h3><p>'+esc(e.message||'Error')+'</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>'; }
-    c.querySelector('#gx-ok').onclick=function(){o.remove();};
-    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
-  }
-  function escanear(){
-    if(!('BarcodeDetector' in window)||!navigator.mediaDevices){ ov('<h3>Escanear</h3><p>Abrí la cámara de tu celular y apuntá al QR del local. Te trae de vuelta acá.</p><button type="button" class="expm-b" id="gx-ok">ENTENDIDO</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();}; return; }
-    var o=ov('<h3>Apuntá al QR del local</h3><video autoplay playsinline muted></video><button type="button" class="expm-b alt" id="gx-x">CANCELAR</button>'),v=o.querySelector('video'),st=null,iv=null;
-    function fin(){clearInterval(iv);if(st)st.getTracks().forEach(function(t){t.stop();});o.remove();}
-    o.querySelector('#gx-x').onclick=fin;
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(s){
-      st=s;v.srcObject=s;var bd=new BarcodeDetector({formats:['qr_code']});
-      iv=setInterval(function(){bd.detect(v).then(function(r){if(!r.length)return;var raw=r[0].rawValue,mq=/#(qr\.\S+)$/.exec(raw);fin();if(mq)llegadaUI(mq[1]);else ov('<h3>QR incorrecto</h3><p>Ese no es el QR del local.</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();};}).catch(function(){});},400);
-    }).catch(function(){fin();ov('<h3>Sin cámara</h3><p>No pudimos abrir la cámara. Usá la cámara del celular para escanear el QR.</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(e){e.target.closest('.expm').remove();};});
-  }
-
   /* ---------- cuenta de trabajador ---------- */
   async function acceso(dni,pw){
     dni=String(dni).replace(/\D/g,'');
@@ -974,22 +954,13 @@ td.avn .av{margin-right:8px}
   /* ---------- ya adentro ---------- */
   var applied=ls('barra-ll-ap')||[];
   function aplicarLl(d){ window.__ciclo.setPres(d.ll,hoyF()); if(window.__fich) __fich.set(d); }
-  async function qrs(el,d){
-    var tk=await tokDe(d);
-    el.innerHTML='<div class="qrc"><div class="qrt">Fichar entrada / salida</div><div class="qrb" data-q="qr"></div></div>';
-    if(!window.QRCode) return;
-    new QRCode(el.querySelector('[data-q="qr"]'),{text:base()+'#'+tk,width:240,height:240,correctLevel:QRCode.CorrectLevel.M});
-  }
   var Z={d:null,lk:'palermo',err:'',msg:null};
-  function base(){return ls('barra-qr-base')||location.href.split('#')[0];}
   async function cargar(){ try{ Z.d=await leer(); Z.err=''; aplicarLl(Z.d); }catch(e){ Z.err=e.message||'Error'; } ren(); }
   async function ren(){
     var el=$('lleg-root'); if(!el) return; var d=Z.d;
-    if(!d){ el.innerHTML='<div class="top"><div class="doodle-title">Fichadas por QR</div></div><p>'+esc(Z.err||'Cargando…')+'</p>'; return; }
+    if(!d){ el.innerHTML='<div class="top"><div class="doodle-title">Fichadas</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">REINTENTAR</button></div></div>'+(Z.err?'<div class="msg e" role="alert">'+esc(Z.err)+'</div>':'<p>Cargando…</p>'); return; }
     var hoy=d.ll.filter(function(x){return x.f===hoyF();}).sort(function(a,b){return a.h<b.h?-1:1;}), ws=Object.keys(d.workers);
-    el.innerHTML='<div class="top"><div class="doodle-title">Fichadas por QR</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>'+
-      '<div class="qrs" id="z-qr"></div><p class="auth-note" style="text-align:center">Es un solo QR para todos los locales: cada trabajador lo escanea para fichar entrada y, la vez siguiente, salida. Vale solo hoy.</p>'+
-      '<label for="z-base">Dirección de la página (la que abren los trabajadores)</label><input id="z-base" value="'+esc(base())+'">'+
+    el.innerHTML='<div class="top"><div class="doodle-title">Fichadas</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>'+
       '<h4>Ubicación de los locales</h4><div class="auth-note" style="margin:0 0 8px">'+LOCS.map(function(l){return esc(l[1])+': '+(d.geo[l[0]]?'cargada':'sin cargar');}).join(' · ')+'. Al fichar, el local se detecta por GPS (a menos de 150 m del punto cargado).</div>'+
       '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
       '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>'+
@@ -1000,7 +971,6 @@ td.avn .av{margin-right:8px}
       '<h4>Caras registradas ('+Object.keys(d.faces).length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
       (Object.keys(d.faces).length?Object.keys(d.faces).map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+'</td><td>'+esc(k)+'</td><td><button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>'+
       '<p class="auth-note">Reiniciar la cuenta libera el celular: sirve si la persona cambió de teléfono o se olvidó la contraseña. Después crea la cuenta de nuevo con su DNI.</p>';
-    var q=$('z-qr'); if(q) await qrs(q,d);
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
   function adminUI(){
@@ -1010,7 +980,6 @@ td.avn .av{margin-right:8px}
     document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(!b)return;var k=b.getAttribute('data-tab');v.hidden=k!=='lleg';if(k==='lleg')cargar();});
     v.addEventListener('change',function(e){
       if(e.target.id==='z-lk'){Z.lk=e.target.value;Z.msg=null;ren();}
-      if(e.target.id==='z-base'){ls('barra-qr-base',e.target.value.trim().split('#')[0]);ren();}
     });
     v.addEventListener('click',async function(e){
       var b=e.target.closest('[data-z]'); if(!b) return; var a=b.getAttribute('data-z');
@@ -1034,7 +1003,6 @@ td.avn .av{margin-right:8px}
   }
   window.addEventListener('load',function(){
     var u=usr();
-    if(/^#qr\./.test(location.hash)&&ls('barra-trab')) llegadaUI(location.hash.slice(1));
     if(!u) return;
     if(u.rol==='trab'){
       ['asis','inf'].forEach(function(k){var b=document.querySelector('.tab[data-tab="'+k+'"]');if(b)b.hidden=true;});
@@ -1423,13 +1391,11 @@ td.avn .av{margin-right:8px}
 
 
 <script>
-/* Datos: el equipo sale de ciclo (JSONBin, solo lectura). Asistencia y horarios se guardan en este navegador. */
+/* Datos: el equipo y las fotos salen de ciclo (Cloudinary, solo lectura). Asistencia y horarios se guardan en este navegador. */
 (function(){
   'use strict';
-  var DEF = {apiKey:'$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n.', clave:'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit', binId:'6ab67ab9ac6210605af45cd2'};
-  var CLD={cloud:'dqar21few',clave:'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4'};
-  function clCfg(){ try{ var s=JSON.parse(localStorage.getItem('rrhh_ciclo_cl_cfg')||'null'); if(s&&!s.off&&s.cloud&&s.clave) return {cloud:s.cloud,clave:s.clave}; }catch(e){} return CLD; }
-  function cfg(){ try{ var c=JSON.parse(localStorage.getItem('rrhh_ciclo_jb_cfg')||'null'); if(c&&c.apiKey&&c.clave&&c.binId) return c; }catch(e){} return DEF; }
+  var CLD={cloud:'dqar21few',apiKey:'676986277772494',apiSecret:'GXtIMDiTbraUN7BZTdeQQafvlPo',clave:'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4'};
+  function clCfg(){ try{ var s=JSON.parse(localStorage.getItem('rrhh_ciclo_cl_cfg')||'null'); if(s&&!s.off&&s.cloud&&s.apiKey&&s.apiSecret&&s.clave) return {cloud:s.cloud,apiKey:s.apiKey,apiSecret:s.apiSecret,clave:s.clave}; }catch(e){} return CLD; }
   var LOC_CICLO={BCP:0,BCB:1,BCBL:2,BCC:3,LM:4,LMR:4,TNT:5}, LOC_HOR=['palermo','belgrano','bulnes','caseros','lamar','tanta'], NOM=['Palermo','Belgrano','Bulnes','Caseros','La Mar','Tanta'], SIN={};
   function locDe(c){ if(LOC_CICLO[c]!==undefined) return LOC_CICLO[c]; var n=plain(c).replace(/[^a-z]/g,''); if(/tanta/.test(n)) return 5; if(/lamar/.test(n)) return 4; return undefined; }
   var PUESTO={'gerencia':'encargado','supervision':'encargado','jefe de barra':'encargado','caja':'cajero',
@@ -1509,7 +1475,7 @@ td.avn .av{margin-right:8px}
         if(l.t!=='s'){ if(now-l.ts<18*36e5) np[id]={presenteEl:hoy,ingreso:l.h}; }
         else if(l.f===hoy){ var en=a.filter(function(x){ return x.t!=='s'&&x.f===hoy; })[0]; np[id]={presenteEl:hoy,ingreso:en?en.h:'',salida:l.h}; } });
       pres=np; LS.set('barra-pres',pres); emitEmp(); },
-    pull:pull,paint:paint,key:function(){ return cfg().apiKey; },getHor:function(){ return hor; },getSem:function(){ return sem; },
+    pull:pull,paint:paint,cl:clCfg,getHor:function(){ return hor; },getSem:function(){ return sem; },
     setHor:function(h){ Object.keys(h||{}).forEach(function(k){ hor[k]=h[k]; }); LS.set('barra-horarios',hor); emitHor(); },
     setSem:function(v){ sem=v; LS.set('barra-semana',v); subs.sem.forEach(function(f){ f({exists:true,data:function(){ return v; }}); }); },
     markPres:function(id,f,h){ var p=pres[id]||{}; if(p.presenteEl===f) return; pres[id]={presenteEl:f,ingreso:h}; LS.set('barra-pres',pres); emitEmp(); },
@@ -2223,7 +2189,15 @@ td.avn .av{margin-right:8px}
 .fx{margin-top:14px}.fx h3{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;margin:0 0 6px}
 .fx .w{overflow-x:auto}.fx table{width:100%;border-collapse:collapse;font-size:13px}.fx th,.fx td{padding:5px 8px;text-align:left;border-bottom:1px solid #e3dcc8;white-space:nowrap}
 .fx th{background:#F4E9D4}.fx .b{font-weight:700}.fx .r{color:#B8341A}.fx .g{color:#1c7c3c}.fx .o{color:#9a6b00}
-.fx form{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.fx form>*{width:auto;flex:0 0 auto}.fx button.s{padding:3px 8px;margin-left:4px}
+.fx button.s{padding:5px 12px;margin-left:4px;font-size:11px}
+.fx.adm{margin-top:16px;padding:16px}
+.fx.adm h3{font-size:18px;text-transform:uppercase;margin:0 0 4px}
+.fx.adm .hint{margin:0 0 12px;font-size:12.5px;color:#0B2E4F;opacity:.75}
+.fx.adm th{background:#145C82;color:#fff;font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;font-size:12px;padding:6px 8px}
+.fx.adm td{padding:8px;border-bottom:1px solid #e3dcc8;vertical-align:middle}
+.fx.adm form.frm{margin:10px 0 16px}
+.fx.adm .fx-go{display:flex;align-items:flex-end}
+.fx.adm .fx-go .dl-btn{margin:0;width:100%;padding:11px 18px}
 </style>
 <script>
 /* Capa de control: planificado vs. real (tardanzas, ausencias, horas), salidas y corrección manual de fichadas. */
@@ -2264,7 +2238,7 @@ td.avn .av{margin-right:8px}
   }
   function draw(){
     var el=document.getElementById('fx-ctrl'); if(!el){
-      var b=document.getElementById('board'); if(!b) return; el=document.createElement('section'); el.id='fx-ctrl'; el.className='fx'; b.insertAdjacentElement('afterend',el); }
+      var b=document.getElementById('board'); if(!b) return; el=document.createElement('section'); el.id='fx-ctrl'; el.className='fx adm'; b.insertAdjacentElement('afterend',el); }
     var rows=emps().map(fila).filter(function(o){return o.est||o.p&&!o.p.libre;});
     if(!window.__horData||!rows.length){ el.innerHTML='<h3>Planificado vs. real</h3><p class="hint">Se completa cuando hay horarios cargados para esta semana.</p>'; return; }
     var ord={'AUSENTE':0,'SIN SALIDA: CORREGIR':1,'PENDIENTE':2,'EN TURNO':3,'COMPLETO':4}; rows.sort(function(a,b){return (ord[a.est]==null?5:ord[a.est])-(ord[b.est]==null?5:ord[b.est])||a.e.nombre.localeCompare(b.e.nombre,'es');});
@@ -2281,15 +2255,18 @@ td.avn .av{margin-right:8px}
   /* corrección manual (administrador) */
   function paint(){
     if(!ADM) return; var v=document.getElementById('v-lleg'); if(!v) return; var el=document.getElementById('fx-fix');
-    if(!el){el=document.createElement('section');el.id='fx-fix';el.className='fx';v.appendChild(el);
+    if(!el){el=document.createElement('section');el.id='fx-fix';el.className='fx adm';v.appendChild(el);
       el.addEventListener('submit',function(e){e.preventDefault();var f=e.target,id=f.p.value,w=emps().filter(function(x){return x.id===id;})[0],ts=new Date(f.d.value+'T'+f.h.value).getTime();
         if(!w||isNaN(ts)){msg='Completá persona, fecha y hora.';paint();return;} edit(function(d){d.ll.push(ev(w.id,w.nombre,LK[w.local],ts,f.t.value,U.usuario||'admin'));},'Fichada agregada.');});
       el.addEventListener('click',function(e){var b=e.target.closest('[data-fx]');if(!b)return;var i=b.getAttribute('data-i'),ts=+b.getAttribute('data-ts');
         if(b.getAttribute('data-fx')==='del'){if(!confirm('¿Eliminar esta fichada?'))return;edit(function(d){d.ll=d.ll.filter(function(x){return !(x.id===i&&x.ts===ts);});},'Fichada eliminada.');}
         else edit(function(d){d.ll.forEach(function(x){if(x.id===i&&x.ts===ts){if(x.t==='s')delete x.t;else x.t='s';x.man=U.usuario||'admin';}});},'Tipo cambiado.');});}
     var hoy=fday(), lim=Date.now()-7*864e5, lst=((D&&D.ll)||[]).filter(function(x){return x.ts>lim;}).sort(function(a,b){return b.ts-a.ts;}).slice(0,60);
-    el.innerHTML='<h3>Corregir fichadas</h3><p class="hint">Si alguien olvidó fichar, agregá la entrada o salida que falta, o cambiá el tipo de una fichada. Queda marcada como manual.</p>'+(msg?'<p class="b">'+esc(msg)+'</p>':'')+
-      '<form><select name="p">'+emps().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');}).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.nombre)+' · '+NM[x.local]+'</option>';}).join('')+'</select><input type="date" name="d" value="'+hoy+'"><input type="time" name="h" value="09:00"><select name="t"><option value="e">Entrada</option><option value="s">Salida</option></select><button class="dl-btn main">AGREGAR</button></form>'+
+    el.innerHTML='<h3>Corregir fichadas</h3><p class="hint">Si alguien olvidó fichar, agregá la entrada o salida que falta, o cambiá el tipo de una fichada. Queda marcada como manual.</p>'+(msg?'<div class="msg '+(/^(No se|Complet)/.test(msg)?'e':'o')+'" role="status">'+esc(msg)+'</div>':'')+
+      '<form class="frm"><div class="full"><label for="fx-p">Persona</label><select id="fx-p" name="p">'+emps().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');}).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.nombre)+' · '+NM[x.local]+'</option>';}).join('')+'</select></div>'+
+        '<div><label for="fx-d">Fecha</label><input id="fx-d" type="date" name="d" value="'+hoy+'"></div><div><label for="fx-h">Hora</label><input id="fx-h" type="time" name="h" value="09:00"></div>'+
+        '<div><label for="fx-t">Tipo</label><select id="fx-t" name="t"><option value="e">Entrada</option><option value="s">Salida</option></select></div>'+
+        '<div class="fx-go"><button class="dl-btn main">AGREGAR</button></div></form>'+
       '<div class="w"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Persona</th><th>Tipo</th><th>Local</th><th></th></tr></thead><tbody>'+lst.map(function(x){return '<tr><td>'+esc(x.f)+'</td><td>'+esc(x.h)+'</td><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+(x.man?' <small>(manual)</small>':'')+'</td><td class="b">'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(x.l)+'</td><td><button type="button" class="dl-btn alt s" data-fx="tipo" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">CAMBIAR TIPO</button><button type="button" class="dl-btn alt s" data-fx="del" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">ELIMINAR</button></td></tr>';}).join('')+'</tbody></table></div>';
   }
   function edit(fn,ok){ msg='Guardando…'; paint(); __bin.mutar(fn).then(function(d){D=d;msg=ok;paint();draw();if(window.__ciclo)__ciclo.setPres(d.ll,fday());}).catch(function(e){msg=e.message||'No se pudo guardar.';paint();}); }

@@ -640,6 +640,12 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .fc-oval{position:absolute;left:50%;top:50%;width:52%;height:78%;transform:translate(-50%,-50%);border:4px dashed rgba(255,255,255,.85);border-radius:50%;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
 .expm-c .fc-st{font-size:19px;font-weight:700;opacity:1;text-align:center;margin:0;min-height:26px;color:#0B2E4F}
 .fc-big{font-size:20px!important;padding:18px 18px!important}
+.av{display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--av,28px);height:var(--av,28px);border-radius:50%;overflow:hidden;background:#F4E9D4;color:#0B2E4F;border:2px solid #0B2E4F;font:700 calc(var(--av,28px)*.38) 'DM Sans',sans-serif;line-height:1;vertical-align:middle}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+td.avn .av{margin-right:8px}
+.chip .chr{display:flex;align-items:center;gap:9px;min-width:0}
+.chip .chtx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pop-in .chip .av{--av:26px}
 .adm h4{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;margin:16px 0 6px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -988,11 +994,11 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
       '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>'+
       '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
-      (hoy.length?hoy.map(function(x){return '<tr><td>'+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>'+
+      (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>'+
       '<h4>Trabajadores con cuenta ('+ws.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Local</th><th></th></tr></thead><tbody>'+
-      (ws.length?ws.map(function(k){var w=d.workers[k];return '<tr><td>'+esc(w.n)+'</td><td>'+esc(LN(w.lk))+' · '+(w.a==='salon'?'Salón':'Cocina')+'</td><td><button type="button" class="dl-btn alt mini" data-z="del" data-k="'+esc(k)+'">REINICIAR CUENTA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie creó su cuenta todavía.</td></tr>')+'</tbody></table></div>'+
+      (ws.length?ws.map(function(k){var w=d.workers[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(w.rid,28,w.n):'')+esc(w.n)+'</td><td>'+esc(LN(w.lk))+' · '+(w.a==='salon'?'Salón':'Cocina')+'</td><td><button type="button" class="dl-btn alt mini" data-z="del" data-k="'+esc(k)+'">REINICIAR CUENTA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie creó su cuenta todavía.</td></tr>')+'</tbody></table></div>'+
       '<h4>Caras registradas ('+Object.keys(d.faces).length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
-      (Object.keys(d.faces).length?Object.keys(d.faces).map(function(k){var f=d.faces[k];return '<tr><td>'+esc(f.n)+'</td><td>'+esc(k)+'</td><td><button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>'+
+      (Object.keys(d.faces).length?Object.keys(d.faces).map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+'</td><td>'+esc(k)+'</td><td><button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>'+
       '<p class="auth-note">Reiniciar la cuenta libera el celular: sirve si la persona cambió de teléfono o se olvidó la contraseña. Después crea la cuenta de nuevo con su DNI.</p>';
     var q=$('z-qr'); if(q) await qrs(q,d);
   }
@@ -1421,6 +1427,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 (function(){
   'use strict';
   var DEF = {apiKey:'$2a$10$VeTrCGoPa3dAkOSMGT5BbexSaQbg7DoG/pOV4kQjM4Wvqq6paZ2n.', clave:'tQWyDpjpNApN8aUnqqOKRQFTIRX6LRit', binId:'6ab67ab9ac6210605af45cd2'};
+  var CLD={cloud:'dqar21few',clave:'I0ndbCzSKHGQebaKt7pkpyl6xOUiwSk4'};
+  function clCfg(){ try{ var s=JSON.parse(localStorage.getItem('rrhh_ciclo_cl_cfg')||'null'); if(s&&!s.off&&s.cloud&&s.clave) return {cloud:s.cloud,clave:s.clave}; }catch(e){} return CLD; }
   function cfg(){ try{ var c=JSON.parse(localStorage.getItem('rrhh_ciclo_jb_cfg')||'null'); if(c&&c.apiKey&&c.clave&&c.binId) return c; }catch(e){} return DEF; }
   var LOC_CICLO={BCP:0,BCB:1,BCBL:2,BCC:3,LM:4,LMR:4,TNT:5}, LOC_HOR=['palermo','belgrano','bulnes','caseros','lamar','tanta'], NOM=['Palermo','Belgrano','Bulnes','Caseros','La Mar','Tanta'], SIN={};
   function locDe(c){ if(LOC_CICLO[c]!==undefined) return LOC_CICLO[c]; var n=plain(c).replace(/[^a-z]/g,''); if(/tanta/.test(n)) return 5; if(/lamar/.test(n)) return 4; return undefined; }
@@ -1475,15 +1483,15 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       if(loc===undefined&&lc) SIN[lc]=1; else if(loc>=4&&!pk) SIN['puesto: '+String(e.puesto||'').trim()]=1;
       var a=String(e.apellido||'').trim(), n=String(e.nombre||'').trim(), nom=a&&n?a+', '+n:(a||n);
       if(loc===undefined||!pk||!nom) return;
-      var rid='c'+String(e.id).replace(/[^A-Za-z0-9_-]/g,''); out.push({id:rid,nombre:nom,local:loc,puesto:pk,sector:String(e.puesto||'').trim().toUpperCase()});
+      var rid='c'+String(e.id).replace(/[^A-Za-z0-9_-]/g,''); out.push({id:rid,nombre:nom,local:loc,puesto:pk,sector:String(e.puesto||'').trim().toUpperCase(),oid:String(e.id),fv:String(e.fotoV||'')});
       if(est==='activo'){ var dn=dniDe(e); if(dn) dm[rid]=dn; }
     });
     window.__locSin=Object.keys(SIN); return out;
   }
   async function pull(manual){ if(!window.__auth) return;
-    var c=cfg();
+    var c=clCfg();
     try{
-      var r=await fetch('https://api.jsonbin.io/v3/b/'+encodeURIComponent(c.binId)+'/latest',{headers:{'X-Master-Key':c.apiKey,'X-Bin-Meta':'false'},cache:'no-store'});
+      var r=await fetch('https://res.cloudinary.com/'+encodeURIComponent(c.cloud)+'/raw/upload/rrhh_ciclo_datos.json?_='+Date.now(),{cache:'no-store'});
       if(!r.ok) throw new Error('HTTP '+r.status);
       var data=JSON.parse(await decrypt(await r.json(),c.clave));
       roster=parse(data); LS.set('barra-roster',roster);
@@ -1506,6 +1514,44 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     setSem:function(v){ sem=v; LS.set('barra-semana',v); subs.sem.forEach(function(f){ f({exists:true,data:function(){ return v; }}); }); },
     markPres:function(id,f,h){ var p=pres[id]||{}; if(p.presenteEl===f) return; pres[id]={presenteEl:f,ingreso:h}; LS.set('barra-pres',pres); emitEmp(); },
     find:function(dni){ var m=window.__dni||{}, id=Object.keys(m).filter(function(k){ return m[k]===dni; })[0]; return id&&(roster||[]).filter(function(e){ return e.id===id; })[0]||null; }};
+
+  /* ---- fotos de perfil de ciclo (archivos cifrados en Cloudinary: rrhh_foto_<id>.json) ---- */
+  var fMem={}, fTry={}, fCola=[], fRun=0, fKeyP=null, fDbP=null;
+  function fEsc(t){ return String(t).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function fDB(){ return fDbP||(fDbP=new Promise(function(ok){ try{ var r=indexedDB.open('barra_fotos_ciclo',1); r.onupgradeneeded=function(){ r.result.createObjectStore('f'); }; r.onsuccess=function(){ ok(r.result); }; r.onerror=function(){ ok(null); }; }catch(e){ ok(null); } })); }
+  async function fIdb(modo,id,val){ var db=await fDB(); if(!db) return null; return new Promise(function(ok){ try{ var st=db.transaction('f',modo==='get'?'readonly':'readwrite').objectStore('f'), q=modo==='get'?st.get(id):st.put(val,id); q.onsuccess=function(){ ok(q.result||null); }; q.onerror=function(){ ok(null); }; }catch(e){ ok(null); } }); }
+  function fKey(pass){ return fKeyP||(fKeyP=crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']).then(function(b){
+    return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode('rrhh-ciclo-foto-v1'),iterations:200000,hash:'SHA-256'},b,{name:'AES-GCM',length:256},false,['decrypt']); }).catch(function(e){ fKeyP=null; throw e; })); }
+  function fEmp(id){ var r=roster||[]; for(var i=0;i<r.length;i++) if(r[i].id===id) return r[i]; return null; }
+  async function fBajar(e){
+    var c=clCfg();
+    try{
+      var r=await fetch('https://res.cloudinary.com/'+encodeURIComponent(c.cloud)+'/raw/upload/rrhh_foto_'+e.oid+'.json?_='+encodeURIComponent(e.fv));
+      if(!r.ok) return null;
+      var j=await r.json(); if(!j||typeof j.d!=='string') return null;
+      var buf=unb64(j.d), pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},await fKey(c.clave),buf.slice(12));
+      return new Blob([pt],{type:'image/jpeg'});
+    }catch(x){ return null; }
+  }
+  function fPintar(id){ var m=fMem[id]; if(!m) return; [].forEach.call(document.querySelectorAll('[data-av]'),function(el){ if(el.getAttribute('data-av')===id) el.innerHTML='<img src="'+m.url+'" alt="">'; }); }
+  function fPoner(id,v,blob){ var a=fMem[id]; if(a&&a.url) URL.revokeObjectURL(a.url); fMem[id]={v:v,url:URL.createObjectURL(blob)}; fIdb('set',id,{v:v,blob:blob}); fPintar(id); }
+  function fCorrer(){ while(fRun<4&&fCola.length){ var f=fCola.shift(); fRun++; f().catch(function(){}).then(function(){ fRun--; fCorrer(); }); } }
+  function fPedir(e){
+    var id=e.id, v=e.fv, t=fTry[id]; if(t&&t.v===v&&Date.now()-t.t<600000) return; fTry[id]={v:v,t:Date.now()};
+    fCola.push(async function(){
+      var it=await fIdb('get',id); if(it&&it.v===v&&it.blob){ fPoner(id,v,it.blob); return; }
+      var b=await fBajar(e); if(b) fPoner(id,v,b);
+      else if(it&&it.blob&&!fMem[id]){ fMem[id]={v:it.v,url:URL.createObjectURL(it.blob)}; fPintar(id); }
+    }); fCorrer();
+  }
+  function fIni(n){ var p=String(n||'').split(','), a=(p[0]||'').trim(), b=(p[1]||'').trim(); return (((b[0]||'')+(a[0]||''))||String(n||'?').slice(0,2)).toUpperCase(); }
+  /* devuelve el HTML de un avatar redondo: la foto de ciclo si hay, y si no las iniciales */
+  window.__foto={av:function(id,px,nombre){
+    var e=fEmp(id), m=fMem[id], u='';
+    if(e&&e.fv){ if(m&&m.v===e.fv) u=m.url; else { fPedir(e); if(m) u=m.url; } }
+    return '<span class="av" data-av="'+fEsc(id)+'" style="--av:'+(px||28)+'px">'+(u?'<img src="'+u+'" alt="">':fEsc(fIni(nombre||(e&&e.nombre))))+'</span>';
+  }};
+
 
   var db={
     collection:function(name){ return {onSnapshot:function(cb,err){
@@ -1592,7 +1638,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     else if (e.salida) meta = (loc ? loc + ' · ' : '') + 'salió ' + esc(e.salida) + (tn ? ' · ' + tn : '');
     else meta = (loc ? loc + (tn ? ' · ' : '') : '') + tn || (state.writable ? 'Tocá para marcar presente' : '');
     return '<button type="button" class="chip ' + (p ? 'si' : 'no') + '" data-id="' + esc(e.id) + '" aria-pressed="' + p + '"' + (state.writable ? '' : ' disabled') + '>' +
-      '<span class="nm">' + esc(e.nombre) + '</span>' + (meta ? '<span class="mt">' + meta + '</span>' : '') + '</button>';
+      '<span class="chr">' + (window.__foto ? window.__foto.av(e.id, 32, e.nombre) : '') + '<span class="chtx"><span class="nm">' + esc(e.nombre) + '</span>' + (meta ? '<span class="mt">' + meta + '</span>' : '') + '</span></span></button>';
   }
   function col(k, titulo, xs){
     var cuerpo = xs.length ? '<div class="pl">' + xs.map(chip).join('') + '</div>' : '<p class="nadie">' + (k === 'si' ? 'Nadie todavía' : 'Nadie falta') + '</p>';
@@ -2244,7 +2290,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     var hoy=fday(), lim=Date.now()-7*864e5, lst=((D&&D.ll)||[]).filter(function(x){return x.ts>lim;}).sort(function(a,b){return b.ts-a.ts;}).slice(0,60);
     el.innerHTML='<h3>Corregir fichadas</h3><p class="hint">Si alguien olvidó fichar, agregá la entrada o salida que falta, o cambiá el tipo de una fichada. Queda marcada como manual.</p>'+(msg?'<p class="b">'+esc(msg)+'</p>':'')+
       '<form><select name="p">'+emps().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');}).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.nombre)+' · '+NM[x.local]+'</option>';}).join('')+'</select><input type="date" name="d" value="'+hoy+'"><input type="time" name="h" value="09:00"><select name="t"><option value="e">Entrada</option><option value="s">Salida</option></select><button class="dl-btn main">AGREGAR</button></form>'+
-      '<div class="w"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Persona</th><th>Tipo</th><th>Local</th><th></th></tr></thead><tbody>'+lst.map(function(x){return '<tr><td>'+esc(x.f)+'</td><td>'+esc(x.h)+'</td><td>'+esc(x.n)+(x.man?' <small>(manual)</small>':'')+'</td><td class="b">'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(x.l)+'</td><td><button type="button" class="dl-btn alt s" data-fx="tipo" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">CAMBIAR TIPO</button><button type="button" class="dl-btn alt s" data-fx="del" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">ELIMINAR</button></td></tr>';}).join('')+'</tbody></table></div>';
+      '<div class="w"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Persona</th><th>Tipo</th><th>Local</th><th></th></tr></thead><tbody>'+lst.map(function(x){return '<tr><td>'+esc(x.f)+'</td><td>'+esc(x.h)+'</td><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+(x.man?' <small>(manual)</small>':'')+'</td><td class="b">'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(x.l)+'</td><td><button type="button" class="dl-btn alt s" data-fx="tipo" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">CAMBIAR TIPO</button><button type="button" class="dl-btn alt s" data-fx="del" data-i="'+esc(x.id)+'" data-ts="'+x.ts+'">ELIMINAR</button></td></tr>';}).join('')+'</tbody></table></div>';
   }
   function edit(fn,ok){ msg='Guardando…'; paint(); __bin.mutar(fn).then(function(d){D=d;msg=ok;paint();draw();if(window.__ciclo)__ciclo.setPres(d.ll,fday());}).catch(function(e){msg=e.message||'No se pudo guardar.';paint();}); }
   window.addEventListener('hor-change',draw);

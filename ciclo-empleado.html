@@ -665,12 +665,83 @@ async function clFirmar(params, secret) {
   const h = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
   return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join('');
 }
+/* ===== Fusión con la nube: antes de subir se trae lo último de la nube y se le suman SOLO tus cambios =====
+   Así, si otra persona cargó o editó legajos mientras vos tenías la pantalla abierta, no se pisan: cada legajo
+   (y cada campo del legajo) se compara contra la última versión sincronizada (jbBase) y gana el que lo tocó. */
+let jbBase = null, jbSkipMerge = false;
+const jbSnap = () => JSON.stringify(S);
+const jbEq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const jbObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
+function jbMergeObj(b, l, r) {                                       // campo por campo: si lo cambiaste vos gana lo tuyo, si no lo de la nube
+  if (!jbObj(l) || !jbObj(r)) return (b !== null && b !== undefined && jbEq(l, b)) ? r : l;
+  const out = {}, bo = jbObj(b) ? b : null;
+  new Set([...Object.keys(r), ...Object.keys(l)]).forEach(k => {
+    const bv = bo ? bo[k] : undefined, enB = !!bo && k in bo;
+    if (!(k in l)) { if (enB && jbEq(r[k], bv)) return; out[k] = r[k]; return; }            // lo quitaste vos
+    if (!(k in r)) { if (enB && jbEq(l[k], bv)) return; out[k] = l[k]; return; }            // lo quitó otra persona
+    if (jbEq(l[k], r[k])) { out[k] = l[k]; return; }
+    if (enB && jbEq(l[k], bv)) { out[k] = r[k]; return; }                                    // vos no lo tocaste
+    if (enB && jbEq(r[k], bv)) { out[k] = l[k]; return; }                                    // la otra persona no lo tocó
+    out[k] = (jbObj(l[k]) && jbObj(r[k]) && jbObj(bv)) ? jbMergeObj(bv, l[k], r[k]) : l[k];  // tocaron lo mismo: gana lo tuyo
+  });
+  return out;
+}
+function jbMergeLista(b, l, r, anexar) {                             // listas de registros con id (legajos, recibos, licencias…)
+  const bm = new Map((b || []).map(x => [x.id, x])), rm = new Map(r.map(x => [x.id, x])), visto = new Set(), out = [];
+  l.forEach(x => {
+    visto.add(x.id); const bi = bm.get(x.id), ri = rm.get(x.id);
+    if (!ri) { if (bi && !anexar && jbEq(x, bi)) return; out.push(x); return; }               // otra persona lo borró y vos no lo tocaste
+    out.push(bi ? jbMergeObj(bi, x, ri) : x);
+  });
+  r.forEach(x => { if (visto.has(x.id)) return; if (bm.has(x.id) && !anexar) return; out.push(x); });   // altas de otra persona (lo que borraste vos queda borrado)
+  return out;
+}
+function jbMerge(base, loc, rem) {
+  const out = {};
+  new Set([...Object.keys(rem), ...Object.keys(loc)]).forEach(k => {
+    const lv = loc[k], rv = rem[k], bv = base ? base[k] : undefined;
+    if (!(k in loc)) { out[k] = rv; return; }
+    if (!(k in rem)) { out[k] = lv; return; }
+    if (Array.isArray(lv) && Array.isArray(rv) && lv.concat(rv).every(x => jbObj(x) && x.id !== undefined)) {
+      out[k] = jbMergeLista(Array.isArray(bv) ? bv : null, lv, rv, k === 'historial' || !base); return;   // el historial solo suma (en la nube va recortado)
+    }
+    if (jbObj(lv) && jbObj(rv)) { out[k] = jbMergeObj(jbObj(bv) ? bv : null, lv, rv); return; }
+    out[k] = (base && jbEq(lv, bv)) ? rv : lv;
+  });
+  return out;
+}
+async function jbTraerNube(cfg) {                                    // -> { env, data } o null si todavía no hay archivo en la nube
+  const r = await fetch(`https://res.cloudinary.com/${encodeURIComponent(cfg.cloud)}/raw/upload/${CL_FILE}?_=${Date.now()}`, { cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('no se pudo leer la nube antes de subir (HTTP ' + r.status + '); no se subió nada para no pisar datos');
+  const env = await r.json();
+  const pt = await crDecrypt(env, cfg.clave);
+  const data = JSON.parse((env.v >= 2) ? await gzDecomp(pt) : new TextDecoder().decode(pt));
+  if (!data || !Array.isArray(data.empleados)) throw new Error('los datos de la nube no tienen el formato esperado; no se subió nada');
+  return { env, data };
+}
+async function jbFusionarAntesDeSubir(cfg) {
+  if (jbSkipMerge) return;
+  const nube = await jbTraerNube(cfg);
+  if (!nube || !nube.env.actualizado || nube.env.actualizado === jbMeta().lastRemote) return;   // nadie subió nada desde tu última sincronización
+  const fusion = jbMerge(jbBase ? JSON.parse(jbBase) : null, S, normalize(nube.data));
+  jbApplyingRemote = true;
+  try {
+    S = normalize(fusion);
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+    if (UI.detail && UI.detail !== 'new' && !S.empleados.some(x => x.id === UI.detail)) UI.detail = null;
+    if (!(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) { go(UI.tab); paintRespaldo(); }
+  } finally { jbApplyingRemote = false; }
+  toast('Se sumaron los cambios de otra persona antes de guardar los tuyos');
+}
 async function jbUpload() {
   const cfg = jbConfig(); if (!cfg) return;
   if (jbBusy) { clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 1500); return; }
   jbBusy = true; const rev = jbRev; setSync('off', 'Subiendo a Cloudinary…');
   try {
     if (!window.crypto || !crypto.subtle) throw new Error('el navegador no permite cifrar (abrí el archivo desde https o localhost)');
+    await jbFusionarAntesDeSubir(cfg);
+    const snap = jbSnap();
     const stamp = new Date().toISOString();
     const payload = historialMesesNube() ? Object.assign({}, S, { historial: historialParaNube(S.historial) }) : S;
     const env = Object.assign({ v: 2, actualizado: stamp, _local: localId }, await crEncrypt(await gzComp(JSON.stringify(payload)), cfg.clave));
@@ -683,11 +754,11 @@ async function jbUpload() {
     const r = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cfg.cloud)}/raw/upload`, { method: 'POST', body: fd });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
-    jbReady = true;
+    jbReady = true; jbBase = snap;
     if (rev === jbRev) { setJbMeta({ dirty: false, lastRemote: stamp }); setSync('on', 'Guardado en Cloudinary ' + horaAr()); }
     else { setJbMeta({ lastRemote: stamp }); clearTimeout(jbTimer); jbTimer = setTimeout(jbUpload, 300); }
   } catch (e) { setSync('err', ('Cloudinary: ' + (e.message || 'no se pudo subir') + ' (quedó guardado en este navegador)').slice(0, 140)); }
-  finally { jbBusy = false; }
+  finally { jbBusy = false; jbSkipMerge = false; }
 }
 // mode: 'first' (al abrir/conectar), 'auto' (sondeo periódico), 'force' (botón "Traer ahora")
 async function jbPull(mode = 'auto') {
@@ -707,7 +778,7 @@ async function jbPull(mode = 'auto') {
     jbReady = true;
     const propio = env._local === localId;
     const viejo = mode !== 'force' && env.actualizado && meta.lastRemote && env.actualizado <= meta.lastRemote;
-    if (propio || viejo) { setSync('on', 'Sincronizado con Cloudinary'); return; }
+    if (propio || viejo) { if (!jbBase && !meta.dirty) jbBase = jbSnap(); setSync('on', 'Sincronizado con Cloudinary'); return; }
     let data;
     try {
       const pt = await crDecrypt(env, cfg.clave);
@@ -731,6 +802,7 @@ async function jbPull(mode = 'auto') {
       const faltantes = historialPropio.filter(h => !idsNube.has(h.id));   // ej. historial viejo recortado al subir a la nube (ver historialMesesNube)
       if (faltantes.length) S.historial = S.historial.concat(faltantes);
       try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+      jbBase = jbSnap();
       if (UI.detail && UI.detail !== 'new' && !S.empleados.some(x => x.id === UI.detail)) UI.detail = null;
       go(UI.tab); paintRespaldo();
     } finally { jbApplyingRemote = false; }
@@ -4008,7 +4080,7 @@ const ACT = {
     try { localStorage.setItem(JB_KEY, JSON.stringify(cfg)); localStorage.removeItem(JB_META); } catch (e) { toast('No se pudo guardar la configuración en este navegador.'); return; }
     jbReady = false; jbInit(); renderPar(); toast('Conectando con Cloudinary…');
   },
-  jbSubir: () => { if (!confirm('Se van a reemplazar los datos de la nube por los de este navegador. ¿Continuar?')) return; jbPush(); clearTimeout(jbTimer); jbUpload(); },
+  jbSubir: () => { if (!confirm('Se van a reemplazar los datos de la nube por los de este navegador. ¿Continuar?')) return; jbSkipMerge = true; jbPush(); clearTimeout(jbTimer); jbUpload(); },
   jbTraer: () => { jbPull('force'); },
   jbDesconectar: () => { jbDisconnect(); renderPar(); toast('Cloudinary desconectado (los datos de la nube no se borran)'); },
   export: () => {

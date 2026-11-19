@@ -2336,6 +2336,32 @@ td.avn .av{margin-right:8px}
 .theme-tanta .dd-der{ background-image:url("data:image/svg+xml,%3Csvg viewBox=%220 0 120 50%22 xmlns=%22http://www.w3.org/2000/svg%22%3E %3Cpolyline points=%222,34 16,14 36,44%22 fill=%22none%22 stroke=%22%237A2D8C%22 stroke-width=%223%22 stroke-linejoin=%22round%22/%3E %3Cpolyline points=%2236,44 56,14 76,44%22 fill=%22none%22 stroke=%22%23F5821F%22 stroke-width=%223%22 stroke-linejoin=%22round%22/%3E %3Cpolyline points=%2276,44 96,14 116,44%22 fill=%22none%22 stroke=%22%23E0177C%22 stroke-width=%223%22 stroke-linejoin=%22round%22/%3E %3C/svg%3E"); }
 .theme-lamar{--navy:#0A3140;--ocean:#10495E;--coral:#D96C4A;--sand:#EFE6D3;--gold:#4C8C6E;--wood-a:#EFE6D3;--wood-b:#EFE6D3}
 .theme-tanta{--navy:#7A2D8C;--ocean:#A5115C;--coral:#E0177C;--sand:#FBF3F8;--gold:#F5821F;--wood-a:#FBF3F8;--wood-b:#FBF3F8}
+
+/* ===== Selector de locales centrado (1, 2, 3… locales quedan balanceados) ===== */
+.locales{ display:flex; flex-wrap:wrap; justify-content:center; gap:12px; }
+.locales .loc{ flex:0 1 calc((100% - 48px)/5); min-width:170px; }
+@media (max-width:700px){
+  .locales .loc{ flex:0 1 calc((100% - 12px)/2); min-width:0; }
+  .locales .loc[data-k="todos"]{ flex-basis:100%; }
+}
+
+/* ===== Botones Tanta: un solo estilo para todos (.dl-btn) ===== */
+.theme-tanta .dl-btn{
+  background:var(--magenta); color:#fff; border:2px solid var(--magenta);
+  font-size:12.5px; letter-spacing:1.2px; padding:9px 20px;
+  box-shadow:0 3px 0 var(--magenta-deep);
+  transition:transform .12s ease, box-shadow .12s ease, background .15s ease, color .15s ease;
+}
+.theme-tanta .dl-btn:hover{ opacity:1; background:var(--pink); border-color:var(--pink); transform:translateY(-1px); box-shadow:0 4px 0 var(--magenta-deep); }
+.theme-tanta .dl-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--magenta-deep); }
+.theme-tanta .dl-btn.alt{ background:#fff; color:var(--magenta-deep); border-color:var(--magenta); box-shadow:0 3px 0 rgba(165,17,92,.28); }
+.theme-tanta .dl-btn.alt:hover{ background:#FDEAF3; border-color:var(--magenta); box-shadow:0 4px 0 rgba(165,17,92,.28); }
+.theme-tanta .dl-btn.alt:active{ box-shadow:0 1px 0 rgba(165,17,92,.28); }
+.theme-tanta .seg .dl-btn[aria-pressed="true"],
+.theme-tanta .dl-btn.alt[aria-pressed="true"]{ background:var(--purple); color:#fff; border-color:var(--purple); box-shadow:0 3px 0 #4F1B5C; }
+.theme-tanta .dl-btn:disabled{ opacity:.5; cursor:default; transform:none; box-shadow:none; }
+.theme-tanta .toolbar .dl-btn,.theme-tanta .seg .dl-btn{ padding:8px 18px; font-size:12px; }
+.theme-tanta .dl-btn:focus-visible{ outline:3px solid var(--purple); outline-offset:2px; }
 .marcas{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .marcas button{font-family:'Anton',sans-serif;font-size:13px;letter-spacing:1px;cursor:pointer;border:2px solid var(--m);background:#fff;color:var(--m);border-radius:999px;padding:6px 14px}
 .marcas button[aria-pressed=true]{background:var(--m);color:#fff}

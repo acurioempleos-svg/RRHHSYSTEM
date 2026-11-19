@@ -455,7 +455,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   var ROOT={id:'root',nombre:'Administrador',usuario:'Administrador',dni:'41047753',salt:'t1JTdpZ7Gmau5kAkBPzkOA==',hash:'2J/QVwx07Mxv94ytrw0JwhhvkzFG1ora4AucrGFYv18=',rol:'admin',perm:{}};
   function buscar(dni,key){ if(dni&&dni===ROOT.dni) return ROOT; return users.filter(function(x){return (dni&&x.dni===dni)||x.usuario===key;})[0]; }
-  var cur=users.filter(function(u){return u.id===SS.get();})[0]||(SS.get()===ROOT.id?ROOT:null)||(function(){var w=LS.get('barra-trab',null);return w&&SS.get()===w.id?w:null;})();
+  var cur=users.filter(function(u){return u.id===SS.get();})[0]||(SS.get()===ROOT.id?ROOT:null)||null; try{localStorage.removeItem('barra-trab');}catch(e){}
 
   /* permisos: perm[local] = 'salon' | 'cocina' | 'ambos' | '' */
   function areasDe(loc){ if(!cur) return []; if(cur.rol==='admin') return ['salon','cocina'];
@@ -485,7 +485,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       '<label for="a-pw">Contraseña</label><input id="a-pw" type="password" autocomplete="current-password">'+
       '<button type="button" class="dl-btn" id="a-go">ENTRAR</button>'+
       '<div class="auth-err" id="a-err" role="alert"></div>'+
-      '<div class="auth-note">Entrás con tu DNI (el que está cargado en ciclo); tu nombre sale de ahí. Primera vez: elegí una contraseña y tu cuenta queda lista.</div></div>';
+      '<div class="auth-note">Acceso solo para administradores y encargados de salón y cocina. Si necesitás un usuario, pedíselo al administrador. Los colaboradores no necesitan cuenta: fichan con la cara.</div></div>';
   }
   var fails=0,lockUntil=0;
   async function verificar(raw,pw){
@@ -496,7 +496,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
     if(!u&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscar(dni,key); }
     if(u){ ok=(await hash(pw,u.salt))===u.hash;
       if(!ok&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscar(dni,key)||u; ok=(await hash(pw,u.salt))===u.hash; } }
-    if(!ok){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} throw new Error('DNI o contraseña incorrectos. Esta pantalla es solo para colaboradores y administradores.'); }
+    if(!ok){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} throw new Error('DNI o contraseña incorrectos. Este acceso es solo para administradores y encargados.'); }
     return u;
   }
   async function go(){
@@ -515,11 +515,8 @@ footer svg{ height:22px; width:auto; opacity:.85; }
       try{ var c2=window.__ciclo; if(c2&&u.dni){ await c2.pull(); var e2=c2.find(u.dni); if(u.id!=='root'&&e2&&e2.nombre!==u.usuario){u.nombre=e2.nombre;u.usuario=e2.nombre;save();} } }catch(x){}
       SS.set(u.id); location.reload(); return;
     }
-    /* no es admin/colaborador: es trabajador, sale de ciclo */
-    if(!window.__gx||!window.__gx.acceso){err.textContent='No se pudo iniciar. Recargá la página.';return;}
-    if(btn) btn.disabled=true;
-    try{ await window.__gx.acceso(dni,pw); location.reload(); }
-    catch(x){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} err.textContent=x.message||'Error'; if(btn) btn.disabled=false; }
+    if(++fails>=5){lockUntil=Date.now()+30000;fails=0;}
+    err.textContent='DNI o contraseña incorrectos. Este acceso es solo para administradores y encargados.';
   }
   function showGate(){
     document.getElementById('page-barra').hidden=true;
@@ -765,30 +762,6 @@ td.avn .av{margin-right:8px}
     if(!navigator.geolocation) return no(new Error('Este celular no permite tomar la ubicación.'));
     navigator.geolocation.getCurrentPosition(ok,function(e){no(new Error(e.code===1?'Tenés que permitir la ubicación para poder registrar.':'No se pudo tomar la ubicación. Probá de nuevo.'));},{enableHighAccuracy:true,maximumAge:0,timeout:20000});});}
   function ov(html){var o=document.createElement('div');o.className='expm';o.style.zIndex=1001;o.innerHTML='<div class="expm-c">'+html+'</div>';document.body.appendChild(o);return o;}
-  /* ---------- cuenta de trabajador ---------- */
-  async function acceso(dni,pw){
-    dni=String(dni).replace(/\D/g,'');
-    if(dni.length<6||pw.length<6) throw new Error('Completá tu DNI y una contraseña de al menos 6 caracteres.');
-    var c=window.__ciclo; await c.pull(); var e=c.find(dni);
-    if(!e) throw new Error('Tu DNI no figura en ciclo. Pedile a tu encargado que lo cargue.');
-    var d=await leer(), w=d.workers[dni], me=dev(), m=ls('barra-trab');
-    if(m&&m.dni!==dni) throw new Error('Este celular ya está vinculado a otra persona.');
-    if(Object.keys(d.workers).some(function(k){return k!==dni&&d.workers[k].dev===me;})) throw new Error('Este celular ya está vinculado a otra cuenta.');
-    var area=SAL.indexOf(e.puesto)>=0?'salon':'cocina', lk=LOCS[e.local][0];
-    if(w){
-      if(w.dev&&w.dev!==me) throw new Error('Esta cuenta está vinculada a otro celular. Pedile al administrador que la reinicie.');
-      if((await pbk(pw,w.s))!==w.p) throw new Error('DNI o contraseña incorrectos.');
-    } else {
-      var s=rnd(8), p=await pbk(pw,s);
-      try{ await mutar(function(x){if(!x.workers[dni])x.workers[dni]={rid:e.id,n:e.nombre,lk:lk,a:area,s:s,p:p,dev:me,t:Date.now()};},function(x){return x.workers[dni]&&x.workers[dni].dev===me;}); }
-      catch(x){ throw new Error('No se pudo crear la cuenta. Si ya la creaste en otro celular, pedile al administrador que la reinicie.'); }
-    }
-    var perm={}; perm[lk]=area;
-    ls('barra-trab',{id:'w'+dni,usuario:e.nombre,nombre:e.nombre,rol:'trab',perm:perm,dni:dni,rid:e.id,n:e.nombre,lk:lk});
-    try{sessionStorage.setItem('barra-sess','w'+dni);}catch(x){}
-    location.reload();
-  }
-
   /* ---------- FICHAJE POR CARA (cámara) ---------- */
   var FA_VER='1.7.12', FA_BASE='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@'+FA_VER, FA_P=null;
   var UMBRAL=0.5, MUESTRAS=3;
@@ -870,7 +843,7 @@ td.avn .av{margin-right:8px}
   async function ficharCara(){
     var d;
     try{ d=await leer(); }catch(e){ ov('<h3>No se pudo</h3><p>'+esc(e.message||'Error')+'</p><button type="button" class="expm-b" id="gx-ok">CERRAR</button>').querySelector('#gx-ok').onclick=function(ev){ev.target.closest('.expm').remove();}; return; }
-    if(!Object.keys(d.faces).length){ ov('<h3>Nadie registró su cara</h3><p>Primero tocá "REGISTRAR MI CARA".</p><button type="button" class="expm-b" id="gx-ok">ENTENDIDO</button>').querySelector('#gx-ok').onclick=function(ev){ev.target.closest('.expm').remove();}; return; }
+    if(!Object.keys(d.faces).length){ ov('<h3>Nadie registró su cara</h3><p>Pedile a tu encargado que registre tu cara.</p><button type="button" class="expm-b" id="gx-ok">ENTENDIDO</button>').querySelector('#gx-ok').onclick=function(ev){ev.target.closest('.expm').remove();}; return; }
     var seguidos=0,quien=null,fallos=0;
     var R=await camaraCara('Fichar con la cara',function(desc,say){
       var m=mejorCara(desc,d.faces);
@@ -888,54 +861,43 @@ td.avn .av{margin-right:8px}
       msgFin(o,c,(r.ya?(sal?'Ya fichaste tu salida':'Ya fichaste tu entrada'):(sal?'¡Salida registrada!':'¡Entrada registrada!')),esc(f.n)+' · '+esc(LN(r.l))+' · '+esc(r.h));
     }catch(e){ msgFin(o,c,'No se pudo registrar',esc(e.message||'Error')); }
   }
-  /* REGISTRAR CARA: DNI + contraseña y después 3 fotos de la cara */
-  async function verificarCred(d,dni,pw){
-    var w=d.workers[dni]||d.faces[dni];
-    if(w){ if((await pbk(pw,w.s))!==w.p) throw new Error('DNI o contraseña incorrectos.'); return null; }
-    if(window.__auth.getUsers().some(function(u){return u.dni===dni;})){ await window.__auth.verificar(dni,pw); return null; }
-    var s=rnd(8); return {s:s,p:await pbk(pw,s)};
-  }
-  async function registrarCara(dni,pw){
-    dni=String(dni).replace(/\D/g,'');
-    if(dni.length<6||pw.length<6) throw new Error('Completá tu DNI y una contraseña de al menos 6 caracteres.');
+  /* REGISTRAR CARA: la hace un administrador o encargado con la cara del colaborador (el colaborador no tiene cuenta) */
+  async function registrarCaraDe(rid,dni){
+    var u=usr(); if(!u||u.rol==='trab') throw new Error('Solo administradores y encargados pueden registrar caras.');
     var c=window.__ciclo; await c.pull(); var e=c.find(dni);
-    if(!e) throw new Error('Tu DNI no figura en ciclo. Pedile a tu encargado que lo cargue.');
-    var d=await leer(), nuevo=await verificarCred(d,dni,pw);
+    if(!e||e.id!==rid) throw new Error('Ese colaborador no tiene DNI cargado en ciclo.');
+    var d=await leer();
     var caps=[],ult=0,dup=null;
-    var R=await camaraCara('Registrar mi cara',function(desc,say){
+    var R=await camaraCara('Registrar cara de '+e.nombre,function(desc,say){
       var otro=Object.keys(d.faces).filter(function(k){return k!==dni;}),m=otro.length?mejorCara(desc,otro.reduce(function(a,k){a[k]=d.faces[k];return a;},{})):null;
       if(m&&m.m<0.45){ dup=d.faces[m.k].n; return 'dup'; }
       var t=Date.now(); if(t-ult<900){return undefined;} ult=t;
       caps.push(Array.prototype.slice.call(desc));
-      say(caps.length<MUESTRAS?('Muy bien. Mové un poquito la cabeza ('+caps.length+' de '+MUESTRAS+')'):'¡Listo!');
+      say(caps.length<MUESTRAS?('Muy bien. Que mueva un poquito la cabeza ('+caps.length+' de '+MUESTRAS+')'):'¡Listo!');
       return caps.length>=MUESTRAS?'ok':undefined;
     });
     if(!R||!R.res) return null;
     var o=R.o,cc=R.c;
-    if(R.res==='dup'){ msgFin(o,cc,'Esta cara ya está registrada','Ya figura con otro DNI ('+esc(dup)+'). Avisale al administrador.'); return null; }
+    if(R.res==='dup'){ msgFin(o,cc,'Esta cara ya está registrada','Ya figura con otro DNI ('+esc(dup)+').'); return null; }
     cc.classList.remove('fc'); cc.innerHTML='<h3>Guardando…</h3>';
     var fd=caps.map(fdEnc);
     try{
-      await mutar(function(x){ x.faces=x.faces||{}; var p=x.faces[dni]||{}; var s=nuevo?nuevo.s:(p.s||(x.workers[dni]||{}).s), pp=nuevo?nuevo.p:(p.p||(x.workers[dni]||{}).p);
-        x.faces[dni]={rid:e.id,n:e.nombre,lk:LOCS[e.local]?LOCS[e.local][0]:'',s:s,p:pp,fd:fd,t:Date.now()}; },
+      await mutar(function(x){ x.faces=x.faces||{}; var p=x.faces[dni]||{}, n={rid:e.id,n:e.nombre,lk:LOCS[e.local]?LOCS[e.local][0]:'',fd:fd,t:Date.now()}; if(p.s){n.s=p.s;n.p=p.p;} x.faces[dni]=n; },
         function(x){return x.faces&&x.faces[dni]&&x.faces[dni].fd.length===fd.length;});
-      msgFin(o,cc,'¡Cara registrada!','Hola, '+esc(e.nombre)+'. Desde ahora podés fichar con "FICHAR CON MI CARA".');
+      msgFin(o,cc,'¡Cara registrada!',esc(e.nombre)+' ya puede fichar con "FICHAR CON MI CARA".');
     }catch(x){ msgFin(o,cc,'No se pudo guardar',esc(x.message||'Error')); }
     return true;
   }
 
   /* ---------- pantalla de ingreso: un solo botón de cámara ---------- */
-  window.__gx={acceso:acceso,pushUsers:pushUsers,syncUsers:syncUsers,init:function(g){
+  window.__gx={pushUsers:pushUsers,syncUsers:syncUsers,init:function(g){
     var card=g.querySelector('.auth-card'); if(!card) return;
     var head='<div class="lg">BARRA CHALACA</div><div class="sb">STREET FOOD PERUANO · RRHH</div>';
     var inner=card.innerHTML.replace(head,''), wrap=document.createElement('div'), bar=document.createElement('div'), hd=document.createElement('div'), tab='e';
     wrap.className='gx-wrap'; bar.className='gx-tabs'; hd.className='auth-card'; hd.innerHTML=head;
     g.insertBefore(wrap,card); wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
     var ICF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>';
-    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button>'+
-      '<h2 style="margin-top:22px">Primera vez</h2><div class="auth-note" style="margin:0">Ingresá tu DNI y una contraseña (si es tu primera vez, elegí una) y después te sacamos la foto.</div>'+
-      '<label for="f-dni">DNI</label><input id="f-dni" inputmode="numeric" autocomplete="username"><label for="f-pw">Contraseña</label><input id="f-pw" type="password" autocomplete="current-password">'+
-      '<button type="button" class="dl-btn alt" id="f-reg">REGISTRAR MI CARA</button><div class="auth-err" id="f-err" role="alert"></div>';
+    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button>';
     function show(k){ tab=k;
       bar.innerHTML='<button type="button" data-g="c" title="Fichar con la cara" aria-label="Fichar con la cara" aria-selected="'+(k==='c')+'">'+ICF+'</button>';
       card.innerHTML=(k==='c')?CARA:inner;
@@ -944,9 +906,6 @@ td.avn .av{margin-right:8px}
     bar.addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(b)show(tab==='c'?'e':'c');});
     wrap.addEventListener('click',async function(e){ var i=e.target.id;
       if(i==='f-go') ficharCara();
-      else if(i==='f-reg'){ var err=$('f-err'),btn=e.target; err.textContent=''; btn.disabled=true;
-        try{ await registrarCara($('f-dni').value,$('f-pw').value); }catch(x){ err.textContent=x.message||'Error'; }
-        btn.disabled=false; }
     });
     show('e');
   }};
@@ -956,21 +915,29 @@ td.avn .av{margin-right:8px}
   function aplicarLl(d){ window.__ciclo.setPres(d.ll,hoyF()); if(window.__fich) __fich.set(d); }
   var Z={d:null,lk:'palermo',err:'',msg:null};
   async function cargar(){ try{ Z.d=await leer(); Z.err=''; aplicarLl(Z.d); }catch(e){ Z.err=e.message||'Error'; } ren(); }
+  var TODOS=['palermo','belgrano','bulnes','caseros','lamar','tanta'];
   async function ren(){
-    var el=$('lleg-root'); if(!el) return; var d=Z.d;
+    var el=$('lleg-root'); if(!el) return; var d=Z.d, adm=esAdmin();
     if(!d){ el.innerHTML='<div class="top"><div class="doodle-title">Fichadas</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">REINTENTAR</button></div></div>'+(Z.err?'<div class="msg e" role="alert">'+esc(Z.err)+'</div>':'<p>Cargando…</p>'); return; }
-    var hoy=d.ll.filter(function(x){return x.f===hoyF();}).sort(function(a,b){return a.h<b.h?-1:1;}), ws=Object.keys(d.workers);
-    el.innerHTML='<div class="top"><div class="doodle-title">Fichadas</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>'+
-      '<h4>Ubicación de los locales</h4><div class="auth-note" style="margin:0 0 8px">'+LOCS.map(function(l){return esc(l[1])+': '+(d.geo[l[0]]?'cargada':'sin cargar');}).join(' · ')+'. Al fichar, el local se detecta por GPS (a menos de 150 m del punto cargado).</div>'+
-      '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
-      '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>'+
-      '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
-      (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>'+
-      '<h4>Trabajadores con cuenta ('+ws.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Local</th><th></th></tr></thead><tbody>'+
-      (ws.length?ws.map(function(k){var w=d.workers[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(w.rid,28,w.n):'')+esc(w.n)+'</td><td>'+esc(LN(w.lk))+' · '+(w.a==='salon'?'Salón':'Cocina')+'</td><td><button type="button" class="dl-btn alt mini" data-z="del" data-k="'+esc(k)+'">REINICIAR CUENTA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie creó su cuenta todavía.</td></tr>')+'</tbody></table></div>'+
-      '<h4>Caras registradas ('+Object.keys(d.faces).length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
-      (Object.keys(d.faces).length?Object.keys(d.faces).map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+'</td><td>'+esc(k)+'</td><td><button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button></td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>'+
-      '<p class="auth-note">Reiniciar la cuenta libera el celular: sirve si la persona cambió de teléfono o se olvidó la contraseña. Después crea la cuenta de nuevo con su DNI.</p>';
+    var dnis=window.__dni||{}, emps=(window.__ciclo&&__ciclo.emps?__ciclo.emps():[]).filter(function(e){return dnis[e.id];}).sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es');}), ids={};
+    emps.forEach(function(e){ids[e.id]=1;});
+    if(!Z.emp||!ids[Z.emp]) Z.emp=emps[0]?emps[0].id:'';
+    var caras=Object.keys(d.faces).filter(function(k){return adm||ids[d.faces[k].rid];});
+    var h='<div class="top"><div class="doodle-title">Fichadas</div><div class="acts"><button type="button" class="dl-btn mini" data-z="ref">ACTUALIZAR</button></div></div>';
+    h+='<h4>Registrar cara de un colaborador</h4><div class="auth-note" style="margin:0 0 8px">Los colaboradores no necesitan cuenta. Elegí a la persona, que mire a la cámara de este dispositivo y listo: después ficha desde la pantalla de ingreso con "FICHAR CON MI CARA".</div>'+
+      '<label for="z-emp">Colaborador</label><select id="z-emp">'+(emps.length?emps.map(function(e){var t=dnis[e.id];return '<option value="'+esc(e.id)+'"'+(e.id===Z.emp?' selected':'')+'>'+esc(e.nombre)+' · '+esc(LN(TODOS[e.local]||''))+(d.faces[t]?' ✓':'')+'</option>';}).join(''):'<option value="">Sin colaboradores con DNI en ciclo</option>')+'</select>'+
+      '<button type="button" class="dl-btn mini" data-z="regcara"'+(emps.length?'':' disabled')+'>REGISTRAR CARA</button>'+
+      '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>';
+    if(adm){
+      var hoy=d.ll.filter(function(x){return x.f===hoyF();}).sort(function(a,b){return a.h<b.h?-1:1;});
+      h+='<h4>Ubicación de los locales</h4><div class="auth-note" style="margin:0 0 8px">'+LOCS.map(function(l){return esc(l[1])+': '+(d.geo[l[0]]?'cargada':'sin cargar');}).join(' · ')+'. Al fichar, el local se detecta por GPS (a menos de 150 m del punto cargado).</div>'+
+        '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
+        '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
+        (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>';
+    }
+    h+='<h4>Caras registradas ('+caras.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
+      (caras.length?caras.map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>';
+    el.innerHTML=h;
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
   function adminUI(){
@@ -980,18 +947,20 @@ td.avn .av{margin-right:8px}
     document.querySelector('.tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(!b)return;var k=b.getAttribute('data-tab');v.hidden=k!=='lleg';if(k==='lleg')cargar();});
     v.addEventListener('change',function(e){
       if(e.target.id==='z-lk'){Z.lk=e.target.value;Z.msg=null;ren();}
+      else if(e.target.id==='z-emp'){Z.emp=e.target.value;Z.msg=null;}
     });
     v.addEventListener('click',async function(e){
       var b=e.target.closest('[data-z]'); if(!b) return; var a=b.getAttribute('data-z');
       if(a==='ref') cargar();
-      else if(a==='geo'){ try{ setMsg('Tomando ubicación…'); var q=await pos(), lk=Z.lk;
+      else if(a==='regcara'){ var rid=($('z-emp')||{}).value, dn=(window.__dni||{})[rid];
+        if(!rid||!dn){ setMsg('Elegí un colaborador con DNI cargado en ciclo.',true); return; }
+        try{ var ok=await registrarCaraDe(rid,dn); if(ok){ Z.d=await leer(); setMsg('Cara registrada.'); } }catch(x){ setMsg(x.message||'Error',true); } }
+      else if(a==='geo'&&esAdmin()){ try{ setMsg('Tomando ubicación…'); var q=await pos(), lk=Z.lk;
           Z.d=await mutar(function(d){d.geo[lk]={lat:q.coords.latitude,lng:q.coords.longitude,t:Date.now()};},function(d){return !!d.geo[lk];});
           setMsg('Ubicación de '+LN(lk)+' guardada (precisión de unos '+Math.round(q.coords.accuracy||0)+' m). Hacelo parado dentro del local.'); }
         catch(x){ setMsg(x.message||'Error',true); } }
-      else if(a==='delf'){ var kf=b.getAttribute('data-k'); if(!confirm('¿Borrar la cara de '+((Z.d.faces||{})[kf]||{}).n+'? Tendrá que registrarla de nuevo.')) return;
+      else if(a==='delf'&&esAdmin()){ var kf=b.getAttribute('data-k'); if(!confirm('¿Borrar la cara de '+((Z.d.faces||{})[kf]||{}).n+'? Tendrá que registrarla de nuevo.')) return;
         try{ Z.d=await mutar(function(d){delete d.faces[kf];},function(d){return !d.faces[kf];}); setMsg('Cara borrada.'); }catch(x){ setMsg(x.message||'Error',true); } }
-      else if(a==='del'){ var k=b.getAttribute('data-k'); if(!confirm('¿Reiniciar la cuenta de '+(Z.d.workers[k]||{}).n+'?')) return;
-        try{ Z.d=await mutar(function(d){delete d.workers[k];},function(d){return !d.workers[k];}); setMsg('Cuenta reiniciada.'); }catch(x){ setMsg(x.message||'Error',true); } }
     });
   }
   async function trabSync(){
@@ -1009,7 +978,7 @@ td.avn .av{margin-right:8px}
       var h=document.querySelector('.tab[data-tab="hor"]'); if(h) h.click();
       trabSync(); setInterval(trabSync,300000); document.addEventListener('visibilitychange',trabSync);
     } else {
-      if(u.rol==='admin') adminUI();
+      adminUI();
       var go=function(){ if(document.hidden) return; leer().then(function(d){Z.d=d;adoptUsers(d);aplicarLl(d);ren();}).catch(function(){}); };
       go(); setInterval(go,120000);
     }

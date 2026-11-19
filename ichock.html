@@ -482,7 +482,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
   /* ---- login ---- */
   var gate;
   function gateHtml(){
-    return '<div class="auth-card"><div class="lg">BARRA CHALACA</div><div class="sb">STREET FOOD PERUANO · RRHH</div>'+
+    return '<div class="auth-card">'+
       '<h2>Iniciar sesión</h2>'+
       '<label for="a-usr">DNI</label><input id="a-usr" autocomplete="username" autocapitalize="none">'+
       '<label for="a-pw">Contraseña</label><input id="a-pw" type="password" autocomplete="current-password">'+
@@ -932,10 +932,10 @@ td.avn .av{margin-right:8px}
   /* ---------- pantalla de ingreso: un solo botón de cámara ---------- */
   window.__gx={pushUsers:pushUsers,syncUsers:syncUsers,init:function(g){
     var card=g.querySelector('.auth-card'); if(!card) return;
-    var head='<div class="lg">BARRA CHALACA</div><div class="sb">STREET FOOD PERUANO · RRHH</div>';
+    var head='';
     var inner=card.innerHTML.replace(head,''), wrap=document.createElement('div'), bar=document.createElement('div'), hd=document.createElement('div'), tab='e';
     wrap.className='gx-wrap'; bar.className='gx-tabs'; hd.className='auth-card'; hd.innerHTML=head;
-    g.insertBefore(wrap,card); wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
+    g.insertBefore(wrap,card); if(head) wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
     var ICF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>';
     var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button><button type="button" class="dl-btn alt" id="f-new" style="margin-top:12px;width:100%">REGISTRAR CARA NUEVA</button>';
     var NUEVA='<h2>Registrar cara nueva</h2><div class="auth-note" style="margin:0 0 6px">Ingresá tu DNI y tu nombre completo. Después te sacamos la foto.</div>'+

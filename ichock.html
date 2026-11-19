@@ -854,12 +854,49 @@ td.avn .av{margin-right:8px}
       return undefined;
     });
     if(!R||!R.res) return;
-    var o=R.o,c=R.c,f=d.faces[R.res]; c.classList.remove('fc');
+    var o=R.o,c=R.c,f=d.faces[R.res], rid=f.rid, nom=f.n; c.classList.remove('fc');
     c.innerHTML='<h3>Hola, '+esc(f.n)+'</h3><p>Registrando… Aceptá el permiso de ubicación si te lo pide.</p>';
     try{
-      var r=await ficharPersona({rid:f.rid,n:f.n}), sal=r.t==='sa';
-      msgFin(o,c,(r.ya?(sal?'Ya fichaste tu salida':'Ya fichaste tu entrada'):(sal?'¡Salida registrada!':'¡Entrada registrada!')),esc(f.n)+' · '+esc(LN(r.l))+' · '+esc(r.h));
+      if(f.x){ try{ var cc2=window.__ciclo; await cc2.pull(); var ce=cc2.find(R.res);
+        if(ce){ rid=ce.id; nom=ce.nombre; var kk=R.res;
+          await mutar(function(x){var q=x.faces[kk]; if(q){q.rid=ce.id;q.n=ce.nombre;delete q.x;delete q.a;}},function(x){return x.faces[kk]&&!x.faces[kk].x;}); } }catch(e2){} }
+      var r=await ficharPersona({rid:rid,n:nom}), sal=r.t==='sa';
+      msgFin(o,c,(r.ya?(sal?'Ya fichaste tu salida':'Ya fichaste tu entrada'):(sal?'¡Salida registrada!':'¡Entrada registrada!')),esc(nom)+' · '+esc(LN(r.l))+' · '+esc(r.h));
     }catch(e){ msgFin(o,c,'No se pudo registrar',esc(e.message||'Error')); }
+  }
+  /* REGISTRAR CARA NUEVA (pantalla de ingreso): DNI + nombre completo. Si no está en ciclo igual se acepta y aparece solo en asistencia hasta que esté en ciclo */
+  async function registrarCaraNueva(dni,nombre,area){
+    dni=String(dni).replace(/\D/g,''); nombre=String(nombre||'').trim().replace(/\s+/g,' ');
+    if(dni.length<6||dni.length>9) throw new Error('Ingresá un DNI válido.');
+    if(nombre.length<5||nombre.indexOf(' ')<0) throw new Error('Ingresá nombre y apellido completos.');
+    var c=window.__ciclo; try{ await c.pull(); }catch(e0){}
+    var ce=c.find(dni), d=await leer();
+    if(d.faces[dni]) throw new Error('Ese DNI ya tiene la cara registrada. Si hay que cambiarla, pedile a un encargado.');
+    var caps=[],ult=0,dup=null;
+    var R=await camaraCara('Registrar cara nueva',function(desc,say){
+      var m=Object.keys(d.faces).length?mejorCara(desc,d.faces):null;
+      if(m&&m.m<0.45){ dup=d.faces[m.k].n; return 'dup'; }
+      var t=Date.now(); if(t-ult<900){return undefined;} ult=t;
+      caps.push(Array.prototype.slice.call(desc));
+      say(caps.length<MUESTRAS?('Muy bien. Mové un poquito la cabeza ('+caps.length+' de '+MUESTRAS+')'):'¡Listo!');
+      return caps.length>=MUESTRAS?'ok':undefined;
+    });
+    if(!R||!R.res) return null;
+    var o=R.o,cc=R.c;
+    if(R.res==='dup'){ msgFin(o,cc,'Esta cara ya está registrada','Ya figura con otro DNI ('+esc(dup)+').'); return null; }
+    cc.classList.remove('fc'); cc.innerHTML='<h3>Guardando…</h3>';
+    var lk=ce&&LOCS[ce.local]?LOCS[ce.local][0]:'';
+    if(!lk){ try{ var q=await pos(), acc=Math.min(q.coords.accuracy||0,100), bm=null;
+      Object.keys(d.geo).forEach(function(k){ var g=d.geo[k], m=dist(g.lat,g.lng,q.coords.latitude,q.coords.longitude); if(m-acc<=RADIO&&(!bm||m<bm.m)) bm={l:k,m:m}; });
+      if(bm) lk=bm.l; }catch(e1){} }
+    var fd=caps.map(fdEnc), rec={rid:ce?ce.id:'x'+dni,n:ce?ce.nombre:nombre,lk:lk,fd:fd,t:Date.now()};
+    if(!ce){ rec.x=1; rec.a=(area==='cocina'?'cocina':'salon'); }
+    try{
+      await mutar(function(x){ x.faces=x.faces||{}; if(!x.faces[dni]) x.faces[dni]=rec; },
+        function(x){return x.faces&&x.faces[dni]&&x.faces[dni].fd.length===fd.length;});
+      msgFin(o,cc,'¡Cara registrada!','Hola, '+esc(rec.n)+'. Desde ahora podés fichar con "FICHAR CON MI CARA".'+(ce?'':' Aparecés en asistencia hasta que te carguen en ciclo.'));
+    }catch(x){ msgFin(o,cc,'No se pudo guardar',esc(x.message||'Error')); }
+    return true;
   }
   /* REGISTRAR CARA: la hace un administrador o encargado con la cara del colaborador (el colaborador no tiene cuenta) */
   async function registrarCaraDe(rid,dni){
@@ -897,22 +934,40 @@ td.avn .av{margin-right:8px}
     wrap.className='gx-wrap'; bar.className='gx-tabs'; hd.className='auth-card'; hd.innerHTML=head;
     g.insertBefore(wrap,card); wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
     var ICF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>';
-    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button>';
+    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button><button type="button" class="dl-btn alt" id="f-new" style="margin-top:12px;width:100%">REGISTRAR CARA NUEVA</button>';
+    var NUEVA='<h2>Registrar cara nueva</h2><div class="auth-note" style="margin:0 0 6px">Ingresá tu DNI y tu nombre completo. Después te sacamos la foto.</div>'+
+      '<label for="f-dni">DNI</label><input id="f-dni" inputmode="numeric" autocomplete="off">'+
+      '<label for="f-nom">Nombre completo</label><input id="f-nom" autocomplete="off" autocapitalize="words">'+
+      '<label for="f-area">Área (si todavía no estás en ciclo)</label><select id="f-area"><option value="salon">Salón</option><option value="cocina">Cocina</option></select>'+
+      '<button type="button" class="dl-btn" id="f-reg" style="margin-top:12px;width:100%">TOMAR FOTOS</button>'+
+      '<button type="button" class="dl-btn alt" id="f-back" style="margin-top:8px;width:100%">VOLVER</button><div class="auth-err" id="f-err" role="alert"></div>';
     function show(k){ tab=k;
       bar.innerHTML='<button type="button" data-g="c" title="Fichar con la cara" aria-label="Fichar con la cara" aria-selected="'+(k==='c')+'">'+ICF+'</button>';
-      card.innerHTML=(k==='c')?CARA:inner;
+      card.innerHTML=(k==='c')?CARA:(k==='n'?NUEVA:inner);
       if(k==='e'){ setTimeout(function(){var f=document.getElementById('a-usr');if(f)f.focus();},0); }
     }
-    bar.addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(b)show(tab==='c'?'e':'c');});
+    bar.addEventListener('click',function(e){var b=e.target.closest('[data-g]');if(b)show(tab==='e'?'c':'e');});
     wrap.addEventListener('click',async function(e){ var i=e.target.id;
       if(i==='f-go') ficharCara();
+      else if(i==='f-new') show('n');
+      else if(i==='f-back') show('c');
+      else if(i==='f-reg'){ var err=$('f-err'),btn=e.target; err.textContent=''; btn.disabled=true;
+        try{ var ok=await registrarCaraNueva($('f-dni').value,$('f-nom').value,$('f-area').value); if(ok) show('c'); }catch(x){ err.textContent=x.message||'Error'; }
+        btn.disabled=false; }
     });
     show('e');
   }};
 
   /* ---------- ya adentro ---------- */
   var applied=ls('barra-ll-ap')||[];
-  function aplicarLl(d){ window.__ciclo.setPres(d.ll,hoyF()); if(window.__fich) __fich.set(d); }
+  function aplicarLl(d){
+    var c=window.__ciclo, map={}, ex=[];
+    Object.keys(d.faces||{}).forEach(function(k){ var f=d.faces[k]; if(!f.x) return;
+      var ce=c.find(k); if(ce){ map[f.rid]=ce.id; return; }
+      var ult=d.ll.filter(function(y){return y.id===f.rid;}).sort(function(a,b){return b.ts-a.ts;})[0], li=TODOS.indexOf(ult?ult.l:f.lk);
+      if(li>=0) ex.push({id:f.rid,dni:k,nombre:f.n,local:li,puesto:f.a==='cocina'?'cocina':'salon'}); });
+    var ll=d.ll.map(function(y){ return map[y.id]?Object.assign({},y,{id:map[y.id]}):y; });
+    c.setExtras(ex); c.setPres(ll,hoyF()); if(window.__fich) __fich.set(d); }
   var Z={d:null,lk:'palermo',err:'',msg:null};
   async function cargar(){ try{ Z.d=await leer(); Z.err=''; aplicarLl(Z.d); }catch(e){ Z.err=e.message||'Error'; } ren(); }
   var TODOS=['palermo','belgrano','bulnes','caseros','lamar','tanta'];
@@ -936,7 +991,7 @@ td.avn .av{margin-right:8px}
         (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>';
     }
     h+='<h4>Caras registradas ('+caras.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
-      (caras.length?caras.map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>';
+      (caras.length?caras.map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+(f.x?' · sin ciclo':'')+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>';
     el.innerHTML=h;
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
@@ -1377,7 +1432,9 @@ td.avn .av{margin-right:8px}
   var roster=LS.get('barra-roster',null), pres=LS.get('barra-pres',{}), hor=LS.get('barra-horarios',{}), sem=LS.get('barra-semana',null);
   var subs={emp:[],emperr:[],hor:[],sem:[]}, status='Conectando con ciclo…';
 
-  function empDocs(){ return (roster||[]).filter(function(e){ return __inBr(e.local)&&__auth.puedeIdx(e.local,__auth.esPuestoSalon(e.puesto)?'salon':'cocina'); }).map(function(e){ var p=pres[e.id]||{};
+  var extras=[];
+  function rosterAll(){ var dm=window.__dni||{}, have={}; Object.keys(dm).forEach(function(k){ have[dm[k]]=1; }); return (roster||[]).concat(extras.filter(function(x){ return !have[x.dni]; })); }
+  function empDocs(){ return rosterAll().filter(function(e){ return __inBr(e.local)&&__auth.puedeIdx(e.local,__auth.esPuestoSalon(e.puesto)?'salon':'cocina'); }).map(function(e){ var p=pres[e.id]||{};
     return {id:e.id,data:function(){ return {nombre:e.nombre,local:e.local,puesto:e.puesto,presenteEl:p.presenteEl||'',ingreso:p.ingreso||'',salida:p.salida||'',ejemplo:false}; }}; }); }
   function emitEmp(){ if(roster) subs.emp.forEach(function(f){ f({docs:empDocs()}); }); }
   function horDocs(){ return Object.keys(hor).map(function(k){ return {id:k,data:function(){ return hor[k]; }}; }); }
@@ -1438,7 +1495,7 @@ td.avn .av{margin-right:8px}
     }
     paint();
   }
-  window.__ciclo={emps:function(){ return empDocs().map(function(d){ var x=d.data(); x.id=d.id; return x; }); },
+  window.__ciclo={setExtras:function(l){ extras=l||[]; emitEmp(); },emps:function(){ return empDocs().map(function(d){ var x=d.data(); x.id=d.id; return x; }); },
     setPres:function(ll,hoy){ var by={},np={},now=Date.now(); ll.forEach(function(x){ (by[x.id]=by[x.id]||[]).push(x); });
       Object.keys(by).forEach(function(id){ var a=by[id].sort(function(p,q){ return p.ts-q.ts; }), l=a[a.length-1];
         if(l.t!=='s'){ if(now-l.ts<18*36e5) np[id]={presenteEl:hoy,ingreso:l.h}; }
@@ -2359,6 +2416,96 @@ td.avn .av{margin-right:8px}
   function diag(){ if(k==='barra'||!window.__ciclo) return; var n=__ciclo.emps().length, sin=window.__locSin||[];
     dg.hidden=!!n; if(!n) dg.textContent='Todavía no hay nadie de '+m.n+' desde ciclo. '+(sin.length?'Locales o puestos de ciclo sin reconocer: '+sin.join(', ')+'. Pasame cómo figura '+m.n+' en ciclo.':'Esperando la lectura de ciclo…'); }
   setInterval(diag,3000); setTimeout(diag,1500);
+})();
+</script>
+<style>
+/* Peces 8 bits animados (tema Barra Chalaca) */
+.theme-barra .dd-izq,.theme-barra .dd-der{ background-image:none !important; }
+.theme-barra .doodle-row .dd{ width:104px; height:60px !important; aspect-ratio:auto; overflow:visible; }
+.theme-barra .dd canvas{ display:block; width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; image-rendering:pixelated; }
+@media (max-width:700px){ .theme-barra .doodle-row .dd{ width:52px; height:30px !important; } }
+</style>
+<script>
+(function(){
+  'use strict';
+  var W=52,H=30;
+  var SP={
+    a:{top:'#0F4A68',mid:'#145C82',low:'#2F8DB0',belly:'#A8DCE9',scale:'#3C9CBF',str:'#E8492B',strd:'#B8341A',fin:'#F2B705',find:'#C99A04',spec:'#CFEFF7'},
+    b:{top:'#B8341A',mid:'#E8492B',low:'#F26B48',belly:'#FFD9B0',scale:'#F58A67',str:'#F2B705',strd:'#C99A04',fin:'#145C82',find:'#0F4A68',spec:'#FFF3D6'}
+  };
+  var OUT='#0B2E4F', WHITE='#FFFDF7', BUB='#8FCDE0', BUB2='#4FA6C6';
+  function frame(ctx,t,sp,seed){
+    var g=new Array(W*H), T=t+seed, ph=T*0.8, bob=Math.round(Math.sin(T*0.22)*1.2);
+    var cx=27, cy=15+bob, rx=13.5, ry=7.6, i, j, k, x, y;
+    function put(px,py,c){ px=Math.round(px); py=Math.round(py); if(px>=0&&px<W&&py>=0&&py<H) g[py*W+px]=c; }
+    function has(px,py){ return px>=0&&px<W&&py>=0&&py<H&&!!g[py*W+px]; }
+    function edge(px){ var q=(px-cx)/rx; return Math.sqrt(Math.max(0,1-q*q))*ry; }
+    /* cola con horquilla */
+    var x0=cx-13;
+    for(k=0;k<=10;k++){
+      var half=1.5+k*0.55, yc=cy+Math.sin(ph)*k*0.3, tx=x0+1-k;
+      for(y=Math.floor(yc-half);y<=Math.ceil(yc+half);y++){
+        if(k>=7&&Math.abs(y-yc)<(k-6)*0.7) continue;
+        put(tx,y,(k>1&&((y+k)&1))?sp.find:sp.fin);
+      }
+    }
+    /* aletas dorsal, pélvica y anal */
+    for(x=cx-4;x<=cx+5;x++){ var h=4.5-Math.abs(x-(cx-1))*0.55+Math.sin(ph+x*0.5)*0.6, ty=cy-edge(x);
+      for(y=ty-h;y<=ty+1;y++) put(x,y,((x+Math.round(y))&1)?sp.find:sp.fin); }
+    for(x=cx-1;x<=cx+3;x++){ var h2=3.5-Math.abs(x-(cx+1))*0.7+Math.sin(ph+2)*0.5, by=cy+edge(x);
+      for(y=by-1;y<=by+h2;y++) put(x,y,((x+Math.round(y))&1)?sp.find:sp.fin); }
+    for(x=cx-8;x<=cx-5;x++){ var h3=2.4-Math.abs(x-(cx-6.5))*0.7+Math.sin(ph+3)*0.4, by2=cy+edge(x);
+      for(y=by2-1;y<=by2+h3;y++) put(x,y,sp.fin); }
+    /* cuerpo */
+    for(y=cy-9;y<=cy+9;y++) for(x=cx-15;x<=cx+15;x++){
+      var qx=(x-cx)/rx, qy=(y-cy)/ry; if(qx*qx+qy*qy>1) continue;
+      var c=qy<-0.55?sp.top:(qy<0.15?sp.mid:(qy<0.6?sp.low:sp.belly));
+      if(qy>-0.5&&qy<0.55&&(((x+((y&1)*2))&3)===0)) c=sp.scale;
+      var bands=[cx-6,cx+1];
+      for(j=0;j<2;j++){ var bc=bands[j]+(y-cy)*0.25, dx=x-bc;
+        if(Math.abs(dx)<=1.0&&qy>-0.9&&qy<0.9) c=dx>0.3?sp.strd:sp.str; }
+      put(x,y,c);
+    }
+    put(cx+6,cy-5,sp.spec); put(cx+7,cy-5,sp.spec); put(cx+5,cy-6,sp.spec);
+    /* aleta pectoral (aletea) */
+    var fl=Math.sin(ph*1.2)>0?0:-1, pec=[[3,1],[4,1],[5,1],[2,2],[3,2],[4,2],[5,2],[1,3],[2,3],[3,3],[4,3],[0,4],[1,4],[2,4],[3,4]];
+    for(i=0;i<pec.length;i++) put(cx+pec[i][0],cy+pec[i][1]+fl,(i>10||i===3||i===7||i===11)?sp.find:sp.fin);
+    /* contorno */
+    var snap=g.slice();
+    for(y=0;y<H;y++) for(x=0;x<W;x++){ if(snap[y*W+x]) continue;
+      if((x>0&&snap[y*W+x-1])||(x<W-1&&snap[y*W+x+1])||(y>0&&snap[(y-1)*W+x])||(y<H-1&&snap[(y+1)*W+x])) g[y*W+x]=OUT; }
+    /* branquia */
+    for(y=cy-5;y<=cy+5;y++){ var d=y-cy, gx=cx+5-Math.round(d*d/10); if(has(gx,y)&&g[y*W+gx]!==OUT) put(gx,y,sp.top); }
+    /* ojo (parpadea) */
+    var ex=cx+9, ey=cy-2, blink=(T%46)<2;
+    for(j=-2;j<=2;j++) for(i=-2;i<=2;i++){ if(Math.abs(i)===2&&Math.abs(j)===2) continue; if(Math.abs(i)<2&&Math.abs(j)<2) continue; put(ex+i,ey+j,OUT); }
+    for(j=-1;j<=1;j++) for(i=-1;i<=1;i++) put(ex+i,ey+j,blink?sp.mid:WHITE);
+    if(blink){ for(i=-1;i<=1;i++) put(ex+i,ey,OUT); }
+    else { put(ex+1,ey,OUT); put(ex+1,ey+1,OUT); put(ex-1,ey-1,'#FFFFFF'); }
+    /* boca */
+    put(cx+13,cy+1,OUT); put(cx+12,cy+2,OUT); put(cx+11,cy+2,OUT);
+    /* burbujas */
+    for(i=0;i<3;i++){
+      var p=((T*0.045+i*0.34)%1), bx=cx+16+i*1.5+Math.sin(p*9+i*2)*1.2, byy=cy+1-p*(H-9);
+      if(p<0.45) put(bx,byy,BUB);
+      else if(p<0.8){ put(bx,byy,BUB); put(bx+1,byy,BUB); put(bx,byy+1,BUB); put(bx+1,byy+1,BUB2); }
+      else { for(j=0;j<3;j++) for(k=0;k<3;k++){ if(j===1&&k===1) continue; put(bx+k,byy+j,BUB2); } }
+    }
+    ctx.clearRect(0,0,W,H);
+    for(y=0;y<H;y++) for(x=0;x<W;x++){ var cc=g[y*W+x]; if(cc){ ctx.fillStyle=cc; ctx.fillRect(x,y,1,1); } }
+  }
+  var list=[], t=0, still=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function init(){
+    [].forEach.call(document.querySelectorAll('.theme-barra .dd:not([data-px])'),function(d){
+      var cv=document.createElement('canvas'), der=d.classList.contains('dd-der');
+      cv.width=W; cv.height=H; cv.setAttribute('aria-hidden','true'); d.setAttribute('data-px','1'); d.appendChild(cv);
+      if(der) cv.style.transform='scaleX(-1)';
+      var o={ctx:cv.getContext('2d'),sp:der?SP.b:SP.a,seed:der?9:0}; list.push(o); frame(o.ctx,t,o.sp,o.seed);
+    });
+  }
+  init();
+  if(window.MutationObserver) new MutationObserver(init).observe(document.body,{childList:true,subtree:true});
+  if(!still) setInterval(function(){ if(document.hidden) return; t++; list.forEach(function(o){ frame(o.ctx,t,o.sp,o.seed); }); },120);
 })();
 </script>
 </body></html>

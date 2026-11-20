@@ -292,7 +292,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .ht td.n{ width:34px; background:#F7F7F7; color:#5a6470; font-size:12px; }
 .ht td.cn,.ht td.sc{ background:#F7F7F7; text-align:left; font-weight:700; padding:0 8px; }
 .ht td.cn{ min-width:150px; } .ht td.sc{ min-width:90px; }
-.ht td input{ width:100%; min-width:0; border:0; background:transparent; font:13px 'DM Sans',sans-serif; color:var(--navy); text-align:center; padding:9px 5px; }
+.ht td input{ width:100%; min-width:0; border:0; background:transparent; font:13px 'DM Sans',sans-serif; color:var(--navy); text-align:center; padding:9px 1px; }
 .ht td.cn input,.ht td.sc input{ text-align:left; font-weight:700; padding-left:0; }
 .ht td.x{ width:70px; border:0; background:#fff; }
 .ht tfoot td{ background:#DDEBF7; font-weight:700; padding:8px 4px; color:var(--navy); }
@@ -344,7 +344,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 /* ===================== HORARIOS: pantalla completa y vista compacta en celular ===================== */
 .h-x{ display:none; }
 html.hfull-on{ overflow:hidden; }
-#v-hor.hfull{ position:fixed; inset:0; z-index:900; background:var(--sand); overflow:auto; -webkit-overflow-scrolling:touch; padding:calc(env(safe-area-inset-top,0px) + 6px) 8px calc(env(safe-area-inset-bottom,0px) + 10px); }
+#v-hor.hfull{ position:fixed; inset:0; z-index:900; background:var(--sand); overflow:auto; -webkit-overflow-scrolling:touch; padding:calc(env(safe-area-inset-top,0px) + 54px) 8px calc(env(safe-area-inset-bottom,0px) + 10px); }
 #v-hor.hfull .doodle-row{ display:none; }
 #v-hor.hfull .h-x{ display:block; position:fixed; top:calc(env(safe-area-inset-top,0px) + 8px); right:10px; z-index:950; width:42px; height:42px; border-radius:50%; border:2px solid var(--navy); background:var(--coral); color:#fff; font:700 20px/1 'DM Sans',sans-serif; box-shadow:2px 2px 0 rgba(0,0,0,.25); cursor:pointer; }
 #v-hor.hfull .hwrap{ border-radius:8px; }
@@ -1529,7 +1529,7 @@ td.avn .av{margin-right:8px}
   var subs={emp:[],emperr:[],hor:[],sem:[]}, status='Conectando con ciclo…';
 
   var extras=[];
-  function rosterAll(){ var dm=window.__dni||{}, have={}; Object.keys(dm).forEach(function(k){ have[dm[k]]=1; }); return (roster||[]).concat(extras.filter(function(x){ return !have[x.dni]; })); }
+  function rosterAll(){ var dm=window.__dni||{}, have={}; Object.keys(dm).forEach(function(k){ have[dm[k]]=1; }); var eg=window.__egr||{}; return (roster||[]).concat(extras.filter(function(x){ return !have[x.dni]&&!eg[x.dni]; })); }
   function empDocs(){ return rosterAll().filter(function(e){ return __inBr(e.local)&&__auth.puedeIdx(e.local,__auth.esPuestoSalon(e.puesto)?'salon':'cocina'); }).map(function(e){ var p=pres[e.id]||{};
     return {id:e.id,data:function(){ return {nombre:e.nombre,local:e.local,puesto:e.puesto,presenteEl:p.presenteEl||'',ingreso:p.ingreso||'',salida:p.salida||'',por:p.por||'',porS:p.porS||'',ejemplo:false}; }}; }); }
   function emitEmp(){ if(roster) subs.emp.forEach(function(f){ f({docs:empDocs()}); }); }
@@ -1564,9 +1564,9 @@ td.avn .av{margin-right:8px}
   }
   function dniDe(e){var k=Object.keys(e).filter(function(x){return /dni|docum/i.test(x);});for(var i=0;i<k.length;i++){var v=String(e[k[i]]||'').replace(/\D/g,'');if(v.length>=6)return v;}return '';}
   function parse(d){
-    var out=[], dm=window.__dni={};
+    var out=[], dm=window.__dni={}, eg=window.__egr={};
     (d.empleados||[]).forEach(function(e){
-      var est=String(e.estado||''); if(est!=='activo'&&est!=='egreso') return;
+      var est=String(e.estado||''); if(est==='egreso'){ var d0=dniDe(e); if(d0) eg[d0]=1; return; } if(est!=='activo') return;
       var lc=String(e.local||'').trim().replace(/^\d+\.\s*/,'').toUpperCase(), loc=locDe(lc), pk=PUESTO[plain(e.puesto)];
       if(loc===undefined&&lc) SIN[lc]=1; else if(loc>=4&&!pk) SIN['puesto: '+String(e.puesto||'').trim()]=1;
       var a=String(e.apellido||'').trim(), n=String(e.nombre||'').trim(), nom=a&&n?a+', '+n:(a||n);

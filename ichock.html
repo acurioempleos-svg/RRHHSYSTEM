@@ -499,6 +499,7 @@ html.hfull-on{ overflow:hidden; }
 .adm .top{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px}
 .adm .msg{font-size:13px;font-weight:700;margin-top:8px;min-height:16px}
 .adm .msg.e{color:#B8341A}.adm .msg.o{color:#1E7F5C}
+.adm h5.fc-loc{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:1px;font-size:14px;margin:14px 0 6px;color:#145C82;text-transform:uppercase}
 .expa{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;font-weight:700;font-size:13px}
 </style>
 <script>
@@ -1086,8 +1087,16 @@ td.avn .av{margin-right:8px}
         '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
         (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>';
     }
-    h+='<h4>Caras registradas ('+caras.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+
-      (caras.length?caras.map(function(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+(f.x?' · sin ciclo':'')+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}).join(''):'<tr><td colspan="3">Nadie registró su cara todavía.</td></tr>')+'</tbody></table></div>';
+    var cic=window.__ciclo, known={}, porL={}, sinL=[], nCar=0;
+    LOCS.forEach(function(l){known[l[0]]=1; porL[l[0]]=[];});
+    caras.forEach(function(k){ var f=d.faces[k], ce=cic&&cic.find?cic.find(k):null, key=(ce&&TODOS[ce.local]!=null)?TODOS[ce.local]:(f.lk||'');
+      if(known[key]) porL[key].push(k); else if(!key||TODOS.indexOf(key)<0) sinL.push(k); });   /* locales de otra marca no se muestran acá */
+    function filaCara(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+(f.x?' · sin ciclo':'')+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}
+    function tablaCaras(ks){ks.sort(function(a,b){return String(d.faces[a].n).localeCompare(String(d.faces[b].n),'es');});return '<div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+ks.map(filaCara).join('')+'</tbody></table></div>';}
+    var gr='';
+    LOCS.forEach(function(l){ var ks=porL[l[0]]; nCar+=ks.length; gr+='<h5 class="fc-loc">'+esc(l[1])+' ('+ks.length+')</h5>'+(ks.length?tablaCaras(ks):'<p class="auth-note" style="margin:0 0 6px">Nadie registró su cara en este local todavía.</p>'); });
+    if(sinL.length){ nCar+=sinL.length; gr+='<h5 class="fc-loc">Sin local asignado ('+sinL.length+')</h5>'+tablaCaras(sinL); }
+    h+='<h4>Caras registradas ('+nCar+')</h4>'+(nCar?gr:'<p class="auth-note">Nadie registró su cara todavía.</p>');
     el.innerHTML=h;
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
@@ -1730,9 +1739,21 @@ td.avn .av{margin-right:8px}
   }
   function esperado(e){ var t = turno(e); return t === null || (t !== '' && t !== 'FRANCO' && t !== 'VACACIONES'); }
   function conHorario(){ return state.emps.some(function(e){ return turno(e) !== null; }); }
+  /* Hora de inicio del turno de hoy en minutos (null si no hay turno o no se entiende). Con turno cortado toma el primer tramo. */
+  function inicioTurno(e){
+    var t = turno(e); if (!t || t === 'FRANCO' || t === 'VACACIONES') return null;
+    var m = /^\s*(\d{1,2})(?:[:.](\d{2}))?/.exec(t.split('/')[0]);
+    return m ? (+m[1]) * 60 + (+(m[2] || 0)) : null;
+  }
+  /* Todavía no es su horario de ingreso: no está, pero tampoco cuenta como ausente hasta que sea la hora. */
+  function aunNoEsHora(e){
+    if (isPresent(e) || e.presenteEl === state.hoy) return false;
+    var s = inicioTurno(e); if (s === null) return false;
+    var d = new Date(); return d.getHours() * 60 + d.getMinutes() < s;
+  }
   function filtrados(){
     var l = state.sel === 'todos' ? state.emps : state.emps.filter(function(e){ return String(e.local) === state.sel; });
-    return l.filter(function(e){ return isPresent(e) || e.presenteEl === state.hoy || esperado(e); });
+    return l.filter(function(e){ return (isPresent(e) || e.presenteEl === state.hoy || esperado(e)) && !aunNoEsHora(e); });
   }
 
   /* ---------- dibujo ---------- */
@@ -1820,7 +1841,7 @@ td.avn .av{margin-right:8px}
     if (state.loaded && state.emps.some(function(e){ return e.ejemplo; })) {
       h += '<div class="aviso">Estás viendo empleados de ejemplo.' + (state.writable ? ' Cargá a tu equipo real y quitá los ejemplos desde Gestionar.' : '') + '</div>';
     }
-    if (state.loaded && conHorario()) h += '<div class="aviso">Se espera a quienes tienen turno hoy en Horarios. Franco y vacaciones no figuran como ausentes.</div>';
+    if (state.loaded && conHorario()) h += '<div class="aviso">Se espera a quienes tienen turno hoy en Horarios. Franco y vacaciones no figuran como ausentes, y quien todavía no llegó a su horario de ingreso tampoco hasta que sea su hora.</div>';
     if (state.loaded && !state.writable) h += '<div class="aviso">Solo lectura: en esta vista no podés cambiar la asistencia.</div>';
     $('avisos').innerHTML = h;
   }
@@ -1830,7 +1851,9 @@ td.avn .av{margin-right:8px}
     $('fecha').textContent = t.charAt(0).toUpperCase() + t.slice(1);
   }
 
+  var _ocultos = -1;
   function render(){
+    _ocultos = state.emps.filter(aunNoEsHora).length;
     var ae = document.activeElement, sel = null;
     if (ae && ae.hasAttribute) {
       if (ae.hasAttribute('data-id')) sel = '[data-id="' + ae.getAttribute('data-id') + '"]';
@@ -1966,6 +1989,7 @@ td.avn .av{margin-right:8px}
   setInterval(function(){
     var d = dia();
     if (d !== state.hoy) { state.hoy = d; render(); }
+    else if (state.loaded && state.emps.filter(aunNoEsHora).length !== _ocultos) render();   /* llegó la hora de ingreso de alguien: pasa a la lista */
   }, 60000);
 
   render();
@@ -2376,6 +2400,8 @@ td.avn .av{margin-right:8px}
   function hhmm(m){m=Math.max(0,Math.round(m));return Math.floor(m/60)+':'+pad(m%60);}
   function lunes(){var d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return fday(d);}
   function emps(){return window.__ciclo&&__ciclo.emps?__ciclo.emps():[];}
+  var PUE=[['encargado','Encargado'],['cajero','Cajero'],['salon','Salón'],['limpieza','Limpieza'],['souschef','Sous chef'],['cocina','Cocina'],['bachero','Bachero']];
+  function pn(k){var x=PUE.filter(function(p){return p[0]===k;})[0];return x?x[1]:'';}
   function plan(e){
     var f=(window.__horData||{})[LK[e.local]]; if(!f||window.__horSem!==lunes()) return null;
     var di=(new Date().getDay()+6)%7, r=f.filter(function(x){return nrm(x.c)===nrm(e.nombre);})[0];
@@ -2458,8 +2484,8 @@ td.avn .av{margin-right:8px}
       sec('aus','No se presentaron',g.aus,function(o){return li(o,'sin entrada');})+
       sec('pend','Todavía no es su hora',g.pend,function(o){return li(o,'');});
     var tm=tomDay(), av=((D&&D.avi)||[]).filter(function(x){return x.f===tm&&visAvi(x);}).sort(function(a,b){return String(a.h).localeCompare(String(b.h))||String(a.n).localeCompare(String(b.n),'es');});
-    h+='<div class="rs-s man"><h4><span>Mañana · '+esc(lbl(tm))+'</span><span>'+av.length+'</span></h4>'+
-      (av.length?'<ul>'+av.map(function(x){return '<li><b>'+esc(x.n)+'</b> · '+esc(NM[LK.indexOf(x.l)]||x.l)+(x.h?' · '+esc(x.h):'')+(x.nota?' · '+esc(x.nota):'')+'</li>';}).join('')+'</ul>':'<p class="rs-n">El administrador todavía no cargó ingresos para mañana.</p>')+'</div>';
+    h+='<div class="rs-s man"><h4><span>Ingresos nuevos · mañana · '+esc(lbl(tm))+'</span><span>'+av.length+'</span></h4>'+
+      (av.length?'<ul>'+av.map(function(x){return '<li><b>'+esc(x.n)+'</b> · '+esc(NM[LK.indexOf(x.l)]||x.l)+(pn(x.pu)?' · '+esc(pn(x.pu)):'')+(x.h?' · '+esc(x.h):'')+(x.nota?' · '+esc(x.nota):'')+'</li>';}).join('')+'</ul>':'<p class="rs-n">El administrador todavía no cargó ingresos nuevos para mañana.</p>')+'</div>';
     return h;
   }
   function abrirResumen(){
@@ -2490,8 +2516,12 @@ td.avn .av{margin-right:8px}
       el.addEventListener('submit',function(e){
         e.preventDefault(); var f=e.target, id=f.p.value, w=emps().filter(function(x){return x.id===id;})[0], fe=f.d.value;
         if(!w||!/^\d{4}-\d\d-\d\d$/.test(fe)){aviMsg='Elegí la persona y la fecha.';el.__sig='';aviPaint();return;}
-        var rec={id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),pid:w.id,n:w.nombre,l:LK[w.local],f:fe,h:f.h.value.replace(/\s+/g,' ').trim().toUpperCase(),nota:f.nt.value.trim(),by:U.usuario||'admin',ts:Date.now()};
+        var rec={id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),pid:w.id,n:w.nombre,l:LK[w.local],pu:f.pu.value,f:fe,h:f.h.value.replace(/\s+/g,' ').trim().toUpperCase(),nota:f.nt.value.trim(),by:U.usuario||'admin',ts:Date.now()};
         aviEdit(function(d){d.avi.push(rec);},'Aviso guardado: lo verán al ingresar.');
+      });
+      el.addEventListener('change',function(e){
+        if(e.target.id!=='av-p') return; var w=emps().filter(function(x){return x.id===e.target.value;})[0], sp=el.querySelector('#av-pu');
+        if(w&&sp&&w.puesto) sp.value=w.puesto;
       });
       el.addEventListener('click',function(e){
         var b=e.target.closest('[data-av]'); if(!b) return; var i=b.getAttribute('data-av');
@@ -2502,15 +2532,17 @@ td.avn .av{margin-right:8px}
     var sig=JSON.stringify([lst.map(function(x){return x.id;}),aviMsg,emps().length]);
     if(el.__sig===sig||(el.__sig&&el.contains(document.activeElement))) return;
     el.__sig=sig;
-    el.innerHTML='<h3>Avisar ingresos</h3><p class="hint">Cargá quién ingresa en un día (por defecto mañana). Cada usuario lo ve en el resumen emergente al entrar, del día anterior.</p>'+
+    var e0=emps().slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');})[0], pu0=(e0&&e0.puesto)||'salon';
+    el.innerHTML='<h3>Avisar ingresos nuevos</h3><p class="hint">Cargá quién tiene un ingreso nuevo en un día (por defecto mañana). Cada usuario lo ve en el resumen emergente al entrar, del día anterior.</p>'+
       (aviMsg?'<div class="msg '+(/^(Elegí|No se)/.test(aviMsg)?'e':'o')+'" role="status">'+esc(aviMsg)+'</div>':'')+
       '<form class="frm"><div class="full"><label for="av-p">Persona</label><select id="av-p" name="p">'+emps().sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');}).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.nombre)+' · '+NM[x.local]+'</option>';}).join('')+'</select></div>'+
-      '<div><label for="av-d">Fecha del ingreso</label><input id="av-d" type="date" name="d" value="'+tomDay()+'"></div>'+
+      '<div><label for="av-pu">Puesto</label><select id="av-pu" name="pu">'+PUE.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===pu0?' selected':'')+'>'+x[1]+'</option>';}).join('')+'</select></div>'+
+      '<div><label for="av-d">Fecha del ingreso nuevo</label><input id="av-d" type="date" name="d" value="'+tomDay()+'"></div>'+
       '<div><label for="av-h">Horario (ej. 17 A CIERRE)</label><input id="av-h" name="h" autocomplete="off"></div>'+
       '<div class="full"><label for="av-n">Nota (opcional)</label><input id="av-n" name="nt" autocomplete="off"></div>'+
       '<div class="fx-go"><button class="dl-btn main">AVISAR</button></div></form>'+
-      '<div class="w"><table><thead><tr><th>Fecha</th><th>Persona</th><th>Local</th><th>Horario</th><th>Nota</th><th></th></tr></thead><tbody>'+
-      (lst.length?lst.map(function(x){return '<tr><td>'+esc(x.f)+'</td><td class="b">'+esc(x.n)+'</td><td>'+esc(NM[LK.indexOf(x.l)]||x.l)+'</td><td>'+esc(x.h||'–')+'</td><td>'+esc(x.nota||'')+'</td><td><button type="button" class="dl-btn alt s" data-av="'+esc(x.id)+'">QUITAR</button></td></tr>';}).join(''):'<tr><td colspan="6">No hay avisos cargados.</td></tr>')+'</tbody></table></div>';
+      '<div class="w"><table><thead><tr><th>Fecha</th><th>Persona</th><th>Local</th><th>Puesto</th><th>Horario</th><th>Nota</th><th></th></tr></thead><tbody>'+
+      (lst.length?lst.map(function(x){return '<tr><td>'+esc(x.f)+'</td><td class="b">'+esc(x.n)+'</td><td>'+esc(NM[LK.indexOf(x.l)]||x.l)+'</td><td>'+esc(pn(x.pu)||'–')+'</td><td>'+esc(x.h||'–')+'</td><td>'+esc(x.nota||'')+'</td><td><button type="button" class="dl-btn alt s" data-av="'+esc(x.id)+'">QUITAR</button></td></tr>';}).join(''):'<tr><td colspan="7">No hay avisos cargados.</td></tr>')+'</tbody></table></div>';
   }
   window.addEventListener('hor-change',function(){draw();tryShow();});
   window.addEventListener('load',function(){ draw(); paint(); var tb0=document.querySelector('.toolbar'); if(tb0){var rb=document.createElement('button');rb.type='button';rb.className='dl-btn alt';rb.id='b-resumen';rb.textContent='RESUMEN DEL DÍA';rb.onclick=abrirResumen;tb0.appendChild(rb);} setInterval(tryShow,2500); var t=document.querySelector('.tabs'); if(t) t.addEventListener('click',function(){setTimeout(paint,50);}); setInterval(function(){draw();},60000); });

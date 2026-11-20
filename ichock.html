@@ -1030,7 +1030,7 @@ td.avn .av{margin-right:8px}
     wrap.className='gx-wrap'; bar.className='gx-tabs'; hd.className='auth-card'; if(lc) hd.appendChild(lc);
     g.insertBefore(wrap,card); if(lc) wrap.appendChild(hd); wrap.appendChild(bar); wrap.appendChild(card);
     var ICF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>';
-    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button><button type="button" class="dl-btn alt" id="f-new" style="margin-top:12px;width:100%">REGISTRAR CARA NUEVA</button>';
+    var CARA='<h2>Fichar con la cara</h2><div class="auth-note" style="margin:0 0 6px">Mirá a la cámara: te reconoce y registra tu entrada o tu salida.</div><button type="button" class="dl-btn fc-big" id="f-go">FICHAR CON MI CARA</button>';
     var NUEVA='<h2>Registrar cara nueva</h2><div class="auth-note" style="margin:0 0 6px">Ingresá tu DNI y tu nombre completo. Después te sacamos la foto.</div>'+
       '<label for="f-dni">DNI</label><input id="f-dni" inputmode="numeric" autocomplete="off">'+
       '<label for="f-nom">Nombre completo</label><input id="f-nom" autocomplete="off" autocapitalize="words">'+
@@ -1091,7 +1091,7 @@ td.avn .av{margin-right:8px}
     el.innerHTML=h;
   }
   function setMsg(t,e){Z.msg={t:t,e:!!e};ren();}
-  function adminUI(){
+  function adminUI(){ if(!esAdmin()) return;
     var tb=document.createElement('button'); tb.type='button'; tb.className='tab'; tb.setAttribute('role','tab'); tb.setAttribute('data-tab','lleg'); tb.setAttribute('aria-selected','false'); tb.textContent='Fichadas';
     document.querySelector('.tabs').appendChild(tb);
     var v=document.createElement('div'); v.id='v-lleg'; v.hidden=true; v.innerHTML='<div class="adm" id="lleg-root"></div>'; $('v-hor').after(v);

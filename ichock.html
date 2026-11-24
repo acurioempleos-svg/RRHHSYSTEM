@@ -715,7 +715,13 @@ td.avn .av{margin-right:8px}
   function hx(u){return Array.from(u,function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
   function rnd(n){return hx(crypto.getRandomValues(new Uint8Array(n)));}
   function dev(){var d=ls('barra-dev');if(!d){d='d'+rnd(12);ls('barra-dev',d);}return d;}
-  function LN(k){var l=LOCS.filter(function(x){return x[0]===k;})[0];return l?l[1]:k;}
+  /* todos los locales por marca (orden: La Mar, Tanta, Barra Chalaca), para el GPS de cada uno */
+  var GEO_MARCAS=[['La Mar',[['lamar','La Mar']]],['Tanta',[['tanta','Tanta']]],['Barra Chalaca',[['palermo','Palermo'],['belgrano','Belgrano'],['bulnes','Bulnes'],['caseros','Caseros']]]];
+  var GEO_MIN=2*RADIO;   /* dos locales no pueden quedar a menos de 300 m: así las zonas de fichada nunca se pisan */
+  function LN(k){var r=k;GEO_MARCAS.forEach(function(m){m[1].forEach(function(l){if(l[0]===k)r=l[1];});});return r;}
+  /* local más cercano (distinto de lk) que esté a menos de GEO_MIN de ese punto */
+  function geoCerca(d,lk,lat,lng){var r=null;Object.keys(d.geo||{}).forEach(function(k){if(k===lk)return;var g=d.geo[k];if(!g)return;var m=dist(g.lat,g.lng,lat,lng);if(m<GEO_MIN&&(!r||m<r.m))r={k:k,m:m};});return r;}
+  function geoTxtCerca(c){return c.m<5?'es la misma ubicación que la de '+LN(c.k):'queda a solo '+Math.round(c.m)+' m de '+LN(c.k);}
   function usr(){return window.__auth&&window.__auth.user;}
   function esAdmin(){var u=usr();return !!u&&u.rol==='admin';}
   async function sha(t){return hx(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t))));}
@@ -1071,8 +1077,15 @@ td.avn .av{margin-right:8px}
       '<div class="msg '+(Z.msg&&Z.msg.e?'e':'o')+'" role="status">'+(Z.msg?esc(Z.msg.t):'')+'</div>';
     if(adm){
       var hoy=d.ll.filter(function(x){return x.f===hoyF();}).sort(function(a,b){return a.h<b.h?-1:1;});
-      h+='<h4>Ubicación de los locales</h4><div class="auth-note" style="margin:0 0 8px">'+LOCS.map(function(l){return esc(l[1])+': '+(d.geo[l[0]]?'cargada':'sin cargar');}).join(' · ')+'. Al fichar, el local se detecta por GPS (a menos de 150 m del punto cargado).</div>'+
-        '<label for="z-lk">Local</label><select id="z-lk">'+LOCS.map(function(l){return '<option value="'+l[0]+'"'+(l[0]===Z.lk?' selected':'')+'>'+l[1]+'</option>';}).join('')+'</select><button type="button" class="dl-btn mini" data-z="geo">GUARDAR MI UBICACIÓN ACTUAL COMO LA DE '+esc(LN(Z.lk)).toUpperCase()+'</button>'+
+      var gh='<h4>Ubicación GPS de los locales</h4><div class="auth-note" style="margin:0 0 8px">Cada local tiene su propia ubicación. Marcala parado dentro del local, con el GPS del celular. Al fichar, el local se detecta por GPS (a menos de '+RADIO+' m del punto cargado). No se aceptan dos locales a menos de '+GEO_MIN+' m entre sí, ni con la misma ubicación.</div>';
+      GEO_MARCAS.forEach(function(m){
+        gh+='<h5 class="fc-loc">'+esc(m[0])+'</h5><div class="tw"><table><thead><tr><th>Local</th><th>Ubicación</th><th></th></tr></thead><tbody>'+
+          m[1].map(function(l){ var g=d.geo[l[0]], ce=g?geoCerca(d,l[0],g.lat,g.lng):null,
+            est=g?('Cargada · '+g.lat.toFixed(5)+', '+g.lng.toFixed(5)+(g.t?' · '+new Date(g.t).toLocaleDateString('es-AR'):'')+(ce?'<br><span style="color:#B8341A;font-weight:700">Atención: '+esc(geoTxtCerca(ce))+'. Volvé a marcarla.</span>':'')):'Sin cargar';
+            return '<tr><td>'+esc(l[1])+'</td><td>'+est+'</td><td><button type="button" class="dl-btn mini" data-z="geo" data-k="'+l[0]+'">'+(g?'VOLVER A MARCAR':'MARCAR UBICACIÓN')+'</button>'+(g?' <button type="button" class="dl-btn alt mini" data-z="geod" data-k="'+l[0]+'">QUITAR</button>':'')+'</td></tr>'; }).join('')+
+          '</tbody></table></div>';
+      });
+      h+=gh+
         '<h4>Registros de hoy ('+hoy.length+')</h4><div class="tw"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Local</th><th>Hora</th><th>Distancia</th></tr></thead><tbody>'+
         (hoy.length?hoy.map(function(x){return '<tr><td class="avn">'+(window.__foto?window.__foto.av(x.id,28,x.n):'')+esc(x.n)+'</td><td>'+(x.t==='s'?'Salida':'Entrada')+'</td><td>'+esc(LN(x.l))+'</td><td>'+esc(x.h)+'</td><td>'+x.m+' m</td></tr>';}).join(''):'<tr><td colspan="5">Todavía no hay registros.</td></tr>')+'</tbody></table></div>';
     }
@@ -1104,10 +1117,14 @@ td.avn .av{margin-right:8px}
       else if(a==='regcara'){ var rid=($('z-emp')||{}).value, dn=(window.__dni||{})[rid];
         if(!rid||!dn){ setMsg('Elegí un colaborador con DNI cargado en ciclo.',true); return; }
         try{ var ok=await registrarCaraDe(rid,dn); if(ok){ Z.d=await leer(); setMsg('Cara registrada.'); } }catch(x){ setMsg(x.message||'Error',true); } }
-      else if(a==='geo'&&esAdmin()){ try{ setMsg('Tomando ubicación…'); var q=await pos(), lk=Z.lk;
-          Z.d=await mutar(function(d){d.geo[lk]={lat:q.coords.latitude,lng:q.coords.longitude,t:Date.now()};},function(d){return !!d.geo[lk];});
+      else if(a==='geo'&&esAdmin()){ var lk=b.getAttribute('data-k'); if(!lk) return;
+        try{ setMsg('Tomando ubicación de '+LN(lk)+'…'); var q=await pos(), la=q.coords.latitude, lo=q.coords.longitude, pre=await leer(), c0=geoCerca(pre,lk,la,lo);
+          if(c0){ setMsg('No se guardó: la ubicación actual '+geoTxtCerca(c0)+'. Cada local necesita su propia ubicación: marcala estando dentro de '+LN(lk)+'.',true); return; }
+          Z.d=await mutar(function(d){var c1=geoCerca(d,lk,la,lo); if(c1) throw new Error('No se guardó: la ubicación '+geoTxtCerca(c1)+'.'); d.geo[lk]={lat:la,lng:lo,t:Date.now()};},function(d){return !!d.geo[lk];});
           setMsg('Ubicación de '+LN(lk)+' guardada (precisión de unos '+Math.round(q.coords.accuracy||0)+' m). Hacelo parado dentro del local.'); }
         catch(x){ setMsg(x.message||'Error',true); } }
+      else if(a==='geod'&&esAdmin()){ var lq=b.getAttribute('data-k'); if(!lq||!confirm('¿Quitar la ubicación de '+LN(lq)+'? Nadie podrá fichar ahí hasta que se vuelva a marcar.')) return;
+        try{ Z.d=await mutar(function(d){delete d.geo[lq];},function(d){return !d.geo[lq];}); setMsg('Ubicación de '+LN(lq)+' quitada.'); }catch(x){ setMsg(x.message||'Error',true); } }
       else if(a==='delf'&&esAdmin()){ var kf=b.getAttribute('data-k'); if(!confirm('¿Borrar la cara de '+((Z.d.faces||{})[kf]||{}).n+'? Tendrá que registrarla de nuevo.')) return;
         try{ Z.d=await mutar(function(d){delete d.faces[kf];},function(d){return !d.faces[kf];}); setMsg('Cara borrada.'); }catch(x){ setMsg(x.message||'Error',true); } }
     });

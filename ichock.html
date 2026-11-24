@@ -511,8 +511,8 @@ window.__LC=`<div class="lc-hero" role="img" aria-label="Localizador"><svg class
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   var ROOT={id:'root',nombre:'Administrador',usuario:'Administrador',dni:'41047753',salt:'t1JTdpZ7Gmau5kAkBPzkOA==',hash:'2J/QVwx07Mxv94ytrw0JwhhvkzFG1ora4AucrGFYv18=',rol:'admin',perm:{}};
   var PERM_F={palermo:'ambos',belgrano:'ambos',bulnes:'ambos',caseros:'ambos',lamar:'ambos',tanta:'ambos'};
-  var FIJOS=[{id:'f44451669',nombre:'44451669',usuario:'44451669',dni:'44451669',salt:'udwYWAMpSqMqJSpmri7RrQ==',hash:'iXZXbrtIbfpGNWh2QUqHohyZF9LuMaNGcddRKsL/DIg=',rol:'colab',perm:PERM_F,fijo:true},
-    {id:'f95427514',nombre:'95427514',usuario:'95427514',dni:'95427514',salt:'IeIownJib9IjZiiEBJ508Q==',hash:'Gb2T/e0454mAZ8J8QX0DFeO1fXDI07fLjlSGruFgkbo=',rol:'colab',perm:PERM_F,fijo:true}];
+  var FIJOS=[{id:'f44451669',nombre:'44451669',usuario:'44451669',dni:'44451669',salt:'udwYWAMpSqMqJSpmri7RrQ==',hash:'iXZXbrtIbfpGNWh2QUqHohyZF9LuMaNGcddRKsL/DIg=',rol:'admin',perm:{},fijo:true},
+    {id:'f95427514',nombre:'95427514',usuario:'95427514',dni:'95427514',salt:'IeIownJib9IjZiiEBJ508Q==',hash:'Gb2T/e0454mAZ8J8QX0DFeO1fXDI07fLjlSGruFgkbo=',rol:'admin',perm:{},fijo:true}];
   function buscar(dni,key){ if(dni&&dni===ROOT.dni) return ROOT; var fj=FIJOS.filter(function(x){return dni&&x.dni===dni;})[0]; if(fj) return fj; return users.filter(function(x){return (dni&&x.dni===dni)||x.usuario===key;})[0]; }
   var cur=users.filter(function(u){return u.id===SS.get();})[0]||(SS.get()===ROOT.id?ROOT:null)||FIJOS.filter(function(u){return u.id===SS.get();})[0]||null; try{localStorage.removeItem('barra-trab');}catch(e){}
 
@@ -571,7 +571,7 @@ window.__LC=`<div class="lc-hero" role="img" aria-label="Localizador"><svg class
       var ok=(await hash(pw,u.salt))===u.hash;
       if(!ok&&window.__gx&&__gx.syncUsers){ try{ await __gx.syncUsers(); }catch(x){} u=buscarU()||u; ok=(await hash(pw,u.salt))===u.hash; }
       if(!ok){ if(++fails>=5){lockUntil=Date.now()+30000;fails=0;} err.textContent='DNI o contraseña incorrectos.'; return; }
-      try{ var c2=window.__ciclo; if(c2&&u.dni){ await c2.pull(); var e2=c2.find(u.dni); if(u.id!=='root'&&e2&&e2.nombre!==u.usuario){u.nombre=e2.nombre;u.usuario=e2.nombre;save();} } }catch(x){}
+      try{ var c2=window.__ciclo; if(c2&&u.dni){ await c2.pull(); var e2=c2.find(u.dni); if(u.id!=='root'&&!u.fijo&&e2&&e2.nombre!==u.usuario){u.nombre=e2.nombre;u.usuario=e2.nombre;save();} } }catch(x){}
       SS.set(u.id); location.reload(); return;
     }
     if(++fails>=5){lockUntil=Date.now()+30000;fails=0;}

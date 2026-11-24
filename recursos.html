@@ -692,6 +692,45 @@ function pdfColumnas(ctx, cols){
    PLANTILLAS — se generan al tocar "Descargar", con los colores y el
    nombre de cada local. Las de 'todas' aparecen en las 3 pestañas.
    ====================================================================== */
+
+/* ---------------- EVALUACIÓN DE DESEMPEÑO (Cocina / Salón) ---------------- */
+function pdfEvaluacion(ctx, titulo, puestoDesc, bloques){
+  pdfTituloC(ctx, titulo, 'Evaluación del personal - ' + ctx.M.local);
+  pdfFila(ctx, [{ e:'Nombre', id:'nom', ui:'Nombre y apellido del colaborador' }, { e:'DNI', id:'dni' }]);
+  pdfFila(ctx, [{ e:'Local' }, { e:'Puesto / sector', ui:'Puesto / sector (' + puestoDesc + ')' }]);
+  pdfFila(ctx, [{ e:'Antigüedad' }, { e:'Período evaluado' }]);
+  pdfFila(ctx, [{ e:'Evaluador', id:'enc', ui:'Evaluador (nombre y apellido)' }, { e:'Fecha de evaluación' }]);
+  ctx.y += 1;
+  pdfSub(ctx, 'Escala de puntuación');
+  pdfLista(ctx, [
+    '1 = Insuficiente: no cumple con lo esperado, requiere acción inmediata.',
+    '2 = A mejorar: cumple parcialmente, necesita seguimiento y capacitación.',
+    '3 = Cumple: alcanza el estándar esperado para el puesto.',
+    '4 = Muy bueno: supera el estándar de forma frecuente.',
+    '5 = Sobresaliente: referente del equipo.'
+  ], 8.5, 1.2);
+  bloques.forEach((b, i) => {
+    pdfEspacio(ctx, 66);
+    pdfSub(ctx, 'BLOQUE ' + (i+1) + ' - ' + b.t + ' (peso ' + b.peso + '%)');
+    pdfTabla(ctx, ['Criterio','1','2','3','4','5','Observaciones'],
+      b.crit.map(c => [c,'','','','','','']), [6.5,0.7,0.7,0.7,0.7,0.7,3.2], 8,
+      { primeraColumna:true, ui:'Puntajes: ' + b.t });
+  });
+  pdfEspacio(ctx, 70);
+  pdfSub(ctx, 'Resultado final');
+  pdfTabla(ctx, ['Bloque','Promedio','Peso','Ponderado'],
+    bloques.map((b, i) => [(i+1) + '. ' + b.t, '', b.peso + '%', ''])
+      .concat([['PUNTAJE FINAL (sobre 5)', '', '100%', '']]),
+    [5.2,1.4,1,1.4], 8, { primeraColumna:true, ui:'Resultado final' });
+  pdfParrafo(ctx, 'Interpretación: 1,0 a 1,9 Insuficiente / 2,0 a 2,9 A mejorar / 3,0 a 3,9 Cumple / 4,0 a 4,5 Muy bueno / 4,6 a 5,0 Sobresaliente.', 8.5);
+  pdfCajaRenglones(ctx, 'PRINCIPALES FORTALEZAS', 3, 8);
+  pdfCajaRenglones(ctx, 'OPORTUNIDADES DE MEJORA', 3, 8);
+  pdfCajaRenglones(ctx, 'PLAN DE ACCIÓN Y CAPACITACIONES SUGERIDAS', 3, 8);
+  pdfCajaRenglones(ctx, 'COMENTARIOS DEL COLABORADOR', 3, 8);
+  pdfFirmasFilas(ctx, [['Firma colaborador','Firma evaluador','Firma RRHH'], ['Aclaración colaborador','Aclaración evaluador','Aclaración RRHH']],
+    [[], ['nom|Colaborador (nombre y apellido)','enc|Evaluador (nombre y apellido)','rrhh|Aclaración de RRHH']]);
+}
+
 const PLANTILLAS = {
   todas: [
     /* ---------------- ACTA DE REUNIÓN ---------------- */
@@ -951,7 +990,76 @@ const PLANTILLAS = {
       }
     }
   ],
-  barra: [],
+  barra: [
+    /* ---------------- EVALUACIÓN DE DESEMPEÑO - COCINA ---------------- */
+    {
+      id:'evaluacion-cocina', nombre:'Evaluación de desempeño - Cocina',
+      desc:'Evaluación del personal de cocina: higiene y seguridad, calidad y producción, trabajo en equipo y compromiso, con puntaje del 1 al 5 y plan de acción.',
+      archivo: 'Evaluacion_de_Desempeno_Cocina_BarraChalaca.pdf',
+      generar(ctx){
+        pdfEvaluacion(ctx, 'EVALUACIÓN DE DESEMPEÑO - COCINA', 'cocina caliente, fría, parrilla, bacha, otro', [
+          { t:'HIGIENE, SEGURIDAD Y NORMAS', peso:25, crit:[
+            'Higiene personal y uniforme completo',
+            'Manipulación segura de alimentos (BPM)',
+            'Orden y limpieza de la estación',
+            'Uso correcto de equipos y utensilios',
+            'Cumplimiento de normas de seguridad' ] },
+          { t:'CALIDAD Y PRODUCCIÓN', peso:30, crit:[
+            'Cumple recetas, técnicas y estándares',
+            'Respeto de porciones y presentación',
+            'Mise en place completa y a tiempo',
+            'Velocidad y tiempos de despacho',
+            'Control de mermas y uso de insumos' ] },
+          { t:'TRABAJO EN EQUIPO Y ACTITUD', peso:25, crit:[
+            'Comunicación con cocina y salón',
+            'Colaboración en momentos de alta demanda',
+            'Manejo de la presión y los picos',
+            'Receptividad a indicaciones',
+            'Respeto hacia compañeros y superiores' ] },
+          { t:'COMPROMISO Y DESARROLLO', peso:20, crit:[
+            'Puntualidad y asistencia',
+            'Responsabilidad en tareas asignadas',
+            'Iniciativa y propuestas de mejora',
+            'Polivalencia (cubre otras estaciones)',
+            'Interés por aprender y capacitarse' ] }
+        ]);
+      }
+    },
+    /* ---------------- EVALUACIÓN DE DESEMPEÑO - SALÓN ---------------- */
+    {
+      id:'evaluacion-salon', nombre:'Evaluación de desempeño - Salón',
+      desc:'Evaluación del personal de salón: atención al cliente, conocimiento y técnica de servicio, trabajo en equipo y compromiso, con puntaje del 1 al 5 y plan de acción.',
+      archivo: 'Evaluacion_de_Desempeno_Salon_BarraChalaca.pdf',
+      generar(ctx){
+        pdfEvaluacion(ctx, 'EVALUACIÓN DE DESEMPEÑO - SALÓN', 'mozo, runner, hostess, barra, otro', [
+          { t:'PRESENTACIÓN Y ATENCIÓN AL CLIENTE', peso:30, crit:[
+            'Presentación personal y uniforme',
+            'Recibimiento, cordialidad y trato',
+            'Comunicación clara y tono adecuado',
+            'Anticipación a las necesidades',
+            'Manejo de quejas y situaciones difíciles' ] },
+          { t:'CONOCIMIENTO Y TÉCNICA DE SERVICIO', peso:30, crit:[
+            'Conocimiento de carta y alérgenos',
+            'Recomendación y venta sugestiva',
+            'Toma de pedido y comanda correcta',
+            'Técnica de servicio y tiempos de mesa',
+            'Manejo de caja, POS y cobro' ] },
+          { t:'TRABAJO EN EQUIPO Y ORGANIZACIÓN', peso:20, crit:[
+            'Coordinación con cocina y barra',
+            'Colaboración con compañeros de salón',
+            'Organización del sector en horas pico',
+            'Orden y limpieza del salón',
+            'Receptividad a indicaciones' ] },
+          { t:'COMPROMISO Y DESARROLLO', peso:20, crit:[
+            'Puntualidad y asistencia',
+            'Cumplimiento de normas del local',
+            'Actitud positiva y compromiso',
+            'Iniciativa y propuestas de mejora',
+            'Interés por aprender y capacitarse' ] }
+        ]);
+      }
+    }
+  ],
   tanta: [],
   lamar: [
     /* ---------------- RETIRO ---------------- */

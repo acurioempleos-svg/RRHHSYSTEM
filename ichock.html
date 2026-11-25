@@ -297,7 +297,7 @@ footer svg{ height:22px; width:auto; opacity:.85; }
 .ht td.x{ width:70px; border:0; background:#fff; }
 .ht tfoot td{ background:#DDEBF7; font-weight:700; padding:8px 4px; color:var(--navy); }
 .ht tfoot td.l{ text-align:right; font-family:var(--font-display); letter-spacing:.8px; font-weight:400; }
-.s-x{ background:#D4EDDA; } .ht td input[data-c]{ min-width:116px; } .s-f{ background:#D9D9D9; } .s-v{ background:#DDEBF7; } .s-m{ background:#FFF2CC; } .s-d{ background:#FCE4D6; } .s-c{ background:#E2D9F3; }
+.s-x{ background:#D4EDDA; } .ht td input[data-c]{ min-width:116px; } .s-f{ background:#D9D9D9; } .s-v{ background:#DDEBF7; } .s-b{ background:#F8D7E3; } .s-m{ background:#FFF2CC; } .s-d{ background:#FCE4D6; } .s-c{ background:#E2D9F3; }
 .ref{ display:flex; gap:6px 16px; flex-wrap:wrap; padding:10px 14px; font-size:12px; border-top:2px solid var(--navy); }
 .ref b{ font-family:var(--font-display); font-weight:400; letter-spacing:.8px; }
 .ref i{ display:inline-block; width:13px; height:13px; border:1px solid #888; margin-right:5px; vertical-align:-2px; }
@@ -1093,7 +1093,7 @@ td.avn .av{margin-right:8px}
     LOCS.forEach(function(l){known[l[0]]=1; porL[l[0]]=[];});
     caras.forEach(function(k){ var f=d.faces[k], ce=cic&&cic.find?cic.find(k):null, key=(ce&&TODOS[ce.local]!=null)?TODOS[ce.local]:(f.lk||'');
       if(known[key]) porL[key].push(k); else if(!key||TODOS.indexOf(key)<0) sinL.push(k); });   /* locales de otra marca no se muestran acá */
-    function filaCara(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+(f.x?' · sin ciclo':'')+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}
+    function filaCara(k){var f=d.faces[k];return '<tr><td class="avn">'+(window.__foto?window.__foto.av(f.rid,28,f.n):'')+esc(f.n)+(f.x?' · sin ciclo':'')+'</td><td>'+esc(k)+'</td><td>'+(adm?'<button type="button" class="dl-btn mini" data-z="edni" data-k="'+esc(k)+'">EDITAR DNI</button> <button type="button" class="dl-btn alt mini" data-z="delf" data-k="'+esc(k)+'">BORRAR CARA</button>':'')+'</td></tr>';}
     function tablaCaras(ks){ks.sort(function(a,b){return String(d.faces[a].n).localeCompare(String(d.faces[b].n),'es');});return '<div class="tw"><table><thead><tr><th>Nombre</th><th>DNI</th><th></th></tr></thead><tbody>'+ks.map(filaCara).join('')+'</tbody></table></div>';}
     var gr='';
     LOCS.forEach(function(l){ var ks=porL[l[0]]; nCar+=ks.length; gr+='<h5 class="fc-loc">'+esc(l[1])+' ('+ks.length+')</h5>'+(ks.length?tablaCaras(ks):'<p class="auth-note" style="margin:0 0 6px">Nadie registró su cara en este local todavía.</p>'); });
@@ -1125,6 +1125,20 @@ td.avn .av{margin-right:8px}
         catch(x){ setMsg(x.message||'Error',true); } }
       else if(a==='geod'&&esAdmin()){ var lq=b.getAttribute('data-k'); if(!lq||!confirm('¿Quitar la ubicación de '+LN(lq)+'? Nadie podrá fichar ahí hasta que se vuelva a marcar.')) return;
         try{ Z.d=await mutar(function(d){delete d.geo[lq];},function(d){return !d.geo[lq];}); setMsg('Ubicación de '+LN(lq)+' quitada.'); }catch(x){ setMsg(x.message||'Error',true); } }
+      else if(a==='edni'&&esAdmin()){ var ko=b.getAttribute('data-k'), fo=(Z.d.faces||{})[ko]; if(!fo) return;
+        var rw=prompt('DNI de '+fo.n+' (actual: '+ko+').\nEscribí el DNI correcto:',ko); if(rw===null) return;
+        var kn=String(rw).replace(/\D/g,''); if(kn===ko){ return; }
+        if(kn.length<6||kn.length>9){ setMsg('El DNI no es válido.',true); return; }
+        try{ var cz=window.__ciclo, ce2=null; try{ await cz.pull(); ce2=cz.find(kn); }catch(x0){}
+          if(!fo.x&&!ce2){ setMsg('Ese DNI no figura en ciclo. Cargalo primero ahí.',true); return; }
+          Z.d=await mutar(function(d){ var o=d.faces&&d.faces[ko]; if(!o) throw new Error('Esa cara ya no existe.'); if(d.faces[kn]) throw new Error('Ese DNI ya tiene una cara registrada.');
+              var r=Object.assign({},o), ridV=o.rid; delete d.faces[ko];
+              if(ce2){ r.rid=ce2.id; r.n=ce2.nombre; if(LOCS[ce2.local]) r.lk=LOCS[ce2.local][0]; delete r.x; delete r.a; } else if(r.x){ r.rid='x'+kn; }
+              d.faces[kn]=r; if(r.rid!==ridV) (d.ll||[]).forEach(function(y){ if(y.id===ridV) y.id=r.rid; }); },
+            function(d){ return !!(d.faces&&d.faces[kn]&&!d.faces[ko]); });
+          try{ aplicarLl(Z.d); }catch(x1){}
+          setMsg(ce2?'DNI corregido: ciclo lo reconoció ('+ce2.nombre+').':'DNI corregido a '+kn+'. Todavía no figura en ciclo.'); }
+        catch(x){ setMsg(x.message||'Error',true); } }
       else if(a==='delf'&&esAdmin()){ var kf=b.getAttribute('data-k'); if(!confirm('¿Borrar la cara de '+((Z.d.faces||{})[kf]||{}).n+'? Tendrá que registrarla de nuevo.')) return;
         try{ Z.d=await mutar(function(d){delete d.faces[kf];},function(d){return !d.faces[kf];}); setMsg('Cara borrada.'); }catch(x){ setMsg(x.message||'Error',true); } }
     });
@@ -1743,11 +1757,11 @@ td.avn .av{margin-right:8px}
     var r = f.filter(function(x){ return nrm(x.c) === n; })[0];
     return r ? String((r.d || [])[di] || '').trim().toUpperCase() : '';
   }
-  function esperado(e){ var t = turno(e); return t === null || (t !== '' && t !== 'FRANCO' && t !== 'VACACIONES'); }
+  function esperado(e){ var t = turno(e); return t === null || (t !== '' && t !== 'FRANCO' && t !== 'VACACIONES' && !/^CUMPLE/.test(t)); }
   function conHorario(){ return state.emps.some(function(e){ return turno(e) !== null; }); }
   /* Hora de inicio del turno de hoy en minutos (null si no hay turno o no se entiende). Con turno cortado toma el primer tramo. */
   function inicioTurno(e){
-    var t = turno(e); if (!t || t === 'FRANCO' || t === 'VACACIONES') return null;
+    var t = turno(e); if (!t || t === 'FRANCO' || t === 'VACACIONES' || /^CUMPLE/.test(t)) return null;
     var m = /^\s*(\d{1,2})(?:[:.](\d{2}))?/.exec(t.split('/')[0]);
     return m ? (+m[1]) * 60 + (+(m[2] || 0)) : null;
   }
@@ -1769,7 +1783,7 @@ td.avn .av{margin-right:8px}
     var p = isPresent(e);
     var loc = state.sel === 'todos' ? esc(state.locales[e.local] || '') : '';
     var meta;
-    var tn = turno(e); tn = tn && tn !== 'FRANCO' && tn !== 'VACACIONES' ? esc(tn) : '';
+    var tn = turno(e); tn = tn && tn !== 'FRANCO' && tn !== 'VACACIONES' && !/^CUMPLE/.test(tn) ? esc(tn) : '';
     if (p) meta = (loc ? loc + ' · ' : '') + (e.ingreso ? 'desde ' + esc(e.ingreso) : 'presente') + (e.por ? ' · marcado por ' + esc(e.por) : '') + (tn ? ' · ' + tn : '');
     else if (e.salida) meta = (loc ? loc + ' · ' : '') + 'salió ' + esc(e.salida) + (e.porS ? ' · marcado por ' + esc(e.porS) : '') + (tn ? ' · ' + tn : '');
     else meta = (loc ? loc + (tn ? ' · ' : '') : '') + tn || (state.writable ? 'Tocá para marcar presente' : '');
@@ -1847,7 +1861,7 @@ td.avn .av{margin-right:8px}
     if (state.loaded && state.emps.some(function(e){ return e.ejemplo; })) {
       h += '<div class="aviso">Estás viendo empleados de ejemplo.' + (state.writable ? ' Cargá a tu equipo real y quitá los ejemplos desde Gestionar.' : '') + '</div>';
     }
-    if (state.loaded && conHorario()) h += '<div class="aviso">Se espera a quienes tienen turno hoy en Horarios. Franco y vacaciones no figuran como ausentes, y quien todavía no llegó a su horario de ingreso tampoco hasta que sea su hora.</div>';
+    if (state.loaded && conHorario()) h += '<div class="aviso">Se espera a quienes tienen turno hoy en Horarios. Franco, vacaciones y cumpleaños no figuran como ausentes, y quien todavía no llegó a su horario de ingreso tampoco hasta que sea su hora.</div>';
     if (state.loaded && !state.writable) h += '<div class="aviso">Solo lectura: en esta vista no podés cambiar la asistencia.</div>';
     $('avisos').innerHTML = h;
   }
@@ -2041,11 +2055,11 @@ td.avn .av{margin-right:8px}
 
   function cls(v){
     v=String(v||'').trim().toUpperCase();
-    if(v==='FRANCO') return 's-f'; if(v==='VACACIONES') return 's-v'; if(v.indexOf('/')>=0) return 's-x';
+    if(v==='FRANCO') return 's-f'; if(v==='VACACIONES') return 's-v'; if(/^CUMPLE/.test(v)) return 's-b'; if(v.indexOf('/')>=0) return 's-x';
     var m=/^(\d{1,2})/.exec(v); if(!m) return '';
     var h=+m[1]; return h<=10?'s-m':(h<=16?'s-d':'s-c');
   }
-  function pres(v){ v=String(v||'').trim().toUpperCase(); return v!==''&&v!=='FRANCO'&&v!=='VACACIONES'; }
+  function pres(v){ v=String(v||'').trim().toUpperCase(); return v!==''&&v!=='FRANCO'&&v!=='VACACIONES'&&!/^CUMPLE/.test(v); }
   function fechas(){
     var p=H.lunes.split('-');
     return DIAS.map(function(_,i){ var d=new Date(+p[0],+p[1]-1,+p[2]+i); return pad(d.getDate())+'/'+pad(d.getMonth()+1); });
@@ -2114,9 +2128,9 @@ td.avn .av{margin-right:8px}
     if(!rows) rows='<tr><td colspan="'+(cols.length+4)+'" style="padding:22px;font-style:italic;opacity:.7">'+(visibles(d).length?'Nadie con horario cargado para este día.':'Todavía no hay colaboradores cargados en este sector.')+'</td></tr>';
     var t=totales(d);
     var foot=H.vista==='col'?'':'<tfoot><tr><td class="l" colspan="3">PRESENTES / DÍA</td>'+cols.map(function(i){ return '<td data-tot="'+i+'">'+t[i]+'</td>'; }).join('')+(ed?'<td></td>':'')+'</tr></tfoot>';
-    var ref='<div class="ref"><b>Referencias:</b><span><i class="s-m"></i>Turno mañana (inicio ≤10 hs)</span><span><i class="s-d"></i>Turno mediodía (inicio 11-16 hs)</span><span><i class="s-c"></i>Turno cierre (inicio ≥17 hs)</span><span><i class="s-x"></i>Cortado (dos tramos separados con /)</span><span><i class="s-f"></i>Franco</span><span><i class="s-v"></i>Vacaciones</span></div>';
+    var ref='<div class="ref"><b>Referencias:</b><span><i class="s-m"></i>Turno mañana (inicio ≤10 hs)</span><span><i class="s-d"></i>Turno mediodía (inicio 11-16 hs)</span><span><i class="s-c"></i>Turno cierre (inicio ≥17 hs)</span><span><i class="s-x"></i>Cortado (dos tramos separados con /)</span><span><i class="s-f"></i>Franco</span><span><i class="s-v"></i>Vacaciones</span><span><i class="s-b"></i>Cumpleaños</span></div>';
     var add=ed?'<div class="hadd" style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="dl-btn alt" data-add>+ AGREGAR COLABORADOR</button><button type="button" class="dl-btn alt" data-copy>'+(H.armCopy?'¿SEGURO? REEMPLAZA LOS HORARIOS DE ESTA SEMANA':'⧉ COPIAR SEMANA ANTERIOR ('+fmtC(prevLunes())+')')+'</button></div>':'';
-    el.innerHTML='<div class="hwrap"><div class="htit">Localizador — '+nombreLoc()+' · '+(H.area==='cocina'?'Cocina':'Salón')+'</div>'+(ed?'<p class="hint" style="padding:8px 14px 0;margin:0">Escribí los horarios a mano (ej. 9 A 17, 17 A CIERRE, FRANCO). Cortado: separá los dos tramos con una barra, ej. 9 A 14 / 18 A 22.</p>':'')+'<div class="ht"><table><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody>'+foot+'</table></div>'+add+ref+'</div>';
+    el.innerHTML='<div class="hwrap"><div class="htit">Localizador — '+nombreLoc()+' · '+(H.area==='cocina'?'Cocina':'Salón')+'</div>'+(ed?'<p class="hint" style="padding:8px 14px 0;margin:0">Escribí los horarios a mano (ej. 9 A 17, 17 A CIERRE, FRANCO, VACACIONES, CUMPLEAÑOS). Cortado: separá los dos tramos con una barra, ej. 9 A 14 / 18 A 22.</p>':'')+'<div class="ht"><table><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody>'+foot+'</table></div>'+add+ref+'</div>';
   }
   function avisos(){
     $('h-avisos').innerHTML=(H.info?'<div class="aviso">'+esc(H.info)+'</div>':'')+(H.msg?'<div class="aviso err">'+esc(H.msg)+'</div>':'')+(H.loaded&&!H.w?'<div class="aviso">Solo lectura: en esta vista no podés cambiar los horarios.</div>':'');
@@ -2207,7 +2221,7 @@ td.avn .av{margin-right:8px}
     Ht+=40;
     var cv=document.createElement('canvas'); cv.width=W*SC; cv.height=Ht*SC;
     var x=cv.getContext('2d'); x.scale(SC,SC); x.textBaseline='middle';
-    var COL={'s-x':'#D4EDDA','s-f':'#D9D9D9','s-v':'#DDEBF7','s-m':'#FFF2CC','s-d':'#FCE4D6','s-c':'#E2D9F3'};
+    var COL={'s-x':'#D4EDDA','s-f':'#D9D9D9','s-v':'#DDEBF7','s-b':'#F8D7E3','s-m':'#FFF2CC','s-d':'#FCE4D6','s-c':'#E2D9F3'};
     function ajust(tx,mw){ tx=String(tx); if(x.measureText(tx).width<=mw) return tx; while(tx.length>1&&x.measureText(tx+'…').width>mw) tx=tx.slice(0,-1); return tx+'…'; }
     function cell(cx,cy,w,h,bg,txt,al,font,col){
       x.fillStyle=bg; x.fillRect(cx,cy,w,h); x.strokeStyle='#cfd4da'; x.lineWidth=1; x.strokeRect(cx+.5,cy+.5,w-1,h-1);
@@ -2244,7 +2258,7 @@ td.avn .av{margin-right:8px}
       for(var j=0;j<7;j++){ cell(tx,y,cD,rh,'#DDEBF7',String(g.filas.filter(function(r){ return pres(r.d[j]); }).length),'center','bold 14px "DM Sans", sans-serif'); tx+=cD; }
       y+=rh+gap;
     });
-    var lg=[['#FFF2CC','Mañana (inicio ≤10 hs)'],['#FCE4D6','Mediodía (11-16 hs)'],['#E2D9F3','Cierre (≥17 hs)'],['#D4EDDA','Cortado'],['#D9D9D9','Franco'],['#DDEBF7','Vacaciones']], lx=PAD;
+    var lg=[['#FFF2CC','Mañana (inicio ≤10 hs)'],['#FCE4D6','Mediodía (11-16 hs)'],['#E2D9F3','Cierre (≥17 hs)'],['#D4EDDA','Cortado'],['#D9D9D9','Franco'],['#DDEBF7','Vacaciones'],['#F8D7E3','Cumpleaños']], lx=PAD;
     lg.forEach(function(l){
       x.fillStyle=l[0]; x.fillRect(lx,y+6,14,14); x.strokeStyle='#888'; x.strokeRect(lx+.5,y+6.5,13,13);
       x.fillStyle='#0B2E4F'; x.font='12px "DM Sans", sans-serif'; x.textAlign='left'; x.fillText(l[1],lx+20,y+14);
@@ -2411,7 +2425,7 @@ td.avn .av{margin-right:8px}
   function plan(e){
     var f=(window.__horData||{})[LK[e.local]]; if(!f||window.__horSem!==lunes()) return null;
     var di=(new Date().getDay()+6)%7, r=f.filter(function(x){return nrm(x.c)===nrm(e.nombre);})[0];
-    var v=String(r&&(r.d||[])[di]||'').trim().toUpperCase(); if(!v||v==='FRANCO'||v==='VACACIONES') return {v:v,libre:true};
+    var v=String(r&&(r.d||[])[di]||'').trim().toUpperCase(); if(!v||v==='FRANCO'||v==='VACACIONES'||/^CUMPLE/.test(v)) return {v:v,libre:true};
     var ps=v.split('/'), m=/(\d{1,2})(?:[:.](\d{2}))?\D+(\d{1,2})(?:[:.](\d{2}))?/.exec(ps[ps.length-1]), m1=/^\s*(\d{1,2})(?:[:.](\d{2}))?/.exec(ps[0]);
     if(!m1) return {v:v}; var s=+m1[1]*60+(+m1[2]||0), en=null;
     if(m){en=+m[3]*60+(+m[4]||0); if(en<=s) en+=1440;}
@@ -2967,11 +2981,12 @@ td.avn .av{margin-right:8px}
     var fi=D.by[f+'|'+e.id],v=turno(d,e.local,e.nombre,f);
     if(fi){
       if(fi.l&&fi.l!==LK[e.local])return CODE[LK.indexOf(fi.l)]||'P';
-      var s=startMin(v); if(v&&v!=='FRANCO'&&v!=='VACACIONES'&&s!==null&&hMin(fi.h)>s+10)return 'T';
+      var s=startMin(v); if(v&&v!=='FRANCO'&&v!=='VACACIONES'&&!/^CUMPLE/.test(v)&&s!==null&&hMin(fi.h)>s+10)return 'T';
       return 'P';
     }
     if(v==='FRANCO')return 'F';
     if(v==='VACACIONES')return 'V';
+    if(/^CUMPLE/.test(v))return 'CU';
     if(D.min===null||f<D.min||f===hoy)return '';
     return v?'A':'';
   }
@@ -3023,10 +3038,10 @@ td.avn .av{margin-right:8px}
     }
     bloque(SEC.izq,true); bloque(SEC.coc,false);
     r+=2; ws.getCell(r,1).value='Referencias:'; ws.getCell(r,1).font={name:'Arial',size:12,bold:true};
-    var leg=[['DIA DE INCORPORACION','I'],['Franco','F'],['Presente','P'],['Ausente','A'],['APERCIBIMIENTO','AP'],['SUSPENSION','S'],['VACACIONES','V'],['FERIADOS','FE'],['RENUNCIO','R'],['TARDE (MAYOR A 10´)','T'],['LICENCIA','L'],['TRABAJO EN OTRO LOCAL (BCP, BCB, BCBL, BCC, LM, TNT)','OTRO']], l0=r+1;
+    var leg=[['DIA DE INCORPORACION','I'],['Franco','F'],['Presente','P'],['Ausente','A'],['APERCIBIMIENTO','AP'],['SUSPENSION','S'],['VACACIONES','V'],['CUMPLEAÑOS','CU'],['FERIADOS','FE'],['RENUNCIO','R'],['TARDE (MAYOR A 10´)','T'],['LICENCIA','L'],['TRABAJO EN OTRO LOCAL (BCP, BCB, BCBL, BCC, LM, TNT)','OTRO']], l0=r+1;
     leg.forEach(function(x){r++; var a=ws.getCell(r,1); a.value=x[0]; a.font={name:'Arial',size:12,bold:true}; a.border=bd; var b2=ws.getCell(r,2); b2.value=x[1]==='OTRO'?'BC…':x[1]; b2.font={name:'Calibri',size:12}; b2.alignment={horizontal:'center'}; b2.border=bd;});
     rangos.push('B'+l0+':B'+(r-1));
-    var reglas=[['FE','FFFF00'],['V','00FF00'],['S','00FFFF'],['A','FF0000'],['R','7F6000'],['AP','FF00FF'],['L','B7E1CD'],['I','45818E'],['T','FFC000']];
+    var reglas=[['FE','FFFF00'],['V','00FF00'],['CU','F4B6C2'],['S','00FFFF'],['A','FF0000'],['R','7F6000'],['AP','FF00FF'],['L','B7E1CD'],['I','45818E'],['T','FFC000']];
     rangos.forEach(function(rg){
       ws.addConditionalFormatting({ref:rg,rules:reglas.map(function(x,i){var o={type:'cellIs',operator:'equal',formulae:['"'+x[0]+'"'],priority:i+1,style:{fill:{type:'pattern',pattern:'solid',bgColor:{argb:'FF'+x[1]}}}};if(x[0]==='R'||x[0]==='I'||x[0]==='A')o.style.font={color:{argb:'FFFFFFFF'}};return o;})});
     });

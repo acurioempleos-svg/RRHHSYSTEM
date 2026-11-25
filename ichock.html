@@ -687,6 +687,7 @@ window.__LC=`<div class="lc-hero" role="img" aria-label="Localizador"><svg class
 @media(max-width:540px){.gx-wrap{padding-top:58px}.gx-tabs{top:10px;right:12px;flex-direction:row}.gx-tabs button{width:38px;height:38px}.gx-tabs svg{width:19px;height:19px}}
 .expm-c h3{margin:0}.expm-c video{width:100%;border-radius:12px;background:#000}
 .expm-c.fc{max-width:460px}
+.expm.luz{background:#fff}.expm.luz .expm-c{box-shadow:none}
 .fc-box{position:relative;width:100%;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000}
 .fc-box video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);border-radius:0}
 .fc-oval{position:absolute;left:50%;top:50%;width:52%;height:78%;transform:translate(-50%,-50%);border:4px dashed rgba(255,255,255,.85);border-radius:50%;pointer-events:none;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
@@ -884,11 +885,20 @@ td.avn .av{margin-right:8px}
   /* abre la cámara frontal y llama a cb(descriptor) con cada cuadro donde hay una cara */
   function camaraCara(titulo,onFrame){
     return new Promise(function(fin){
-      var o=ov('<h3>'+esc(titulo)+'</h3><div class="fc-box"><video autoplay playsinline muted></video><div class="fc-oval"></div></div><p class="fc-st" id="fc-st">Abriendo la cámara…</p><button type="button" class="expm-b alt" id="fc-x">CANCELAR</button>'),
+      var o=ov('<h3>'+esc(titulo)+'</h3><div class="fc-box"><video autoplay playsinline muted></video><div class="fc-oval"></div></div><p class="fc-st" id="fc-st">Abriendo la cámara…</p><button type="button" class="expm-b" id="fc-luz" style="background:#F2B134;color:#0B2E4F">💡 PRENDER LUZ DE PANTALLA</button><button type="button" class="expm-b alt" id="fc-x">CANCELAR</button>'),
           c=o.querySelector('.expm-c'),v=o.querySelector('video'),st=null,stop=false,busy=false;
       c.classList.add('fc');
       function say(t){var e=o.querySelector('#fc-st');if(e)e.textContent=t;}
-      function cerrar(r){stop=true;if(st)st.getTracks().forEach(function(t){t.stop();});fin({res:r,o:o,c:c});}
+      var wl=null, cv=document.createElement('canvas'), ultL=0, avisoL=false;
+      function luz(on){ o.classList.toggle('luz',on); var b=o.querySelector('#fc-luz'); if(b) b.textContent=on?'💡 APAGAR LUZ DE PANTALLA':'💡 PRENDER LUZ DE PANTALLA';
+        if(on&&!wl&&navigator.wakeLock){ navigator.wakeLock.request('screen').then(function(l){wl=l;}).catch(function(){}); } }
+      /* si el cuadro de la cámara está oscuro, prende solo la luz de pantalla (una sola vez) */
+      function revisarLuz(){ var t=Date.now(); if(avisoL||t-ultL<1200||!v.videoWidth) return; ultL=t;
+        try{ cv.width=32; cv.height=24; var g=cv.getContext('2d'); g.drawImage(v,0,0,32,24); var d=g.getImageData(0,0,32,24).data, sum=0;
+          for(var i=0;i<d.length;i+=4) sum+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];
+          if(sum/(d.length/4)<70){ avisoL=true; luz(true); say('Hay poca luz: prendimos la luz de pantalla. Acercate un poco más.'); } }catch(e){} }
+      function cerrar(r){stop=true;if(st)st.getTracks().forEach(function(t){t.stop();});if(wl){try{wl.release();}catch(e){} wl=null;} o.classList.remove('luz');fin({res:r,o:o,c:c});}
+      o.querySelector('#fc-luz').onclick=function(){ avisoL=true; luz(!o.classList.contains('luz')); };
       o.querySelector('#fc-x').onclick=function(){o.remove();cerrar(null);};
       cargarFA().then(function(){
         return navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
@@ -897,7 +907,7 @@ td.avn .av{margin-right:8px}
         var opt=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5});
         (async function loop(){
           while(!stop){
-            await sleep(250); if(stop||busy||v.readyState<2) continue; busy=true;
+            await sleep(250); if(stop||busy||v.readyState<2) continue; revisarLuz(); busy=true;
             try{
               var r=await faceapi.detectSingleFace(v,opt).withFaceLandmarks().withFaceDescriptor();
               if(!r) say('No te veo. Acercate y mirá de frente'); else { var x=await onFrame(r.descriptor,say); if(x!==undefined&&x!==false&&!stop){ cerrar(x); busy=false; return; } }

@@ -497,7 +497,7 @@ window.__LC=`<div class="lc-hero" role="img" aria-label="Localizador"><svg class
 (function(){
   'use strict';
   var LOCS=[['palermo','Palermo'],['belgrano','Belgrano'],['bulnes','Bulnes'],['caseros','Caseros'],['lamar','La Mar'],['tanta','Tanta']];
-  var SAL=['encargado','cajero','salon','limpieza'];
+  var SAL=['encargado','cajero','salon','limpieza','vigilancia'];
   var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   var SS={get:function(){try{return sessionStorage.getItem('barra-sess');}catch(e){return null;}},set:function(v){try{if(v)sessionStorage.setItem('barra-sess',v);else sessionStorage.removeItem('barra-sess');}catch(e){}}};
   var users=LS.get('barra-users',[]);
@@ -705,7 +705,7 @@ td.avn .av{margin-right:8px}
 /* Trabajadores + fichaje por cara. Base compartida: archivo cifrado "rrhh_asistencia_base.json" en Cloudinary (la misma cuenta de ciclo). */
 (function(){
   'use strict';
-  var RADIO=150, SAL=['encargado','cajero','salon','limpieza'];
+  var RADIO=150, SAL=['encargado','cajero','salon','limpieza','vigilancia'];
   var LOCS=[['palermo','Palermo'],['belgrano','Belgrano'],['bulnes','Bulnes'],['caseros','Caseros'],['lamar','La Mar'],['tanta','Tanta']].filter(function(l){return __BR.indexOf(l[0])>=0;});
   function $(i){return document.getElementById(i);}
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -1580,8 +1580,8 @@ td.avn .av{margin-right:8px}
   function locDe(c){ if(LOC_CICLO[c]!==undefined) return LOC_CICLO[c]; var n=plain(c).replace(/[^a-z]/g,''); if(/tanta/.test(n)) return 5; if(/lamar/.test(n)) return 4; return undefined; }
   var PUESTO={'gerencia':'encargado','supervision':'encargado','jefe de barra':'encargado','caja':'cajero',
     'camarero':'salon','camarero jr':'salon','corredor':'salon','barra':'salon','recepcion':'salon','volante':'salon','valet parking':'salon',
-    'limpieza':'limpieza','chef':'souschef','sous chef':'souschef','cocina':'cocina','pasteleria':'cocina','produccion':'cocina','bacha':'bachero'};
-  var ORD=['encargado','cajero','salon','limpieza','souschef','cocina','bachero'];
+    'limpieza':'limpieza','vigilancia':'vigilancia','seguridad':'vigilancia','vigilador':'vigilancia','vigiladores':'vigilancia','seguridad y vigilancia':'vigilancia','vigilancia y seguridad':'vigilancia','chef':'souschef','sous chef':'souschef','cocina':'cocina','pasteleria':'cocina','produccion':'cocina','bacha':'bachero'};
+  var ORD=['encargado','cajero','salon','limpieza','vigilancia','souschef','cocina','bachero'];
   function plain(v){ return String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
   var LS={get:function(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
           set:function(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -1605,7 +1605,7 @@ td.avn .av{margin-right:8px}
       var prev=(hor[LOC_HOR[l]]||{}).filas||[];
       var filas=emps.map(function(x){
         var m=prev.filter(function(r){ return plain(r.c)===plain(x.nombre); })[0];
-        return {c:x.nombre,s:x.sector,a:(['encargado','cajero','salon','limpieza'].indexOf(x.puesto)>=0?'salon':'cocina'),d:m?m.d:['','','','','','','']};
+        return {c:x.nombre,s:x.sector,a:(['encargado','cajero','salon','limpieza','vigilancia'].indexOf(x.puesto)>=0?'salon':'cocina'),d:m?m.d:['','','','','','','']};
       });
       prev.forEach(function(r){ if(!String(r.c||'').trim()) filas.push(r); });
       if(JSON.stringify(filas)!==JSON.stringify(prev)){ hor[LOC_HOR[l]]={nombre:NOM[l],filas:filas}; changed=true; if(window.__bin&&window.__horOk) __bin.push('hor',LOC_HOR[l],hor[LOC_HOR[l]]); }
@@ -1724,7 +1724,7 @@ td.avn .av{margin-right:8px}
 
   var AREAS = [{k:'salon', n:'Salón'}, {k:'cocina', n:'Cocina'}];
   var PUESTOS = {
-    salon:  [{k:'encargado', n:'Encargado'}, {k:'cajero', n:'Cajero'}, {k:'salon', n:'Salón'}, {k:'limpieza', n:'Limpieza'}],
+    salon:  [{k:'encargado', n:'Encargado'}, {k:'cajero', n:'Cajero'}, {k:'salon', n:'Salón'}, {k:'limpieza', n:'Limpieza'}, {k:'vigilancia', n:'Vigilancia'}],
     cocina: [{k:'souschef', n:'Sous chef'}, {k:'cocina', n:'Cocina'}, {k:'bachero', n:'Bachero'}]
   };
   var ORDEN = [];
@@ -2430,7 +2430,7 @@ td.avn .av{margin-right:8px}
   function hhmm(m){m=Math.max(0,Math.round(m));return Math.floor(m/60)+':'+pad(m%60);}
   function lunes(){var d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return fday(d);}
   function emps(){return window.__ciclo&&__ciclo.emps?__ciclo.emps():[];}
-  var PUE=[['encargado','Encargado'],['cajero','Cajero'],['salon','Salón'],['limpieza','Limpieza'],['souschef','Sous chef'],['cocina','Cocina'],['bachero','Bachero']];
+  var PUE=[['encargado','Encargado'],['cajero','Cajero'],['salon','Salón'],['limpieza','Limpieza'],['vigilancia','Vigilancia'],['souschef','Sous chef'],['cocina','Cocina'],['bachero','Bachero']];
   function pn(k){var x=PUE.filter(function(p){return p[0]===k;})[0];return x?x[1]:'';}
   function plan(e){
     var f=(window.__horData||{})[LK[e.local]]; if(!f||window.__horSem!==lunes()) return null;
@@ -2954,7 +2954,7 @@ td.avn .av{margin-right:8px}
   var MARCA=['BARRA CHALACA','BARRA CHALACA','BARRA CHALACA','BARRA CHALACA','LA MAR','TANTA'];
   var TH=[{a:'0B2E4F',b:'E8492B'},{a:'0B2E4F',b:'E8492B'},{a:'0B2E4F',b:'E8492B'},{a:'0B2E4F',b:'E8492B'},{a:'10495E',b:'D96C4A'},{a:'A5115C',b:'E0177C'}];
   var FER0='01/01/2026, 16/02/2026, 17/02/2026, 23/03/2026, 24/03/2026, 02/04/2026, 03/04/2026, 01/05/2026, 25/05/2026, 15/06/2026, 20/06/2026, 09/07/2026, 10/07/2026, 17/08/2026, 12/10/2026, 23/11/2026, 07/12/2026, 08/12/2026, 25/12/2026';
-  var SEC={izq:[['encargado','SUPERVISORES'],['salon','CAMAREROS/CORREDORES'],['cajero','CAJEROS'],['limpieza','LIMPIEZA']],coc:[['souschef','SOUS CHEFF'],['cocina','COCINEROS'],['bachero','BACHEROS']]};
+  var SEC={izq:[['encargado','SUPERVISORES'],['salon','CAMAREROS/CORREDORES'],['cajero','CAJEROS'],['limpieza','LIMPIEZA'],['vigilancia','VIGILANCIA']],coc:[['souschef','SOUS CHEFF'],['cocina','COCINEROS'],['bachero','BACHEROS']]};
   var msg='', busy=false;
   function pad(n){return n<10?'0'+n:''+n;}
   function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}

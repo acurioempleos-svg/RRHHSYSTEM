@@ -700,6 +700,7 @@ function pdfEvaluacion(ctx, titulo, puestoDesc, bloques){
   pdfFila(ctx, [{ e:'Local' }, { e:'Puesto / sector', ui:'Puesto / sector (' + puestoDesc + ')' }]);
   pdfFila(ctx, [{ e:'Antigüedad' }, { e:'Período evaluado' }]);
   pdfFila(ctx, [{ e:'Evaluador', id:'enc', ui:'Evaluador (nombre y apellido)' }, { e:'Fecha de evaluación' }]);
+  pdfFila(ctx, [{ e:'Carnet de manipulación de alimentos', w:1.5, id:'carnet', chk:['SI','NO'] }, { e:'Fecha de vencimiento', id:'carnetv', ui:'Vencimiento del carnet de manipulación' }]);
   ctx.y += 1;
   pdfSub(ctx, 'Escala de puntuación');
   pdfLista(ctx, [
@@ -710,23 +711,24 @@ function pdfEvaluacion(ctx, titulo, puestoDesc, bloques){
     '5 = Sobresaliente: referente del equipo.'
   ], 8.5, 1.2);
   bloques.forEach((b, i) => {
-    pdfEspacio(ctx, 66);
+    pdfEspacio(ctx, 58);
     pdfSub(ctx, 'BLOQUE ' + (i+1) + ' - ' + b.t + ' (peso ' + b.peso + '%)');
     pdfTabla(ctx, ['Criterio','1','2','3','4','5','Observaciones'],
-      b.crit.map(c => [c,'','','','','','']), [6.5,0.7,0.7,0.7,0.7,0.7,3.2], 8,
+      b.crit.map(c => [c,'','','','','','']), [6.5,0.7,0.7,0.7,0.7,0.7,3.2], 7,
       { primeraColumna:true, ui:'Puntajes: ' + b.t });
   });
-  pdfEspacio(ctx, 70);
+  pdfEspacio(ctx, 58);
   pdfSub(ctx, 'Resultado final');
   pdfTabla(ctx, ['Bloque','Promedio','Peso','Ponderado'],
     bloques.map((b, i) => [(i+1) + '. ' + b.t, '', b.peso + '%', ''])
       .concat([['PUNTAJE FINAL (sobre 5)', '', '100%', '']]),
-    [5.2,1.4,1,1.4], 8, { primeraColumna:true, ui:'Resultado final' });
+    [5.2,1.4,1,1.4], 7, { primeraColumna:true, ui:'Resultado final' });
   pdfParrafo(ctx, 'Interpretación: 1,0 a 1,9 Insuficiente / 2,0 a 2,9 A mejorar / 3,0 a 3,9 Cumple / 4,0 a 4,5 Muy bueno / 4,6 a 5,0 Sobresaliente.', 8.5);
-  pdfCajaRenglones(ctx, 'PRINCIPALES FORTALEZAS', 3, 8);
-  pdfCajaRenglones(ctx, 'OPORTUNIDADES DE MEJORA', 3, 8);
-  pdfCajaRenglones(ctx, 'PLAN DE ACCIÓN Y CAPACITACIONES SUGERIDAS', 3, 8);
-  pdfCajaRenglones(ctx, 'COMENTARIOS DEL COLABORADOR', 3, 8);
+  pdfCajaRenglones(ctx, 'PRINCIPALES FORTALEZAS', 3, 7);
+  pdfCajaRenglones(ctx, 'OPORTUNIDADES DE MEJORA', 3, 7);
+  pdfCajaRenglones(ctx, 'PLAN DE ACCIÓN Y CAPACITACIONES SUGERIDAS', 3, 7);
+  pdfEspacio(ctx, 8 + 3*7 + 6 + 2*15 + 6);   /* comentarios + firmas van juntos en la misma hoja */
+  pdfCajaRenglones(ctx, 'COMENTARIOS DEL COLABORADOR', 3, 7);
   pdfFirmasFilas(ctx, [['Firma colaborador','Firma evaluador','Firma RRHH'], ['Aclaración colaborador','Aclaración evaluador','Aclaración RRHH']],
     [[], ['nom|Colaborador (nombre y apellido)','enc|Evaluador (nombre y apellido)','rrhh|Aclaración de RRHH']]);
 }
@@ -988,14 +990,12 @@ const PLANTILLAS = {
         pdfParrafo(ctx, 'Hago constar que el locker de trabajo lo recibo nuevo y en perfectas condiciones para su uso, obligándome a conservarlo en buen estado y utilizarlo para lo que está destinado dentro de mi trabajo. Responsabilizándome del mismo bajo cualquier circunstancia, obligándome a cubrir su costo en caso de rotura por negligencia de mi parte.');
         pdfFirmaApilada(ctx, ['Firma','Aclaración']);
       }
-    }
-  ],
-  barra: [
+    },
     /* ---------------- EVALUACIÓN DE DESEMPEÑO - COCINA ---------------- */
     {
       id:'evaluacion-cocina', nombre:'Evaluación de desempeño - Cocina',
-      desc:'Evaluación del personal de cocina: higiene y seguridad, calidad y producción, trabajo en equipo y compromiso, con puntaje del 1 al 5 y plan de acción.',
-      archivo: 'Evaluacion_de_Desempeno_Cocina_BarraChalaca.pdf',
+      desc:'Evaluación del personal de cocina: higiene y seguridad, calidad y producción, trabajo en equipo y compromiso, carnet de manipulación, con puntaje del 1 al 5 y plan de acción.',
+      archivo: m => 'Evaluacion_de_Desempeno_Cocina_' + MARCAS[m].slug + '.pdf',
       generar(ctx){
         pdfEvaluacion(ctx, 'EVALUACIÓN DE DESEMPEÑO - COCINA', 'cocina caliente, fría, parrilla, bacha, otro', [
           { t:'HIGIENE, SEGURIDAD Y NORMAS', peso:25, crit:[
@@ -1028,8 +1028,8 @@ const PLANTILLAS = {
     /* ---------------- EVALUACIÓN DE DESEMPEÑO - SALÓN ---------------- */
     {
       id:'evaluacion-salon', nombre:'Evaluación de desempeño - Salón',
-      desc:'Evaluación del personal de salón: atención al cliente, conocimiento y técnica de servicio, trabajo en equipo y compromiso, con puntaje del 1 al 5 y plan de acción.',
-      archivo: 'Evaluacion_de_Desempeno_Salon_BarraChalaca.pdf',
+      desc:'Evaluación del personal de salón: atención al cliente, conocimiento y técnica de servicio, trabajo en equipo y compromiso, carnet de manipulación, con puntaje del 1 al 5 y plan de acción.',
+      archivo: m => 'Evaluacion_de_Desempeno_Salon_' + MARCAS[m].slug + '.pdf',
       generar(ctx){
         pdfEvaluacion(ctx, 'EVALUACIÓN DE DESEMPEÑO - SALÓN', 'mozo, runner, hostess, barra, otro', [
           { t:'PRESENTACIÓN Y ATENCIÓN AL CLIENTE', peso:30, crit:[
@@ -1060,6 +1060,7 @@ const PLANTILLAS = {
       }
     }
   ],
+  barra: [],
   tanta: [],
   lamar: [
     /* ---------------- RETIRO ---------------- */
